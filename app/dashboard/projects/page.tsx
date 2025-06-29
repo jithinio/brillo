@@ -1,363 +1,380 @@
 "use client"
 
-import { DialogFooter } from "@/components/ui/dialog"
-
-import { SelectItem } from "@/components/ui/select"
-
-import { SelectContent } from "@/components/ui/select"
-
-import { SelectValue } from "@/components/ui/select"
-
-import { SelectTrigger } from "@/components/ui/select"
-
-import { Select } from "@/components/ui/select"
-
-import { Label } from "@/components/ui/label"
-
-import { DialogDescription } from "@/components/ui/dialog"
-
-import { DialogTitle } from "@/components/ui/dialog"
-
-import { DialogHeader } from "@/components/ui/dialog"
-
-import { DialogContent } from "@/components/ui/dialog"
-
-import { DialogTrigger } from "@/components/ui/dialog"
-
-import { Dialog } from "@/components/ui/dialog"
-
-import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { Plus, Search, MoreHorizontal, Calendar, DollarSign, User, Clock, TrendingUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { Search, Plus, Calendar, Users } from "lucide-react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { supabase } from "@/lib/supabase"
 
 interface Project {
-  id: number
+  id: string
   name: string
-  client: string
+  description?: string
   status: string
-  progress: number
-  dueDate: string
-  team: number
+  start_date?: string
+  end_date?: string
+  budget?: number
+  hourly_rate?: number
+  estimated_hours?: number
+  actual_hours?: number
+  progress?: number
+  notes?: string
+  created_at: string
+  clients?: {
+    name: string
+    company?: string
+  }
 }
 
+const statusColors = {
+  active: "bg-green-500",
+  completed: "bg-blue-500",
+  on_hold: "bg-yellow-500",
+  cancelled: "bg-red-500",
+}
+
+const statusLabels = {
+  active: "Active",
+  completed: "Completed",
+  on_hold: "On Hold",
+  cancelled: "Cancelled",
+}
+
+// Mock data fallback
 const mockProjects: Project[] = [
   {
-    id: 1,
+    id: "1",
     name: "Website Redesign",
-    client: "Acme Corporation",
-    status: "In Progress",
+    description: "Complete redesign of corporate website with modern UI/UX",
+    status: "active",
+    start_date: "2024-01-15",
+    end_date: "2024-03-15",
+    budget: 15000,
+    hourly_rate: 125,
+    estimated_hours: 120,
+    actual_hours: 45,
     progress: 65,
-    dueDate: "2024-02-15",
-    team: 4,
+    notes: "Phase 1 completed, working on responsive design",
+    created_at: "2024-01-15T00:00:00Z",
+    clients: {
+      name: "John Smith",
+      company: "Acme Corporation",
+    },
   },
   {
-    id: 2,
+    id: "2",
     name: "Mobile App Development",
-    client: "TechStart Inc.",
-    status: "Planning",
-    progress: 20,
-    dueDate: "2024-03-30",
-    team: 6,
+    description: "Native iOS and Android app for customer engagement",
+    status: "active",
+    start_date: "2024-02-01",
+    end_date: "2024-06-01",
+    budget: 45000,
+    hourly_rate: 150,
+    estimated_hours: 300,
+    actual_hours: 120,
+    progress: 40,
+    notes: "Backend API development in progress",
+    created_at: "2024-02-01T00:00:00Z",
+    clients: {
+      name: "Sarah Johnson",
+      company: "TechStart Inc.",
+    },
   },
   {
-    id: 3,
-    name: "Brand Identity",
-    client: "Global Solutions",
-    status: "Completed",
+    id: "3",
+    name: "Brand Identity Package",
+    description: "Logo design, brand guidelines, and marketing materials",
+    status: "completed",
+    start_date: "2023-11-01",
+    end_date: "2024-01-31",
+    budget: 8500,
+    hourly_rate: 100,
+    estimated_hours: 85,
+    actual_hours: 85,
     progress: 100,
-    dueDate: "2024-01-20",
-    team: 3,
+    notes: "Project completed successfully, client very satisfied",
+    created_at: "2023-11-01T00:00:00Z",
+    clients: {
+      name: "Michael Brown",
+      company: "Global Solutions LLC",
+    },
+  },
+  {
+    id: "4",
+    name: "E-commerce Platform",
+    description: "Custom e-commerce solution with payment integration",
+    status: "active",
+    start_date: "2024-01-01",
+    end_date: "2024-04-30",
+    budget: 25000,
+    hourly_rate: 140,
+    estimated_hours: 180,
+    actual_hours: 60,
+    progress: 35,
+    notes: "Payment gateway integration phase",
+    created_at: "2024-01-01T00:00:00Z",
+    clients: {
+      name: "Emily Davis",
+      company: "Creative Studio",
+    },
+  },
+  {
+    id: "5",
+    name: "Marketing Automation",
+    description: "Email marketing and CRM integration system",
+    status: "on_hold",
+    start_date: "2024-02-15",
+    end_date: "2024-05-15",
+    budget: 12000,
+    hourly_rate: 120,
+    estimated_hours: 100,
+    actual_hours: 25,
+    progress: 25,
+    notes: "On hold pending client budget approval",
+    created_at: "2024-02-15T00:00:00Z",
+    clients: {
+      name: "David Wilson",
+      company: "Retail Plus",
+    },
   },
 ]
 
-const mockClients = ["Acme Corporation", "TechStart Inc.", "Global Solutions", "New Client"]
-
 export default function ProjectsPage() {
-  const [projects, setProjects] = useState<Project[]>(mockProjects)
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [editingProject, setEditingProject] = useState<Project | null>(null)
+  const [projects, setProjects] = useState<Project[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
-  const [formData, setFormData] = useState({
-    name: "",
-    client: "",
-    progress: "",
-    dueDate: "",
-    team: "",
-    status: "In Progress" as "In Progress" | "Planning" | "Completed",
-  })
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetchProjects()
+  }, [])
+
+  async function fetchProjects() {
+    try {
+      setError(null)
+
+      const { data, error } = await supabase
+        .from("projects")
+        .select(`
+          *,
+          clients (
+            name,
+            company
+          )
+        `)
+        .order("created_at", { ascending: false })
+
+      if (error) {
+        console.error("Supabase error:", error)
+        // Use mock data as fallback
+        setProjects(mockProjects)
+        setError("Using demo data - database not connected")
+      } else {
+        setProjects(data || [])
+      }
+    } catch (error) {
+      console.error("Error fetching projects:", error)
+      // Use mock data as fallback
+      setProjects(mockProjects)
+      setError("Using demo data - database not connected")
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const filteredProjects = projects.filter(
     (project) =>
       project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.client.toLowerCase().includes(searchTerm.toLowerCase()),
+      project.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      project.clients?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      project.clients?.company?.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    const progress = Number.parseInt(formData.progress)
-    const team = Number.parseInt(formData.team) || 0
-
-    if (editingProject) {
-      setProjects(
-        projects.map((project) =>
-          project.id === editingProject.id
-            ? {
-                ...project,
-                name: formData.name,
-                client: formData.client,
-                progress,
-                dueDate: formData.dueDate,
-                team,
-                status: formData.status,
-              }
-            : project,
-        ),
-      )
-    } else {
-      const newProject: Project = {
-        id: Date.now(),
-        name: formData.name,
-        client: formData.client,
-        progress,
-        dueDate: formData.dueDate,
-        team,
-        status: formData.status,
-      }
-      setProjects([...projects, newProject])
-    }
-    resetForm()
+  const getDaysRemaining = (endDate: string) => {
+    const end = new Date(endDate)
+    const today = new Date()
+    const diffTime = end.getTime() - today.getTime()
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    return diffDays
   }
 
-  const resetForm = () => {
-    setFormData({
-      name: "",
-      client: "",
-      progress: "",
-      dueDate: "",
-      team: "",
-      status: "In Progress",
-    })
-    setEditingProject(null)
-    setIsDialogOpen(false)
-  }
-
-  const handleEdit = (project: Project) => {
-    setEditingProject(project)
-    setFormData({
-      name: project.name,
-      client: project.client,
-      progress: project.progress.toString(),
-      dueDate: project.dueDate,
-      team: project.team.toString(),
-      status: project.status,
-    })
-    setIsDialogOpen(true)
-  }
-
-  const handleDelete = (projectId: number) => {
-    setProjects(projects.filter((project) => project.id !== projectId))
-  }
-
-  const handleGenerateInvoice = (project: Project) => {
-    // Navigate to invoice generation page
-    console.log("Generate invoice for project:", project.name)
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
+            <p className="text-muted-foreground">Track and manage your projects</p>
+          </div>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[...Array(6)].map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <CardHeader className="space-y-2">
+                <div className="h-4 bg-muted rounded w-3/4"></div>
+                <div className="h-3 bg-muted rounded w-1/2"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="h-3 bg-muted rounded"></div>
+                  <div className="h-3 bg-muted rounded w-2/3"></div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="space-y-4 px-4 lg:px-6">
-      <div className="flex items-center justify-between space-y-2 mb-6">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Projects</h2>
-          <p className="text-muted-foreground">Track and manage your ongoing projects and deliverables.</p>
+          <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
+          <p className="text-muted-foreground">Track progress and manage your active projects</p>
+          {error && <p className="text-sm text-yellow-600 mt-1">⚠️ {error}</p>}
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => setEditingProject(null)}>
-              <Plus className="mr-2 h-4 w-4" />
-              New Project
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>{editingProject ? "Edit Project" : "Add New Project"}</DialogTitle>
-              <DialogDescription>
-                {editingProject ? "Update project information below." : "Add a new project to your portfolio."}
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSubmit}>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="name" className="text-right">
-                    Name
-                  </Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="col-span-3"
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="client" className="text-right">
-                    Client
-                  </Label>
-                  <Input
-                    id="client"
-                    value={formData.client}
-                    onChange={(e) => setFormData({ ...formData, client: e.target.value })}
-                    className="col-span-3"
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="progress" className="text-right">
-                    Progress
-                  </Label>
-                  <Input
-                    id="progress"
-                    type="number"
-                    value={formData.progress}
-                    onChange={(e) => setFormData({ ...formData, progress: e.target.value })}
-                    className="col-span-3"
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="dueDate" className="text-right">
-                    Due Date
-                  </Label>
-                  <Input
-                    id="dueDate"
-                    type="date"
-                    value={formData.dueDate}
-                    onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-                    className="col-span-3"
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="team" className="text-right">
-                    Team Size
-                  </Label>
-                  <Input
-                    id="team"
-                    type="number"
-                    value={formData.team}
-                    onChange={(e) => setFormData({ ...formData, team: e.target.value })}
-                    className="col-span-3"
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="status" className="text-right">
-                    Status
-                  </Label>
-                  <Select
-                    value={formData.status}
-                    onValueChange={(value: any) => setFormData({ ...formData, status: value })}
-                  >
-                    <SelectTrigger className="col-span-3">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="In Progress">In Progress</SelectItem>
-                      <SelectItem value="Planning">Planning</SelectItem>
-                      <SelectItem value="Completed">Completed</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={resetForm}>
-                  Cancel
-                </Button>
-                <Button type="submit">{editingProject ? "Update" : "Add"} Project</Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <Button>
+          <Plus className="mr-2 h-4 w-4" />
+          New Project
+        </Button>
       </div>
 
-      <div className="flex items-center space-x-2 mb-6">
+      <div className="flex items-center space-x-2">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search projects..."
-            className="pl-8"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-8"
           />
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {filteredProjects.map((project) => (
-          <Card key={project.id}>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">{project.name}</CardTitle>
-                <Badge
-                  variant={
-                    project.status === "Completed"
-                      ? "default"
-                      : project.status === "In Progress"
-                        ? "secondary"
-                        : "outline"
-                  }
-                >
-                  {project.status}
-                </Badge>
+          <Card key={project.id} className="hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div className="space-y-1">
+                <CardTitle className="text-base">{project.name}</CardTitle>
+                {project.clients && (
+                  <CardDescription className="text-xs">
+                    {project.clients.company || project.clients.name}
+                  </CardDescription>
+                )}
               </div>
-              <CardDescription>{project.client}</CardDescription>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="h-8 w-8 p-0">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem>View Project</DropdownMenuItem>
+                  <DropdownMenuItem>Edit Project</DropdownMenuItem>
+                  <DropdownMenuItem>Create Invoice</DropdownMenuItem>
+                  <DropdownMenuItem>Time Tracking</DropdownMenuItem>
+                  <DropdownMenuItem className="text-destructive">Delete Project</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <div className="flex items-center justify-between text-sm mb-2">
-                  <span>Progress</span>
-                  <span>{project.progress}%</span>
-                </div>
-                <Progress value={project.progress} className="h-2" />
+              <div className="flex items-center justify-between">
+                <Badge
+                  variant="secondary"
+                  className={`text-white ${statusColors[project.status as keyof typeof statusColors]}`}
+                >
+                  {statusLabels[project.status as keyof typeof statusLabels]}
+                </Badge>
+                {project.budget && (
+                  <div className="flex items-center space-x-1 text-sm font-semibold">
+                    <DollarSign className="h-3 w-3" />
+                    <span>${project.budget.toLocaleString()}</span>
+                  </div>
+                )}
               </div>
 
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center space-x-1">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span>{project.dueDate}</span>
+              {project.description && (
+                <p className="text-sm text-muted-foreground line-clamp-2">{project.description}</p>
+              )}
+
+              {project.progress !== undefined && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Progress</span>
+                    <span className="font-medium">{project.progress}%</span>
+                  </div>
+                  <Progress value={project.progress} className="h-2" />
                 </div>
-                <div className="flex items-center space-x-1">
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                  <span>{project.team} members</span>
-                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                {project.estimated_hours && project.actual_hours !== undefined && (
+                  <div className="flex items-center space-x-2">
+                    <Clock className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-muted-foreground">
+                      {project.actual_hours}h / {project.estimated_hours}h
+                    </span>
+                  </div>
+                )}
+
+                {project.hourly_rate && (
+                  <div className="flex items-center space-x-2">
+                    <TrendingUp className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-muted-foreground">${project.hourly_rate}/hr</span>
+                  </div>
+                )}
               </div>
 
-              <div className="flex space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 bg-transparent"
-                  onClick={() => console.log("View Details for project:", project.name)}
-                >
-                  View Details
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 bg-transparent"
-                  onClick={() => handleEdit(project)}
-                >
-                  Edit
-                </Button>
-              </div>
+              {project.end_date && project.status !== "completed" && (
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center space-x-2 text-muted-foreground">
+                    <Calendar className="h-3 w-3" />
+                    <span>Due {new Date(project.end_date).toLocaleDateString()}</span>
+                  </div>
+                  <span
+                    className={`text-xs font-medium ${
+                      getDaysRemaining(project.end_date) < 0
+                        ? "text-red-600"
+                        : getDaysRemaining(project.end_date) <= 7
+                          ? "text-yellow-600"
+                          : "text-muted-foreground"
+                    }`}
+                  >
+                    {getDaysRemaining(project.end_date) < 0
+                      ? `${Math.abs(getDaysRemaining(project.end_date))} days overdue`
+                      : `${getDaysRemaining(project.end_date)} days left`}
+                  </span>
+                </div>
+              )}
+
+              {project.clients && (
+                <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                  <User className="h-3 w-3" />
+                  <span className="truncate">{project.clients.name}</span>
+                </div>
+              )}
+
+              {project.notes && <p className="text-xs text-muted-foreground line-clamp-2">{project.notes}</p>}
             </CardContent>
           </Card>
         ))}
       </div>
+
+      {filteredProjects.length === 0 && !loading && (
+        <div className="text-center py-12">
+          <h3 className="text-lg font-semibold">No projects found</h3>
+          <p className="text-muted-foreground">
+            {searchTerm ? "Try adjusting your search terms" : "Get started by creating your first project"}
+          </p>
+        </div>
+      )}
     </div>
   )
 }
