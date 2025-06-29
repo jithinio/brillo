@@ -1,241 +1,181 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Plus, Search, MoreHorizontal, Calendar, DollarSign, User, Clock, TrendingUp } from "lucide-react"
+import * as React from "react"
+import { Plus, Eye, Clock } from "lucide-react"
+
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { toast } from "sonner"
+
 import { PageHeader, PageContent, PageTitle } from "@/components/page-header"
-import { supabase, isSupabaseConfigured } from "@/lib/supabase"
+import { DataTable } from "@/components/projects/data-table"
+import { createColumns, type Project } from "@/components/projects/columns"
 
-interface Project {
-  id: string
-  name: string
-  description?: string
-  status: string
-  start_date?: string
-  end_date?: string
-  budget?: number
-  hourly_rate?: number
-  estimated_hours?: number
-  actual_hours?: number
-  progress?: number
-  notes?: string
-  created_at: string
-  clients?: {
-    name: string
-    company?: string
-  }
-}
-
-const statusColors = {
-  active: "bg-green-500",
-  completed: "bg-blue-500",
-  on_hold: "bg-yellow-500",
-  cancelled: "bg-red-500",
-}
-
-const statusLabels = {
-  active: "Active",
-  completed: "Completed",
-  on_hold: "On Hold",
-  cancelled: "Cancelled",
-}
-
-// Mock data fallback
+// Mock data for projects with new fields
 const mockProjects: Project[] = [
   {
     id: "1",
-    name: "Website Redesign",
-    description: "Complete redesign of corporate website with modern UI/UX",
+    name: "Website Redesign Project",
     status: "active",
     start_date: "2024-01-15",
     end_date: "2024-03-15",
     budget: 15000,
-    hourly_rate: 125,
-    estimated_hours: 120,
-    actual_hours: 45,
-    progress: 65,
-    notes: "Phase 1 completed, working on responsive design",
-    created_at: "2024-01-15T00:00:00Z",
+    expenses: 2500,
+    received: 7500,
+    pending: 5000,
+    created_at: "2024-01-10T10:00:00Z",
     clients: {
       name: "John Smith",
-      company: "Acme Corporation",
+      company: "Tech Corp",
     },
   },
   {
     id: "2",
     name: "Mobile App Development",
-    description: "Native iOS and Android app for customer engagement",
-    status: "active",
-    start_date: "2024-02-01",
-    end_date: "2024-06-01",
+    status: "completed",
+    start_date: "2023-10-01",
+    end_date: "2024-01-31",
     budget: 45000,
-    hourly_rate: 150,
-    estimated_hours: 300,
-    actual_hours: 120,
-    progress: 40,
-    notes: "Backend API development in progress",
-    created_at: "2024-02-01T00:00:00Z",
+    expenses: 8500,
+    received: 45000,
+    pending: 0,
+    created_at: "2023-09-25T14:30:00Z",
     clients: {
       name: "Sarah Johnson",
-      company: "TechStart Inc.",
+      company: "StartupXYZ",
     },
   },
   {
     id: "3",
-    name: "Brand Identity Package",
-    description: "Logo design, brand guidelines, and marketing materials",
-    status: "completed",
-    start_date: "2023-11-01",
-    end_date: "2024-01-31",
-    budget: 8500,
-    hourly_rate: 100,
-    estimated_hours: 85,
-    actual_hours: 85,
-    progress: 100,
-    notes: "Project completed successfully, client very satisfied",
-    created_at: "2023-11-01T00:00:00Z",
+    name: "E-commerce Platform Build",
+    status: "on_hold",
+    start_date: "2024-02-01",
+    end_date: "2024-06-30",
+    budget: 32000,
+    expenses: 1200,
+    received: 10000,
+    pending: 21800,
+    created_at: "2024-01-28T09:15:00Z",
     clients: {
-      name: "Michael Brown",
-      company: "Global Solutions LLC",
+      name: "Mike Davis",
+      company: "Retail Plus",
     },
   },
   {
     id: "4",
-    name: "E-commerce Platform",
-    description: "Custom e-commerce solution with payment integration",
+    name: "Data Analytics Dashboard",
     status: "active",
-    start_date: "2024-01-01",
-    end_date: "2024-04-30",
-    budget: 25000,
-    hourly_rate: 140,
-    estimated_hours: 180,
-    actual_hours: 60,
-    progress: 35,
-    notes: "Payment gateway integration phase",
-    created_at: "2024-01-01T00:00:00Z",
+    start_date: "2024-03-01",
+    end_date: "2024-05-15",
+    budget: 28000,
+    expenses: 3200,
+    received: 14000,
+    pending: 10800,
+    created_at: "2024-02-25T16:45:00Z",
     clients: {
-      name: "Emily Davis",
-      company: "Creative Studio",
+      name: "Lisa Chen",
+      company: "DataFlow Inc",
     },
   },
   {
     id: "5",
-    name: "Marketing Automation",
-    description: "Email marketing and CRM integration system",
-    status: "on_hold",
-    start_date: "2024-02-15",
-    end_date: "2024-05-15",
-    budget: 12000,
-    hourly_rate: 120,
-    estimated_hours: 100,
-    actual_hours: 25,
-    progress: 25,
-    notes: "On hold pending client budget approval",
-    created_at: "2024-02-15T00:00:00Z",
+    name: "Legacy System Migration",
+    status: "cancelled",
+    start_date: "2024-01-01",
+    end_date: "2024-04-30",
+    budget: 55000,
+    expenses: 0,
+    received: 0,
+    pending: 0,
+    created_at: "2023-12-20T11:20:00Z",
     clients: {
-      name: "David Wilson",
-      company: "Retail Plus",
+      name: "Robert Wilson",
+      company: "Enterprise Solutions",
+    },
+  },
+  {
+    id: "6",
+    name: "Brand Identity Package Design",
+    status: "completed",
+    start_date: "2023-11-01",
+    end_date: "2024-01-15",
+    budget: 12000,
+    expenses: 800,
+    received: 12000,
+    pending: 0,
+    created_at: "2023-10-25T13:30:00Z",
+    clients: {
+      name: "Emma Thompson",
+      company: "Creative Studio",
     },
   },
 ]
 
 export default function ProjectsPage() {
-  const [projects, setProjects] = useState<Project[]>([])
-  const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [error, setError] = useState<string | null>(null)
+  const [projects, setProjects] = React.useState<Project[]>(mockProjects)
+  const [selectedProject, setSelectedProject] = React.useState<Project | null>(null)
+  const [isViewDialogOpen, setIsViewDialogOpen] = React.useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false)
+  const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false)
 
-  useEffect(() => {
-    fetchProjects()
-  }, [])
+  const handleViewDetails = (project: Project) => {
+    setSelectedProject(project)
+    setIsViewDialogOpen(true)
+  }
 
-  async function fetchProjects() {
-    try {
-      setError(null)
+  const handleEditProject = (project: Project) => {
+    setSelectedProject(project)
+    setIsEditDialogOpen(true)
+  }
 
-      // Check if Supabase is properly configured
-      if (!isSupabaseConfigured()) {
-        console.log("Supabase not configured, using mock data")
-        setProjects(mockProjects)
-        setError("Using demo data - Supabase not configured")
-        return
-      }
+  const handleCreateInvoice = (project: Project) => {
+    toast.success(`Creating invoice for ${project.name}`)
+  }
 
-      const { data, error } = await supabase
-        .from("projects")
-        .select(`
-          *,
-          clients (
-            name,
-            company
-          )
-        `)
-        .order("created_at", { ascending: false })
+  const handleTimeTracking = (project: Project) => {
+    toast.success(`Opening time tracking for ${project.name}`)
+  }
 
-      if (error) {
-        console.error("Supabase error:", error)
-        // Use mock data as fallback
-        setProjects(mockProjects)
-        setError("Using demo data - database connection failed")
-      } else {
-        setProjects(data || [])
-      }
-    } catch (error) {
-      console.error("Error fetching projects:", error)
-      // Use mock data as fallback
-      setProjects(mockProjects)
-      setError("Using demo data - connection error")
-    } finally {
-      setLoading(false)
+  const handleDeleteProject = (project: Project) => {
+    setSelectedProject(project)
+    setIsDeleteDialogOpen(true)
+  }
+
+  const confirmDelete = () => {
+    if (selectedProject) {
+      setProjects(projects.filter((p) => p.id !== selectedProject.id))
+      toast.success(`Project "${selectedProject.name}" deleted successfully`)
+      setIsDeleteDialogOpen(false)
+      setSelectedProject(null)
     }
   }
 
-  const filteredProjects = projects.filter(
-    (project) =>
-      project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.clients?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.clients?.company?.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+  const columns = createColumns({
+    onViewDetails: handleViewDetails,
+    onEditProject: handleEditProject,
+    onCreateInvoice: handleCreateInvoice,
+    onTimeTracking: handleTimeTracking,
+    onDeleteProject: handleDeleteProject,
+  })
 
-  const getDaysRemaining = (endDate: string) => {
-    const end = new Date(endDate)
-    const today = new Date()
-    const diffTime = end.getTime() - today.getTime()
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-    return diffDays
-  }
-
-  if (loading) {
-    return (
-      <>
-        <PageHeader title="Projects" breadcrumbs={[{ label: "Projects" }]} />
-        <PageContent>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {[...Array(6)].map((_, i) => (
-              <Card key={i} className="animate-pulse">
-                <CardHeader className="space-y-2">
-                  <div className="h-4 bg-muted rounded w-3/4"></div>
-                  <div className="h-3 bg-muted rounded w-1/2"></div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="h-3 bg-muted rounded"></div>
-                    <div className="h-3 bg-muted rounded w-2/3"></div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </PageContent>
-      </>
-    )
-  }
+  // Summary calculations
+  const totalProjects = projects.length
+  const activeProjects = projects.filter((p) => p.status === "active").length
+  const completedProjects = projects.filter((p) => p.status === "completed").length
+  const totalBudget = projects.reduce((sum, p) => sum + (p.budget || 0), 0)
+  const totalExpenses = projects.reduce((sum, p) => sum + (p.expenses || 0), 0)
+  const totalReceived = projects.reduce((sum, p) => sum + (p.received || 0), 0)
+  const totalPending = projects.reduce((sum, p) => sum + (p.pending || 0), 0)
 
   return (
     <>
@@ -245,144 +185,146 @@ export default function ProjectsPage() {
         action={
           <Button size="sm">
             <Plus className="mr-2 h-4 w-4" />
-            New Project
+            Add Project
           </Button>
         }
       />
       <PageContent>
-        <PageTitle title="Projects" description="Track progress and manage your active projects" error={error} />
+        <PageTitle title="Projects" description="Manage your projects and track their progress" />
 
-        <div className="flex items-center space-x-2">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search projects..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-8"
-            />
+        {/* Summary Cards */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
+            <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <h3 className="tracking-tight text-sm font-medium">Total Projects</h3>
+            </div>
+            <div className="text-2xl font-bold">{totalProjects}</div>
+            <p className="text-xs text-muted-foreground">All projects in system</p>
+          </div>
+          <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
+            <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <h3 className="tracking-tight text-sm font-medium">Total Budget</h3>
+            </div>
+            <div className="text-2xl font-bold">${totalBudget.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">Combined project value</p>
+          </div>
+          <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
+            <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <h3 className="tracking-tight text-sm font-medium">Total Received</h3>
+            </div>
+            <div className="text-2xl font-bold text-green-600">${totalReceived.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">Payments received</p>
+          </div>
+          <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
+            <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <h3 className="tracking-tight text-sm font-medium">Total Pending</h3>
+            </div>
+            <div className="text-2xl font-bold text-yellow-600">${totalPending.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">Outstanding payments</p>
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredProjects.map((project) => (
-            <Card key={project.id} className="hover:shadow-md transition-shadow">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <div className="space-y-1">
-                  <CardTitle className="text-base">{project.name}</CardTitle>
-                  {project.clients && (
-                    <CardDescription className="text-xs">
-                      {project.clients.company || project.clients.name}
-                    </CardDescription>
-                  )}
-                </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="h-8 w-8 p-0">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem>View Project</DropdownMenuItem>
-                    <DropdownMenuItem>Edit Project</DropdownMenuItem>
-                    <DropdownMenuItem>Create Invoice</DropdownMenuItem>
-                    <DropdownMenuItem>Time Tracking</DropdownMenuItem>
-                    <DropdownMenuItem className="text-destructive">Delete Project</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Badge
-                    variant="secondary"
-                    className={`text-white ${statusColors[project.status as keyof typeof statusColors]}`}
-                  >
-                    {statusLabels[project.status as keyof typeof statusLabels]}
-                  </Badge>
-                  {project.budget && (
-                    <div className="flex items-center space-x-1 text-sm font-semibold">
-                      <DollarSign className="h-3 w-3" />
-                      <span>${project.budget.toLocaleString()}</span>
-                    </div>
-                  )}
-                </div>
-
-                {project.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-2">{project.description}</p>
-                )}
-
-                {project.progress !== undefined && (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Progress</span>
-                      <span className="font-medium">{project.progress}%</span>
-                    </div>
-                    <Progress value={project.progress} className="h-2" />
-                  </div>
-                )}
-
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  {project.estimated_hours && project.actual_hours !== undefined && (
-                    <div className="flex items-center space-x-2">
-                      <Clock className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-muted-foreground">
-                        {project.actual_hours}h / {project.estimated_hours}h
-                      </span>
-                    </div>
-                  )}
-
-                  {project.hourly_rate && (
-                    <div className="flex items-center space-x-2">
-                      <TrendingUp className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-muted-foreground">${project.hourly_rate}/hr</span>
-                    </div>
-                  )}
-                </div>
-
-                {project.end_date && project.status !== "completed" && (
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center space-x-2 text-muted-foreground">
-                      <Calendar className="h-3 w-3" />
-                      <span>Due {new Date(project.end_date).toLocaleDateString()}</span>
-                    </div>
-                    <span
-                      className={`text-xs font-medium ${
-                        getDaysRemaining(project.end_date) < 0
-                          ? "text-red-600"
-                          : getDaysRemaining(project.end_date) <= 7
-                            ? "text-yellow-600"
-                            : "text-muted-foreground"
-                      }`}
-                    >
-                      {getDaysRemaining(project.end_date) < 0
-                        ? `${Math.abs(getDaysRemaining(project.end_date))} days overdue`
-                        : `${getDaysRemaining(project.end_date)} days left`}
-                    </span>
-                  </div>
-                )}
-
-                {project.clients && (
-                  <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                    <User className="h-3 w-3" />
-                    <span className="truncate">{project.clients.name}</span>
-                  </div>
-                )}
-
-                {project.notes && <p className="text-xs text-muted-foreground line-clamp-2">{project.notes}</p>}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {filteredProjects.length === 0 && !loading && (
-          <div className="text-center py-12">
-            <h3 className="text-lg font-semibold">No projects found</h3>
-            <p className="text-muted-foreground">
-              {searchTerm ? "Try adjusting your search terms" : "Get started by creating your first project"}
-            </p>
-          </div>
-        )}
+        {/* Projects Table */}
+        <DataTable columns={columns} data={projects} />
       </PageContent>
+
+      {/* View Project Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{selectedProject?.name}</DialogTitle>
+            <DialogDescription>Project details and financial information</DialogDescription>
+          </DialogHeader>
+          {selectedProject && (
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium">Status</Label>
+                  <div className="mt-1">
+                    <Badge variant="outline" className="text-muted-foreground px-1.5">
+                      {selectedProject.status === "completed" ? (
+                        <>
+                          <Eye className="fill-green-500 dark:fill-green-400 mr-1 h-3 w-3" />
+                          Done
+                        </>
+                      ) : selectedProject.status === "active" ? (
+                        <>
+                          <Clock className="mr-1 h-3 w-3" />
+                          In Progress
+                        </>
+                      ) : (
+                        selectedProject.status
+                      )}
+                    </Badge>
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Client</Label>
+                  <p className="mt-1 text-sm">{selectedProject.clients?.name || "No client assigned"}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium">Budget</Label>
+                  <p className="mt-1 text-sm font-medium">${selectedProject.budget?.toLocaleString()}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Expenses</Label>
+                  <p className="mt-1 text-sm font-medium text-red-600">${selectedProject.expenses?.toLocaleString()}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium">Received</Label>
+                  <p className="mt-1 text-sm font-medium text-green-600">
+                    ${selectedProject.received?.toLocaleString()}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Pending</Label>
+                  <p className="mt-1 text-sm font-medium text-yellow-600">
+                    ${selectedProject.pending?.toLocaleString()}
+                  </p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium">Start Date</Label>
+                  <p className="mt-1 text-sm">
+                    {selectedProject.start_date ? new Date(selectedProject.start_date).toLocaleDateString() : "—"}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">End Date</Label>
+                  <p className="mt-1 text-sm">
+                    {selectedProject.end_date ? new Date(selectedProject.end_date).toLocaleDateString() : "—"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Project</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete "{selectedProject?.name}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

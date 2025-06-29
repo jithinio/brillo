@@ -1,0 +1,439 @@
+"use client"
+
+import type { ColumnDef } from "@tanstack/react-table"
+import {
+  ArrowUpDown,
+  MoreHorizontal,
+  CheckCircle,
+  Clock,
+  Pause,
+  XCircle,
+  Eye,
+  Edit,
+  FileText,
+  Trash2,
+  User,
+  Calendar,
+  DollarSign,
+} from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Badge } from "@/components/ui/badge"
+
+export type Project = {
+  id: string
+  name: string
+  status: string
+  start_date?: string
+  end_date?: string
+  budget?: number
+  expenses?: number
+  received?: number
+  pending?: number
+  created_at: string
+  clients?: {
+    name: string
+    company?: string
+  }
+}
+
+const statusConfig = {
+  active: {
+    label: "In Progress",
+    icon: Clock,
+    className: "text-muted-foreground",
+  },
+  completed: {
+    label: "Done",
+    icon: CheckCircle,
+    className: "text-muted-foreground",
+  },
+  on_hold: {
+    label: "On Hold",
+    icon: Pause,
+    className: "text-muted-foreground",
+  },
+  cancelled: {
+    label: "Cancelled",
+    icon: XCircle,
+    className: "text-muted-foreground",
+  },
+}
+
+interface ColumnActions {
+  onViewDetails: (project: Project) => void
+  onEditProject: (project: Project) => void
+  onCreateInvoice: (project: Project) => void
+  onTimeTracking: (project: Project) => void
+  onDeleteProject: (project: Project) => void
+}
+
+export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
+  return [
+    {
+      id: "select",
+      header: ({ table }) => (
+        <div className="flex items-center justify-center">
+          <Checkbox
+            checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
+            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+            aria-label="Select all"
+            className="translate-y-[2px]"
+          />
+        </div>
+      ),
+      cell: ({ row }) => (
+        <div className="flex items-center justify-center">
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            aria-label="Select row"
+            className="translate-y-[2px]"
+          />
+        </div>
+      ),
+      enableSorting: false,
+      enableHiding: false,
+      size: 40,
+    },
+    {
+      accessorKey: "name",
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+            className="h-auto p-0 font-medium"
+          >
+            Project Name
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        )
+      },
+      cell: ({ row }) => {
+        const project = row.original
+        return (
+          <div className="min-w-[200px] max-w-[250px]">
+            <div className="font-medium truncate" title={project.name}>
+              {project.name}
+            </div>
+          </div>
+        )
+      },
+      size: 250,
+      enableHiding: false,
+    },
+    {
+      id: "client",
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+            className="h-auto p-0 font-medium"
+          >
+            Client
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        )
+      },
+      cell: ({ row }) => {
+        const client = row.original.clients
+        return client ? (
+          <div className="flex items-center space-x-2 min-w-[150px] max-w-[180px]">
+            <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <div className="font-medium truncate" title={client.name}>
+              {client.name}
+            </div>
+          </div>
+        ) : (
+          <span className="text-muted-foreground min-w-[150px] block">No client</span>
+        )
+      },
+      size: 180,
+      enableHiding: true,
+    },
+    {
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ row }) => {
+        const status = row.getValue("status") as string
+        const config = statusConfig[status as keyof typeof statusConfig]
+
+        if (!config) {
+          return <span className="text-muted-foreground">Unknown</span>
+        }
+
+        const Icon = config.icon
+
+        return (
+          <div className="min-w-[120px]">
+            <Badge variant="outline" className="text-muted-foreground">
+              <Icon className="mr-1 h-3 w-3" />
+              {config.label}
+            </Badge>
+          </div>
+        )
+      },
+      size: 120,
+      enableHiding: true,
+    },
+    {
+      accessorKey: "budget",
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+            className="h-auto p-0 font-medium"
+          >
+            Budget
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        )
+      },
+      cell: ({ row }) => {
+        const budget = row.getValue("budget") as number
+        return (
+          <div className="min-w-[100px] max-w-[120px]">
+            {budget ? (
+              <div className="flex items-center space-x-2">
+                <DollarSign className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <span className="font-medium truncate">${budget.toLocaleString()}</span>
+              </div>
+            ) : (
+              <span className="text-muted-foreground">—</span>
+            )}
+          </div>
+        )
+      },
+      size: 120,
+      enableHiding: true,
+    },
+    {
+      accessorKey: "expenses",
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+            className="h-auto p-0 font-medium"
+          >
+            Expenses
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        )
+      },
+      cell: ({ row }) => {
+        const expenses = row.getValue("expenses") as number
+        return (
+          <div className="min-w-[100px] max-w-[120px]">
+            {expenses ? (
+              <div className="flex items-center space-x-2">
+                <DollarSign className="h-4 w-4 text-red-500 flex-shrink-0" />
+                <span className="font-medium text-red-600 truncate">${expenses.toLocaleString()}</span>
+              </div>
+            ) : (
+              <span className="text-muted-foreground">$0</span>
+            )}
+          </div>
+        )
+      },
+      size: 120,
+      enableHiding: true,
+    },
+    {
+      accessorKey: "received",
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+            className="h-auto p-0 font-medium"
+          >
+            Received
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        )
+      },
+      cell: ({ row }) => {
+        const received = row.getValue("received") as number
+        return (
+          <div className="min-w-[100px] max-w-[120px]">
+            {received ? (
+              <div className="flex items-center space-x-2">
+                <DollarSign className="h-4 w-4 text-green-500 flex-shrink-0" />
+                <span className="font-medium text-green-600 truncate">${received.toLocaleString()}</span>
+              </div>
+            ) : (
+              <span className="text-muted-foreground">$0</span>
+            )}
+          </div>
+        )
+      },
+      size: 120,
+      enableHiding: true,
+    },
+    {
+      accessorKey: "pending",
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+            className="h-auto p-0 font-medium"
+          >
+            Pending
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        )
+      },
+      cell: ({ row }) => {
+        const pending = row.getValue("pending") as number
+        return (
+          <div className="min-w-[100px] max-w-[120px]">
+            {pending ? (
+              <div className="flex items-center space-x-2">
+                <DollarSign className="h-4 w-4 text-yellow-500 flex-shrink-0" />
+                <span className="font-medium text-yellow-600 truncate">${pending.toLocaleString()}</span>
+              </div>
+            ) : (
+              <span className="text-muted-foreground">$0</span>
+            )}
+          </div>
+        )
+      },
+      size: 120,
+      enableHiding: true,
+    },
+    {
+      accessorKey: "end_date",
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+            className="h-auto p-0 font-medium"
+          >
+            Due Date
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        )
+      },
+      cell: ({ row }) => {
+        const endDate = row.getValue("end_date") as string
+        if (endDate) {
+          const date = new Date(endDate)
+          const today = new Date()
+          const diffTime = date.getTime() - today.getTime()
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+          return (
+            <div className="min-w-[120px] max-w-[140px]">
+              <div className="flex items-center space-x-2">
+                <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <span className="text-sm truncate">{date.toLocaleDateString()}</span>
+              </div>
+              {row.original.status !== "completed" && (
+                <div
+                  className={`text-xs truncate ${
+                    diffDays < 0 ? "text-red-600" : diffDays <= 7 ? "text-yellow-600" : "text-muted-foreground"
+                  }`}
+                >
+                  {diffDays < 0 ? `${Math.abs(diffDays)} days overdue` : `${diffDays} days left`}
+                </div>
+              )}
+            </div>
+          )
+        }
+        return <span className="text-muted-foreground min-w-[120px] block">—</span>
+      },
+      size: 140,
+      enableHiding: true,
+    },
+    {
+      accessorKey: "created_at",
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+            className="h-auto p-0 font-medium"
+          >
+            Created
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        )
+      },
+      cell: ({ row }) => {
+        const date = new Date(row.getValue("created_at"))
+        return (
+          <div className="text-sm text-muted-foreground whitespace-nowrap min-w-[100px] max-w-[120px] truncate">
+            {date.toLocaleDateString()}
+          </div>
+        )
+      },
+      size: 120,
+      enableHiding: true,
+    },
+    {
+      id: "actions",
+      enableHiding: false,
+      cell: ({ row }) => {
+        const project = row.original
+
+        return (
+          <div className="min-w-[50px]">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="data-[state=open]:bg-muted text-muted-foreground flex size-8"
+                  size="icon"
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                  <span className="sr-only">Open menu</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40">
+                <DropdownMenuItem onClick={() => actions.onViewDetails(project)} className="whitespace-nowrap">
+                  <Eye className="mr-2 h-4 w-4" />
+                  View Details
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => actions.onEditProject(project)} className="whitespace-nowrap">
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit Project
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => actions.onTimeTracking(project)} className="whitespace-nowrap">
+                  <Clock className="mr-2 h-4 w-4" />
+                  Time Tracking
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => actions.onCreateInvoice(project)} className="whitespace-nowrap">
+                  <FileText className="mr-2 h-4 w-4" />
+                  Create Invoice
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-destructive whitespace-nowrap"
+                  onClick={() => actions.onDeleteProject(project)}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Project
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )
+      },
+      size: 70,
+    },
+  ]
+}

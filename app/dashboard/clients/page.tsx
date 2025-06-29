@@ -14,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -134,6 +135,7 @@ export default function ClientsPage() {
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [editingClient, setEditingClient] = useState<Partial<Client>>({})
+  const [acceptTerms, setAcceptTerms] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -195,6 +197,7 @@ export default function ClientsPage() {
 
   const handleAddClient = () => {
     setEditingClient({})
+    setAcceptTerms(false)
     setShowAddDialog(true)
   }
 
@@ -297,6 +300,7 @@ export default function ClientsPage() {
       setShowAddDialog(false)
       setSelectedClient(null)
       setEditingClient({})
+      setAcceptTerms(false)
     } catch (error) {
       toast({
         title: "Error",
@@ -626,12 +630,21 @@ export default function ClientsPage() {
                 rows={3}
               />
             </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox id="terms" checked={acceptTerms} onCheckedChange={setAcceptTerms} />
+              <Label
+                htmlFor="terms"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                I agree to the terms and conditions for adding this client
+              </Label>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAddDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSaveClient} disabled={!editingClient.name}>
+            <Button onClick={handleSaveClient} disabled={!editingClient.name || !acceptTerms}>
               Add Client
             </Button>
           </DialogFooter>
