@@ -1,34 +1,35 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Plus, Search, MoreHorizontal, Mail, Phone, Building, MapPin } from "lucide-react"
+import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { PageHeader, PageContent, PageTitle } from "@/components/page-header"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
-
-interface Client {
-  id: string
-  name: string
-  email?: string
-  phone?: string
-  company?: string
-  address?: string
-  city?: string
-  state?: string
-  zip_code?: string
-  country?: string
-  notes?: string
-  created_at: string
-  projects?: Array<{
-    id: string
-    name: string
-    status: string
-  }>
-}
+import { useToast } from "@/hooks/use-toast"
+import { DataTable } from "@/components/clients/data-table"
+import { createColumns, type Client } from "@/components/clients/columns"
 
 // Mock data fallback
 const mockClients: Client[] = [
@@ -126,8 +127,14 @@ const statusLabels = {
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState("")
   const [error, setError] = useState<string | null>(null)
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null)
+  const [showViewDialog, setShowViewDialog] = useState(false)
+  const [showEditDialog, setShowEditDialog] = useState(false)
+  const [showAddDialog, setShowAddDialog] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [editingClient, setEditingClient] = useState<Partial<Client>>({})
+  const { toast } = useToast()
 
   useEffect(() => {
     fetchClients()
@@ -175,33 +182,145 @@ export default function ClientsPage() {
     }
   }
 
-  const filteredClients = clients.filter(
-    (client) =>
-      client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.email?.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+  const handleViewDetails = (client: Client) => {
+    setSelectedClient(client)
+    setShowViewDialog(true)
+  }
+
+  const handleEditClient = (client: Client) => {
+    setSelectedClient(client)
+    setEditingClient(client)
+    setShowEditDialog(true)
+  }
+
+  const handleAddClient = () => {
+    setEditingClient({})
+    setShowAddDialog(true)
+  }
+
+  const handleCreateInvoice = (client: Client) => {
+    toast({
+      title: "Create Invoice",
+      description: `Creating invoice for ${client.name}...`,
+    })
+    // TODO: Navigate to invoice creation page with client pre-selected
+  }
+
+  const handleNewProject = (client: Client) => {
+    toast({
+      title: "New Project",
+      description: `Creating new project for ${client.name}...`,
+    })
+    // TODO: Navigate to project creation page with client pre-selected
+  }
+
+  const handleDeleteClient = (client: Client) => {
+    setSelectedClient(client)
+    setShowDeleteDialog(true)
+  }
+
+  const confirmDelete = async () => {
+    if (!selectedClient) return
+
+    try {
+      if (isSupabaseConfigured()) {
+        const { error } = await supabase.from("clients").delete().eq("id", selectedClient.id)
+
+        if (error) throw error
+      }
+
+      // Remove from local state
+      setClients(clients.filter((c) => c.id !== selectedClient.id))
+
+      toast({
+        title: "Client Deleted",
+        description: `${selectedClient.name} has been deleted successfully.`,
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete client. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setShowDeleteDialog(false)
+      setSelectedClient(null)
+    }
+  }
+
+  const handleSaveClient = async () => {
+    try {
+      if (isSupabaseConfigured()) {
+        if (selectedClient) {
+          // Update existing client
+          const { error } = await supabase.from("clients").update(editingClient).eq("id", selectedClient.id)
+
+          if (error) throw error
+
+          // Update local state
+          setClients(clients.map((c) => (c.id === selectedClient.id ? { ...c, ...editingClient } : c)))
+        } else {
+          // Add new client
+          const newClient = {
+            ...editingClient,
+            id: Date.now().toString(),
+            created_at: new Date().toISOString(),
+          }
+
+          const { error } = await supabase.from("clients").insert([newClient])
+
+          if (error) throw error
+
+          // Add to local state
+          setClients([newClient as Client, ...clients])
+        }
+      } else {
+        // Mock data handling
+        if (selectedClient) {
+          setClients(clients.map((c) => (c.id === selectedClient.id ? { ...c, ...editingClient } : c)))
+        } else {
+          const newClient = {
+            ...editingClient,
+            id: Date.now().toString(),
+            created_at: new Date().toISOString(),
+          } as Client
+          setClients([newClient, ...clients])
+        }
+      }
+
+      toast({
+        title: selectedClient ? "Client Updated" : "Client Added",
+        description: `${editingClient.name} has been ${selectedClient ? "updated" : "added"} successfully.`,
+      })
+
+      setShowEditDialog(false)
+      setShowAddDialog(false)
+      setSelectedClient(null)
+      setEditingClient({})
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: `Failed to ${selectedClient ? "update" : "add"} client. Please try again.`,
+        variant: "destructive",
+      })
+    }
+  }
+
+  const columns = createColumns({
+    onViewDetails: handleViewDetails,
+    onEditClient: handleEditClient,
+    onCreateInvoice: handleCreateInvoice,
+    onNewProject: handleNewProject,
+    onDeleteClient: handleDeleteClient,
+  })
 
   if (loading) {
     return (
       <>
         <PageHeader title="Clients" breadcrumbs={[{ label: "Clients" }]} />
         <PageContent>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {[...Array(6)].map((_, i) => (
-              <Card key={i} className="animate-pulse">
-                <CardHeader className="space-y-2">
-                  <div className="h-4 bg-muted rounded w-3/4"></div>
-                  <div className="h-3 bg-muted rounded w-1/2"></div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="h-3 bg-muted rounded"></div>
-                    <div className="h-3 bg-muted rounded w-2/3"></div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="flex items-center justify-center h-32">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
         </PageContent>
       </>
@@ -214,7 +333,7 @@ export default function ClientsPage() {
         title="Clients"
         breadcrumbs={[{ label: "Clients" }]}
         action={
-          <Button size="sm">
+          <Button size="sm" onClick={handleAddClient}>
             <Plus className="mr-2 h-4 w-4" />
             Add Client
           </Button>
@@ -227,115 +346,318 @@ export default function ClientsPage() {
           error={error}
         />
 
-        <div className="flex items-center space-x-2">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search clients..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-8"
-            />
-          </div>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredClients.map((client) => (
-            <Card key={client.id} className="hover:shadow-md transition-shadow">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <div className="space-y-1">
-                  <CardTitle className="text-base">{client.name}</CardTitle>
-                  {client.company && (
-                    <CardDescription className="text-xs flex items-center space-x-1">
-                      <Building className="h-3 w-3" />
-                      <span>{client.company}</span>
-                    </CardDescription>
-                  )}
-                </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="h-8 w-8 p-0">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem>View Details</DropdownMenuItem>
-                    <DropdownMenuItem>Edit Client</DropdownMenuItem>
-                    <DropdownMenuItem>Create Invoice</DropdownMenuItem>
-                    <DropdownMenuItem>New Project</DropdownMenuItem>
-                    <DropdownMenuItem className="text-destructive">Delete Client</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {client.email && (
-                  <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                    <Mail className="h-3 w-3" />
-                    <span className="truncate">{client.email}</span>
-                  </div>
-                )}
-
-                {client.phone && (
-                  <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                    <Phone className="h-3 w-3" />
-                    <span>{client.phone}</span>
-                  </div>
-                )}
-
-                {(client.city || client.state) && (
-                  <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                    <MapPin className="h-3 w-3" />
-                    <span>
-                      {client.city}
-                      {client.city && client.state && ", "}
-                      {client.state}
-                    </span>
-                  </div>
-                )}
-
-                {client.projects && client.projects.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-xs font-medium text-muted-foreground">Active Projects:</p>
-                    <div className="space-y-1">
-                      {client.projects.slice(0, 2).map((project) => (
-                        <div key={project.id} className="flex items-center justify-between">
-                          <span className="text-xs truncate">{project.name}</span>
-                          <Badge
-                            variant="secondary"
-                            className={`text-white text-xs ${statusColors[project.status as keyof typeof statusColors]}`}
-                          >
-                            {statusLabels[project.status as keyof typeof statusLabels]}
-                          </Badge>
-                        </div>
-                      ))}
-                      {client.projects.length > 2 && (
-                        <p className="text-xs text-muted-foreground">+{client.projects.length - 2} more</p>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {client.notes && <p className="text-xs text-muted-foreground line-clamp-2">{client.notes}</p>}
-
-                <div className="pt-2 border-t">
-                  <p className="text-xs text-muted-foreground">
-                    Client since {new Date(client.created_at).toLocaleDateString()}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {filteredClients.length === 0 && !loading && (
-          <div className="text-center py-12">
-            <h3 className="text-lg font-semibold">No clients found</h3>
-            <p className="text-muted-foreground">
-              {searchTerm ? "Try adjusting your search terms" : "Get started by adding your first client"}
-            </p>
-          </div>
-        )}
+        <DataTable columns={columns} data={clients} />
       </PageContent>
+
+      {/* View Details Dialog */}
+      <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Client Details</DialogTitle>
+            <DialogDescription>Complete information for {selectedClient?.name}</DialogDescription>
+          </DialogHeader>
+          {selectedClient && (
+            <div className="grid gap-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium">Name</Label>
+                  <p className="text-sm text-muted-foreground">{selectedClient.name}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Company</Label>
+                  <p className="text-sm text-muted-foreground">{selectedClient.company || "N/A"}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium">Email</Label>
+                  <p className="text-sm text-muted-foreground">{selectedClient.email || "N/A"}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Phone</Label>
+                  <p className="text-sm text-muted-foreground">{selectedClient.phone || "N/A"}</p>
+                </div>
+              </div>
+              <div>
+                <Label className="text-sm font-medium">Address</Label>
+                <p className="text-sm text-muted-foreground">
+                  {selectedClient.address && (
+                    <>
+                      {selectedClient.address}
+                      <br />
+                      {selectedClient.city}, {selectedClient.state} {selectedClient.zip_code}
+                      <br />
+                      {selectedClient.country}
+                    </>
+                  )}
+                  {!selectedClient.address && "N/A"}
+                </p>
+              </div>
+              {selectedClient.notes && (
+                <div>
+                  <Label className="text-sm font-medium">Notes</Label>
+                  <p className="text-sm text-muted-foreground">{selectedClient.notes}</p>
+                </div>
+              )}
+              {selectedClient.projects && selectedClient.projects.length > 0 && (
+                <div>
+                  <Label className="text-sm font-medium">Projects</Label>
+                  <div className="space-y-2 mt-2">
+                    {selectedClient.projects.map((project) => (
+                      <div key={project.id} className="flex items-center justify-between p-2 border rounded">
+                        <span className="text-sm">{project.name}</span>
+                        <Badge
+                          variant="secondary"
+                          className={`text-white text-xs ${statusColors[project.status as keyof typeof statusColors]}`}
+                        >
+                          {statusLabels[project.status as keyof typeof statusLabels]}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Client Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Client</DialogTitle>
+            <DialogDescription>Update client information</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="name">Name *</Label>
+                <Input
+                  id="name"
+                  value={editingClient.name || ""}
+                  onChange={(e) => setEditingClient({ ...editingClient, name: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="company">Company</Label>
+                <Input
+                  id="company"
+                  value={editingClient.company || ""}
+                  onChange={(e) => setEditingClient({ ...editingClient, company: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={editingClient.email || ""}
+                  onChange={(e) => setEditingClient({ ...editingClient, email: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="phone">Phone</Label>
+                <Input
+                  id="phone"
+                  value={editingClient.phone || ""}
+                  onChange={(e) => setEditingClient({ ...editingClient, phone: e.target.value })}
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="address">Address</Label>
+              <Input
+                id="address"
+                value={editingClient.address || ""}
+                onChange={(e) => setEditingClient({ ...editingClient, address: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="city">City</Label>
+                <Input
+                  id="city"
+                  value={editingClient.city || ""}
+                  onChange={(e) => setEditingClient({ ...editingClient, city: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="state">State</Label>
+                <Input
+                  id="state"
+                  value={editingClient.state || ""}
+                  onChange={(e) => setEditingClient({ ...editingClient, state: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="zip_code">Zip Code</Label>
+                <Input
+                  id="zip_code"
+                  value={editingClient.zip_code || ""}
+                  onChange={(e) => setEditingClient({ ...editingClient, zip_code: e.target.value })}
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="country">Country</Label>
+              <Input
+                id="country"
+                value={editingClient.country || ""}
+                onChange={(e) => setEditingClient({ ...editingClient, country: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="notes">Notes</Label>
+              <Textarea
+                id="notes"
+                value={editingClient.notes || ""}
+                onChange={(e) => setEditingClient({ ...editingClient, notes: e.target.value })}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveClient} disabled={!editingClient.name}>
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Client Dialog */}
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Add New Client</DialogTitle>
+            <DialogDescription>Create a new client record</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="new-name">Name *</Label>
+                <Input
+                  id="new-name"
+                  value={editingClient.name || ""}
+                  onChange={(e) => setEditingClient({ ...editingClient, name: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="new-company">Company</Label>
+                <Input
+                  id="new-company"
+                  value={editingClient.company || ""}
+                  onChange={(e) => setEditingClient({ ...editingClient, company: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="new-email">Email</Label>
+                <Input
+                  id="new-email"
+                  type="email"
+                  value={editingClient.email || ""}
+                  onChange={(e) => setEditingClient({ ...editingClient, email: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="new-phone">Phone</Label>
+                <Input
+                  id="new-phone"
+                  value={editingClient.phone || ""}
+                  onChange={(e) => setEditingClient({ ...editingClient, phone: e.target.value })}
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="new-address">Address</Label>
+              <Input
+                id="new-address"
+                value={editingClient.address || ""}
+                onChange={(e) => setEditingClient({ ...editingClient, address: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="new-city">City</Label>
+                <Input
+                  id="new-city"
+                  value={editingClient.city || ""}
+                  onChange={(e) => setEditingClient({ ...editingClient, city: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="new-state">State</Label>
+                <Input
+                  id="new-state"
+                  value={editingClient.state || ""}
+                  onChange={(e) => setEditingClient({ ...editingClient, state: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="new-zip_code">Zip Code</Label>
+                <Input
+                  id="new-zip_code"
+                  value={editingClient.zip_code || ""}
+                  onChange={(e) => setEditingClient({ ...editingClient, zip_code: e.target.value })}
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="new-country">Country</Label>
+              <Input
+                id="new-country"
+                value={editingClient.country || ""}
+                onChange={(e) => setEditingClient({ ...editingClient, country: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="new-notes">Notes</Label>
+              <Textarea
+                id="new-notes"
+                value={editingClient.notes || ""}
+                onChange={(e) => setEditingClient({ ...editingClient, notes: e.target.value })}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveClient} disabled={!editingClient.name}>
+              Add Client
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete {selectedClient?.name} and all associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete Client
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }
