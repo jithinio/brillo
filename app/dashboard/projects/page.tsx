@@ -8,7 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { supabase } from "@/lib/supabase"
+import { PageHeader, PageContent, PageTitle } from "@/components/page-header"
+import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 
 interface Project {
   id: string
@@ -157,6 +158,14 @@ export default function ProjectsPage() {
     try {
       setError(null)
 
+      // Check if Supabase is properly configured
+      if (!isSupabaseConfigured()) {
+        console.log("Supabase not configured, using mock data")
+        setProjects(mockProjects)
+        setError("Using demo data - Supabase not configured")
+        return
+      }
+
       const { data, error } = await supabase
         .from("projects")
         .select(`
@@ -172,7 +181,7 @@ export default function ProjectsPage() {
         console.error("Supabase error:", error)
         // Use mock data as fallback
         setProjects(mockProjects)
-        setError("Using demo data - database not connected")
+        setError("Using demo data - database connection failed")
       } else {
         setProjects(data || [])
       }
@@ -180,7 +189,7 @@ export default function ProjectsPage() {
       console.error("Error fetching projects:", error)
       // Use mock data as fallback
       setProjects(mockProjects)
-      setError("Using demo data - database not connected")
+      setError("Using demo data - connection error")
     } finally {
       setLoading(false)
     }
@@ -204,177 +213,176 @@ export default function ProjectsPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
-            <p className="text-muted-foreground">Track and manage your projects</p>
+      <>
+        <PageHeader title="Projects" breadcrumbs={[{ label: "Projects" }]} />
+        <PageContent>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {[...Array(6)].map((_, i) => (
+              <Card key={i} className="animate-pulse">
+                <CardHeader className="space-y-2">
+                  <div className="h-4 bg-muted rounded w-3/4"></div>
+                  <div className="h-3 bg-muted rounded w-1/2"></div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div className="h-3 bg-muted rounded"></div>
+                    <div className="h-3 bg-muted rounded w-2/3"></div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {[...Array(6)].map((_, i) => (
-            <Card key={i} className="animate-pulse">
-              <CardHeader className="space-y-2">
-                <div className="h-4 bg-muted rounded w-3/4"></div>
-                <div className="h-3 bg-muted rounded w-1/2"></div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="h-3 bg-muted rounded"></div>
-                  <div className="h-3 bg-muted rounded w-2/3"></div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
+        </PageContent>
+      </>
     )
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
-          <p className="text-muted-foreground">Track progress and manage your active projects</p>
-          {error && <p className="text-sm text-yellow-600 mt-1">⚠️ {error}</p>}
+    <>
+      <PageHeader
+        title="Projects"
+        breadcrumbs={[{ label: "Projects" }]}
+        action={
+          <Button size="sm">
+            <Plus className="mr-2 h-4 w-4" />
+            New Project
+          </Button>
+        }
+      />
+      <PageContent>
+        <PageTitle title="Projects" description="Track progress and manage your active projects" error={error} />
+
+        <div className="flex items-center space-x-2">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search projects..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-8"
+            />
+          </div>
         </div>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          New Project
-        </Button>
-      </div>
 
-      <div className="flex items-center space-x-2">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search projects..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-8"
-          />
-        </div>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {filteredProjects.map((project) => (
-          <Card key={project.id} className="hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <div className="space-y-1">
-                <CardTitle className="text-base">{project.name}</CardTitle>
-                {project.clients && (
-                  <CardDescription className="text-xs">
-                    {project.clients.company || project.clients.name}
-                  </CardDescription>
-                )}
-              </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="h-8 w-8 p-0">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem>View Project</DropdownMenuItem>
-                  <DropdownMenuItem>Edit Project</DropdownMenuItem>
-                  <DropdownMenuItem>Create Invoice</DropdownMenuItem>
-                  <DropdownMenuItem>Time Tracking</DropdownMenuItem>
-                  <DropdownMenuItem className="text-destructive">Delete Project</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Badge
-                  variant="secondary"
-                  className={`text-white ${statusColors[project.status as keyof typeof statusColors]}`}
-                >
-                  {statusLabels[project.status as keyof typeof statusLabels]}
-                </Badge>
-                {project.budget && (
-                  <div className="flex items-center space-x-1 text-sm font-semibold">
-                    <DollarSign className="h-3 w-3" />
-                    <span>${project.budget.toLocaleString()}</span>
-                  </div>
-                )}
-              </div>
-
-              {project.description && (
-                <p className="text-sm text-muted-foreground line-clamp-2">{project.description}</p>
-              )}
-
-              {project.progress !== undefined && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Progress</span>
-                    <span className="font-medium">{project.progress}%</span>
-                  </div>
-                  <Progress value={project.progress} className="h-2" />
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {filteredProjects.map((project) => (
+            <Card key={project.id} className="hover:shadow-md transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div className="space-y-1">
+                  <CardTitle className="text-base">{project.name}</CardTitle>
+                  {project.clients && (
+                    <CardDescription className="text-xs">
+                      {project.clients.company || project.clients.name}
+                    </CardDescription>
+                  )}
                 </div>
-              )}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="h-8 w-8 p-0">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem>View Project</DropdownMenuItem>
+                    <DropdownMenuItem>Edit Project</DropdownMenuItem>
+                    <DropdownMenuItem>Create Invoice</DropdownMenuItem>
+                    <DropdownMenuItem>Time Tracking</DropdownMenuItem>
+                    <DropdownMenuItem className="text-destructive">Delete Project</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Badge
+                    variant="secondary"
+                    className={`text-white ${statusColors[project.status as keyof typeof statusColors]}`}
+                  >
+                    {statusLabels[project.status as keyof typeof statusLabels]}
+                  </Badge>
+                  {project.budget && (
+                    <div className="flex items-center space-x-1 text-sm font-semibold">
+                      <DollarSign className="h-3 w-3" />
+                      <span>${project.budget.toLocaleString()}</span>
+                    </div>
+                  )}
+                </div>
 
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                {project.estimated_hours && project.actual_hours !== undefined && (
-                  <div className="flex items-center space-x-2">
-                    <Clock className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-muted-foreground">
-                      {project.actual_hours}h / {project.estimated_hours}h
+                {project.description && (
+                  <p className="text-sm text-muted-foreground line-clamp-2">{project.description}</p>
+                )}
+
+                {project.progress !== undefined && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Progress</span>
+                      <span className="font-medium">{project.progress}%</span>
+                    </div>
+                    <Progress value={project.progress} className="h-2" />
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  {project.estimated_hours && project.actual_hours !== undefined && (
+                    <div className="flex items-center space-x-2">
+                      <Clock className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-muted-foreground">
+                        {project.actual_hours}h / {project.estimated_hours}h
+                      </span>
+                    </div>
+                  )}
+
+                  {project.hourly_rate && (
+                    <div className="flex items-center space-x-2">
+                      <TrendingUp className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-muted-foreground">${project.hourly_rate}/hr</span>
+                    </div>
+                  )}
+                </div>
+
+                {project.end_date && project.status !== "completed" && (
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center space-x-2 text-muted-foreground">
+                      <Calendar className="h-3 w-3" />
+                      <span>Due {new Date(project.end_date).toLocaleDateString()}</span>
+                    </div>
+                    <span
+                      className={`text-xs font-medium ${
+                        getDaysRemaining(project.end_date) < 0
+                          ? "text-red-600"
+                          : getDaysRemaining(project.end_date) <= 7
+                            ? "text-yellow-600"
+                            : "text-muted-foreground"
+                      }`}
+                    >
+                      {getDaysRemaining(project.end_date) < 0
+                        ? `${Math.abs(getDaysRemaining(project.end_date))} days overdue`
+                        : `${getDaysRemaining(project.end_date)} days left`}
                     </span>
                   </div>
                 )}
 
-                {project.hourly_rate && (
-                  <div className="flex items-center space-x-2">
-                    <TrendingUp className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-muted-foreground">${project.hourly_rate}/hr</span>
+                {project.clients && (
+                  <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                    <User className="h-3 w-3" />
+                    <span className="truncate">{project.clients.name}</span>
                   </div>
                 )}
-              </div>
 
-              {project.end_date && project.status !== "completed" && (
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center space-x-2 text-muted-foreground">
-                    <Calendar className="h-3 w-3" />
-                    <span>Due {new Date(project.end_date).toLocaleDateString()}</span>
-                  </div>
-                  <span
-                    className={`text-xs font-medium ${
-                      getDaysRemaining(project.end_date) < 0
-                        ? "text-red-600"
-                        : getDaysRemaining(project.end_date) <= 7
-                          ? "text-yellow-600"
-                          : "text-muted-foreground"
-                    }`}
-                  >
-                    {getDaysRemaining(project.end_date) < 0
-                      ? `${Math.abs(getDaysRemaining(project.end_date))} days overdue`
-                      : `${getDaysRemaining(project.end_date)} days left`}
-                  </span>
-                </div>
-              )}
-
-              {project.clients && (
-                <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                  <User className="h-3 w-3" />
-                  <span className="truncate">{project.clients.name}</span>
-                </div>
-              )}
-
-              {project.notes && <p className="text-xs text-muted-foreground line-clamp-2">{project.notes}</p>}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {filteredProjects.length === 0 && !loading && (
-        <div className="text-center py-12">
-          <h3 className="text-lg font-semibold">No projects found</h3>
-          <p className="text-muted-foreground">
-            {searchTerm ? "Try adjusting your search terms" : "Get started by creating your first project"}
-          </p>
+                {project.notes && <p className="text-xs text-muted-foreground line-clamp-2">{project.notes}</p>}
+              </CardContent>
+            </Card>
+          ))}
         </div>
-      )}
-    </div>
+
+        {filteredProjects.length === 0 && !loading && (
+          <div className="text-center py-12">
+            <h3 className="text-lg font-semibold">No projects found</h3>
+            <p className="text-muted-foreground">
+              {searchTerm ? "Try adjusting your search terms" : "Get started by creating your first project"}
+            </p>
+          </div>
+        )}
+      </PageContent>
+    </>
   )
 }

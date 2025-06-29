@@ -47,7 +47,7 @@ export default function AnalyticsPage() {
         </div>
         <div className="flex items-center space-x-2">
           <CalendarDateRangePicker />
-          <Button>Export Report</Button>
+          <Button size="sm">Export Report</Button>
         </div>
       </div>
 

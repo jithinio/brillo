@@ -30,11 +30,11 @@ export default function CustomizeInvoicePage() {
           <p className="text-muted-foreground">Personalize your invoice template with your branding and preferences.</p>
         </div>
         <div className="flex space-x-2">
-          <Button variant="outline">
+          <Button variant="outline" size="sm">
             <Eye className="mr-2 h-4 w-4" />
             Preview
           </Button>
-          <Button>
+          <Button size="sm">
             <Save className="mr-2 h-4 w-4" />
             Save Template
           </Button>

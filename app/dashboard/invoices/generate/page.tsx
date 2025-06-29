@@ -52,11 +52,11 @@ export default function GenerateInvoicePage() {
           <p className="text-muted-foreground">Create a new invoice for your client.</p>
         </div>
         <div className="flex space-x-2">
-          <Button variant="outline">
+          <Button variant="outline" size="sm">
             <Save className="mr-2 h-4 w-4" />
             Save Draft
           </Button>
-          <Button>
+          <Button size="sm">
             <Send className="mr-2 h-4 w-4" />
             Send Invoice
           </Button>

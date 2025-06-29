@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { supabase } from "@/lib/supabase"
+import { PageHeader, PageContent, PageTitle } from "@/components/page-header"
+import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 
 interface Invoice {
   id: string
@@ -158,25 +159,33 @@ export default function InvoicesPage() {
     try {
       setError(null)
 
+      // Check if Supabase is properly configured
+      if (!isSupabaseConfigured()) {
+        console.log("Supabase not configured, using mock data")
+        setInvoices(mockInvoices)
+        setError("Using demo data - Supabase not configured")
+        return
+      }
+
       const { data, error } = await supabase
         .from("invoices")
         .select(`
-          *,
-          clients (
-            name,
-            company
-          ),
-          projects (
-            name
-          )
-        `)
+        *,
+        clients (
+          name,
+          company
+        ),
+        projects (
+          name
+        )
+      `)
         .order("created_at", { ascending: false })
 
       if (error) {
         console.error("Supabase error:", error)
         // Use mock data as fallback
         setInvoices(mockInvoices)
-        setError("Using demo data - database not connected")
+        setError("Using demo data - database connection failed")
       } else {
         setInvoices(data || [])
       }
@@ -184,7 +193,7 @@ export default function InvoicesPage() {
       console.error("Error fetching invoices:", error)
       // Use mock data as fallback
       setInvoices(mockInvoices)
-      setError("Using demo data - database not connected")
+      setError("Using demo data - connection error")
     } finally {
       setLoading(false)
     }
@@ -207,160 +216,159 @@ export default function InvoicesPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Invoices</h1>
-            <p className="text-muted-foreground">Manage your invoices and payments</p>
+      <>
+        <PageHeader title="Invoices" breadcrumbs={[{ label: "Invoices" }]} />
+        <PageContent>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {[...Array(6)].map((_, i) => (
+              <Card key={i} className="animate-pulse">
+                <CardHeader className="space-y-2">
+                  <div className="h-4 bg-muted rounded w-3/4"></div>
+                  <div className="h-3 bg-muted rounded w-1/2"></div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div className="h-3 bg-muted rounded"></div>
+                    <div className="h-3 bg-muted rounded w-2/3"></div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {[...Array(6)].map((_, i) => (
-            <Card key={i} className="animate-pulse">
-              <CardHeader className="space-y-2">
-                <div className="h-4 bg-muted rounded w-3/4"></div>
-                <div className="h-3 bg-muted rounded w-1/2"></div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="h-3 bg-muted rounded"></div>
-                  <div className="h-3 bg-muted rounded w-2/3"></div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
+        </PageContent>
+      </>
     )
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Invoices</h1>
-          <p className="text-muted-foreground">Create, send, and track your invoices</p>
-          {error && <p className="text-sm text-yellow-600 mt-1">⚠️ {error}</p>}
+    <>
+      <PageHeader
+        title="Invoices"
+        breadcrumbs={[{ label: "Invoices" }]}
+        action={
+          <Button size="sm">
+            <Plus className="mr-2 h-4 w-4" />
+            Create Invoice
+          </Button>
+        }
+      />
+      <PageContent>
+        <PageTitle title="Invoices" description="Create, send, and track your invoices" error={error} />
+
+        <div className="flex items-center space-x-2">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search invoices..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-8"
+            />
+          </div>
         </div>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Create Invoice
-        </Button>
-      </div>
 
-      <div className="flex items-center space-x-2">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search invoices..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-8"
-          />
-        </div>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {filteredInvoices.map((invoice) => (
-          <Card key={invoice.id} className="hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <div className="space-y-1">
-                <CardTitle className="text-base flex items-center space-x-2">
-                  <FileText className="h-4 w-4" />
-                  <span>{invoice.invoice_number}</span>
-                </CardTitle>
-                {invoice.clients && (
-                  <CardDescription className="text-xs">
-                    {invoice.clients.company || invoice.clients.name}
-                  </CardDescription>
-                )}
-              </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="h-8 w-8 p-0">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem>View Invoice</DropdownMenuItem>
-                  <DropdownMenuItem>Edit Invoice</DropdownMenuItem>
-                  <DropdownMenuItem>Send Invoice</DropdownMenuItem>
-                  <DropdownMenuItem>Download PDF</DropdownMenuItem>
-                  <DropdownMenuItem className="text-destructive">Delete Invoice</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Badge
-                  variant="secondary"
-                  className={`text-white ${statusColors[invoice.status as keyof typeof statusColors]}`}
-                >
-                  {statusLabels[invoice.status as keyof typeof statusLabels]}
-                </Badge>
-                <div className="flex items-center space-x-1 text-lg font-semibold">
-                  <DollarSign className="h-4 w-4" />
-                  <span>${invoice.total_amount.toLocaleString()}</span>
-                </div>
-              </div>
-
-              {invoice.projects && (
-                <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                  <span className="truncate">{invoice.projects.name}</span>
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center space-x-2 text-muted-foreground">
-                    <Calendar className="h-3 w-3" />
-                    <span>Issued {new Date(invoice.issue_date).toLocaleDateString()}</span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center space-x-2 text-muted-foreground">
-                    <Calendar className="h-3 w-3" />
-                    <span>Due {new Date(invoice.due_date).toLocaleDateString()}</span>
-                  </div>
-                  {invoice.status !== "paid" && (
-                    <span
-                      className={`text-xs font-medium ${
-                        getDaysUntilDue(invoice.due_date) < 0
-                          ? "text-red-600"
-                          : getDaysUntilDue(invoice.due_date) <= 7
-                            ? "text-yellow-600"
-                            : "text-muted-foreground"
-                      }`}
-                    >
-                      {getDaysUntilDue(invoice.due_date) < 0
-                        ? `${Math.abs(getDaysUntilDue(invoice.due_date))} days overdue`
-                        : `${getDaysUntilDue(invoice.due_date)} days left`}
-                    </span>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {filteredInvoices.map((invoice) => (
+            <Card key={invoice.id} className="hover:shadow-md transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div className="space-y-1">
+                  <CardTitle className="text-base flex items-center space-x-2">
+                    <FileText className="h-4 w-4" />
+                    <span>{invoice.invoice_number}</span>
+                  </CardTitle>
+                  {invoice.clients && (
+                    <CardDescription className="text-xs">
+                      {invoice.clients.company || invoice.clients.name}
+                    </CardDescription>
                   )}
                 </div>
-              </div>
-
-              {invoice.clients && (
-                <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                  <User className="h-3 w-3" />
-                  <span className="truncate">{invoice.clients.name}</span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="h-8 w-8 p-0">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem>View Invoice</DropdownMenuItem>
+                    <DropdownMenuItem>Edit Invoice</DropdownMenuItem>
+                    <DropdownMenuItem>Send Invoice</DropdownMenuItem>
+                    <DropdownMenuItem>Download PDF</DropdownMenuItem>
+                    <DropdownMenuItem className="text-destructive">Delete Invoice</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Badge
+                    variant="secondary"
+                    className={`text-white ${statusColors[invoice.status as keyof typeof statusColors]}`}
+                  >
+                    {statusLabels[invoice.status as keyof typeof statusLabels]}
+                  </Badge>
+                  <div className="flex items-center space-x-1 text-lg font-semibold">
+                    <DollarSign className="h-4 w-4" />
+                    <span>${invoice.total_amount.toLocaleString()}</span>
+                  </div>
                 </div>
-              )}
 
-              {invoice.notes && <p className="text-xs text-muted-foreground line-clamp-2">{invoice.notes}</p>}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                {invoice.projects && (
+                  <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                    <span className="truncate">{invoice.projects.name}</span>
+                  </div>
+                )}
 
-      {filteredInvoices.length === 0 && !loading && (
-        <div className="text-center py-12">
-          <h3 className="text-lg font-semibold">No invoices found</h3>
-          <p className="text-muted-foreground">
-            {searchTerm ? "Try adjusting your search terms" : "Get started by creating your first invoice"}
-          </p>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center space-x-2 text-muted-foreground">
+                      <Calendar className="h-3 w-3" />
+                      <span>Issued {new Date(invoice.issue_date).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center space-x-2 text-muted-foreground">
+                      <Calendar className="h-3 w-3" />
+                      <span>Due {new Date(invoice.due_date).toLocaleDateString()}</span>
+                    </div>
+                    {invoice.status !== "paid" && (
+                      <span
+                        className={`text-xs font-medium ${
+                          getDaysUntilDue(invoice.due_date) < 0
+                            ? "text-red-600"
+                            : getDaysUntilDue(invoice.due_date) <= 7
+                              ? "text-yellow-600"
+                              : "text-muted-foreground"
+                        }`}
+                      >
+                        {getDaysUntilDue(invoice.due_date) < 0
+                          ? `${Math.abs(getDaysUntilDue(invoice.due_date))} days overdue`
+                          : `${getDaysUntilDue(invoice.due_date)} days left`}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {invoice.clients && (
+                  <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                    <User className="h-3 w-3" />
+                    <span className="truncate">{invoice.clients.name}</span>
+                  </div>
+                )}
+
+                {invoice.notes && <p className="text-xs text-muted-foreground line-clamp-2">{invoice.notes}</p>}
+              </CardContent>
+            </Card>
+          ))}
         </div>
-      )}
-    </div>
+
+        {filteredInvoices.length === 0 && !loading && (
+          <div className="text-center py-12">
+            <h3 className="text-lg font-semibold">No invoices found</h3>
+            <p className="text-muted-foreground">
+              {searchTerm ? "Try adjusting your search terms" : "Get started by creating your first invoice"}
+            </p>
+          </div>
+        )}
+      </PageContent>
+    </>
   )
 }

@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -10,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Eye, EyeOff } from "lucide-react"
+import { useAuth } from "@/components/auth-provider"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -18,6 +18,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const router = useRouter()
+  const { signIn } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -25,29 +26,39 @@ export default function LoginPage() {
     setError("")
 
     try {
-      // Mock authentication - replace with real Supabase auth later
-      if (email && password) {
-        // Simulate API call delay
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-
-        // Store mock user session
-        localStorage.setItem(
-          "user",
-          JSON.stringify({
-            id: "1",
-            email: email,
-            name: email.split("@")[0],
-          }),
-        )
-
-        router.push("/dashboard")
-      } else {
+      if (!email || !password) {
         setError("Please enter both email and password")
+        return
+      }
+
+      const { error } = await signIn(email, password)
+
+      if (error) {
+        setError(error.message)
+      } else {
+        router.push("/dashboard")
       }
     } catch (error) {
       setError("Login failed. Please try again.")
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleGoogleSignIn = async () => {
+    try {
+      const { supabase } = await import("@/lib/supabase")
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`,
+        },
+      })
+      if (error) {
+        setError(error.message)
+      }
+    } catch (error) {
+      setError("Google sign-in failed. Please try again.")
     }
   }
 
@@ -114,7 +125,7 @@ export default function LoginPage() {
                 <span className="px-2 bg-white text-gray-500">Or continue with</span>
               </div>
             </div>
-            <Button variant="outline" className="w-full mt-4 bg-transparent">
+            <Button variant="outline" className="w-full mt-4 bg-transparent" onClick={handleGoogleSignIn} type="button">
               <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24">
                 <path
                   fill="currentColor"

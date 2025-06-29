@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { supabase } from "@/lib/supabase"
+import { PageHeader, PageContent, PageTitle } from "@/components/page-header"
+import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 
 interface Client {
   id: string
@@ -136,6 +137,14 @@ export default function ClientsPage() {
     try {
       setError(null)
 
+      // Check if Supabase is properly configured
+      if (!isSupabaseConfigured()) {
+        console.log("Supabase not configured, using mock data")
+        setClients(mockClients)
+        setError("Using demo data - Supabase not configured")
+        return
+      }
+
       const { data, error } = await supabase
         .from("clients")
         .select(`
@@ -152,7 +161,7 @@ export default function ClientsPage() {
         console.error("Supabase error:", error)
         // Use mock data as fallback
         setClients(mockClients)
-        setError("Using demo data - database not connected")
+        setError("Using demo data - database connection failed")
       } else {
         setClients(data || [])
       }
@@ -160,7 +169,7 @@ export default function ClientsPage() {
       console.error("Error fetching clients:", error)
       // Use mock data as fallback
       setClients(mockClients)
-      setError("Using demo data - database not connected")
+      setError("Using demo data - connection error")
     } finally {
       setLoading(false)
     }
@@ -175,155 +184,158 @@ export default function ClientsPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Clients</h1>
-            <p className="text-muted-foreground">Manage your client relationships</p>
+      <>
+        <PageHeader title="Clients" breadcrumbs={[{ label: "Clients" }]} />
+        <PageContent>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {[...Array(6)].map((_, i) => (
+              <Card key={i} className="animate-pulse">
+                <CardHeader className="space-y-2">
+                  <div className="h-4 bg-muted rounded w-3/4"></div>
+                  <div className="h-3 bg-muted rounded w-1/2"></div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div className="h-3 bg-muted rounded"></div>
+                    <div className="h-3 bg-muted rounded w-2/3"></div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </PageContent>
+      </>
+    )
+  }
+
+  return (
+    <>
+      <PageHeader
+        title="Clients"
+        breadcrumbs={[{ label: "Clients" }]}
+        action={
+          <Button size="sm">
+            <Plus className="mr-2 h-4 w-4" />
+            Add Client
+          </Button>
+        }
+      />
+      <PageContent>
+        <PageTitle
+          title="Clients"
+          description="Manage your client relationships and contact information"
+          error={error}
+        />
+
+        <div className="flex items-center space-x-2">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search clients..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-8"
+            />
           </div>
         </div>
+
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {[...Array(6)].map((_, i) => (
-            <Card key={i} className="animate-pulse">
-              <CardHeader className="space-y-2">
-                <div className="h-4 bg-muted rounded w-3/4"></div>
-                <div className="h-3 bg-muted rounded w-1/2"></div>
+          {filteredClients.map((client) => (
+            <Card key={client.id} className="hover:shadow-md transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div className="space-y-1">
+                  <CardTitle className="text-base">{client.name}</CardTitle>
+                  {client.company && (
+                    <CardDescription className="text-xs flex items-center space-x-1">
+                      <Building className="h-3 w-3" />
+                      <span>{client.company}</span>
+                    </CardDescription>
+                  )}
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="h-8 w-8 p-0">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem>View Details</DropdownMenuItem>
+                    <DropdownMenuItem>Edit Client</DropdownMenuItem>
+                    <DropdownMenuItem>Create Invoice</DropdownMenuItem>
+                    <DropdownMenuItem>New Project</DropdownMenuItem>
+                    <DropdownMenuItem className="text-destructive">Delete Client</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="h-3 bg-muted rounded"></div>
-                  <div className="h-3 bg-muted rounded w-2/3"></div>
+              <CardContent className="space-y-3">
+                {client.email && (
+                  <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                    <Mail className="h-3 w-3" />
+                    <span className="truncate">{client.email}</span>
+                  </div>
+                )}
+
+                {client.phone && (
+                  <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                    <Phone className="h-3 w-3" />
+                    <span>{client.phone}</span>
+                  </div>
+                )}
+
+                {(client.city || client.state) && (
+                  <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                    <MapPin className="h-3 w-3" />
+                    <span>
+                      {client.city}
+                      {client.city && client.state && ", "}
+                      {client.state}
+                    </span>
+                  </div>
+                )}
+
+                {client.projects && client.projects.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">Active Projects:</p>
+                    <div className="space-y-1">
+                      {client.projects.slice(0, 2).map((project) => (
+                        <div key={project.id} className="flex items-center justify-between">
+                          <span className="text-xs truncate">{project.name}</span>
+                          <Badge
+                            variant="secondary"
+                            className={`text-white text-xs ${statusColors[project.status as keyof typeof statusColors]}`}
+                          >
+                            {statusLabels[project.status as keyof typeof statusLabels]}
+                          </Badge>
+                        </div>
+                      ))}
+                      {client.projects.length > 2 && (
+                        <p className="text-xs text-muted-foreground">+{client.projects.length - 2} more</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {client.notes && <p className="text-xs text-muted-foreground line-clamp-2">{client.notes}</p>}
+
+                <div className="pt-2 border-t">
+                  <p className="text-xs text-muted-foreground">
+                    Client since {new Date(client.created_at).toLocaleDateString()}
+                  </p>
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
-      </div>
-    )
-  }
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Clients</h1>
-          <p className="text-muted-foreground">Manage your client relationships and contact information</p>
-          {error && <p className="text-sm text-yellow-600 mt-1">⚠️ {error}</p>}
-        </div>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Client
-        </Button>
-      </div>
-
-      <div className="flex items-center space-x-2">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search clients..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-8"
-          />
-        </div>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {filteredClients.map((client) => (
-          <Card key={client.id} className="hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <div className="space-y-1">
-                <CardTitle className="text-base">{client.name}</CardTitle>
-                {client.company && (
-                  <CardDescription className="text-xs flex items-center space-x-1">
-                    <Building className="h-3 w-3" />
-                    <span>{client.company}</span>
-                  </CardDescription>
-                )}
-              </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="h-8 w-8 p-0">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem>View Details</DropdownMenuItem>
-                  <DropdownMenuItem>Edit Client</DropdownMenuItem>
-                  <DropdownMenuItem>Create Invoice</DropdownMenuItem>
-                  <DropdownMenuItem>New Project</DropdownMenuItem>
-                  <DropdownMenuItem className="text-destructive">Delete Client</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {client.email && (
-                <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                  <Mail className="h-3 w-3" />
-                  <span className="truncate">{client.email}</span>
-                </div>
-              )}
-
-              {client.phone && (
-                <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                  <Phone className="h-3 w-3" />
-                  <span>{client.phone}</span>
-                </div>
-              )}
-
-              {(client.city || client.state) && (
-                <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                  <MapPin className="h-3 w-3" />
-                  <span>
-                    {client.city}
-                    {client.city && client.state && ", "}
-                    {client.state}
-                  </span>
-                </div>
-              )}
-
-              {client.projects && client.projects.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground">Active Projects:</p>
-                  <div className="space-y-1">
-                    {client.projects.slice(0, 2).map((project) => (
-                      <div key={project.id} className="flex items-center justify-between">
-                        <span className="text-xs truncate">{project.name}</span>
-                        <Badge
-                          variant="secondary"
-                          className={`text-white text-xs ${statusColors[project.status as keyof typeof statusColors]}`}
-                        >
-                          {statusLabels[project.status as keyof typeof statusLabels]}
-                        </Badge>
-                      </div>
-                    ))}
-                    {client.projects.length > 2 && (
-                      <p className="text-xs text-muted-foreground">+{client.projects.length - 2} more</p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {client.notes && <p className="text-xs text-muted-foreground line-clamp-2">{client.notes}</p>}
-
-              <div className="pt-2 border-t">
-                <p className="text-xs text-muted-foreground">
-                  Client since {new Date(client.created_at).toLocaleDateString()}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {filteredClients.length === 0 && !loading && (
-        <div className="text-center py-12">
-          <h3 className="text-lg font-semibold">No clients found</h3>
-          <p className="text-muted-foreground">
-            {searchTerm ? "Try adjusting your search terms" : "Get started by adding your first client"}
-          </p>
-        </div>
-      )}
-    </div>
+        {filteredClients.length === 0 && !loading && (
+          <div className="text-center py-12">
+            <h3 className="text-lg font-semibold">No clients found</h3>
+            <p className="text-muted-foreground">
+              {searchTerm ? "Try adjusting your search terms" : "Get started by adding your first client"}
+            </p>
+          </div>
+        )}
+      </PageContent>
+    </>
   )
 }

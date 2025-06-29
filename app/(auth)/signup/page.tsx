@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -10,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Eye, EyeOff } from "lucide-react"
+import { useAuth } from "@/components/auth-provider"
 
 export default function SignupPage() {
   const [firstName, setFirstName] = useState("")
@@ -23,6 +23,7 @@ export default function SignupPage() {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const router = useRouter()
+  const { signUp } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -47,30 +48,39 @@ export default function SignupPage() {
         return
       }
 
-      // Mock signup - replace with real Supabase auth later
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      const { error } = await signUp(email, password, {
+        first_name: firstName,
+        last_name: lastName,
+        full_name: `${firstName} ${lastName}`,
+      })
 
-      // Store mock user session
-      localStorage.setItem(
-        "user",
-        JSON.stringify({
-          id: "1",
-          email: email,
-          name: `${firstName} ${lastName}`,
-        }),
-      )
-
-      setSuccess("Account created successfully! Redirecting...")
-
-      // Redirect to dashboard after success
-      setTimeout(() => {
-        router.push("/dashboard")
-      }, 1500)
+      if (error) {
+        setError(error.message)
+      } else {
+        setSuccess("Account created successfully! Please check your email to verify your account.")
+        // Don't redirect immediately, let user verify email first
+      }
     } catch (error) {
       setError("Signup failed. Please try again.")
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleGoogleSignUp = async () => {
+    try {
+      const { supabase } = await import("@/lib/supabase")
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`,
+        },
+      })
+      if (error) {
+        setError(error.message)
+      }
+    } catch (error) {
+      setError("Google sign-up failed. Please try again.")
     }
   }
 
@@ -177,7 +187,7 @@ export default function SignupPage() {
                 <span className="px-2 bg-white text-gray-500">Or continue with</span>
               </div>
             </div>
-            <Button variant="outline" className="w-full mt-4 bg-transparent">
+            <Button variant="outline" className="w-full mt-4 bg-transparent" onClick={handleGoogleSignUp} type="button">
               <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24">
                 <path
                   fill="currentColor"
