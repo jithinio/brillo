@@ -25,7 +25,7 @@ interface PageHeaderProps {
 export function PageHeader({ title, description, breadcrumbs = [], action, error }: PageHeaderProps) {
   return (
     <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
-      <div className="flex items-center gap-2 px-4">
+      <div className="flex items-center gap-2 px-6">
         <SidebarTrigger className="-ml-1" />
         <Separator orientation="vertical" className="mr-2 h-4" />
         <Breadcrumb>
@@ -48,7 +48,7 @@ export function PageHeader({ title, description, breadcrumbs = [], action, error
           </BreadcrumbList>
         </Breadcrumb>
       </div>
-      <div className="ml-auto px-4 flex items-center gap-2">
+      <div className="ml-auto px-6 flex items-center gap-2">
         <ThemeToggle />
         {action}
       </div>
@@ -57,7 +57,7 @@ export function PageHeader({ title, description, breadcrumbs = [], action, error
 }
 
 export function PageContent({ children }: { children: React.ReactNode }) {
-  return <div className="flex flex-1 flex-col gap-4 p-4 pt-0">{children}</div>
+  return <div className="flex flex-1 flex-col gap-4 px-6 pb-4 pt-0">{children}</div>
 }
 
 export function PageTitle({

@@ -85,7 +85,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
             checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
             onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
             aria-label="Select all"
-            className="translate-y-[2px]"
+            className="translate-y-0.5"
           />
         </div>
       ),
@@ -95,7 +95,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
             checked={row.getIsSelected()}
             onCheckedChange={(value) => row.toggleSelected(!!value)}
             aria-label="Select row"
-            className="translate-y-[2px]"
+            className="translate-y-0.5"
           />
         </div>
       ),
@@ -121,7 +121,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
         const project = row.original
         return (
           <div className="min-w-[200px] max-w-[250px]">
-            <div className="font-medium truncate" title={project.name}>
+            <div className="truncate font-medium" title={project.name}>
               {project.name}
             </div>
           </div>
@@ -149,7 +149,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
         return client ? (
           <div className="flex items-center space-x-2 min-w-[150px] max-w-[180px]">
             <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-            <div className="font-medium truncate" title={client.name}>
+            <div className="truncate font-normal" title={client.name}>
               {client.name}
             </div>
           </div>
@@ -175,8 +175,8 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
 
         return (
           <div className="min-w-[120px]">
-            <Badge variant="outline" className="text-muted-foreground">
-              <Icon className="mr-1 h-3 w-3" />
+            <Badge className="font-normal" variant="outline">
+              <Icon className="mr-1.5 h-3 w-3" />
               {config.label}
             </Badge>
           </div>
@@ -206,7 +206,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
             {budget ? (
               <div className="flex items-center space-x-2">
                 <DollarSign className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                <span className="font-medium truncate">${budget.toLocaleString()}</span>
+                <span className="truncate font-normal">${budget.toLocaleString()}</span>
               </div>
             ) : (
               <span className="text-muted-foreground">—</span>
@@ -238,7 +238,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
             {expenses ? (
               <div className="flex items-center space-x-2">
                 <DollarSign className="h-4 w-4 text-red-500 flex-shrink-0" />
-                <span className="font-medium text-red-600 truncate">${expenses.toLocaleString()}</span>
+                <span className="text-red-600 truncate font-normal">${expenses.toLocaleString()}</span>
               </div>
             ) : (
               <span className="text-muted-foreground">$0</span>
@@ -270,7 +270,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
             {received ? (
               <div className="flex items-center space-x-2">
                 <DollarSign className="h-4 w-4 text-green-500 flex-shrink-0" />
-                <span className="font-medium text-green-600 truncate">${received.toLocaleString()}</span>
+                <span className="text-green-600 truncate text-center font-normal">${received.toLocaleString()}</span>
               </div>
             ) : (
               <span className="text-muted-foreground">$0</span>
@@ -302,7 +302,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
             {pending ? (
               <div className="flex items-center space-x-2">
                 <DollarSign className="h-4 w-4 text-yellow-500 flex-shrink-0" />
-                <span className="font-medium text-yellow-600 truncate">${pending.toLocaleString()}</span>
+                <span className="text-yellow-600 truncate font-normal">${pending.toLocaleString()}</span>
               </div>
             ) : (
               <span className="text-muted-foreground">$0</span>

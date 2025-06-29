@@ -85,8 +85,8 @@ export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData
   })
 
   return (
-    <div className="w-full flex-col justify-start gap-6">
-      <div className="flex items-center justify-between py-4">
+    <div className="w-full space-y-4">
+      <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <div className="relative">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -158,9 +158,9 @@ export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-lg border">
+      <div className="rounded-md border">
         <Table>
-          <TableHeader className="bg-muted/50 sticky top-0 z-10">
+          <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
@@ -195,12 +195,12 @@ export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData
         </Table>
       </div>
 
-      <div className="flex items-center justify-between px-4">
+      <div className="flex items-center justify-between space-x-2 py-4">
         <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
           {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} row(s)
           selected.
         </div>
-        <div className="flex w-full items-center gap-8 lg:w-fit">
+        <div className="flex items-center space-x-6 lg:space-x-8">
           <div className="hidden items-center gap-2 lg:flex">
             <Label htmlFor="rows-per-page" className="text-sm font-medium">
               Rows per page
@@ -223,10 +223,10 @@ export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData
               </SelectContent>
             </Select>
           </div>
-          <div className="flex w-fit items-center justify-center text-sm font-medium">
+          <div className="flex items-center justify-center text-sm font-medium">
             Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
           </div>
-          <div className="ml-auto flex items-center gap-2 lg:ml-0">
+          <div className="flex items-center space-x-2">
             <Button
               variant="outline"
               className="h-8 w-8 bg-background"

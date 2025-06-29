@@ -7,7 +7,10 @@ import { AuthProvider } from "@/components/auth-provider"
 import { SettingsProvider } from "@/components/settings-provider"
 import { Toaster } from "@/components/ui/toaster"
 
-const inter = Inter({ subsets: ["latin"] })
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-sans",
+})
 
 export const metadata: Metadata = {
   title: "Suitebase - Business Management Platform",
