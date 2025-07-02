@@ -14,7 +14,7 @@ Any changes you make to your deployed app will be automatically pushed to this r
 
 Your project is live at:
 
-**[https://vercel.com/jithinios-projects/v0-suitebase-app-requirements](https://vercel.com/jithinios-projects/v0-suitebase-app-requirements)**
+**[https://suitebase-cursor-r9c83heut-jithinios-projects.vercel.app](https://suitebase-cursor-r9c83heut-jithinios-projects.vercel.app)**
 
 ## Build your app
 
