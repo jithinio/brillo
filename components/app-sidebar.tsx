@@ -1,7 +1,7 @@
 "use client"
 
 import type * as React from "react"
-import { BookOpen, Bot, Frame, GalleryVerticalEnd, PieChart, Settings2, SquareTerminal } from "lucide-react"
+import { Bot, Gauge, GalleryVerticalEnd, PieChart, ReceiptText, Settings2 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
 import { NavSecondary } from "@/components/nav-secondary"
@@ -22,7 +22,7 @@ const data = {
     {
       title: "Dashboard",
       url: "/dashboard",
-      icon: SquareTerminal,
+      icon: Gauge,
       isActive: true,
     },
     {
@@ -33,12 +33,12 @@ const data = {
     {
       title: "Projects",
       url: "/dashboard/projects",
-      icon: BookOpen,
+      icon: GalleryVerticalEnd,
     },
     {
       title: "Invoices",
       url: "/dashboard/invoices",
-      icon: Frame,
+      icon: ReceiptText,
       items: [
         {
           title: "All Invoices",
