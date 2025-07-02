@@ -256,26 +256,42 @@ export default function ClientsPage() {
       if (isSupabaseConfigured()) {
         if (selectedClient) {
           // Update existing client
-          const { error } = await supabase.from("clients").update(editingClient).eq("id", selectedClient.id)
+          const { data, error } = await supabase
+            .from("clients")
+            .update(editingClient)
+            .eq("id", selectedClient.id)
+            .select()
 
           if (error) throw error
 
-          // Update local state
-          setClients(clients.map((c) => (c.id === selectedClient.id ? { ...c, ...editingClient } : c)))
+          // Update local state with returned data
+          setClients(clients.map((c) => (c.id === selectedClient.id ? data[0] : c)))
         } else {
-          // Add new client
-          const newClient = {
+          // Add new client - let Supabase generate the ID
+          const clientData = {
             ...editingClient,
-            id: Date.now().toString(),
-            created_at: new Date().toISOString(),
+            // Remove any undefined or null values
+            name: editingClient.name?.trim(),
+            email: editingClient.email?.trim() || null,
+            phone: editingClient.phone?.trim() || null,
+            company: editingClient.company?.trim() || null,
+            address: editingClient.address?.trim() || null,
+            city: editingClient.city?.trim() || null,
+            state: editingClient.state?.trim() || null,
+            zip_code: editingClient.zip_code?.trim() || null,
+            country: editingClient.country?.trim() || 'United States',
+            notes: editingClient.notes?.trim() || null,
           }
 
-          const { error } = await supabase.from("clients").insert([newClient])
+          const { data, error } = await supabase
+            .from("clients")
+            .insert([clientData])
+            .select()
 
           if (error) throw error
 
-          // Add to local state
-          setClients([newClient as Client, ...clients])
+          // Add to local state with the returned data (includes generated ID)
+          setClients([data[0], ...clients])
         }
       } else {
         // Mock data handling
@@ -302,9 +318,10 @@ export default function ClientsPage() {
       setEditingClient({})
       setAcceptTerms(false)
     } catch (error) {
+      console.error("Error saving client:", error)
       toast({
         title: "Error",
-        description: `Failed to ${selectedClient ? "update" : "add"} client. Please try again.`,
+        description: `Failed to ${selectedClient ? "update" : "add"} client: ${error instanceof Error ? error.message : "Please try again."}`,
         variant: "destructive",
       })
     }
@@ -631,7 +648,11 @@ export default function ClientsPage() {
               />
             </div>
             <div className="flex items-center space-x-2">
-              <Checkbox id="terms" checked={acceptTerms} onCheckedChange={setAcceptTerms} />
+              <Checkbox 
+                id="terms" 
+                checked={acceptTerms} 
+                onCheckedChange={(checked) => setAcceptTerms(checked === true)} 
+              />
               <Label
                 htmlFor="terms"
                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
