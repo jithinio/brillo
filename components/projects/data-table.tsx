@@ -159,7 +159,8 @@ export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData
       </div>
 
       <div className="rounded-md border">
-        <Table>
+        <div className="w-full overflow-x-auto">
+          <Table className="min-w-[1000px] table-auto">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
@@ -192,7 +193,8 @@ export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData
               </TableRow>
             )}
           </TableBody>
-        </Table>
+          </Table>
+        </div>
       </div>
 
       <div className="flex items-center justify-between space-x-2 py-4">
@@ -211,7 +213,7 @@ export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData
                 table.setPageSize(Number(value))
               }}
             >
-              <SelectTrigger size="sm" className="w-20" id="rows-per-page">
+              <SelectTrigger className="w-20" id="rows-per-page">
                 <SelectValue placeholder={table.getState().pagination.pageSize} />
               </SelectTrigger>
               <SelectContent side="top">

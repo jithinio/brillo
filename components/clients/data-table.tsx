@@ -116,8 +116,8 @@ export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData
         </DropdownMenu>
       </div>
       <div className="rounded-md border bg-background">
-        <div className="relative overflow-x-auto">
-          <Table className="w-full min-w-[800px]">
+        <div className="w-full overflow-x-auto">
+          <Table className="min-w-[1000px] table-auto">
             <TableHeader className="bg-muted/50">
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id} className="border-b">

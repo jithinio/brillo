@@ -19,7 +19,8 @@ export function DataTable({ data }: DataTableProps) {
         <CardDescription>You made 265 sales this month.</CardDescription>
       </CardHeader>
       <CardContent>
-        <Table>
+        <div className="w-full overflow-x-auto">
+          <Table className="min-w-[600px] table-auto">
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
@@ -38,7 +39,8 @@ export function DataTable({ data }: DataTableProps) {
               </TableRow>
             ))}
           </TableBody>
-        </Table>
+          </Table>
+        </div>
       </CardContent>
     </Card>
   )
