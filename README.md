@@ -1,9 +1,7 @@
 # Suitebase app requirements
 
-*Automatically synced with your [v0.dev](https://v0.dev) deployments*
 
 [![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/jithinios-projects/v0-suitebase-app-requirements)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.dev-black?style=for-the-badge)](https://v0.dev/chat/projects/8cRNSDTKzdc)
 
 ## Overview
 
@@ -16,15 +14,3 @@ Your project is live at:
 
 **[https://suitebase-cursor-r9c83heut-jithinios-projects.vercel.app](https://suitebase-cursor-r9c83heut-jithinios-projects.vercel.app)**
 
-## Build your app
-
-Continue building your app on:
-
-**[https://v0.dev/chat/projects/8cRNSDTKzdc](https://v0.dev/chat/projects/8cRNSDTKzdc)**
-
-## How It Works
-
-1. Create and modify your project using [v0.dev](https://v0.dev)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
