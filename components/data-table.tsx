@@ -13,12 +13,12 @@ interface DataTableProps {
 
 export function DataTable({ data }: DataTableProps) {
   return (
-    <Card>
+    <Card className="max-w-full">
       <CardHeader>
         <CardTitle>Recent Sales</CardTitle>
         <CardDescription>You made 265 sales this month.</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="max-w-full">
         <div className="w-full overflow-x-auto">
           <Table className="min-w-[600px] table-auto">
           <TableHeader>

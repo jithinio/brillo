@@ -98,7 +98,7 @@ export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData
   })
 
   return (
-    <div className="w-full space-y-4">
+    <div className="w-full max-w-full space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <div className="relative">
@@ -171,7 +171,7 @@ export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData
         </div>
       </div>
 
-      <div className="rounded-md border">
+      <div className="rounded-md border max-w-full">
         <div className="w-full overflow-x-auto">
           <Table className="min-w-[1400px] table-auto">
           <TableHeader>

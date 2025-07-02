@@ -86,7 +86,7 @@ export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData
   })
 
   return (
-    <div className="w-full space-y-4">
+    <div className="w-full max-w-full space-y-4">
       <div className="flex items-center py-4">
         <div className="relative max-w-sm">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -128,7 +128,7 @@ export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      <div className="rounded-md border bg-background">
+      <div className="rounded-md border bg-background max-w-full">
         <div className="w-full overflow-x-auto">
           <Table className="min-w-[1400px] table-auto">
             <TableHeader className="bg-muted/50">
