@@ -42,15 +42,28 @@ export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData
     pageSize: 10,
   })
 
-  // Load column visibility from localStorage
+  // Load column visibility from localStorage with responsive defaults
   React.useEffect(() => {
     try {
       const saved = localStorage.getItem("projects-table-column-visibility")
       if (saved) {
         setColumnVisibility(JSON.parse(saved))
+      } else {
+        // Set responsive defaults for first-time users
+        setColumnVisibility({
+          expenses: window.innerWidth > 1200,
+          pending: window.innerWidth > 1200,
+          created_at: window.innerWidth > 1024,
+        })
       }
     } catch (error) {
       console.error("Failed to load column visibility:", error)
+      // Set responsive defaults on error
+      setColumnVisibility({
+        expenses: window.innerWidth > 1200,
+        pending: window.innerWidth > 1200,
+        created_at: window.innerWidth > 1024,
+      })
     }
   }, [])
 
@@ -160,7 +173,7 @@ export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData
 
       <div className="rounded-md border">
         <div className="w-full overflow-x-auto">
-          <Table className="min-w-[1000px] table-auto">
+          <Table className="min-w-[1400px] table-auto">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>

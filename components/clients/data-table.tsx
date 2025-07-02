@@ -36,7 +36,7 @@ export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState({})
 
-  // Load column visibility from localStorage on mount
+  // Load column visibility from localStorage on mount with responsive defaults
   React.useEffect(() => {
     const savedVisibility = localStorage.getItem("clients-table-column-visibility")
     if (savedVisibility) {
@@ -44,7 +44,20 @@ export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData
         setColumnVisibility(JSON.parse(savedVisibility))
       } catch (error) {
         console.error("Failed to parse saved column visibility:", error)
+        // Set responsive defaults on error
+        setColumnVisibility({
+          phone: window.innerWidth < 768,
+          location: window.innerWidth > 1200,
+          company: window.innerWidth > 768,
+        })
       }
+    } else {
+      // Set responsive defaults for first-time users
+      setColumnVisibility({
+        phone: window.innerWidth < 768,
+        location: window.innerWidth > 1200,
+        company: window.innerWidth > 768,
+      })
     }
   }, [])
 
@@ -73,7 +86,7 @@ export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData
   })
 
   return (
-    <div className="w-full">
+    <div className="w-full space-y-4">
       <div className="flex items-center py-4">
         <div className="relative max-w-sm">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -117,7 +130,7 @@ export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData
       </div>
       <div className="rounded-md border bg-background">
         <div className="w-full overflow-x-auto">
-          <Table className="min-w-[1000px] table-auto">
+          <Table className="min-w-[1400px] table-auto">
             <TableHeader className="bg-muted/50">
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id} className="border-b">
