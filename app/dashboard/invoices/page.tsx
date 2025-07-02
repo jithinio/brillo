@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { PageHeader, PageContent, PageTitle } from "@/components/page-header"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
+import InvoicesLoading from "./loading"
 
 interface Invoice {
   id: string
@@ -215,29 +216,7 @@ export default function InvoicesPage() {
   }
 
   if (loading) {
-    return (
-      <>
-        <PageHeader title="Invoices" breadcrumbs={[{ label: "Invoices" }]} />
-        <PageContent>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {[...Array(6)].map((_, i) => (
-              <Card key={i} className="animate-pulse">
-                <CardHeader className="space-y-2">
-                  <div className="h-4 bg-muted rounded w-3/4"></div>
-                  <div className="h-3 bg-muted rounded w-1/2"></div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="h-3 bg-muted rounded"></div>
-                    <div className="h-3 bg-muted rounded w-2/3"></div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </PageContent>
-      </>
-    )
+    return <InvoicesLoading />
   }
 
   return (

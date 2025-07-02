@@ -16,6 +16,7 @@ import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
 import { PageHeader, PageContent, PageTitle } from "@/components/page-header"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface Profile {
   id: string
@@ -334,8 +335,60 @@ export default function ProfilePage() {
       <>
         <PageHeader title="Profile" breadcrumbs={[{ label: "Profile" }]} />
         <PageContent>
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin" />
+          <div className="grid gap-6 md:grid-cols-3">
+            <div className="md:col-span-1 space-y-6">
+              <Card>
+                <CardHeader>
+                  <Skeleton className="h-6 w-32" />
+                  <Skeleton className="h-4 w-48" />
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex flex-col items-center space-y-4">
+                    <Skeleton className="w-24 h-24 rounded-full" />
+                    <Skeleton className="h-4 w-48" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <Skeleton className="h-6 w-24" />
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="flex justify-between">
+                      <Skeleton className="h-4 w-16" />
+                      <Skeleton className="h-4 w-8" />
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </div>
+            <div className="md:col-span-2">
+              <Card>
+                <CardHeader>
+                  <Skeleton className="h-6 w-40" />
+                  <Skeleton className="h-4 w-64" />
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-20" />
+                      <Skeleton className="h-10 w-full" />
+                    </div>
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-20" />
+                      <Skeleton className="h-10 w-full" />
+                    </div>
+                  </div>
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="space-y-2">
+                      <Skeleton className="h-4 w-24" />
+                      <Skeleton className="h-10 w-full" />
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </PageContent>
       </>

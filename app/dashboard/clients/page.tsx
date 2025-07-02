@@ -31,6 +31,7 @@ import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
 import { DataTable } from "@/components/clients/data-table"
 import { createColumns, type Client } from "@/components/clients/columns"
+import ClientsLoading from "./loading"
 
 // Mock data fallback
 const mockClients: Client[] = [
@@ -336,16 +337,7 @@ export default function ClientsPage() {
   })
 
   if (loading) {
-    return (
-      <>
-        <PageHeader title="Clients" breadcrumbs={[{ label: "Clients" }]} />
-        <PageContent>
-          <div className="flex items-center justify-center h-32">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        </PageContent>
-      </>
-    )
+    return <ClientsLoading />
   }
 
   return (
