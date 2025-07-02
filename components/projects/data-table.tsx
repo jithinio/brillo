@@ -30,9 +30,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
+  onAddProject?: () => void
 }
 
-export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData, TValue>) {
+export function DataTable<TData, TValue>({ columns, data, onAddProject }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
@@ -41,6 +42,9 @@ export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData
     pageIndex: 0,
     pageSize: 10,
   })
+  const [isInitialLoad, setIsInitialLoad] = React.useState(true)
+
+
 
   // Load column visibility from localStorage with responsive defaults
   React.useEffect(() => {
@@ -65,16 +69,19 @@ export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData
         created_at: window.innerWidth > 1024,
       })
     }
+    setIsInitialLoad(false)
   }, [])
 
-  // Save column visibility to localStorage
+  // Save column visibility to localStorage (but skip initial load)
   React.useEffect(() => {
-    try {
-      localStorage.setItem("projects-table-column-visibility", JSON.stringify(columnVisibility))
-    } catch (error) {
-      console.error("Failed to save column visibility:", error)
+    if (!isInitialLoad) {
+      try {
+        localStorage.setItem("projects-table-column-visibility", JSON.stringify(columnVisibility))
+      } catch (error) {
+        console.error("Failed to save column visibility:", error)
+      }
     }
-  }, [columnVisibility])
+  }, [columnVisibility, isInitialLoad])
 
   const table = useReactTable({
     data,
@@ -164,7 +171,16 @@ export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData
                 })}
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button variant="outline" size="sm" className="bg-background">
+          <Button 
+            type="button"
+            size="sm" 
+            className="bg-primary text-primary-foreground hover:bg-primary/90" 
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              onAddProject?.()
+            }}
+          >
             <Plus className="mr-2 h-4 w-4" />
             <span className="hidden lg:inline">Add Project</span>
           </Button>
@@ -173,13 +189,20 @@ export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData
 
       <div className="rounded-md border max-w-full">
         <div className="w-full overflow-x-auto">
-          <Table className="min-w-[1400px] table-auto">
+          <Table className="min-w-[1200px] table-auto">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
+                  const isActionsColumn = header.column.id === "actions"
                   return (
-                    <TableHead key={header.id} style={{ width: header.getSize() }} className="whitespace-nowrap">
+                    <TableHead 
+                      key={header.id} 
+                      style={{ width: header.getSize() }} 
+                      className={`whitespace-nowrap ${
+                        isActionsColumn ? "sticky right-0 bg-background shadow-[-4px_0_4px_-2px_rgba(0,0,0,0.1)]" : ""
+                      }`}
+                    >
                       {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                     </TableHead>
                   )
@@ -191,11 +214,22 @@ export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} style={{ width: cell.column.getSize() }} className="whitespace-nowrap">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
+                  {row.getVisibleCells().map((cell) => {
+                    const isActionsColumn = cell.column.id === "actions"
+                    return (
+                      <TableCell 
+                        key={cell.id} 
+                        style={{ width: cell.column.getSize() }} 
+                        className={`whitespace-nowrap ${
+                          isActionsColumn 
+                            ? "sticky right-0 bg-background shadow-[-4px_0_4px_-2px_rgba(0,0,0,0.1)]" 
+                            : ""
+                        }`}
+                      >
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    )
+                  })}
                 </TableRow>
               ))
             ) : (

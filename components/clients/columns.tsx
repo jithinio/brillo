@@ -275,17 +275,22 @@ export function createColumns(actions: ColumnActions): ColumnDef<Client>[] {
     },
     {
       id: "actions",
+      header: "",
       enableHiding: false,
       cell: ({ row }) => {
         const client = row.original
 
         return (
-          <div className="min-w-[50px]">
+          <div className="flex justify-center">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-8 w-8 p-0">
-                  <span className="sr-only">Open menu</span>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="h-8 w-8 p-0 border-dashed hover:border-solid"
+                >
                   <MoreHorizontal className="h-4 w-4" />
+                  <span className="sr-only">Open actions menu</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-40">
@@ -320,7 +325,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Client>[] {
           </div>
         )
       },
-      size: 70,
+      size: 36,
     },
   ]
 }

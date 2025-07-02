@@ -14,7 +14,6 @@ import {
   Trash2,
   User,
   Calendar,
-  DollarSign,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -204,10 +203,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
         return (
           <div className="min-w-[100px] max-w-[120px]">
             {budget ? (
-              <div className="flex items-center space-x-2">
-                <DollarSign className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                <span className="truncate font-normal">${budget.toLocaleString()}</span>
-              </div>
+              <span className="truncate font-normal">${budget.toLocaleString()}</span>
             ) : (
               <span className="text-muted-foreground">—</span>
             )}
@@ -236,10 +232,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
         return (
           <div className="min-w-[100px] max-w-[120px]">
             {expenses ? (
-              <div className="flex items-center space-x-2">
-                <DollarSign className="h-4 w-4 text-red-500 flex-shrink-0" />
-                <span className="text-red-600 truncate font-normal">${expenses.toLocaleString()}</span>
-              </div>
+              <span className="truncate font-normal">${expenses.toLocaleString()}</span>
             ) : (
               <span className="text-muted-foreground">$0</span>
             )}
@@ -268,10 +261,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
         return (
           <div className="min-w-[100px] max-w-[120px]">
             {received ? (
-              <div className="flex items-center space-x-2">
-                <DollarSign className="h-4 w-4 text-green-500 flex-shrink-0" />
-                <span className="text-green-600 truncate text-center font-normal">${received.toLocaleString()}</span>
-              </div>
+              <span className="truncate font-normal">${received.toLocaleString()}</span>
             ) : (
               <span className="text-muted-foreground">$0</span>
             )}
@@ -300,10 +290,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
         return (
           <div className="min-w-[100px] max-w-[120px]">
             {pending ? (
-              <div className="flex items-center space-x-2">
-                <DollarSign className="h-4 w-4 text-yellow-500 flex-shrink-0" />
-                <span className="text-yellow-600 truncate font-normal">${pending.toLocaleString()}</span>
-              </div>
+              <span className="truncate font-normal">${pending.toLocaleString()}</span>
             ) : (
               <span className="text-muted-foreground">$0</span>
             )}
@@ -385,21 +372,22 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
     },
     {
       id: "actions",
+      header: "",
       enableHiding: false,
       cell: ({ row }) => {
         const project = row.original
 
         return (
-          <div className="min-w-[50px]">
+          <div className="flex justify-center">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
-                  variant="ghost"
-                  className="data-[state=open]:bg-muted text-muted-foreground flex size-8"
-                  size="icon"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 w-8 p-0 border-dashed hover:border-solid"
                 >
                   <MoreHorizontal className="h-4 w-4" />
-                  <span className="sr-only">Open menu</span>
+                  <span className="sr-only">Open actions menu</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-40">
@@ -433,7 +421,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
           </div>
         )
       },
-      size: 70,
+      size: 36,
     },
   ]
 }

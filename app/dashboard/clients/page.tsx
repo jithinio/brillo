@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Plus } from "lucide-react"
+// Plus icon removed - no longer needed
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -345,12 +345,6 @@ export default function ClientsPage() {
       <PageHeader
         title="Clients"
         breadcrumbs={[{ label: "Clients" }]}
-        action={
-          <Button size="sm" onClick={handleAddClient}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Client
-          </Button>
-        }
       />
       <PageContent>
         <PageTitle
@@ -359,7 +353,7 @@ export default function ClientsPage() {
           error={error}
         />
 
-        <DataTable columns={columns} data={clients} />
+        <DataTable columns={columns} data={clients} onAddClient={handleAddClient} />
       </PageContent>
 
       {/* View Details Dialog */}

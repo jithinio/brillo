@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Plus, Eye, Clock } from "lucide-react"
+import { Eye, Clock } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -12,9 +12,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+
+import { DatePicker } from "@/components/ui/date-picker"
 import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import { toast } from "sonner"
+import { Checkbox } from "@/components/ui/checkbox"
+import { useToast } from "@/hooks/use-toast"
 
 import { PageHeader, PageContent, PageTitle } from "@/components/page-header"
 import { DataTable } from "@/components/projects/data-table"
@@ -120,6 +132,35 @@ const mockProjects: Project[] = [
   },
 ]
 
+// Mock clients data for project creation
+const mockClients = [
+  { id: "1", name: "John Smith", company: "Tech Corp" },
+  { id: "2", name: "Sarah Johnson", company: "StartupXYZ" },
+  { id: "3", name: "Mike Davis", company: "Retail Plus" },
+  { id: "4", name: "Lisa Chen", company: "DataFlow Inc" },
+  { id: "5", name: "Robert Wilson", company: "Enterprise Solutions" },
+  { id: "6", name: "Emma Thompson", company: "Creative Studio" },
+]
+
+const statusOptions = [
+  { value: "active", label: "In Progress" },
+  { value: "on_hold", label: "On Hold" },
+  { value: "completed", label: "Completed" },
+  { value: "cancelled", label: "Cancelled" },
+]
+
+interface NewProject {
+  name: string
+  client_id: string
+  status: string
+  start_date: Date | undefined
+  end_date: Date | undefined
+  budget: string
+  expenses: string
+  received: string
+  description: string
+}
+
 export default function ProjectsPage() {
   const [projects, setProjects] = React.useState<Project[]>(mockProjects)
   const [selectedProject, setSelectedProject] = React.useState<Project | null>(null)
@@ -127,6 +168,19 @@ export default function ProjectsPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false)
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false)
+  const [acceptTerms, setAcceptTerms] = React.useState(false)
+  const [newProject, setNewProject] = React.useState<NewProject>({
+    name: "",
+    client_id: "",
+    status: "active",
+    start_date: undefined,
+    end_date: undefined,
+    budget: "",
+    expenses: "",
+    received: "",
+    description: "",
+  })
+  const { toast } = useToast()
 
   const handleViewDetails = (project: Project) => {
     setSelectedProject(project)
@@ -139,11 +193,17 @@ export default function ProjectsPage() {
   }
 
   const handleCreateInvoice = (project: Project) => {
-    toast.success(`Creating invoice for ${project.name}`)
+    toast({
+      title: "Invoice Creation",
+      description: `Creating invoice for ${project.name}`,
+    })
   }
 
   const handleTimeTracking = (project: Project) => {
-    toast.success(`Opening time tracking for ${project.name}`)
+    toast({
+      title: "Time Tracking",
+      description: `Opening time tracking for ${project.name}`,
+    })
   }
 
   const handleDeleteProject = (project: Project) => {
@@ -151,10 +211,66 @@ export default function ProjectsPage() {
     setIsDeleteDialogOpen(true)
   }
 
+  const handleAddProject = () => {
+    setNewProject({
+      name: "",
+      client_id: "",
+      status: "active",
+      start_date: undefined,
+      end_date: undefined,
+      budget: "",
+      expenses: "",
+      received: "",
+      description: "",
+    })
+    setAcceptTerms(false)
+    setIsAddDialogOpen(true)
+  }
+
+  const handleSaveProject = () => {
+    if (!newProject.name || !acceptTerms) {
+      return
+    }
+
+    const selectedClient = mockClients.find(c => c.id === newProject.client_id)
+    
+    const budget = newProject.budget ? parseFloat(newProject.budget) : 0
+    const expenses = newProject.expenses ? parseFloat(newProject.expenses) : 0
+    const received = newProject.received ? parseFloat(newProject.received) : 0
+    const pending = Math.max(0, budget - received)
+
+    const project: Project = {
+      id: Date.now().toString(),
+      name: newProject.name,
+      status: newProject.status,
+      start_date: newProject.start_date ? newProject.start_date.toISOString() : undefined,
+      end_date: newProject.end_date ? newProject.end_date.toISOString() : undefined,
+      budget: budget || undefined,
+      expenses: expenses,
+      received: received,
+      pending: pending,
+      created_at: new Date().toISOString(),
+      clients: selectedClient ? {
+        name: selectedClient.name,
+        company: selectedClient.company,
+      } : undefined,
+    }
+
+    setProjects([...projects, project])
+    setIsAddDialogOpen(false)
+    toast({
+      title: "Project Created",
+      description: `Project "${project.name}" has been created successfully.`,
+    })
+  }
+
   const confirmDelete = () => {
     if (selectedProject) {
       setProjects(projects.filter((p) => p.id !== selectedProject.id))
-      toast.success(`Project "${selectedProject.name}" deleted successfully`)
+      toast({
+        title: "Project Deleted",
+        description: `Project "${selectedProject.name}" deleted successfully`,
+      })
       setIsDeleteDialogOpen(false)
       setSelectedProject(null)
     }
@@ -182,12 +298,6 @@ export default function ProjectsPage() {
       <PageHeader
         title="Projects"
         breadcrumbs={[{ label: "Projects" }]}
-        action={
-          <Button size="sm">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Project
-          </Button>
-        }
       />
       <PageContent>
         <PageTitle title="Projects" description="Manage your projects and track their progress" />
@@ -225,7 +335,7 @@ export default function ProjectsPage() {
         </div>
 
         {/* Projects Table */}
-        <DataTable columns={columns} data={projects} />
+        <DataTable columns={columns} data={projects} onAddProject={handleAddProject} />
       </PageContent>
 
       {/* View Project Dialog */}
@@ -303,6 +413,142 @@ export default function ProjectsPage() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Project Dialog */}
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Add New Project</DialogTitle>
+            <DialogDescription>Create a new project and assign it to a client</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="project-name">Project Name *</Label>
+                <Input
+                  id="project-name"
+                  value={newProject.name}
+                  onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
+                  placeholder="Enter project name"
+                />
+              </div>
+              <div>
+                <Label htmlFor="project-client">Client</Label>
+                <Select value={newProject.client_id} onValueChange={(value) => setNewProject({ ...newProject, client_id: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a client" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {mockClients.map((client) => (
+                      <SelectItem key={client.id} value={client.id}>
+                        {client.name} - {client.company}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="project-status">Status</Label>
+                <Select value={newProject.status} onValueChange={(value) => setNewProject({ ...newProject, status: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statusOptions.map((status) => (
+                      <SelectItem key={status.value} value={status.value}>
+                        {status.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="project-budget">Budget</Label>
+                <Input
+                  id="project-budget"
+                  type="number"
+                  value={newProject.budget}
+                  onChange={(e) => setNewProject({ ...newProject, budget: e.target.value })}
+                  placeholder="0"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="project-expenses">Expenses</Label>
+                <Input
+                  id="project-expenses"
+                  type="number"
+                  value={newProject.expenses}
+                  onChange={(e) => setNewProject({ ...newProject, expenses: e.target.value })}
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <Label htmlFor="project-received">Received Amount</Label>
+                <Input
+                  id="project-received"
+                  type="number"
+                  value={newProject.received}
+                  onChange={(e) => setNewProject({ ...newProject, received: e.target.value })}
+                  placeholder="0"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Start Date</Label>
+                <DatePicker
+                  date={newProject.start_date}
+                  onSelect={(date) => setNewProject({ ...newProject, start_date: date })}
+                  placeholder="Pick start date"
+                />
+              </div>
+              <div>
+                <Label>End Date</Label>
+                <DatePicker
+                  date={newProject.end_date}
+                  onSelect={(date) => setNewProject({ ...newProject, end_date: date })}
+                  placeholder="Pick end date"
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="project-description">Description</Label>
+              <Textarea
+                id="project-description"
+                value={newProject.description}
+                onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
+                placeholder="Project description or notes"
+                rows={3}
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="project-terms" 
+                checked={acceptTerms} 
+                onCheckedChange={(checked) => setAcceptTerms(checked === true)} 
+              />
+              <Label
+                htmlFor="project-terms"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                I agree to the terms and conditions for creating this project
+              </Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveProject} disabled={!newProject.name || !acceptTerms}>
+              Create Project
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
