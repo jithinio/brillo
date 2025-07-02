@@ -25,19 +25,21 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 export type Client = {
   id: string
   name: string
-  email?: string
-  phone?: string
-  company?: string
-  address?: string
-  city?: string
-  state?: string
-  zip_code?: string
-  country?: string
-  notes?: string
+  email?: string | null
+  phone?: string | null
+  company?: string | null
+  address?: string | null
+  city?: string | null
+  state?: string | null
+  zip_code?: string | null
+  country?: string | null
+  notes?: string | null
+  avatar_url?: string | null
   created_at: string
   projects?: Array<{
     id: string
@@ -110,9 +112,23 @@ export function createColumns(actions: ColumnActions): ColumnDef<Client>[] {
           </Button>
         )
       },
-      cell: ({ row }) => <div className="font-medium min-w-[150px]">{row.getValue("name")}</div>,
-      size: 200,
-    },
+      cell: ({ row }) => {
+        const client = row.original
+        const name = row.getValue("name") as string
+        const initials = name.split(' ').map(n => n[0]).join('').toUpperCase()
+        
+        return (
+          <div className="flex items-center space-x-3 min-w-[180px]">
+            <Avatar className="h-8 w-8">
+              <AvatarImage src={client.avatar_url || "/placeholder-user.jpg"} alt={name} />
+              <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+            </Avatar>
+            <span className="font-medium truncate" title={name}>{name}</span>
+                     </div>
+         )
+       },
+       size: 220,
+     },
     {
       accessorKey: "company",
       header: ({ column }) => {

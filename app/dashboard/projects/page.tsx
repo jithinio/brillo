@@ -25,8 +25,9 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import { Checkbox } from "@/components/ui/checkbox"
+
 import { useToast } from "@/hooks/use-toast"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 import { PageHeader, PageContent, PageTitle } from "@/components/page-header"
 import { DataTable } from "@/components/projects/data-table"
@@ -134,12 +135,12 @@ const mockProjects: Project[] = [
 
 // Mock clients data for project creation
 const mockClients = [
-  { id: "1", name: "John Smith", company: "Tech Corp" },
-  { id: "2", name: "Sarah Johnson", company: "StartupXYZ" },
-  { id: "3", name: "Mike Davis", company: "Retail Plus" },
-  { id: "4", name: "Lisa Chen", company: "DataFlow Inc" },
-  { id: "5", name: "Robert Wilson", company: "Enterprise Solutions" },
-  { id: "6", name: "Emma Thompson", company: "Creative Studio" },
+  { id: "1", name: "John Smith", company: "Tech Corp", avatar_url: undefined },
+  { id: "2", name: "Sarah Johnson", company: "StartupXYZ", avatar_url: undefined },
+  { id: "3", name: "Mike Davis", company: "Retail Plus", avatar_url: undefined },
+  { id: "4", name: "Lisa Chen", company: "DataFlow Inc", avatar_url: undefined },
+  { id: "5", name: "Robert Wilson", company: "Enterprise Solutions", avatar_url: undefined },
+  { id: "6", name: "Emma Thompson", company: "Creative Studio", avatar_url: undefined },
 ]
 
 const statusOptions = [
@@ -168,7 +169,7 @@ export default function ProjectsPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false)
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false)
-  const [acceptTerms, setAcceptTerms] = React.useState(false)
+
   const [newProject, setNewProject] = React.useState<NewProject>({
     name: "",
     client_id: "",
@@ -223,12 +224,11 @@ export default function ProjectsPage() {
       received: "",
       description: "",
     })
-    setAcceptTerms(false)
     setIsAddDialogOpen(true)
   }
 
   const handleSaveProject = () => {
-    if (!newProject.name || !acceptTerms) {
+    if (!newProject.name) {
       return
     }
 
@@ -443,7 +443,15 @@ export default function ProjectsPage() {
                   <SelectContent>
                     {mockClients.map((client) => (
                       <SelectItem key={client.id} value={client.id}>
-                        {client.name} - {client.company}
+                        <div className="flex items-center space-x-2">
+                          <Avatar className="h-6 w-6">
+                            <AvatarImage src={client.avatar_url || "/placeholder-user.jpg"} alt={client.name} />
+                            <AvatarFallback className="text-xs">
+                              {client.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span>{client.name} - {client.company}</span>
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -527,25 +535,13 @@ export default function ProjectsPage() {
                 rows={3}
               />
             </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="project-terms" 
-                checked={acceptTerms} 
-                onCheckedChange={(checked) => setAcceptTerms(checked === true)} 
-              />
-              <Label
-                htmlFor="project-terms"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                I agree to the terms and conditions for creating this project
-              </Label>
-            </div>
+
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSaveProject} disabled={!newProject.name || !acceptTerms}>
+            <Button onClick={handleSaveProject} disabled={!newProject.name}>
               Create Project
             </Button>
           </DialogFooter>

@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS clients (
     zip_code VARCHAR(20),
     country VARCHAR(100) DEFAULT 'United States',
     notes TEXT,
+    avatar_url TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

@@ -13,7 +13,9 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { ChevronDown, Search, LayoutGrid, Plus } from "lucide-react"
+import { ChevronDown, Search, LayoutGrid } from "lucide-react"
+
+
 
 import { Button } from "@/components/ui/button"
 import {
@@ -42,46 +44,41 @@ export function DataTable<TData, TValue>({ columns, data, onAddProject }: DataTa
     pageIndex: 0,
     pageSize: 10,
   })
-  const [isInitialLoad, setIsInitialLoad] = React.useState(true)
 
-
-
-  // Load column visibility from localStorage with responsive defaults
+  // Load column visibility from localStorage on mount
   React.useEffect(() => {
-    try {
-      const saved = localStorage.getItem("projects-table-column-visibility")
-      if (saved) {
-        setColumnVisibility(JSON.parse(saved))
-      } else {
-        // Set responsive defaults for first-time users
-        setColumnVisibility({
+    const savedVisibility = localStorage.getItem("projects-table-column-visibility")
+    if (savedVisibility) {
+      try {
+        setColumnVisibility(JSON.parse(savedVisibility))
+      } catch (error) {
+        // If parsing fails, use defaults
+        const defaults = {
           expenses: window.innerWidth > 1200,
           pending: window.innerWidth > 1200,
           created_at: window.innerWidth > 1024,
-        })
+        }
+        setColumnVisibility(defaults)
       }
-    } catch (error) {
-      console.error("Failed to load column visibility:", error)
-      // Set responsive defaults on error
-      setColumnVisibility({
+    } else {
+      // Set responsive defaults for first-time users
+      const defaults = {
         expenses: window.innerWidth > 1200,
         pending: window.innerWidth > 1200,
         created_at: window.innerWidth > 1024,
-      })
+      }
+      setColumnVisibility(defaults)
     }
-    setIsInitialLoad(false)
   }, [])
 
-  // Save column visibility to localStorage (but skip initial load)
+  // Save column visibility to localStorage when it changes
   React.useEffect(() => {
-    if (!isInitialLoad) {
-      try {
-        localStorage.setItem("projects-table-column-visibility", JSON.stringify(columnVisibility))
-      } catch (error) {
-        console.error("Failed to save column visibility:", error)
-      }
+    if (Object.keys(columnVisibility).length > 0) {
+      localStorage.setItem("projects-table-column-visibility", JSON.stringify(columnVisibility))
     }
-  }, [columnVisibility, isInitialLoad])
+  }, [columnVisibility])
+  
+
 
   const table = useReactTable({
     data,
@@ -181,8 +178,8 @@ export function DataTable<TData, TValue>({ columns, data, onAddProject }: DataTa
               onAddProject?.()
             }}
           >
-            <Plus className="mr-2 h-4 w-4" />
             <span className="hidden lg:inline">Add Project</span>
+            <span className="lg:hidden">Add</span>
           </Button>
         </div>
       </div>

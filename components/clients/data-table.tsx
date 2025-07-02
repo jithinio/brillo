@@ -14,7 +14,9 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { ChevronDown, LayoutGrid, Plus, Search } from "lucide-react"
+import { ChevronDown, LayoutGrid, Search } from "lucide-react"
+
+
 
 import { Button } from "@/components/ui/button"
 import {
@@ -43,44 +45,41 @@ export function DataTable<TData, TValue>({ columns, data, onAddClient }: DataTab
     pageIndex: 0,
     pageSize: 10,
   })
-  const [isInitialLoad, setIsInitialLoad] = React.useState(true)
 
-  // Load column visibility from localStorage on mount with responsive defaults
+  // Load column visibility from localStorage on mount
   React.useEffect(() => {
     const savedVisibility = localStorage.getItem("clients-table-column-visibility")
     if (savedVisibility) {
       try {
         setColumnVisibility(JSON.parse(savedVisibility))
       } catch (error) {
-        console.error("Failed to parse saved column visibility:", error)
-        // Set responsive defaults on error
-        setColumnVisibility({
-          phone: window.innerWidth < 768,
+        // If parsing fails, use defaults
+        const defaults = {
+          phone: window.innerWidth > 768,
           location: window.innerWidth > 1200,
           company: window.innerWidth > 768,
-        })
+        }
+        setColumnVisibility(defaults)
       }
     } else {
       // Set responsive defaults for first-time users
-      setColumnVisibility({
-        phone: window.innerWidth < 768,
+      const defaults = {
+        phone: window.innerWidth > 768,
         location: window.innerWidth > 1200,
         company: window.innerWidth > 768,
-      })
+      }
+      setColumnVisibility(defaults)
     }
-    setIsInitialLoad(false)
   }, [])
 
-  // Save column visibility to localStorage when it changes (but skip initial load)
+  // Save column visibility to localStorage when it changes
   React.useEffect(() => {
-    if (!isInitialLoad) {
-      try {
-        localStorage.setItem("clients-table-column-visibility", JSON.stringify(columnVisibility))
-      } catch (error) {
-        console.error("Failed to save column visibility:", error)
-      }
+    if (Object.keys(columnVisibility).length > 0) {
+      localStorage.setItem("clients-table-column-visibility", JSON.stringify(columnVisibility))
     }
-  }, [columnVisibility, isInitialLoad])
+  }, [columnVisibility])
+  
+
 
   const table = useReactTable({
     data,
@@ -167,8 +166,8 @@ export function DataTable<TData, TValue>({ columns, data, onAddClient }: DataTab
             </DropdownMenuContent>
           </DropdownMenu>
           <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={onAddClient}>
-            <Plus className="mr-2 h-4 w-4" />
             <span className="hidden lg:inline">Add Client</span>
+            <span className="lg:hidden">Add</span>
           </Button>
         </div>
       </div>

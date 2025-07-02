@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-
 import { DayPicker } from "react-day-picker"
 
 import { cn } from "@/lib/utils"
@@ -24,6 +23,10 @@ function Calendar({
         month: "space-y-4",
         caption: "flex justify-center pt-1 relative items-center",
         caption_label: "text-sm font-medium",
+        caption_dropdowns: "flex justify-center gap-1",
+        dropdown: "bg-background border border-input rounded-md px-3 py-1 text-sm",
+        dropdown_month: "bg-background border border-input rounded-md px-3 py-1 text-sm",
+        dropdown_year: "bg-background border border-input rounded-md px-3 py-1 text-sm",
         nav: "space-x-1 flex items-center",
         nav_button: cn(
           buttonVariants({ variant: "outline" }),

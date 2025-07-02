@@ -14,7 +14,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Checkbox } from "@/components/ui/checkbox"
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,8 +29,11 @@ import { Badge } from "@/components/ui/badge"
 import { PageHeader, PageContent, PageTitle } from "@/components/page-header"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Upload } from "lucide-react"
 import { DataTable } from "@/components/clients/data-table"
 import { createColumns, type Client } from "@/components/clients/columns"
+
 import ClientsLoading from "./loading"
 
 // Mock data fallback
@@ -47,6 +50,7 @@ const mockClients: Client[] = [
     zip_code: "10001",
     country: "United States",
     notes: "Long-term client, prefers email communication",
+    avatar_url: undefined,
     created_at: "2024-01-01T00:00:00Z",
     projects: [{ id: "1", name: "Website Redesign", status: "active" }],
   },
@@ -62,6 +66,7 @@ const mockClients: Client[] = [
     zip_code: "94105",
     country: "United States",
     notes: "Startup client, fast-paced projects",
+    avatar_url: undefined,
     created_at: "2024-01-15T00:00:00Z",
     projects: [{ id: "2", name: "Mobile App Development", status: "active" }],
   },
@@ -77,6 +82,7 @@ const mockClients: Client[] = [
     zip_code: "60601",
     country: "United States",
     notes: "Enterprise client, requires detailed reporting",
+    avatar_url: undefined,
     created_at: "2024-01-10T00:00:00Z",
     projects: [{ id: "3", name: "Brand Identity Package", status: "completed" }],
   },
@@ -92,6 +98,7 @@ const mockClients: Client[] = [
     zip_code: "90210",
     country: "United States",
     notes: "Creative agency, values innovative solutions",
+    avatar_url: undefined,
     created_at: "2024-01-20T00:00:00Z",
     projects: [{ id: "4", name: "E-commerce Platform", status: "active" }],
   },
@@ -107,6 +114,7 @@ const mockClients: Client[] = [
     zip_code: "33101",
     country: "United States",
     notes: "Retail client, seasonal projects",
+    avatar_url: undefined,
     created_at: "2024-02-01T00:00:00Z",
     projects: [{ id: "5", name: "Marketing Automation", status: "on_hold" }],
   },
@@ -136,7 +144,7 @@ export default function ClientsPage() {
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [editingClient, setEditingClient] = useState<Partial<Client>>({})
-  const [acceptTerms, setAcceptTerms] = useState(false)
+
   const { toast } = useToast()
 
   useEffect(() => {
@@ -173,6 +181,7 @@ export default function ClientsPage() {
         setClients(mockClients)
         setError("Using demo data - database connection failed")
       } else {
+        // Use database data directly (includes avatar_url)
         setClients(data || [])
       }
     } catch (error) {
@@ -198,7 +207,6 @@ export default function ClientsPage() {
 
   const handleAddClient = () => {
     setEditingClient({})
-    setAcceptTerms(false)
     setShowAddDialog(true)
   }
 
@@ -254,50 +262,105 @@ export default function ClientsPage() {
 
   const handleSaveClient = async () => {
     try {
+      // Validate required fields
+      if (!editingClient.name?.trim()) {
+        toast({
+          title: "Validation Error",
+          description: "Client name is required.",
+          variant: "destructive",
+        })
+        return
+      }
+
       if (isSupabaseConfigured()) {
+        // Prepare database fields including avatar_url
+        const dbClientData: {
+          name: string
+          email: string | null
+          phone: string | null
+          company: string | null
+          address: string | null
+          city: string | null
+          state: string | null
+          zip_code: string | null
+          country: string
+          notes: string | null
+          avatar_url: string | null
+        } = {
+          name: editingClient.name.trim(),
+          email: editingClient.email?.trim() || null,
+          phone: editingClient.phone?.trim() || null,
+          company: editingClient.company?.trim() || null,
+          address: editingClient.address?.trim() || null,
+          city: editingClient.city?.trim() || null,
+          state: editingClient.state?.trim() || null,
+          zip_code: editingClient.zip_code?.trim() || null,
+          country: editingClient.country?.trim() || 'United States',
+          notes: editingClient.notes?.trim() || null,
+          avatar_url: editingClient.avatar_url || null,
+        }
+
+        // Clean up empty strings to null (except for country which always has a default)
+        Object.keys(dbClientData).forEach(key => {
+          if (key === 'country' || key === 'name') return // Skip required fields
+          const value = dbClientData[key as keyof typeof dbClientData]
+          if (value === '' || value === undefined) {
+            (dbClientData as any)[key] = null
+          }
+        })
+
+        // Ensure name is not null (database constraint)
+        if (!dbClientData.name) {
+          throw new Error('Client name is required')
+        }
+
+        console.log("Sending to Supabase:", dbClientData)
+        
         if (selectedClient) {
           // Update existing client
           const { data, error } = await supabase
             .from("clients")
-            .update(editingClient)
+            .update(dbClientData)
             .eq("id", selectedClient.id)
             .select()
 
-          if (error) throw error
-
-          // Update local state with returned data
-          setClients(clients.map((c) => (c.id === selectedClient.id ? data[0] : c)))
-        } else {
-          // Add new client - let Supabase generate the ID
-          const clientData = {
-            ...editingClient,
-            // Remove any undefined or null values
-            name: editingClient.name?.trim(),
-            email: editingClient.email?.trim() || null,
-            phone: editingClient.phone?.trim() || null,
-            company: editingClient.company?.trim() || null,
-            address: editingClient.address?.trim() || null,
-            city: editingClient.city?.trim() || null,
-            state: editingClient.state?.trim() || null,
-            zip_code: editingClient.zip_code?.trim() || null,
-            country: editingClient.country?.trim() || 'United States',
-            notes: editingClient.notes?.trim() || null,
+          if (error) {
+            console.error("Supabase update error:", error)
+            console.error("Error details:", JSON.stringify(error, null, 2))
+            throw new Error(error.message || error.details || 'Database update failed')
           }
 
+          if (!data || data.length === 0) {
+            throw new Error('No data returned from update')
+          }
+
+          // Update local state with database data (including avatar_url)
+          setClients(clients.map((c) => (c.id === selectedClient.id ? data[0] : c)))
+        } else {
+          // Add new client
           const { data, error } = await supabase
             .from("clients")
-            .insert([clientData])
+            .insert([dbClientData])
             .select()
 
-          if (error) throw error
+          if (error) {
+            console.error("Supabase insert error:", error)
+            console.error("Error details:", JSON.stringify(error, null, 2))
+            throw new Error(error.message || error.details || 'Database insert failed')
+          }
 
-          // Add to local state with the returned data (includes generated ID)
+          if (!data || data.length === 0) {
+            throw new Error('No data returned from insert')
+          }
+
+          // Add to local state with database data (including avatar_url)
           setClients([data[0], ...clients])
         }
       } else {
         // Mock data handling
         if (selectedClient) {
-          setClients(clients.map((c) => (c.id === selectedClient.id ? { ...c, ...editingClient } : c)))
+          const updatedClient = { ...selectedClient, ...editingClient }
+          setClients(clients.map((c) => (c.id === selectedClient.id ? updatedClient : c)))
         } else {
           const newClient = {
             ...editingClient,
@@ -317,12 +380,19 @@ export default function ClientsPage() {
       setShowAddDialog(false)
       setSelectedClient(null)
       setEditingClient({})
-      setAcceptTerms(false)
     } catch (error) {
       console.error("Error saving client:", error)
+      let errorMessage = 'Unknown error occurred'
+      
+      if (error instanceof Error) {
+        errorMessage = error.message
+      } else if (typeof error === 'object' && error !== null) {
+        errorMessage = JSON.stringify(error)
+      }
+      
       toast({
         title: "Error",
-        description: `Failed to ${selectedClient ? "update" : "add"} client: ${error instanceof Error ? error.message : "Please try again."}`,
+        description: `Failed to ${selectedClient ? "update" : "add"} client: ${errorMessage}`,
         variant: "destructive",
       })
     }
@@ -437,6 +507,44 @@ export default function ClientsPage() {
             <DialogDescription>Update client information</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4">
+            {/* Avatar Upload */}
+            <div className="flex items-center space-x-4">
+              <Avatar className="h-16 w-16">
+                <AvatarImage src={editingClient.avatar_url || "/placeholder-user.jpg"} alt="Client avatar" />
+                <AvatarFallback className="text-lg">
+                  {editingClient.name ? editingClient.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'CL'}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <Label htmlFor="edit-avatar-upload" className="cursor-pointer">
+                  <Button variant="outline" size="sm" asChild>
+                    <span>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Upload Avatar
+                    </span>
+                  </Button>
+                </Label>
+                <Input
+                  id="edit-avatar-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      const reader = new FileReader()
+                      reader.onload = (e) => {
+                        setEditingClient({ ...editingClient, avatar_url: e.target?.result as string })
+                      }
+                      reader.readAsDataURL(file)
+                    }
+                  }}
+                  className="hidden"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Recommended: Square image, max 2MB
+                </p>
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="name">Name *</Label>
@@ -545,6 +653,44 @@ export default function ClientsPage() {
             <DialogDescription>Create a new client record</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4">
+            {/* Avatar Upload */}
+            <div className="flex items-center space-x-4">
+              <Avatar className="h-16 w-16">
+                <AvatarImage src={editingClient.avatar_url || "/placeholder-user.jpg"} alt="Client avatar" />
+                <AvatarFallback className="text-lg">
+                  {editingClient.name ? editingClient.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'CL'}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <Label htmlFor="avatar-upload" className="cursor-pointer">
+                  <Button variant="outline" size="sm" asChild>
+                    <span>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Upload Avatar
+                    </span>
+                  </Button>
+                </Label>
+                <Input
+                  id="avatar-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      const reader = new FileReader()
+                      reader.onload = (e) => {
+                        setEditingClient({ ...editingClient, avatar_url: e.target?.result as string })
+                      }
+                      reader.readAsDataURL(file)
+                    }
+                  }}
+                  className="hidden"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Recommended: Square image, max 2MB
+                </p>
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="new-name">Name *</Label>
@@ -633,25 +779,13 @@ export default function ClientsPage() {
                 rows={3}
               />
             </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="terms" 
-                checked={acceptTerms} 
-                onCheckedChange={(checked) => setAcceptTerms(checked === true)} 
-              />
-              <Label
-                htmlFor="terms"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                I agree to the terms and conditions for adding this client
-              </Label>
-            </div>
+
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAddDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSaveClient} disabled={!editingClient.name || !acceptTerms}>
+            <Button onClick={handleSaveClient} disabled={!editingClient.name}>
               Add Client
             </Button>
           </DialogFooter>
