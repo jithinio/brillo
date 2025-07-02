@@ -4,6 +4,15 @@ import { createClient } from "@supabase/supabase-js"
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://tcjamlmfdafopidqbrsw.supabase.co"
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRjamFtbGZmZGFmb3BpZHFicnN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyMTU5MTMsImV4cCI6MjA2Njc5MTkxM30.xsYOlHrwH2y0hfExtG0-cwac1FyyFg0tyfE2MI4AaT0"
 
+// Debug logging for environment variables
+console.log('🔍 Supabase Config Debug:')
+console.log('Environment Variables Available:', {
+  NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ? 'Set' : 'Not Set',
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'Set' : 'Not Set'
+})
+console.log('Using URL:', supabaseUrl)
+console.log('Using Key:', supabaseAnonKey.substring(0, 20) + '...')
+
 // Helper function to check if Supabase is properly configured
 export const isSupabaseConfigured = () => {
   return (
