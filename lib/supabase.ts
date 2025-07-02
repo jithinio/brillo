@@ -6,7 +6,6 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOi
 
 // Helper function to check if Supabase is properly configured
 export const isSupabaseConfigured = () => {
-  // Temporarily disabled to use mock data only
   return (
     supabaseUrl && 
     supabaseAnonKey && 
@@ -27,7 +26,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 })
 
-// Mock user data for development
+// Mock user data for development/fallback
 export const mockUser = {
   id: "1",
   email: "demo@example.com",

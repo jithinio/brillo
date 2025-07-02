@@ -49,7 +49,13 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
 
   const handleGoogleSignIn = async () => {
     try {
-      const { supabase } = await import("@/lib/supabase")
+      const { supabase, isSupabaseConfigured } = await import("@/lib/supabase")
+      
+      if (!isSupabaseConfigured()) {
+        setError("Google sign-in not available - Supabase not configured properly.")
+        return
+      }
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {

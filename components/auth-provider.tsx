@@ -21,7 +21,7 @@ const AuthContext = createContext<AuthContextType>({
   signUp: async () => ({}),
 })
 
-// Mock user for when Supabase is disabled
+// Mock user for when Supabase is disabled (fallback only)
 const createMockUser = (email: string): User => ({
   id: "mock-user-id",
   email,
@@ -51,7 +51,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const initializeAuth = async () => {
       if (!isSupabaseConfigured()) {
-        // Use mock authentication
+        console.warn("Supabase not configured properly, using fallback authentication")
+        // Use mock authentication as fallback
         const savedUser = localStorage.getItem("mock-user")
         if (savedUser) {
           setUser(JSON.parse(savedUser))
@@ -79,7 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     initializeAuth()
 
-    // Only set up Supabase listener if configured
+    // Set up Supabase listener if configured
     if (isSupabaseConfigured()) {
       const {
         data: { subscription },
@@ -94,6 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     if (!isSupabaseConfigured()) {
+      console.warn("Supabase not configured, using mock authentication")
       // Mock authentication - accept any email/password
       const mockUser = createMockUser(email)
       setUser(mockUser)
@@ -108,16 +110,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
       return { error }
     } catch (error) {
-      // Fall back to mock auth if Supabase fails
-      const mockUser = createMockUser(email)
-      setUser(mockUser)
-      localStorage.setItem("mock-user", JSON.stringify(mockUser))
-      return { error: null }
+      console.error("Sign in error:", error)
+      return { error }
     }
   }
 
   const signUp = async (email: string, password: string, userData?: any) => {
     if (!isSupabaseConfigured()) {
+      console.warn("Supabase not configured, using mock authentication")
       // Mock authentication - accept any signup
       const mockUser = createMockUser(email)
       setUser(mockUser)
@@ -135,11 +135,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
       return { error }
     } catch (error) {
-      // Fall back to mock auth if Supabase fails
-      const mockUser = createMockUser(email)
-      setUser(mockUser)
-      localStorage.setItem("mock-user", JSON.stringify(mockUser))
-      return { error: null }
+      console.error("Sign up error:", error)
+      return { error }
     }
   }
 
