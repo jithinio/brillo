@@ -2,12 +2,10 @@
 
 import type React from "react"
 import { createContext, useContext, useEffect, useState } from "react"
+import { formatCurrency as formatCurrencyUtil, setDefaultCurrency, getDefaultCurrency } from "@/lib/currency"
 
 interface AppSettings {
   defaultCurrency: string
-  timezone: string
-  language: string
-  dateFormat: string
   companyName: string
   companyLogo: string
   taxRate: number
@@ -24,9 +22,6 @@ interface SettingsContextType {
 
 const defaultSettings: AppSettings = {
   defaultCurrency: "USD",
-  timezone: "UTC",
-  language: "en",
-  dateFormat: "mm/dd/yyyy",
   companyName: "Suitebase",
   companyLogo: "",
   taxRate: 8.0,
@@ -47,13 +42,19 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Load settings from localStorage
     const loadedSettings = { ...defaultSettings }
+    
+    // First, get currency from global currency system
+    const globalCurrency = getDefaultCurrency()
+    loadedSettings.defaultCurrency = globalCurrency
+    
     Object.keys(defaultSettings).forEach((key) => {
       const stored = localStorage.getItem(`setting_${key}`)
       if (stored !== null) {
         try {
-          loadedSettings[key as keyof AppSettings] = JSON.parse(stored)
+          const value = JSON.parse(stored)
+          ;(loadedSettings as any)[key] = value
         } catch {
-          loadedSettings[key as keyof AppSettings] = stored
+          ;(loadedSettings as any)[key] = stored
         }
       }
     })
@@ -63,29 +64,16 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const updateSetting = (key: keyof AppSettings, value: any) => {
     setSettings((prev) => ({ ...prev, [key]: value }))
     localStorage.setItem(`setting_${key}`, JSON.stringify(value))
+    
+    // Sync currency changes with global currency system
+    if (key === 'defaultCurrency') {
+      setDefaultCurrency(value)
+    }
   }
 
   const formatCurrency = (amount: number): string => {
-    const currency = settings.defaultCurrency || "USD"
-    const config = {
-      USD: { symbol: "$", position: "before", decimals: 2 },
-      EUR: { symbol: "€", position: "after", decimals: 2 },
-      GBP: { symbol: "£", position: "before", decimals: 2 },
-      CAD: { symbol: "C$", position: "before", decimals: 2 },
-      AUD: { symbol: "A$", position: "before", decimals: 2 },
-      JPY: { symbol: "¥", position: "before", decimals: 0 },
-      CHF: { symbol: "Fr", position: "after", decimals: 2 },
-      CNY: { symbol: "¥", position: "before", decimals: 2 },
-      INR: { symbol: "₹", position: "before", decimals: 2 },
-    }[currency] || { symbol: "$", position: "before", decimals: 2 }
-
-    const formattedAmount = amount.toFixed(config.decimals)
-
-    if (config.position === "before") {
-      return `${config.symbol}${formattedAmount}`
-    } else {
-      return `${formattedAmount}${config.symbol}`
-    }
+    // Use the global currency formatting utility
+    return formatCurrencyUtil(amount, settings.defaultCurrency)
   }
 
   return (

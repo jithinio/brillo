@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,6 +8,9 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Trash2, Send, Save } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+import { formatCurrency } from "@/lib/currency"
+import { PageHeader, PageContent } from "@/components/page-header"
 
 interface InvoiceItem {
   id: string
@@ -17,10 +20,102 @@ interface InvoiceItem {
 }
 
 export default function GenerateInvoicePage() {
+  const { toast } = useToast()
   const [client, setClient] = useState("")
+  const [clientCompany, setClientCompany] = useState("")
   const [dueDate, setDueDate] = useState("")
   const [notes, setNotes] = useState("")
   const [items, setItems] = useState<InvoiceItem[]>([{ id: "1", description: "", quantity: 1, rate: 0 }])
+  const [projectData, setProjectData] = useState<any>(null)
+  const [clientData, setClientData] = useState<any>(null)
+
+  // Load project or client data from sessionStorage when component mounts
+  useEffect(() => {
+    const storedProjectData = sessionStorage.getItem('invoice-project-data')
+    const storedClientData = sessionStorage.getItem('invoice-client-data')
+    
+    if (storedProjectData) {
+      try {
+        const projectInfo = JSON.parse(storedProjectData)
+        setProjectData(projectInfo)
+        
+        // Auto-populate form fields
+        setClient(projectInfo.clientName || "")
+        setClientCompany(projectInfo.clientCompany || "")
+        
+        // Set due date to 30 days from now
+        const dueDate = new Date()
+        dueDate.setDate(dueDate.getDate() + 30)
+        setDueDate(dueDate.toISOString().split('T')[0])
+        
+        // Calculate suggested amount from project data
+        const suggestedAmount = projectInfo.projectPending || projectInfo.projectBudget || 0
+        
+        // Create default invoice item for the project
+        setItems([{
+          id: "1",
+          description: `${projectInfo.projectName} - Project development and implementation`,
+          quantity: 1,
+          rate: suggestedAmount // Use pending amount or total budget as suggested rate
+        }])
+        
+        // Clear the session storage after loading
+        sessionStorage.removeItem('invoice-project-data')
+        
+        // Show success notification
+        toast({
+          title: "Invoice Auto-Populated",
+          description: `Form filled with data from "${projectInfo.projectName}". ${suggestedAmount > 0 ? `Suggested amount: ${formatCurrency(suggestedAmount)}` : 'Please set the invoice amount.'}`,
+        })
+      } catch (error) {
+        console.error('Error parsing project data:', error)
+        toast({
+          title: "Error",
+          description: "Could not load project data. Please fill the form manually.",
+          variant: "destructive",
+        })
+      }
+    } else if (storedClientData) {
+      // Handle client data from clients page
+      try {
+        const clientInfo = JSON.parse(storedClientData)
+        setClientData(clientInfo)
+        
+        // Auto-populate form fields with client data
+        setClient(clientInfo.clientName || "")
+        setClientCompany(clientInfo.clientCompany || "")
+        
+        // Set due date to 30 days from now
+        const dueDate = new Date()
+        dueDate.setDate(dueDate.getDate() + 30)
+        setDueDate(dueDate.toISOString().split('T')[0])
+        
+        // Create default invoice item
+        setItems([{
+          id: "1",
+          description: "Professional services",
+          quantity: 1,
+          rate: 0 // User will need to set the rate
+        }])
+        
+        // Clear the session storage after loading
+        sessionStorage.removeItem('invoice-client-data')
+        
+        // Show success notification
+        toast({
+          title: "Invoice Auto-Populated",
+          description: `Form filled with client data for "${clientInfo.clientName}". Please add services and set amounts.`,
+        })
+      } catch (error) {
+        console.error('Error parsing client data:', error)
+        toast({
+          title: "Error",
+          description: "Could not load client data. Please fill the form manually.",
+          variant: "destructive",
+        })
+      }
+    }
+  }, [])
 
   const addItem = () => {
     const newItem: InvoiceItem = {
@@ -45,23 +140,27 @@ export default function GenerateInvoicePage() {
   }
 
   return (
-    <div className="px-4 lg:px-6">
-      <div className="flex items-center justify-between space-y-2 mb-6">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Generate Invoice</h2>
-          <p className="text-muted-foreground">Create a new invoice for your client.</p>
-        </div>
-        <div className="flex space-x-2">
-          <Button variant="outline" size="sm">
-            <Save className="mr-2 h-4 w-4" />
-            Save Draft
-          </Button>
-          <Button size="sm">
-            <Send className="mr-2 h-4 w-4" />
-            Send Invoice
-          </Button>
-        </div>
-      </div>
+    <>
+      <PageHeader
+        title="Generate Invoice"
+        breadcrumbs={[
+          { label: "Invoices", href: "/dashboard/invoices" },
+          { label: "Generate" }
+        ]}
+        action={
+          <div className="flex space-x-2">
+            <Button variant="outline" size="sm">
+              <Save className="mr-2 h-4 w-4" />
+              Save Draft
+            </Button>
+            <Button size="sm">
+              <Send className="mr-2 h-4 w-4" />
+              Send Invoice
+            </Button>
+          </div>
+        }
+      />
+      <PageContent>
 
       <div className="grid gap-6 md:grid-cols-3">
         <div className="md:col-span-2 space-y-6">
@@ -73,21 +172,37 @@ export default function GenerateInvoicePage() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="client">Client</Label>
-                  <Select value={client} onValueChange={setClient}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a client" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="acme">Acme Corporation</SelectItem>
-                      <SelectItem value="techstart">TechStart Inc.</SelectItem>
-                      <SelectItem value="global">Global Solutions</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="client">Client Name</Label>
+                  <Input 
+                    id="client" 
+                    value={client} 
+                    onChange={(e) => setClient(e.target.value)}
+                    placeholder="Enter client name"
+                  />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="clientCompany">Company</Label>
+                  <Input 
+                    id="clientCompany" 
+                    value={clientCompany} 
+                    onChange={(e) => setClientCompany(e.target.value)}
+                    placeholder="Enter company name"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="dueDate">Due Date</Label>
                   <Input id="dueDate" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="invoiceDate">Invoice Date</Label>
+                  <Input 
+                    id="invoiceDate" 
+                    type="date" 
+                    value={new Date().toISOString().split('T')[0]} 
+                    readOnly 
+                  />
                 </div>
               </div>
               <div className="space-y-2">
@@ -176,6 +291,32 @@ export default function GenerateInvoicePage() {
               <CardDescription>Review the total amount and details.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {projectData && (
+                <div className="p-3 bg-green-50 border border-green-200 rounded-md mb-4">
+                  <div className="text-sm text-green-800">
+                    <span className="font-medium">✓ Auto-populated from project:</span>
+                    <div className="mt-1">{projectData.projectName}</div>
+                  </div>
+                </div>
+              )}
+              
+              {clientData && (
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-md mb-4">
+                  <div className="text-sm text-blue-800">
+                    <span className="font-medium">✓ Auto-populated from client:</span>
+                    <div className="mt-1">{clientData.clientName}</div>
+                  </div>
+                </div>
+              )}
+              
+              {client && (
+                <div className="space-y-1 pb-4 border-b">
+                  <div className="text-sm font-medium">Bill To:</div>
+                  <div className="text-sm">{client}</div>
+                  {clientCompany && <div className="text-sm text-muted-foreground">{clientCompany}</div>}
+                </div>
+              )}
+
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Subtotal:</span>
@@ -210,6 +351,7 @@ export default function GenerateInvoicePage() {
           </Card>
         </div>
       </div>
-    </div>
+      </PageContent>
+    </>
   )
 }

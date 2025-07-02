@@ -30,6 +30,7 @@ import { PageHeader, PageContent, PageTitle } from "@/components/page-header"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Upload } from "lucide-react"
 import { DataTable } from "@/components/clients/data-table"
 import { createColumns, type Client } from "@/components/clients/columns"
@@ -211,19 +212,48 @@ export default function ClientsPage() {
   }
 
   const handleCreateInvoice = (client: Client) => {
+    // Store client data for invoice creation
+    sessionStorage.setItem('invoice-client-data', JSON.stringify({
+      clientId: client.id,
+      clientName: client.name,
+      clientCompany: client.company,
+      clientEmail: client.email,
+      clientPhone: client.phone,
+      clientAddress: client.address,
+      clientCity: client.city,
+      clientState: client.state,
+      clientZipCode: client.zip_code,
+      clientCountry: client.country,
+    }))
+    
     toast({
-      title: "Create Invoice",
-      description: `Creating invoice for ${client.name}...`,
+      title: "Creating Invoice",
+      description: `Redirecting to create invoice for ${client.name}`,
     })
-    // TODO: Navigate to invoice creation page with client pre-selected
+    
+    // Navigate to invoices page
+    setTimeout(() => {
+      window.location.href = '/dashboard/invoices/generate'
+    }, 1000)
   }
 
   const handleNewProject = (client: Client) => {
+    // Store client data for project creation
+    sessionStorage.setItem('project-client-data', JSON.stringify({
+      clientId: client.id,
+      clientName: client.name,
+      clientCompany: client.company,
+    }))
+    
     toast({
-      title: "New Project",
-      description: `Creating new project for ${client.name}...`,
+      title: "Creating Project",
+      description: `Opening project form with ${client.name} pre-selected.`,
     })
-    // TODO: Navigate to project creation page with client pre-selected
+    
+    // Navigate to projects page with action parameter
+    setTimeout(() => {
+      window.location.href = '/dashboard/projects?action=add-project'
+    }, 500)
   }
 
   const handleDeleteClient = (client: Client) => {
@@ -397,6 +427,8 @@ export default function ClientsPage() {
       })
     }
   }
+
+
 
   const columns = createColumns({
     onViewDetails: handleViewDetails,
@@ -812,6 +844,8 @@ export default function ClientsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+
     </>
   )
 }

@@ -6,14 +6,16 @@ import {
   MoreHorizontal,
   CheckCircle,
   Clock,
-  Pause,
+  Send,
   XCircle,
   Eye,
   Edit,
-  FileText,
+  Download,
   Trash2,
   User,
   Calendar,
+  FileText,
+  DollarSign,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -27,54 +29,68 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { formatCurrency } from "@/lib/currency"
 
-export type Project = {
+export type Invoice = {
   id: string
-  name: string
+  invoice_number: string
+  amount: number
+  tax_amount: number
+  total_amount: number
   status: string
-  start_date?: string
-  end_date?: string
-  budget?: number
-  expenses?: number
-  received?: number
-  pending?: number
+  issue_date: string
+  due_date: string
+  notes?: string
   created_at: string
   clients?: {
     name: string
     company?: string
   }
+  projects?: {
+    name: string
+  }
 }
 
 const statusConfig = {
-  active: {
-    label: "In Progress",
+  draft: {
+    label: "Draft",
     icon: Clock,
-    className: "text-muted-foreground",
+    className: "text-gray-700",
+    color: "bg-gray-100",
   },
-  completed: {
-    label: "Done",
+  sent: {
+    label: "Sent",
+    icon: Send,
+    className: "text-blue-700",
+    color: "bg-blue-100",
+  },
+  paid: {
+    label: "Paid",
     icon: CheckCircle,
-    className: "text-muted-foreground",
+    className: "text-green-700",
+    color: "bg-green-100",
   },
-  on_hold: {
-    label: "On Hold",
-    icon: Pause,
-    className: "text-muted-foreground",
+  overdue: {
+    label: "Overdue",
+    icon: XCircle,
+    className: "text-red-700",
+    color: "bg-red-100",
   },
   cancelled: {
     label: "Cancelled",
     icon: XCircle,
-    className: "text-muted-foreground",
+    className: "text-gray-600",
+    color: "bg-gray-50",
   },
 }
 
 interface ColumnActions {
-  onViewDetails: (project: Project) => void
-  onEditProject: (project: Project) => void
-  onCreateInvoice: (project: Project) => void
-  onDeleteProject: (project: Project) => void
+  onViewDetails: (invoice: Invoice) => void
+  onEditInvoice: (invoice: Invoice) => void
+  onSendInvoice: (invoice: Invoice) => void
+  onDownloadPDF: (invoice: Invoice) => void
+  onDeleteInvoice: (invoice: Invoice) => void
 }
 
-export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
+export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
   return [
     {
       id: "select",
@@ -103,7 +119,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
       size: 40,
     },
     {
-      accessorKey: "name",
+      accessorKey: "invoice_number",
       header: ({ column }) => {
         return (
           <Button
@@ -111,22 +127,25 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
             className="h-auto p-0 font-medium"
           >
-            Project Name
+            Invoice #
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
         )
       },
       cell: ({ row }) => {
-        const project = row.original
+        const invoice = row.original
         return (
-          <div className="min-w-[200px] max-w-[250px]">
-            <div className="truncate font-medium" title={project.name}>
-              {project.name}
+          <div className="min-w-[120px] max-w-[150px]">
+            <div className="flex items-center space-x-2">
+              <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              <div className="truncate font-medium" title={invoice.invoice_number}>
+                {invoice.invoice_number}
+              </div>
             </div>
           </div>
         )
       },
-      size: 250,
+      size: 150,
       enableHiding: false,
     },
     {
@@ -146,17 +165,35 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
       cell: ({ row }) => {
         const client = row.original.clients
         return client ? (
-          <div className="flex items-center space-x-2 min-w-[150px] max-w-[180px]">
+          <div className="flex items-center space-x-2 min-w-[120px] max-w-[150px]">
             <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-            <div className="truncate font-normal" title={client.name}>
+            <div className="font-medium truncate" title={client.name}>
               {client.name}
             </div>
           </div>
         ) : (
-          <span className="text-muted-foreground min-w-[150px] block">No client</span>
+          <span className="text-muted-foreground min-w-[120px] block">No client</span>
         )
       },
-      size: 180,
+      size: 150,
+      enableHiding: true,
+    },
+    {
+      id: "project",
+      header: "Project",
+      cell: ({ row }) => {
+        const project = row.original.projects
+        return project ? (
+          <div className="min-w-[120px] max-w-[150px]">
+            <div className="truncate text-sm" title={project.name}>
+              {project.name}
+            </div>
+          </div>
+        ) : (
+          <span className="text-muted-foreground text-sm min-w-[120px] block">—</span>
+        )
+      },
+      size: 150,
       enableHiding: true,
     },
     {
@@ -173,19 +210,22 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
         const Icon = config.icon
 
         return (
-          <div className="min-w-[120px]">
-            <Badge className="font-normal" variant="outline">
+          <div className="min-w-[100px]">
+            <Badge 
+              variant="secondary" 
+              className={`font-normal ${config.color} ${config.className}`}
+            >
               <Icon className="mr-1.5 h-3 w-3" />
               {config.label}
             </Badge>
           </div>
         )
       },
-      size: 120,
+      size: 100,
       enableHiding: true,
     },
     {
-      accessorKey: "budget",
+      accessorKey: "total_amount",
       header: ({ column }) => {
         return (
           <Button
@@ -193,28 +233,24 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
             className="h-auto p-0 font-medium"
           >
-            Budget
+            Total Amount
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
         )
       },
       cell: ({ row }) => {
-        const budget = row.getValue("budget") as number
+        const amount = row.getValue("total_amount") as number
         return (
-          <div className="min-w-[100px] max-w-[120px]">
-            {budget ? (
-              <span className="truncate font-normal">{formatCurrency(budget)}</span>
-            ) : (
-              <span className="text-muted-foreground">—</span>
-            )}
+          <div className="min-w-[120px] max-w-[150px]">
+            <span className="font-medium">{formatCurrency(amount)}</span>
           </div>
         )
       },
-      size: 120,
+      size: 150,
       enableHiding: true,
     },
     {
-      accessorKey: "expenses",
+      accessorKey: "issue_date",
       header: ({ column }) => {
         return (
           <Button
@@ -222,86 +258,31 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
             className="h-auto p-0 font-medium"
           >
-            Expenses
+            Issue Date
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
         )
       },
       cell: ({ row }) => {
-        const expenses = row.getValue("expenses") as number
-        return (
-          <div className="min-w-[100px] max-w-[120px]">
-            {expenses ? (
-              <span className="truncate font-normal">{formatCurrency(expenses)}</span>
-            ) : (
-              <span className="text-muted-foreground">{formatCurrency(0)}</span>
-            )}
-          </div>
-        )
+        const issueDate = row.getValue("issue_date") as string
+        if (issueDate) {
+          const date = new Date(issueDate)
+          return (
+            <div className="min-w-[100px] max-w-[120px]">
+              <div className="flex items-center space-x-2">
+                <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <span className="text-sm truncate">{date.toLocaleDateString()}</span>
+              </div>
+            </div>
+          )
+        }
+        return <span className="text-muted-foreground min-w-[100px] block">—</span>
       },
       size: 120,
       enableHiding: true,
     },
     {
-      accessorKey: "received",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="h-auto p-0 font-medium"
-          >
-            Received
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        )
-      },
-      cell: ({ row }) => {
-        const received = row.getValue("received") as number
-        return (
-          <div className="min-w-[100px] max-w-[120px]">
-            {received ? (
-              <span className="truncate font-normal">{formatCurrency(received)}</span>
-            ) : (
-              <span className="text-muted-foreground">{formatCurrency(0)}</span>
-            )}
-          </div>
-        )
-      },
-      size: 120,
-      enableHiding: true,
-    },
-    {
-      accessorKey: "pending",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="h-auto p-0 font-medium"
-          >
-            Pending
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        )
-      },
-      cell: ({ row }) => {
-        const pending = row.getValue("pending") as number
-        return (
-          <div className="min-w-[100px] max-w-[120px]">
-            {pending ? (
-              <span className="truncate font-normal">{formatCurrency(pending)}</span>
-            ) : (
-              <span className="text-muted-foreground">{formatCurrency(0)}</span>
-            )}
-          </div>
-        )
-      },
-      size: 120,
-      enableHiding: true,
-    },
-    {
-      accessorKey: "end_date",
+      accessorKey: "due_date",
       header: ({ column }) => {
         return (
           <Button
@@ -315,9 +296,11 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
         )
       },
       cell: ({ row }) => {
-        const endDate = row.getValue("end_date") as string
-        if (endDate) {
-          const date = new Date(endDate)
+        const dueDate = row.getValue("due_date") as string
+        const status = row.original.status
+        
+        if (dueDate) {
+          const date = new Date(dueDate)
           const today = new Date()
           const diffTime = date.getTime() - today.getTime()
           const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
@@ -328,7 +311,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
                 <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                 <span className="text-sm truncate">{date.toLocaleDateString()}</span>
               </div>
-              {row.original.status !== "completed" && (
+              {status !== "paid" && status !== "cancelled" && (
                 <div
                   className={`text-xs truncate ${
                     diffDays < 0 ? "text-red-600" : diffDays <= 7 ? "text-yellow-600" : "text-muted-foreground"
@@ -375,7 +358,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
       header: "",
       enableHiding: false,
       cell: ({ row }) => {
-        const project = row.original
+        const invoice = row.original
 
         return (
           <div className="flex justify-center">
@@ -391,26 +374,30 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-40">
-                <DropdownMenuItem onClick={() => actions.onViewDetails(project)} className="whitespace-nowrap">
+                <DropdownMenuItem onClick={() => actions.onViewDetails(invoice)} className="whitespace-nowrap">
                   <Eye className="mr-2 h-4 w-4" />
                   View Details
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => actions.onEditProject(project)} className="whitespace-nowrap">
+                <DropdownMenuItem onClick={() => actions.onEditInvoice(invoice)} className="whitespace-nowrap">
                   <Edit className="mr-2 h-4 w-4" />
-                  Edit Project
+                  Edit Invoice
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => actions.onCreateInvoice(project)} className="whitespace-nowrap">
-                  <FileText className="mr-2 h-4 w-4" />
-                  Create Invoice
+                <DropdownMenuItem onClick={() => actions.onSendInvoice(invoice)} className="whitespace-nowrap">
+                  <Send className="mr-2 h-4 w-4" />
+                  Send Invoice
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => actions.onDownloadPDF(invoice)} className="whitespace-nowrap">
+                  <Download className="mr-2 h-4 w-4" />
+                  Download PDF
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
+                  onClick={() => actions.onDeleteInvoice(invoice)}
                   className="text-destructive whitespace-nowrap"
-                  onClick={() => actions.onDeleteProject(project)}
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
-                  Delete Project
+                  Delete Invoice
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -420,4 +407,4 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
       size: 36,
     },
   ]
-}
+} 

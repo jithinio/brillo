@@ -32,6 +32,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { PageHeader, PageContent, PageTitle } from "@/components/page-header"
 import { DataTable } from "@/components/projects/data-table"
 import { createColumns, type Project } from "@/components/projects/columns"
+import { formatCurrency } from "@/lib/currency"
 
 // Mock data for projects with new fields
 const mockProjects: Project[] = [
@@ -48,7 +49,7 @@ const mockProjects: Project[] = [
     created_at: "2024-01-10T10:00:00Z",
     clients: {
       name: "John Smith",
-      company: "Tech Corp",
+      company: "Acme Corporation",
     },
   },
   {
@@ -64,7 +65,7 @@ const mockProjects: Project[] = [
     created_at: "2023-09-25T14:30:00Z",
     clients: {
       name: "Sarah Johnson",
-      company: "StartupXYZ",
+      company: "TechStart Inc.",
     },
   },
   {
@@ -79,8 +80,8 @@ const mockProjects: Project[] = [
     pending: 21800,
     created_at: "2024-01-28T09:15:00Z",
     clients: {
-      name: "Mike Davis",
-      company: "Retail Plus",
+      name: "Michael Brown",
+      company: "Global Solutions LLC",
     },
   },
   {
@@ -95,8 +96,8 @@ const mockProjects: Project[] = [
     pending: 10800,
     created_at: "2024-02-25T16:45:00Z",
     clients: {
-      name: "Lisa Chen",
-      company: "DataFlow Inc",
+      name: "Emily Davis",
+      company: "Creative Studio",
     },
   },
   {
@@ -111,36 +112,19 @@ const mockProjects: Project[] = [
     pending: 0,
     created_at: "2023-12-20T11:20:00Z",
     clients: {
-      name: "Robert Wilson",
-      company: "Enterprise Solutions",
-    },
-  },
-  {
-    id: "6",
-    name: "Brand Identity Package Design",
-    status: "completed",
-    start_date: "2023-11-01",
-    end_date: "2024-01-15",
-    budget: 12000,
-    expenses: 800,
-    received: 12000,
-    pending: 0,
-    created_at: "2023-10-25T13:30:00Z",
-    clients: {
-      name: "Emma Thompson",
-      company: "Creative Studio",
+      name: "David Wilson",
+      company: "Retail Plus",
     },
   },
 ]
 
-// Mock clients data for project creation
+// Mock clients data for project creation (matching clients page data)
 const mockClients = [
-  { id: "1", name: "John Smith", company: "Tech Corp", avatar_url: undefined },
-  { id: "2", name: "Sarah Johnson", company: "StartupXYZ", avatar_url: undefined },
-  { id: "3", name: "Mike Davis", company: "Retail Plus", avatar_url: undefined },
-  { id: "4", name: "Lisa Chen", company: "DataFlow Inc", avatar_url: undefined },
-  { id: "5", name: "Robert Wilson", company: "Enterprise Solutions", avatar_url: undefined },
-  { id: "6", name: "Emma Thompson", company: "Creative Studio", avatar_url: undefined },
+  { id: "1", name: "John Smith", company: "Acme Corporation", avatar_url: undefined },
+  { id: "2", name: "Sarah Johnson", company: "TechStart Inc.", avatar_url: undefined },
+  { id: "3", name: "Michael Brown", company: "Global Solutions LLC", avatar_url: undefined },
+  { id: "4", name: "Emily Davis", company: "Creative Studio", avatar_url: undefined },
+  { id: "5", name: "David Wilson", company: "Retail Plus", avatar_url: undefined },
 ]
 
 const statusOptions = [
@@ -183,6 +167,76 @@ export default function ProjectsPage() {
   })
   const { toast } = useToast()
 
+  // Check for client pre-selection from sessionStorage and URL parameters
+  React.useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const action = urlParams.get('action')
+    
+    if (action === 'add-project') {
+      // Check for pre-selected client data
+      const clientDataStr = sessionStorage.getItem('project-client-data')
+      if (clientDataStr) {
+        try {
+          const clientData = JSON.parse(clientDataStr)
+          
+          // Find matching client by name and company instead of ID
+          const matchingClient = mockClients.find(client => 
+            client.name === clientData.clientName || 
+            client.company === clientData.clientCompany
+          )
+          
+          if (matchingClient) {
+            // Set the client_id in the form
+            setNewProject(prev => ({
+              ...prev,
+              client_id: matchingClient.id
+            }))
+            
+            toast({
+              title: "Client Pre-selected",
+              description: `${clientData.clientName} has been pre-selected for the new project.`,
+            })
+          } else {
+            // If no exact match, try to find by name similarity
+            const similarClient = mockClients.find(client => 
+              client.name.toLowerCase().includes(clientData.clientName.toLowerCase()) ||
+              clientData.clientName.toLowerCase().includes(client.name.toLowerCase())
+            )
+            
+            if (similarClient) {
+              setNewProject(prev => ({
+                ...prev,
+                client_id: similarClient.id
+              }))
+              
+              toast({
+                title: "Similar Client Pre-selected",
+                description: `Selected ${similarClient.name} as the closest match for ${clientData.clientName}.`,
+              })
+            } else {
+              toast({
+                title: "Client Not Found",
+                description: `Could not find ${clientData.clientName} in the projects client list. Please select manually.`,
+                variant: "destructive",
+              })
+            }
+          }
+          
+          // Clean up sessionStorage
+          sessionStorage.removeItem('project-client-data')
+        } catch (error) {
+          console.error('Error parsing client data from sessionStorage:', error)
+        }
+      }
+      
+      // Open the add project dialog
+      setIsAddDialogOpen(true)
+      
+      // Clean up URL parameter
+      window.history.replaceState({}, '', '/dashboard/projects')
+    }
+  }, [toast])
+
   const handleViewDetails = (project: Project) => {
     setSelectedProject(project)
     setIsViewDialogOpen(true)
@@ -190,22 +244,49 @@ export default function ProjectsPage() {
 
   const handleEditProject = (project: Project) => {
     setSelectedProject(project)
+    // Populate editing form with current project data
+    setNewProject({
+      name: project.name,
+      client_id: project.clients ? mockClients.find(c => c.name === project.clients!.name)?.id || "" : "",
+      status: project.status,
+      start_date: project.start_date ? new Date(project.start_date) : undefined,
+      end_date: project.end_date ? new Date(project.end_date) : undefined,
+      budget: project.budget?.toString() || "",
+      expenses: project.expenses?.toString() || "",
+      received: project.received?.toString() || "",
+      description: "", // We don't have description in current data
+    })
     setIsEditDialogOpen(true)
   }
 
   const handleCreateInvoice = (project: Project) => {
+    // Navigate to invoices page with project pre-selected
+    const clientName = project.clients?.name || "Unknown Client"
+    const projectName = project.name
+    
     toast({
-      title: "Invoice Creation",
-      description: `Creating invoice for ${project.name}`,
+      title: "Creating Invoice",
+      description: `Redirecting to create invoice for "${projectName}" - ${clientName}`,
     })
+    
+    // Store project data for invoice creation
+    sessionStorage.setItem('invoice-project-data', JSON.stringify({
+      projectId: project.id,
+      projectName: project.name,
+      clientName: project.clients?.name,
+      clientCompany: project.clients?.company,
+      projectBudget: project.budget,
+      projectPending: project.pending,
+      projectStatus: project.status,
+    }))
+    
+    // Navigate to invoices page
+    setTimeout(() => {
+      window.location.href = '/dashboard/invoices/generate'
+    }, 1000)
   }
 
-  const handleTimeTracking = (project: Project) => {
-    toast({
-      title: "Time Tracking",
-      description: `Opening time tracking for ${project.name}`,
-    })
-  }
+
 
   const handleDeleteProject = (project: Project) => {
     setSelectedProject(project)
@@ -213,6 +294,7 @@ export default function ProjectsPage() {
   }
 
   const handleAddProject = () => {
+    setSelectedProject(null) // Clear any selected project
     setNewProject({
       name: "",
       client_id: "",
@@ -229,6 +311,11 @@ export default function ProjectsPage() {
 
   const handleSaveProject = () => {
     if (!newProject.name) {
+      toast({
+        title: "Validation Error",
+        description: "Project name is required.",
+        variant: "destructive",
+      })
       return
     }
 
@@ -239,29 +326,59 @@ export default function ProjectsPage() {
     const received = newProject.received ? parseFloat(newProject.received) : 0
     const pending = Math.max(0, budget - received)
 
-    const project: Project = {
-      id: Date.now().toString(),
-      name: newProject.name,
-      status: newProject.status,
-      start_date: newProject.start_date ? newProject.start_date.toISOString() : undefined,
-      end_date: newProject.end_date ? newProject.end_date.toISOString() : undefined,
-      budget: budget || undefined,
-      expenses: expenses,
-      received: received,
-      pending: pending,
-      created_at: new Date().toISOString(),
-      clients: selectedClient ? {
-        name: selectedClient.name,
-        company: selectedClient.company,
-      } : undefined,
+    if (selectedProject) {
+      // Editing existing project
+      const updatedProject: Project = {
+        ...selectedProject,
+        name: newProject.name,
+        status: newProject.status,
+        start_date: newProject.start_date ? newProject.start_date.toISOString() : undefined,
+        end_date: newProject.end_date ? newProject.end_date.toISOString() : undefined,
+        budget: budget || undefined,
+        expenses: expenses,
+        received: received,
+        pending: pending,
+        clients: selectedClient ? {
+          name: selectedClient.name,
+          company: selectedClient.company,
+        } : undefined,
+      }
+
+      setProjects(projects.map(p => p.id === selectedProject.id ? updatedProject : p))
+      setIsEditDialogOpen(false)
+      toast({
+        title: "Project Updated",
+        description: `Project "${updatedProject.name}" has been updated successfully.`,
+      })
+    } else {
+      // Adding new project
+      const project: Project = {
+        id: Date.now().toString(),
+        name: newProject.name,
+        status: newProject.status,
+        start_date: newProject.start_date ? newProject.start_date.toISOString() : undefined,
+        end_date: newProject.end_date ? newProject.end_date.toISOString() : undefined,
+        budget: budget || undefined,
+        expenses: expenses,
+        received: received,
+        pending: pending,
+        created_at: new Date().toISOString(),
+        clients: selectedClient ? {
+          name: selectedClient.name,
+          company: selectedClient.company,
+        } : undefined,
+      }
+
+      setProjects([...projects, project])
+      setIsAddDialogOpen(false)
+      toast({
+        title: "Project Created",
+        description: `Project "${project.name}" has been created successfully.`,
+      })
     }
 
-    setProjects([...projects, project])
-    setIsAddDialogOpen(false)
-    toast({
-      title: "Project Created",
-      description: `Project "${project.name}" has been created successfully.`,
-    })
+    // Reset form
+    setSelectedProject(null)
   }
 
   const confirmDelete = () => {
@@ -280,7 +397,6 @@ export default function ProjectsPage() {
     onViewDetails: handleViewDetails,
     onEditProject: handleEditProject,
     onCreateInvoice: handleCreateInvoice,
-    onTimeTracking: handleTimeTracking,
     onDeleteProject: handleDeleteProject,
   })
 
@@ -315,21 +431,21 @@ export default function ProjectsPage() {
             <div className="flex flex-row items-center justify-between space-y-0 pb-2">
               <h3 className="tracking-tight text-sm font-medium">Total Budget</h3>
             </div>
-            <div className="text-2xl font-bold">${totalBudget.toLocaleString()}</div>
+            <div className="text-2xl font-bold">{formatCurrency(totalBudget)}</div>
             <p className="text-xs text-muted-foreground">Combined project value</p>
           </div>
           <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
             <div className="flex flex-row items-center justify-between space-y-0 pb-2">
               <h3 className="tracking-tight text-sm font-medium">Total Received</h3>
             </div>
-            <div className="text-2xl font-bold text-green-600">${totalReceived.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-green-600">{formatCurrency(totalReceived)}</div>
             <p className="text-xs text-muted-foreground">Payments received</p>
           </div>
           <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
             <div className="flex flex-row items-center justify-between space-y-0 pb-2">
               <h3 className="tracking-tight text-sm font-medium">Total Pending</h3>
             </div>
-            <div className="text-2xl font-bold text-yellow-600">${totalPending.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-yellow-600">{formatCurrency(totalPending)}</div>
             <p className="text-xs text-muted-foreground">Outstanding payments</p>
           </div>
         </div>
@@ -376,24 +492,24 @@ export default function ProjectsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label className="text-sm font-medium">Budget</Label>
-                  <p className="mt-1 text-sm font-medium">${selectedProject.budget?.toLocaleString()}</p>
+                  <p className="mt-1 text-sm font-medium">{formatCurrency(selectedProject.budget || 0)}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium">Expenses</Label>
-                  <p className="mt-1 text-sm font-medium text-red-600">${selectedProject.expenses?.toLocaleString()}</p>
+                  <p className="mt-1 text-sm font-medium text-red-600">{formatCurrency(selectedProject.expenses || 0)}</p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label className="text-sm font-medium">Received</Label>
                   <p className="mt-1 text-sm font-medium text-green-600">
-                    ${selectedProject.received?.toLocaleString()}
+                    {formatCurrency(selectedProject.received || 0)}
                   </p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium">Pending</Label>
                   <p className="mt-1 text-sm font-medium text-yellow-600">
-                    ${selectedProject.pending?.toLocaleString()}
+                    {formatCurrency(selectedProject.pending || 0)}
                   </p>
                 </div>
               </div>
@@ -417,7 +533,12 @@ export default function ProjectsPage() {
       </Dialog>
 
       {/* Add Project Dialog */}
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+      <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
+        setIsAddDialogOpen(open)
+        if (!open) {
+          setSelectedProject(null)
+        }
+      }}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Add New Project</DialogTitle>
@@ -538,11 +659,153 @@ export default function ProjectsPage() {
 
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+            <Button variant="outline" onClick={() => {
+              setIsAddDialogOpen(false)
+              setSelectedProject(null)
+            }}>
               Cancel
             </Button>
             <Button onClick={handleSaveProject} disabled={!newProject.name}>
               Create Project
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Project Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
+        setIsEditDialogOpen(open)
+        if (!open) {
+          setSelectedProject(null)
+        }
+      }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Project</DialogTitle>
+            <DialogDescription>Update project information and settings</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-project-name">Project Name *</Label>
+                <Input
+                  id="edit-project-name"
+                  value={newProject.name}
+                  onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
+                  placeholder="Enter project name"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-project-client">Client</Label>
+                <Select value={newProject.client_id} onValueChange={(value) => setNewProject({ ...newProject, client_id: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a client" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {mockClients.map((client) => (
+                      <SelectItem key={client.id} value={client.id}>
+                        <div className="flex items-center space-x-2">
+                          <Avatar className="h-6 w-6">
+                            <AvatarImage src={client.avatar_url || "/placeholder-user.jpg"} alt={client.name} />
+                            <AvatarFallback className="text-xs">
+                              {client.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span>{client.name} - {client.company}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-project-status">Status</Label>
+                <Select value={newProject.status} onValueChange={(value) => setNewProject({ ...newProject, status: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statusOptions.map((status) => (
+                      <SelectItem key={status.value} value={status.value}>
+                        {status.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="edit-project-budget">Budget</Label>
+                <Input
+                  id="edit-project-budget"
+                  type="number"
+                  value={newProject.budget}
+                  onChange={(e) => setNewProject({ ...newProject, budget: e.target.value })}
+                  placeholder="0"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-project-expenses">Expenses</Label>
+                <Input
+                  id="edit-project-expenses"
+                  type="number"
+                  value={newProject.expenses}
+                  onChange={(e) => setNewProject({ ...newProject, expenses: e.target.value })}
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-project-received">Received Amount</Label>
+                <Input
+                  id="edit-project-received"
+                  type="number"
+                  value={newProject.received}
+                  onChange={(e) => setNewProject({ ...newProject, received: e.target.value })}
+                  placeholder="0"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Start Date</Label>
+                <DatePicker
+                  date={newProject.start_date}
+                  onSelect={(date) => setNewProject({ ...newProject, start_date: date })}
+                  placeholder="Pick start date"
+                />
+              </div>
+              <div>
+                <Label>End Date</Label>
+                <DatePicker
+                  date={newProject.end_date}
+                  onSelect={(date) => setNewProject({ ...newProject, end_date: date })}
+                  placeholder="Pick end date"
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="edit-project-description">Description</Label>
+              <Textarea
+                id="edit-project-description"
+                value={newProject.description}
+                onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
+                placeholder="Project description or notes"
+                rows={3}
+              />
+            </div>
+          </div>
+                     <DialogFooter>
+             <Button variant="outline" onClick={() => {
+               setIsEditDialogOpen(false)
+               setSelectedProject(null)
+             }}>
+               Cancel
+             </Button>
+            <Button onClick={handleSaveProject} disabled={!newProject.name}>
+              Update Project
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -14,6 +14,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Save, Bell, Shield, CreditCard, Upload, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { PageHeader, PageContent, PageTitle } from "@/components/page-header"
+import { setDefaultCurrency, getDefaultCurrency } from "@/lib/currency"
+import { useSettings } from "@/components/settings-provider"
 
 export default function SettingsPage() {
   const [notifications, setNotifications] = useState({
@@ -23,8 +25,184 @@ export default function SettingsPage() {
   })
 
   const [uploading, setUploading] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [companyLogo, setCompanyLogo] = useState("")
+  
+  // General settings state
+  const [generalSettings, setGeneralSettings] = useState({
+    defaultCurrency: "USD",
+  })
+
+  // Company information state
+  const [companyInfo, setCompanyInfo] = useState({
+    companyName: "Suitebase",
+    companyAddress: "123 Business St, City, State 12345",
+    companyPhone: "+1 (555) 123-4567",
+    companyWebsite: "https://suitebase.com",
+    companyEmail: "contact@suitebase.com",
+    companyRegistration: "",
+  })
+
+  // Tax information state
+  const [taxInfo, setTaxInfo] = useState({
+    taxId: "",
+    defaultTaxRate: "8.00",
+    taxName: "Sales Tax",
+    taxJurisdiction: "",
+    taxAddress: "",
+    includeTaxInPrices: false,
+    autoCalculateTax: true,
+  })
+
+  // Security settings state
+  const [securitySettings, setSecuritySettings] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  })
+
   const { toast } = useToast()
+  const { updateSetting } = useSettings()
+
+  // Load settings from localStorage on component mount
+  useEffect(() => {
+    const savedGeneral = localStorage.getItem('general-settings')
+    const savedCompany = localStorage.getItem('company-info')
+    const savedTax = localStorage.getItem('tax-info')
+    const savedNotifications = localStorage.getItem('notifications')
+    const savedLogo = localStorage.getItem('company_logo')
+
+    if (savedGeneral) {
+      const parsed = JSON.parse(savedGeneral)
+      setGeneralSettings(parsed)
+      // Sync currency with global currency system
+      if (parsed.defaultCurrency !== getDefaultCurrency()) {
+        setDefaultCurrency(parsed.defaultCurrency)
+      }
+    } else {
+      // Load current currency from global system
+      const currentCurrency = getDefaultCurrency()
+      setGeneralSettings(prev => ({ ...prev, defaultCurrency: currentCurrency }))
+    }
+    
+    if (savedCompany) {
+      setCompanyInfo(JSON.parse(savedCompany))
+    }
+    if (savedTax) {
+      setTaxInfo(JSON.parse(savedTax))
+    }
+    if (savedNotifications) {
+      setNotifications(JSON.parse(savedNotifications))
+    }
+    if (savedLogo) {
+      setCompanyLogo(savedLogo)
+    }
+  }, [])
+
+  const handleSaveSettings = async () => {
+    try {
+      setSaving(true)
+      
+      // Save all settings to localStorage
+      localStorage.setItem('general-settings', JSON.stringify(generalSettings))
+      localStorage.setItem('company-info', JSON.stringify(companyInfo))
+      localStorage.setItem('tax-info', JSON.stringify(taxInfo))
+      localStorage.setItem('notifications', JSON.stringify(notifications))
+      if (companyLogo) {
+        localStorage.setItem('company_logo', companyLogo)
+      }
+      
+      // Update global currency setting
+      setDefaultCurrency(generalSettings.defaultCurrency)
+      updateSetting('defaultCurrency', generalSettings.defaultCurrency)
+      
+      // Update other settings in the global provider
+      updateSetting('companyName', companyInfo.companyName)
+      updateSetting('taxRate', parseFloat(taxInfo.defaultTaxRate))
+      updateSetting('taxName', taxInfo.taxName)
+      updateSetting('includeTaxInPrices', taxInfo.includeTaxInPrices)
+      updateSetting('autoCalculateTax', taxInfo.autoCalculateTax)
+      
+      // In a real app, you would send this to your backend API
+      // await api.saveUserSettings({ generalSettings, companyInfo, taxInfo, notifications })
+      
+      toast({
+        title: "Settings Saved",
+        description: "Your settings have been saved successfully. Currency changes will reflect across the app.",
+      })
+    } catch (error) {
+      console.error("Error saving settings:", error)
+      toast({
+        title: "Error",
+        description: "Failed to save settings. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleUpdatePassword = async () => {
+    if (!securitySettings.currentPassword) {
+      toast({
+        title: "Validation Error",
+        description: "Current password is required.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!securitySettings.newPassword) {
+      toast({
+        title: "Validation Error",
+        description: "New password is required.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (securitySettings.newPassword !== securitySettings.confirmPassword) {
+      toast({
+        title: "Validation Error",
+        description: "New passwords do not match.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (securitySettings.newPassword.length < 6) {
+      toast({
+        title: "Validation Error",
+        description: "Password must be at least 6 characters long.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      // In a real app, you would send this to your backend API
+      // await api.updatePassword(securitySettings.currentPassword, securitySettings.newPassword)
+      
+      // Clear password fields
+      setSecuritySettings({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      })
+
+      toast({
+        title: "Password Updated",
+        description: "Your password has been updated successfully.",
+      })
+    } catch (error) {
+      console.error("Error updating password:", error)
+      toast({
+        title: "Error",
+        description: "Failed to update password. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
 
   const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
@@ -63,9 +241,13 @@ export default function SettingsPage() {
         title="Settings"
         breadcrumbs={[{ label: "Settings" }]}
         action={
-          <Button size="sm">
-            <Save className="mr-2 h-4 w-4" />
-            Save Changes
+          <Button size="sm" onClick={handleSaveSettings} disabled={saving}>
+            {saving ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="mr-2 h-4 w-4" />
+            )}
+            {saving ? "Saving..." : "Save Changes"}
           </Button>
         }
       />
@@ -87,72 +269,27 @@ export default function SettingsPage() {
                 <CardDescription>Update your general application preferences.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="timezone">Timezone</Label>
-                    <Select defaultValue="utc">
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="utc">UTC</SelectItem>
-                        <SelectItem value="est">Eastern Time</SelectItem>
-                        <SelectItem value="pst">Pacific Time</SelectItem>
-                        <SelectItem value="cet">Central European Time</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="defaultCurrency">Default Currency</Label>
-                    <Select defaultValue="USD">
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="USD">USD ($) - US Dollar</SelectItem>
-                        <SelectItem value="EUR">EUR (€) - Euro</SelectItem>
-                        <SelectItem value="GBP">GBP (£) - British Pound</SelectItem>
-                        <SelectItem value="CAD">CAD (C$) - Canadian Dollar</SelectItem>
-                        <SelectItem value="AUD">AUD (A$) - Australian Dollar</SelectItem>
-                        <SelectItem value="JPY">JPY (¥) - Japanese Yen</SelectItem>
-                        <SelectItem value="CHF">CHF (Fr) - Swiss Franc</SelectItem>
-                        <SelectItem value="CNY">CNY (¥) - Chinese Yuan</SelectItem>
-                        <SelectItem value="INR">INR (₹) - Indian Rupee</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">
-                      This currency will be used throughout the app for invoices, projects, and reports.
-                    </p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="language">Language</Label>
-                    <Select defaultValue="en">
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="en">English</SelectItem>
-                        <SelectItem value="es">Spanish</SelectItem>
-                        <SelectItem value="fr">French</SelectItem>
-                        <SelectItem value="de">German</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="dateFormat">Date Format</Label>
-                    <Select defaultValue="mm/dd/yyyy">
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="mm/dd/yyyy">MM/DD/YYYY</SelectItem>
-                        <SelectItem value="dd/mm/yyyy">DD/MM/YYYY</SelectItem>
-                        <SelectItem value="yyyy-mm-dd">YYYY-MM-DD</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="defaultCurrency">Default Currency</Label>
+                  <Select value={generalSettings.defaultCurrency} onValueChange={(value) => setGeneralSettings({...generalSettings, defaultCurrency: value})}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="USD">USD ($) - US Dollar</SelectItem>
+                      <SelectItem value="EUR">EUR (€) - Euro</SelectItem>
+                      <SelectItem value="GBP">GBP (£) - British Pound</SelectItem>
+                      <SelectItem value="CAD">CAD (C$) - Canadian Dollar</SelectItem>
+                      <SelectItem value="AUD">AUD (A$) - Australian Dollar</SelectItem>
+                      <SelectItem value="JPY">JPY (¥) - Japanese Yen</SelectItem>
+                      <SelectItem value="CHF">CHF (Fr) - Swiss Franc</SelectItem>
+                      <SelectItem value="CNY">CNY (¥) - Chinese Yuan</SelectItem>
+                      <SelectItem value="INR">INR (₹) - Indian Rupee</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    This currency will be used throughout the app for invoices, projects, and reports.
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -210,33 +347,60 @@ export default function SettingsPage() {
 
                   <div className="space-y-2">
                     <Label htmlFor="companyName">Company Name</Label>
-                    <Input id="companyName" defaultValue="Suitebase" />
+                    <Input 
+                      id="companyName" 
+                      value={companyInfo.companyName} 
+                      onChange={(e) => setCompanyInfo({...companyInfo, companyName: e.target.value})}
+                    />
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="companyAddress">Address</Label>
-                    <Textarea id="companyAddress" defaultValue="123 Business St, City, State 12345" rows={3} />
+                    <Textarea 
+                      id="companyAddress" 
+                      value={companyInfo.companyAddress} 
+                      onChange={(e) => setCompanyInfo({...companyInfo, companyAddress: e.target.value})}
+                      rows={3} 
+                    />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="companyPhone">Phone</Label>
-                      <Input id="companyPhone" defaultValue="+1 (555) 123-4567" />
+                      <Input 
+                        id="companyPhone" 
+                        value={companyInfo.companyPhone} 
+                        onChange={(e) => setCompanyInfo({...companyInfo, companyPhone: e.target.value})}
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="companyWebsite">Website</Label>
-                      <Input id="companyWebsite" defaultValue="https://suitebase.com" />
+                      <Input 
+                        id="companyWebsite" 
+                        value={companyInfo.companyWebsite} 
+                        onChange={(e) => setCompanyInfo({...companyInfo, companyWebsite: e.target.value})}
+                      />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="companyEmail">Company Email</Label>
-                      <Input id="companyEmail" type="email" defaultValue="contact@suitebase.com" />
+                      <Input 
+                        id="companyEmail" 
+                        type="email" 
+                        value={companyInfo.companyEmail} 
+                        onChange={(e) => setCompanyInfo({...companyInfo, companyEmail: e.target.value})}
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="companyRegistration">Registration Number</Label>
-                      <Input id="companyRegistration" placeholder="e.g., 123456789" />
+                      <Input 
+                        id="companyRegistration" 
+                        value={companyInfo.companyRegistration} 
+                        onChange={(e) => setCompanyInfo({...companyInfo, companyRegistration: e.target.value})}
+                        placeholder="e.g., 123456789" 
+                      />
                     </div>
                   </div>
                 </div>
@@ -252,22 +416,45 @@ export default function SettingsPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="taxId">Tax ID / VAT Number</Label>
-                    <Input id="taxId" placeholder="e.g., VAT123456789" />
+                    <Input 
+                      id="taxId" 
+                      value={taxInfo.taxId} 
+                      onChange={(e) => setTaxInfo({...taxInfo, taxId: e.target.value})}
+                      placeholder="e.g., VAT123456789" 
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="defaultTaxRate">Default Tax Rate (%)</Label>
-                    <Input id="defaultTaxRate" type="number" step="0.01" min="0" max="100" defaultValue="8.00" />
+                    <Input 
+                      id="defaultTaxRate" 
+                      type="number" 
+                      step="0.01" 
+                      min="0" 
+                      max="100" 
+                      value={taxInfo.defaultTaxRate} 
+                      onChange={(e) => setTaxInfo({...taxInfo, defaultTaxRate: e.target.value})}
+                    />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="taxName">Tax Name</Label>
-                    <Input id="taxName" defaultValue="Sales Tax" placeholder="e.g., VAT, GST, Sales Tax" />
+                    <Input 
+                      id="taxName" 
+                      value={taxInfo.taxName} 
+                      onChange={(e) => setTaxInfo({...taxInfo, taxName: e.target.value})}
+                      placeholder="e.g., VAT, GST, Sales Tax" 
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="taxJurisdiction">Tax Jurisdiction</Label>
-                    <Input id="taxJurisdiction" placeholder="e.g., California, UK, EU" />
+                    <Input 
+                      id="taxJurisdiction" 
+                      value={taxInfo.taxJurisdiction} 
+                      onChange={(e) => setTaxInfo({...taxInfo, taxJurisdiction: e.target.value})}
+                      placeholder="e.g., California, UK, EU" 
+                    />
                   </div>
                 </div>
 
@@ -275,20 +462,30 @@ export default function SettingsPage() {
                   <Label htmlFor="taxAddress">Tax Address</Label>
                   <Textarea
                     id="taxAddress"
+                    value={taxInfo.taxAddress}
+                    onChange={(e) => setTaxInfo({...taxInfo, taxAddress: e.target.value})}
                     placeholder="Address for tax purposes (if different from company address)"
                     rows={2}
                   />
                 </div>
 
                 <div className="flex items-center space-x-2">
-                  <Switch id="includeTaxInPrices" />
+                  <Switch 
+                    id="includeTaxInPrices" 
+                    checked={taxInfo.includeTaxInPrices}
+                    onCheckedChange={(checked) => setTaxInfo({...taxInfo, includeTaxInPrices: checked})}
+                  />
                   <Label htmlFor="includeTaxInPrices" className="text-sm">
                     Include tax in displayed prices
                   </Label>
                 </div>
 
                 <div className="flex items-center space-x-2">
-                  <Switch id="autoCalculateTax" defaultChecked />
+                  <Switch 
+                    id="autoCalculateTax" 
+                    checked={taxInfo.autoCalculateTax}
+                    onCheckedChange={(checked) => setTaxInfo({...taxInfo, autoCalculateTax: checked})}
+                  />
                   <Label htmlFor="autoCalculateTax" className="text-sm">
                     Automatically calculate tax on invoices
                   </Label>
@@ -353,17 +550,32 @@ export default function SettingsPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="currentPassword">Current Password</Label>
-                  <Input id="currentPassword" type="password" />
+                  <Input 
+                    id="currentPassword" 
+                    type="password" 
+                    value={securitySettings.currentPassword}
+                    onChange={(e) => setSecuritySettings({...securitySettings, currentPassword: e.target.value})}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="newPassword">New Password</Label>
-                  <Input id="newPassword" type="password" />
+                  <Input 
+                    id="newPassword" 
+                    type="password" 
+                    value={securitySettings.newPassword}
+                    onChange={(e) => setSecuritySettings({...securitySettings, newPassword: e.target.value})}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                  <Input id="confirmPassword" type="password" />
+                  <Input 
+                    id="confirmPassword" 
+                    type="password" 
+                    value={securitySettings.confirmPassword}
+                    onChange={(e) => setSecuritySettings({...securitySettings, confirmPassword: e.target.value})}
+                  />
                 </div>
-                <Button>Update Password</Button>
+                <Button onClick={handleUpdatePassword}>Update Password</Button>
               </CardContent>
             </Card>
 

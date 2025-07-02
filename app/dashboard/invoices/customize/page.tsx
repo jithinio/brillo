@@ -1,13 +1,15 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { getDefaultCurrency, getCurrencySymbol } from "@/lib/currency"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Save, Eye } from "lucide-react"
+import { PageHeader, PageContent } from "@/components/page-header"
 
 export default function CustomizeInvoicePage() {
   const [template, setTemplate] = useState({
@@ -19,27 +21,37 @@ export default function CustomizeInvoicePage() {
     primaryColor: "#000000",
     accentColor: "#6366f1",
     fontSize: "medium",
-    currency: "USD",
+    currency: "USD", // This will be updated from global setting
   })
 
+  // Initialize currency from global setting
+  useEffect(() => {
+    const globalCurrency = getDefaultCurrency()
+    setTemplate(prev => ({ ...prev, currency: globalCurrency }))
+  }, [])
+
   return (
-    <div className="px-4 lg:px-6">
-      <div className="flex items-center justify-between space-y-2 mb-6">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Customize Invoice</h2>
-          <p className="text-muted-foreground">Personalize your invoice template with your branding and preferences.</p>
-        </div>
-        <div className="flex space-x-2">
-          <Button variant="outline" size="sm">
-            <Eye className="mr-2 h-4 w-4" />
-            Preview
-          </Button>
-          <Button size="sm">
-            <Save className="mr-2 h-4 w-4" />
-            Save Template
-          </Button>
-        </div>
-      </div>
+    <>
+      <PageHeader
+        title="Customize Invoice"
+        breadcrumbs={[
+          { label: "Invoices", href: "/dashboard/invoices" },
+          { label: "Customize" }
+        ]}
+        action={
+          <div className="flex space-x-2">
+            <Button variant="outline" size="sm">
+              <Eye className="mr-2 h-4 w-4" />
+              Preview
+            </Button>
+            <Button size="sm">
+              <Save className="mr-2 h-4 w-4" />
+              Save Template
+            </Button>
+          </div>
+        }
+      />
+      <PageContent>
 
       <div className="grid gap-6 md:grid-cols-2">
         <div className="space-y-6">
@@ -218,24 +230,10 @@ export default function CustomizeInvoicePage() {
                     <div>Sample Service</div>
                     <div className="text-center">1</div>
                     <div className="text-center">
-                      {template.currency === "USD"
-                        ? "$"
-                        : template.currency === "EUR"
-                          ? "€"
-                          : template.currency === "GBP"
-                            ? "£"
-                            : "C$"}
-                      1,000
+                      {getCurrencySymbol(template.currency)}1,000
                     </div>
                     <div className="text-right">
-                      {template.currency === "USD"
-                        ? "$"
-                        : template.currency === "EUR"
-                          ? "€"
-                          : template.currency === "GBP"
-                            ? "£"
-                            : "C$"}
-                      1,000
+                      {getCurrencySymbol(template.currency)}1,000
                     </div>
                   </div>
                 </div>
@@ -245,14 +243,7 @@ export default function CustomizeInvoicePage() {
                     <div className="flex justify-between py-2 border-t">
                       <span className="font-semibold">Total:</span>
                       <span className="font-bold text-lg" style={{ color: template.accentColor }}>
-                        {template.currency === "USD"
-                          ? "$"
-                          : template.currency === "EUR"
-                            ? "€"
-                            : template.currency === "GBP"
-                              ? "£"
-                              : "C$"}
-                        1,000
+                        {getCurrencySymbol(template.currency)}1,000
                       </span>
                     </div>
                   </div>
@@ -262,6 +253,7 @@ export default function CustomizeInvoicePage() {
           </Card>
         </div>
       </div>
-    </div>
+      </PageContent>
+    </>
   )
 }
