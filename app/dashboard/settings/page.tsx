@@ -31,6 +31,7 @@ export default function SettingsPage() {
   // General settings state
   const [generalSettings, setGeneralSettings] = useState({
     defaultCurrency: "USD",
+    invoicePrefix: "INV",
   })
 
   // Company information state
@@ -122,6 +123,7 @@ export default function SettingsPage() {
       updateSetting('taxName', taxInfo.taxName)
       updateSetting('includeTaxInPrices', taxInfo.includeTaxInPrices)
       updateSetting('autoCalculateTax', taxInfo.autoCalculateTax)
+      updateSetting('invoicePrefix', generalSettings.invoicePrefix)
       
       // In a real app, you would send this to your backend API
       // await api.saveUserSettings({ generalSettings, companyInfo, taxInfo, notifications })
@@ -289,6 +291,20 @@ export default function SettingsPage() {
                   </Select>
                   <p className="text-xs text-muted-foreground">
                     This currency will be used throughout the app for invoices, projects, and reports.
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="invoicePrefix">Invoice Number Prefix</Label>
+                  <Input 
+                    id="invoicePrefix" 
+                    value={generalSettings.invoicePrefix} 
+                    onChange={(e) => setGeneralSettings({...generalSettings, invoicePrefix: e.target.value})}
+                    placeholder="INV"
+                    className="max-w-32"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    This prefix will be used for all invoice numbers (e.g., {generalSettings.invoicePrefix || 'INV'}-2024-001).
                   </p>
                 </div>
               </CardContent>

@@ -18,7 +18,7 @@ import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { createColumns, type Invoice } from "@/components/invoices/columns"
 import { DataTable } from "@/components/invoices/data-table"
-import { formatCurrency } from "@/lib/currency"
+import { formatCurrency, formatCurrencyWithConversion, getDefaultCurrency } from "@/lib/currency"
 
 // Mock data fallback
 const mockInvoices: Invoice[] = [
@@ -28,6 +28,7 @@ const mockInvoices: Invoice[] = [
     amount: 2450,
     tax_amount: 245,
     total_amount: 2695,
+    currency: "USD",
     status: "sent",
     issue_date: "2024-01-15",
     due_date: "2024-02-15",
@@ -44,9 +45,10 @@ const mockInvoices: Invoice[] = [
   {
     id: "2",
     invoice_number: "INV-2024-002",
-    amount: 1800,
-    tax_amount: 180,
-    total_amount: 1980,
+    amount: 1500,
+    tax_amount: 150,
+    total_amount: 1650,
+    currency: "EUR",
     status: "paid",
     issue_date: "2024-01-20",
     due_date: "2024-02-20",
@@ -63,9 +65,10 @@ const mockInvoices: Invoice[] = [
   {
     id: "3",
     invoice_number: "INV-2024-003",
-    amount: 3200,
-    tax_amount: 320,
-    total_amount: 3520,
+    amount: 2500,
+    tax_amount: 250,
+    total_amount: 2750,
+    currency: "GBP",
     status: "overdue",
     issue_date: "2024-01-05",
     due_date: "2024-01-05",
@@ -85,6 +88,7 @@ const mockInvoices: Invoice[] = [
     amount: 2800,
     tax_amount: 280,
     total_amount: 3080,
+    currency: "USD",
     status: "draft",
     issue_date: "2024-02-01",
     due_date: "2024-03-01",
@@ -96,6 +100,26 @@ const mockInvoices: Invoice[] = [
     },
     projects: {
       name: "Mobile Banking App",
+    },
+  },
+  {
+    id: "5",
+    invoice_number: "INV-2024-005",
+    amount: 180000,
+    tax_amount: 18000,
+    total_amount: 198000,
+    currency: "JPY",
+    status: "sent",
+    issue_date: "2024-02-10",
+    due_date: "2024-03-10",
+    notes: "Website localization for Japanese market",
+    created_at: "2024-02-10T00:00:00Z",
+    clients: {
+      name: "Hiroshi Tanaka",
+      company: "Tokyo Digital",
+    },
+    projects: {
+      name: "Website Localization",
     },
   },
 ]
@@ -111,6 +135,7 @@ export default function InvoicesPage() {
   const [sendInvoiceOpen, setSendInvoiceOpen] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
+  const [downloadingPDF, setDownloadingPDF] = useState<string | null>(null)
   
   // Send invoice form state
   const [sendForm, setSendForm] = useState({
@@ -123,6 +148,27 @@ export default function InvoicesPage() {
     fetchInvoices()
   }, [])
 
+  // Refresh invoices when page becomes visible (e.g., coming back from generate page)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        fetchInvoices()
+      }
+    }
+
+    const handleFocus = () => {
+      fetchInvoices()
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('focus', handleFocus)
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('focus', handleFocus)
+    }
+  }, [])
+
   async function fetchInvoices() {
     try {
       setError(null)
@@ -130,8 +176,15 @@ export default function InvoicesPage() {
       // Check if Supabase is properly configured
       if (!isSupabaseConfigured()) {
         console.log("Supabase not configured, using mock data")
-        setInvoices(mockInvoices)
-        setError("Using demo data - Supabase not configured")
+        
+        // Load generated invoices from session storage and merge with mock data
+        const generatedInvoices = JSON.parse(sessionStorage.getItem('demo-invoices') || '[]')
+        const allInvoices = [...generatedInvoices, ...mockInvoices].sort((a, b) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        )
+        
+        setInvoices(allInvoices)
+        setError(generatedInvoices.length > 0 ? "Using demo data with generated invoices - Supabase not configured" : "Using demo data - Supabase not configured")
         return
       }
 
@@ -151,16 +204,24 @@ export default function InvoicesPage() {
 
       if (error) {
         console.error("Supabase error:", error)
-        // Use mock data as fallback
-        setInvoices(mockInvoices)
+        // Use mock data as fallback, including generated invoices
+        const generatedInvoices = JSON.parse(sessionStorage.getItem('demo-invoices') || '[]')
+        const allInvoices = [...generatedInvoices, ...mockInvoices].sort((a, b) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        )
+        setInvoices(allInvoices)
         setError("Using demo data - database connection failed")
       } else {
         setInvoices(data || [])
       }
     } catch (error) {
       console.error("Error fetching invoices:", error)
-      // Use mock data as fallback
-      setInvoices(mockInvoices)
+      // Use mock data as fallback, including generated invoices
+      const generatedInvoices = JSON.parse(sessionStorage.getItem('demo-invoices') || '[]')
+      const allInvoices = [...generatedInvoices, ...mockInvoices].sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      )
+      setInvoices(allInvoices)
       setError("Using demo data - connection error")
     } finally {
       setLoading(false)
@@ -187,40 +248,27 @@ export default function InvoicesPage() {
   }
 
   const handleDownloadPDF = async (invoice: Invoice) => {
-    // Create a simple PDF-like content
-    const pdfContent = `
-INVOICE
-${invoice.invoice_number}
+    if (downloadingPDF) return // Prevent multiple simultaneous downloads
+    
+    setDownloadingPDF(invoice.id)
+    
+    try {
+      // Import the PDF generator dynamically to avoid SSR issues
+      const { generateInvoicePDF } = await import('@/lib/pdf-generator')
+      
+      // Generate and download the PDF
+      await generateInvoicePDF({
+        invoice,
+        filename: `${invoice.invoice_number}.pdf`
+      })
 
-Invoice Date: ${new Date(invoice.issue_date).toLocaleDateString()}
-Due Date: ${new Date(invoice.due_date).toLocaleDateString()}
-
-Bill To:
-${invoice.clients?.name || 'N/A'}
-${invoice.clients?.company || ''}
-
-Project: ${invoice.projects?.name || 'N/A'}
-Description: ${invoice.notes || 'No description'}
-
-Amount: ${formatCurrency(invoice.amount)}
-Tax: ${formatCurrency(invoice.tax_amount)}
-Total: ${formatCurrency(invoice.total_amount)}
-
-Status: ${invoice.status.toUpperCase()}
-    `.trim()
-
-    // Create and download the file
-    const blob = new Blob([pdfContent], { type: 'text/plain' })
-    const url = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `${invoice.invoice_number}.txt`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    window.URL.revokeObjectURL(url)
-
-    toast.success(`Invoice ${invoice.invoice_number} downloaded successfully!`)
+      toast.success(`Invoice ${invoice.invoice_number} downloaded successfully!`)
+    } catch (error) {
+      console.error('Error generating PDF:', error)
+      toast.error('Failed to generate PDF. Please try again.')
+    } finally {
+      setDownloadingPDF(null)
+    }
   }
 
   const handleDeleteInvoice = (invoice: Invoice) => {
@@ -284,6 +332,7 @@ Status: ${invoice.status.toUpperCase()}
     onSendInvoice: handleSendInvoice,
     onDownloadPDF: handleDownloadPDF,
     onDeleteInvoice: handleDeleteInvoice,
+    downloadingPDF,
   }
 
   const columns = createColumns(columnActions)
@@ -377,17 +426,38 @@ Status: ${invoice.status.toUpperCase()}
                   <CardTitle className="text-sm">Amount Breakdown</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
+                  {selectedInvoice.currency && selectedInvoice.currency !== getDefaultCurrency() && (
+                    <div className="flex justify-between mb-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
+                      <span className="text-blue-700 font-medium">Currency:</span>
+                      <span className="text-blue-700">{selectedInvoice.currency}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">Subtotal:</span>
-                    <span className="text-sm">{formatCurrency(selectedInvoice.amount)}</span>
+                    <span className="text-sm">
+                      {selectedInvoice.currency && selectedInvoice.currency !== getDefaultCurrency()
+                        ? formatCurrencyWithConversion(selectedInvoice.amount, selectedInvoice.currency, getDefaultCurrency())
+                        : formatCurrency(selectedInvoice.amount, selectedInvoice.currency)
+                      }
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">Tax:</span>
-                    <span className="text-sm">{formatCurrency(selectedInvoice.tax_amount)}</span>
+                    <span className="text-sm">
+                      {selectedInvoice.currency && selectedInvoice.currency !== getDefaultCurrency()
+                        ? formatCurrencyWithConversion(selectedInvoice.tax_amount, selectedInvoice.currency, getDefaultCurrency())
+                        : formatCurrency(selectedInvoice.tax_amount, selectedInvoice.currency)
+                      }
+                    </span>
                   </div>
                   <div className="flex justify-between border-t pt-2">
                     <span className="font-medium">Total:</span>
-                    <span className="font-medium text-lg">{formatCurrency(selectedInvoice.total_amount)}</span>
+                    <span className="font-medium text-lg">
+                      {selectedInvoice.currency && selectedInvoice.currency !== getDefaultCurrency()
+                        ? formatCurrencyWithConversion(selectedInvoice.total_amount, selectedInvoice.currency, getDefaultCurrency())
+                        : formatCurrency(selectedInvoice.total_amount, selectedInvoice.currency)
+                      }
+                    </span>
                   </div>
                 </CardContent>
               </Card>

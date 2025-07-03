@@ -12,6 +12,7 @@ interface AppSettings {
   taxName: string
   includeTaxInPrices: boolean
   autoCalculateTax: boolean
+  invoicePrefix: string
 }
 
 interface SettingsContextType {
@@ -28,6 +29,7 @@ const defaultSettings: AppSettings = {
   taxName: "Sales Tax",
   includeTaxInPrices: false,
   autoCalculateTax: true,
+  invoicePrefix: "INV",
 }
 
 const SettingsContext = createContext<SettingsContextType>({

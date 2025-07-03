@@ -16,6 +16,7 @@ import {
   Calendar,
   FileText,
   DollarSign,
+  Loader2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -27,7 +28,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
-import { formatCurrency } from "@/lib/currency"
+import { formatCurrency, formatCurrencyWithConversion, getDefaultCurrency } from "@/lib/currency"
 
 export type Invoice = {
   id: string
@@ -35,6 +36,7 @@ export type Invoice = {
   amount: number
   tax_amount: number
   total_amount: number
+  currency?: string
   status: string
   issue_date: string
   due_date: string
@@ -88,6 +90,7 @@ interface ColumnActions {
   onSendInvoice: (invoice: Invoice) => void
   onDownloadPDF: (invoice: Invoice) => void
   onDeleteInvoice: (invoice: Invoice) => void
+  downloadingPDF?: string | null
 }
 
 export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
@@ -240,13 +243,22 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
       },
       cell: ({ row }) => {
         const amount = row.getValue("total_amount") as number
+        const invoice = row.original
+        const invoiceCurrency = invoice.currency || getDefaultCurrency()
+        const defaultCurrency = getDefaultCurrency()
+        
         return (
-          <div className="min-w-[120px] max-w-[150px]">
-            <span className="font-medium">{formatCurrency(amount)}</span>
+          <div className="min-w-[120px] max-w-[180px]">
+            <span className="font-medium">
+              {invoiceCurrency !== defaultCurrency 
+                ? formatCurrencyWithConversion(amount, invoiceCurrency, defaultCurrency)
+                : formatCurrency(amount, invoiceCurrency)
+              }
+            </span>
           </div>
         )
       },
-      size: 150,
+      size: 180,
       enableHiding: true,
     },
     {
@@ -387,8 +399,16 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
                   <Send className="mr-2 h-4 w-4" />
                   Send Invoice
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => actions.onDownloadPDF(invoice)} className="whitespace-nowrap">
-                  <Download className="mr-2 h-4 w-4" />
+                <DropdownMenuItem 
+                  onClick={() => actions.onDownloadPDF(invoice)} 
+                  className="whitespace-nowrap"
+                  disabled={actions.downloadingPDF === invoice.id}
+                >
+                  {actions.downloadingPDF === invoice.id ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="mr-2 h-4 w-4" />
+                  )}
                   Download PDF
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
