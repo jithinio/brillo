@@ -84,7 +84,6 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
             checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
             onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
             aria-label="Select all"
-            className="translate-y-0.5"
           />
         </div>
       ),
@@ -94,7 +93,6 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
             checked={row.getIsSelected()}
             onCheckedChange={(value) => row.toggleSelected(!!value)}
             aria-label="Select row"
-            className="translate-y-0.5"
           />
         </div>
       ),

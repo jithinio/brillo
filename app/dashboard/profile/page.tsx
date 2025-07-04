@@ -13,10 +13,10 @@ import { Badge } from "@/components/ui/badge"
 import { Save, Edit, Loader2, Camera, AlertCircle } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 import { PageHeader, PageContent, PageTitle } from "@/components/page-header"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Skeleton } from "@/components/ui/skeleton"
+
 
 interface Profile {
   id: string
@@ -40,7 +40,7 @@ export default function ProfilePage() {
   const [error, setError] = useState<string | null>(null)
   const [isSupabaseReady, setIsSupabaseReady] = useState(false)
   const { user } = useAuth()
-  const { toast } = useToast()
+
 
   const [profile, setProfile] = useState<Profile>({
     id: "",
@@ -151,9 +151,8 @@ export default function ProfilePage() {
       if (!isSupabaseReady) {
         // Save to localStorage if Supabase isn't available
         saveToLocalStorage()
-        toast({
-          title: "Success",
-          description: "Profile updated locally (database not available)",
+        toast.success("Profile updated locally", {
+          description: "Database not available"
         })
         setIsEditing(false)
         return
@@ -168,9 +167,8 @@ export default function ProfilePage() {
         // If table doesn't exist, save locally
         if (error.message.includes("does not exist")) {
           saveToLocalStorage()
-          toast({
-            title: "Success",
-            description: "Profile updated locally (database table not found)",
+          toast.success("Profile updated locally", {
+            description: "Database table not found"
           })
           setIsEditing(false)
           return
@@ -195,18 +193,11 @@ export default function ProfilePage() {
         console.warn("Auth update failed:", authError)
       }
 
-      toast({
-        title: "Success",
-        description: "Profile updated successfully",
-      })
+      toast.success("Profile updated successfully")
       setIsEditing(false)
     } catch (error) {
       console.error("Error updating profile:", error)
-      toast({
-        title: "Error",
-        description: "Failed to update profile",
-        variant: "destructive",
-      })
+      toast.error("Failed to update profile")
     } finally {
       setSaving(false)
     }
@@ -238,9 +229,8 @@ export default function ProfilePage() {
         setProfile(updatedProfile)
         localStorage.setItem("profile_avatar_url", localUrl)
 
-        toast({
-          title: "Success",
-          description: "Avatar updated locally (storage not available)",
+        toast.success("Avatar updated locally", {
+          description: "Storage not available"
         })
         return
       }
@@ -259,9 +249,8 @@ export default function ProfilePage() {
           setProfile(updatedProfile)
           localStorage.setItem("profile_avatar_url", localUrl)
 
-          toast({
-            title: "Success",
-            description: "Avatar updated locally (storage bucket not found)",
+          toast.success("Avatar updated locally", {
+            description: "Storage bucket not found"
           })
           return
         }
@@ -306,17 +295,10 @@ export default function ProfilePage() {
         console.warn("Auth update failed:", authError)
       }
 
-      toast({
-        title: "Success",
-        description: "Avatar updated successfully",
-      })
+      toast.success("Avatar updated successfully")
     } catch (error) {
       console.error("Error uploading avatar:", error)
-      toast({
-        title: "Error",
-        description: "Failed to upload avatar",
-        variant: "destructive",
-      })
+      toast.error("Failed to upload avatar")
     } finally {
       setUploading(false)
     }
@@ -331,68 +313,7 @@ export default function ProfilePage() {
   }
 
   if (loading) {
-    return (
-      <>
-        <PageHeader title="Profile" breadcrumbs={[{ label: "Profile" }]} />
-        <PageContent>
-          <div className="grid gap-6 md:grid-cols-3">
-            <div className="md:col-span-1 space-y-6">
-              <Card>
-                <CardHeader>
-                  <Skeleton className="h-6 w-32" />
-                  <Skeleton className="h-4 w-48" />
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex flex-col items-center space-y-4">
-                    <Skeleton className="w-24 h-24 rounded-full" />
-                    <Skeleton className="h-4 w-48" />
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <Skeleton className="h-6 w-24" />
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <div key={i} className="flex justify-between">
-                      <Skeleton className="h-4 w-16" />
-                      <Skeleton className="h-4 w-8" />
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            </div>
-            <div className="md:col-span-2">
-              <Card>
-                <CardHeader>
-                  <Skeleton className="h-6 w-40" />
-                  <Skeleton className="h-4 w-64" />
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Skeleton className="h-4 w-20" />
-                      <Skeleton className="h-10 w-full" />
-                    </div>
-                    <div className="space-y-2">
-                      <Skeleton className="h-4 w-20" />
-                      <Skeleton className="h-10 w-full" />
-                    </div>
-                  </div>
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <div key={i} className="space-y-2">
-                      <Skeleton className="h-4 w-24" />
-                      <Skeleton className="h-10 w-full" />
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </PageContent>
-      </>
-    )
+    return null
   }
 
   return (

@@ -26,7 +26,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 import { PageHeader, PageContent, PageTitle } from "@/components/page-header"
@@ -153,6 +153,7 @@ export default function ProjectsPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false)
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false)
+  const [undoData, setUndoData] = React.useState<{ items: Project[], timeout: NodeJS.Timeout } | null>(null)
 
   const [newProject, setNewProject] = React.useState<NewProject>({
     name: "",
@@ -165,7 +166,16 @@ export default function ProjectsPage() {
     received: "",
     description: "",
   })
-  const { toast } = useToast()
+
+
+  // Cleanup undo timeout on unmount
+  React.useEffect(() => {
+    return () => {
+      if (undoData) {
+        clearTimeout(undoData.timeout)
+      }
+    }
+  }, [undoData])
 
   // Check for client pre-selection from sessionStorage and URL parameters
   React.useEffect(() => {
@@ -192,10 +202,7 @@ export default function ProjectsPage() {
               client_id: matchingClient.id
             }))
             
-            toast({
-              title: "Client Pre-selected",
-              description: `${clientData.clientName} has been pre-selected for the new project.`,
-            })
+            toast.success(`${clientData.clientName} has been pre-selected for the new project`)
           } else {
             // If no exact match, try to find by name similarity
             const similarClient = mockClients.find(client => 
@@ -209,16 +216,9 @@ export default function ProjectsPage() {
                 client_id: similarClient.id
               }))
               
-              toast({
-                title: "Similar Client Pre-selected",
-                description: `Selected ${similarClient.name} as the closest match for ${clientData.clientName}.`,
-              })
+              toast.success(`Selected ${similarClient.name} as the closest match for ${clientData.clientName}`)
             } else {
-              toast({
-                title: "Client Not Found",
-                description: `Could not find ${clientData.clientName} in the projects client list. Please select manually.`,
-                variant: "destructive",
-              })
+              toast.error(`Could not find ${clientData.clientName} in the projects client list. Please select manually`)
             }
           }
           
@@ -264,9 +264,8 @@ export default function ProjectsPage() {
     const clientName = project.clients?.name || "Unknown Client"
     const projectName = project.name
     
-    toast({
-      title: "Creating Invoice",
-      description: `Redirecting to create invoice for "${projectName}" - ${clientName}`,
+    toast.success(`Creating invoice for "${projectName}" - ${clientName}`, {
+      description: "Redirecting to generate invoice..."
     })
     
     // Store project data for invoice creation
@@ -286,11 +285,60 @@ export default function ProjectsPage() {
     }, 1000)
   }
 
-
-
   const handleDeleteProject = (project: Project) => {
     setSelectedProject(project)
     setIsDeleteDialogOpen(true)
+  }
+
+  const handleBatchDelete = (projects: Project[], onUndo: (items: Project[]) => void) => {
+    if (projects.length === 0) return
+    confirmBatchDelete(projects, onUndo)
+  }
+
+  const handleUndo = (deletedProjects: Project[]) => {
+    // Clear any existing undo timeout
+    if (undoData) {
+      clearTimeout(undoData.timeout)
+    }
+    
+    // Restore the deleted projects
+    setProjects(prev => [...deletedProjects, ...prev])
+    setUndoData(null)
+    
+    toast.success(`${deletedProjects.length} project${deletedProjects.length > 1 ? 's' : ''} restored successfully`)
+  }
+
+  const confirmBatchDelete = async (projectsToDelete: Project[], onUndo: (items: Project[]) => void) => {
+    try {
+      // In a real app, you would delete from the database here
+      const deletedIds = projectsToDelete.map(project => project.id)
+      
+      // Remove from local state
+      setProjects(prev => prev.filter(project => !deletedIds.includes(project.id)))
+      
+      // Clear any existing undo timeout
+      if (undoData) {
+        clearTimeout(undoData.timeout)
+      }
+      
+      // Set up new undo timeout (30 seconds)
+      const timeout = setTimeout(() => {
+        setUndoData(null)
+      }, 30000)
+      
+      setUndoData({ items: projectsToDelete, timeout })
+      
+      // Show toast with undo action
+      toast(`${deletedIds.length} project${deletedIds.length > 1 ? 's' : ''} deleted successfully`, {
+        action: {
+          label: "Undo",
+          onClick: () => handleUndo(projectsToDelete),
+        },
+      })
+    } catch (error) {
+      console.error('Error during batch delete:', error)
+      toast.error("Failed to delete projects. Please try again.")
+    }
   }
 
   const handleAddProject = () => {
@@ -311,11 +359,7 @@ export default function ProjectsPage() {
 
   const handleSaveProject = () => {
     if (!newProject.name) {
-      toast({
-        title: "Validation Error",
-        description: "Project name is required.",
-        variant: "destructive",
-      })
+      toast.error("Project name is required")
       return
     }
 
@@ -346,10 +390,7 @@ export default function ProjectsPage() {
 
       setProjects(projects.map(p => p.id === selectedProject.id ? updatedProject : p))
       setIsEditDialogOpen(false)
-      toast({
-        title: "Project Updated",
-        description: `Project "${updatedProject.name}" has been updated successfully.`,
-      })
+      toast.success(`Project "${updatedProject.name}" has been updated successfully`)
     } else {
       // Adding new project
       const project: Project = {
@@ -371,10 +412,7 @@ export default function ProjectsPage() {
 
       setProjects([...projects, project])
       setIsAddDialogOpen(false)
-      toast({
-        title: "Project Created",
-        description: `Project "${project.name}" has been created successfully.`,
-      })
+      toast.success(`Project "${project.name}" has been created successfully`)
     }
 
     // Reset form
@@ -384,10 +422,7 @@ export default function ProjectsPage() {
   const confirmDelete = () => {
     if (selectedProject) {
       setProjects(projects.filter((p) => p.id !== selectedProject.id))
-      toast({
-        title: "Project Deleted",
-        description: `Project "${selectedProject.name}" deleted successfully`,
-      })
+      toast.success(`Project "${selectedProject.name}" deleted successfully`)
       setIsDeleteDialogOpen(false)
       setSelectedProject(null)
     }
@@ -451,7 +486,18 @@ export default function ProjectsPage() {
         </div>
 
         {/* Projects Table */}
-        <DataTable columns={columns} data={projects} onAddProject={handleAddProject} />
+        <DataTable 
+          columns={columns} 
+          data={projects} 
+          onAddProject={handleAddProject} 
+          onBatchDelete={handleBatchDelete}
+          contextActions={{
+            onViewDetails: handleViewDetails,
+            onEditProject: handleEditProject,
+            onCreateInvoice: handleCreateInvoice,
+            onDeleteProject: handleDeleteProject,
+          }}
+        />
       </PageContent>
 
       {/* View Project Dialog */}

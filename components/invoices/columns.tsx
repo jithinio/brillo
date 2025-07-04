@@ -17,6 +17,7 @@ import {
   FileText,
   DollarSign,
   Loader2,
+  ChevronRight,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -26,6 +27,9 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import { formatCurrency, formatCurrencyWithConversion, getDefaultCurrency } from "@/lib/currency"
@@ -43,12 +47,20 @@ export type Invoice = {
   notes?: string
   created_at: string
   clients?: {
+    id?: string
     name: string
     company?: string
   }
   projects?: {
     name: string
   }
+  items?: {
+    id: string
+    description: string
+    quantity: number
+    rate: number
+    amount: number
+  }[]
 }
 
 const statusConfig = {
@@ -90,6 +102,8 @@ interface ColumnActions {
   onSendInvoice: (invoice: Invoice) => void
   onDownloadPDF: (invoice: Invoice) => void
   onDeleteInvoice: (invoice: Invoice) => void
+  onStatusChange: (invoice: Invoice, newStatus: string) => void
+  onClientClick: (client: { name: string; company?: string; id?: string }) => void
   downloadingPDF?: string | null
 }
 
@@ -103,7 +117,6 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
             checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
             onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
             aria-label="Select all"
-            className="translate-y-0.5"
           />
         </div>
       ),
@@ -113,7 +126,6 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
             checked={row.getIsSelected()}
             onCheckedChange={(value) => row.toggleSelected(!!value)}
             aria-label="Select row"
-            className="translate-y-0.5"
           />
         </div>
       ),
@@ -141,9 +153,14 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
           <div className="min-w-[120px] max-w-[150px]">
             <div className="flex items-center space-x-2">
               <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-              <div className="truncate font-medium" title={invoice.invoice_number}>
-                {invoice.invoice_number}
-              </div>
+              <Button
+                variant="link"
+                className="p-0 h-auto font-medium text-sm hover:underline"
+                onClick={() => actions.onViewDetails(invoice)}
+                title={invoice.invoice_number}
+              >
+                <span className="truncate">{invoice.invoice_number}</span>
+              </Button>
             </div>
           </div>
         )
@@ -170,9 +187,14 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
         return client ? (
           <div className="flex items-center space-x-2 min-w-[120px] max-w-[150px]">
             <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-            <div className="font-medium truncate" title={client.name}>
-              {client.name}
-            </div>
+            <Button
+              variant="link"
+              className="p-0 h-auto font-medium text-sm hover:underline"
+              onClick={() => actions.onClientClick(client)}
+              title={client.name}
+            >
+              <span className="truncate">{client.name}</span>
+            </Button>
           </div>
         ) : (
           <span className="text-muted-foreground min-w-[120px] block">No client</span>
@@ -385,7 +407,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
                   <span className="sr-only">Open actions menu</span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem onClick={() => actions.onViewDetails(invoice)} className="whitespace-nowrap">
                   <Eye className="mr-2 h-4 w-4" />
                   View Details
@@ -394,6 +416,53 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
                   <Edit className="mr-2 h-4 w-4" />
                   Edit Invoice
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                
+                {/* Status Change Submenu */}
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger className="whitespace-nowrap">
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    Change Status
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuItem 
+                      onClick={() => actions.onStatusChange(invoice, 'draft')}
+                      disabled={invoice.status === 'draft'}
+                    >
+                      <Clock className="mr-2 h-4 w-4 text-gray-600" />
+                      Draft
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => actions.onStatusChange(invoice, 'sent')}
+                      disabled={invoice.status === 'sent'}
+                    >
+                      <Send className="mr-2 h-4 w-4 text-blue-600" />
+                      Sent
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => actions.onStatusChange(invoice, 'paid')}
+                      disabled={invoice.status === 'paid'}
+                    >
+                      <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
+                      Paid
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => actions.onStatusChange(invoice, 'overdue')}
+                      disabled={invoice.status === 'overdue'}
+                    >
+                      <XCircle className="mr-2 h-4 w-4 text-red-600" />
+                      Overdue
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => actions.onStatusChange(invoice, 'cancelled')}
+                      disabled={invoice.status === 'cancelled'}
+                    >
+                      <XCircle className="mr-2 h-4 w-4 text-gray-600" />
+                      Cancelled
+                    </DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+                
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => actions.onSendInvoice(invoice)} className="whitespace-nowrap">
                   <Send className="mr-2 h-4 w-4" />

@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { Save, Bell, Shield, CreditCard, Upload, Loader2 } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 import { PageHeader, PageContent, PageTitle } from "@/components/page-header"
 import { setDefaultCurrency, getDefaultCurrency } from "@/lib/currency"
 import { useSettings } from "@/components/settings-provider"
@@ -62,7 +62,7 @@ export default function SettingsPage() {
     confirmPassword: "",
   })
 
-  const { toast } = useToast()
+
   const { updateSetting } = useSettings()
 
   // Load settings from localStorage on component mount
@@ -87,10 +87,27 @@ export default function SettingsPage() {
     }
     
     if (savedCompany) {
-      setCompanyInfo(JSON.parse(savedCompany))
+      const parsed = JSON.parse(savedCompany)
+      setCompanyInfo({
+        companyName: parsed.companyName || "Suitebase",
+        companyAddress: parsed.companyAddress || "123 Business St, City, State 12345",
+        companyPhone: parsed.companyPhone || "+1 (555) 123-4567",
+        companyWebsite: parsed.companyWebsite || "https://suitebase.com",
+        companyEmail: parsed.companyEmail || "contact@suitebase.com",
+        companyRegistration: parsed.companyRegistration || "",
+      })
     }
     if (savedTax) {
-      setTaxInfo(JSON.parse(savedTax))
+      const parsed = JSON.parse(savedTax)
+      setTaxInfo({
+        taxId: parsed.taxId || "",
+        defaultTaxRate: parsed.defaultTaxRate || "8.00",
+        taxName: parsed.taxName || "Sales Tax",
+        taxJurisdiction: parsed.taxJurisdiction || "",
+        taxAddress: parsed.taxAddress || "",
+        includeTaxInPrices: parsed.includeTaxInPrices || false,
+        autoCalculateTax: parsed.autoCalculateTax !== undefined ? parsed.autoCalculateTax : true,
+      })
     }
     if (savedNotifications) {
       setNotifications(JSON.parse(savedNotifications))
@@ -128,17 +145,12 @@ export default function SettingsPage() {
       // In a real app, you would send this to your backend API
       // await api.saveUserSettings({ generalSettings, companyInfo, taxInfo, notifications })
       
-      toast({
-        title: "Settings Saved",
-        description: "Your settings have been saved successfully. Currency changes will reflect across the app.",
+      toast.success("Settings saved successfully", {
+        description: "Currency changes will reflect across the app."
       })
     } catch (error) {
       console.error("Error saving settings:", error)
-      toast({
-        title: "Error",
-        description: "Failed to save settings. Please try again.",
-        variant: "destructive",
-      })
+      toast.error("Failed to save settings. Please try again.")
     } finally {
       setSaving(false)
     }
@@ -146,38 +158,22 @@ export default function SettingsPage() {
 
   const handleUpdatePassword = async () => {
     if (!securitySettings.currentPassword) {
-      toast({
-        title: "Validation Error",
-        description: "Current password is required.",
-        variant: "destructive",
-      })
+      toast.error("Current password is required")
       return
     }
 
     if (!securitySettings.newPassword) {
-      toast({
-        title: "Validation Error",
-        description: "New password is required.",
-        variant: "destructive",
-      })
+      toast.error("New password is required")
       return
     }
 
     if (securitySettings.newPassword !== securitySettings.confirmPassword) {
-      toast({
-        title: "Validation Error",
-        description: "New passwords do not match.",
-        variant: "destructive",
-      })
+      toast.error("New passwords do not match")
       return
     }
 
     if (securitySettings.newPassword.length < 6) {
-      toast({
-        title: "Validation Error",
-        description: "Password must be at least 6 characters long.",
-        variant: "destructive",
-      })
+      toast.error("Password must be at least 6 characters long")
       return
     }
 
@@ -192,17 +188,10 @@ export default function SettingsPage() {
         confirmPassword: "",
       })
 
-      toast({
-        title: "Password Updated",
-        description: "Your password has been updated successfully.",
-      })
+      toast.success("Your password has been updated successfully")
     } catch (error) {
       console.error("Error updating password:", error)
-      toast({
-        title: "Error",
-        description: "Failed to update password. Please try again.",
-        variant: "destructive",
-      })
+      toast.error("Failed to update password. Please try again.")
     }
   }
 
@@ -221,17 +210,10 @@ export default function SettingsPage() {
       setCompanyLogo(localUrl)
       localStorage.setItem("company_logo", localUrl)
 
-      toast({
-        title: "Success",
-        description: "Company logo uploaded successfully",
-      })
+      toast.success("Company logo uploaded successfully")
     } catch (error) {
       console.error("Error uploading logo:", error)
-      toast({
-        title: "Error",
-        description: "Failed to upload company logo",
-        variant: "destructive",
-      })
+      toast.error("Failed to upload company logo")
     } finally {
       setUploading(false)
     }

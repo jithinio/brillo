@@ -9,11 +9,11 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogPortal, DialogOverlay } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Switch } from "@/components/ui/switch"
 import { DatePicker } from "@/components/ui/date-picker"
 import { Plus, Trash2, Send, Save, UserPlus, Building, Mail, Phone, MapPin, Receipt, Eye, Download, CheckCircle } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 import { formatCurrency, CURRENCIES, getDefaultCurrency } from "@/lib/currency"
 import { PageHeader, PageContent } from "@/components/page-header"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
@@ -114,8 +114,11 @@ const mockClients: Client[] = [
 ]
 
 export default function GenerateInvoicePage() {
-  const { toast } = useToast()
+
   const { settings } = useSettings()
+  
+  // Check if we're in edit mode
+  const [isEditMode, setIsEditMode] = useState(false)
   
   // Invoice form state
   const [selectedClientId, setSelectedClientId] = useState("")
@@ -147,6 +150,7 @@ export default function GenerateInvoicePage() {
   const [generatedInvoiceData, setGeneratedInvoiceData] = useState<any>(null)
   const [isDownloading, setIsDownloading] = useState(false)
   const [isSending, setIsSending] = useState(false)
+  const [isSavingDraft, setIsSavingDraft] = useState(false)
   
   // Auto-populate data from session storage
   const [projectData, setProjectData] = useState<any>(null)
@@ -169,8 +173,11 @@ export default function GenerateInvoicePage() {
     defaultDueDate.setDate(defaultDueDate.getDate() + 30)
     setDueDate(defaultDueDate)
     
-    // Generate a simple sequential invoice number
+    // Generate a simple sequential invoice number (skip if in edit mode)
     const generateInvoiceNumber = async () => {
+      // Don't generate new invoice number if in edit mode
+      if (isEditMode) return
+      
       const now = new Date()
       const year = now.getFullYear()
       let invoiceCount = 1
@@ -207,7 +214,7 @@ export default function GenerateInvoicePage() {
     }
 
     generateInvoiceNumber()
-  }, [settings.invoicePrefix])
+  }, [settings.invoicePrefix, isEditMode])
 
   // Update tax settings when settings change
   useEffect(() => {
@@ -256,17 +263,12 @@ export default function GenerateInvoicePage() {
         sessionStorage.removeItem('invoice-project-data')
         
         // Show success notification
-        toast({
-          title: "Invoice Auto-Populated",
-          description: `Form filled with data from "${projectInfo.projectName}". ${suggestedAmount > 0 ? `Suggested amount: ${formatCurrency(suggestedAmount)}` : 'Please set the invoice amount.'}`,
+        toast.success(`Invoice auto-populated from "${projectInfo.projectName}"`, {
+          description: `${suggestedAmount > 0 ? `Suggested amount: ${formatCurrency(suggestedAmount)}` : 'Please set the invoice amount.'}`
         })
       } catch (error) {
         console.error('Error parsing project data:', error)
-        toast({
-          title: "Error",
-          description: "Could not load project data. Please fill the form manually.",
-          variant: "destructive",
-        })
+        toast.error("Could not load project data. Please fill the form manually.")
       }
     } else if (storedClientData) {
       try {
@@ -284,20 +286,118 @@ export default function GenerateInvoicePage() {
         sessionStorage.removeItem('invoice-client-data')
         
         // Show success notification
-        toast({
-          title: "Invoice Auto-Populated",
-          description: `Form filled with data for "${clientInfo.clientName}".`,
-        })
+        toast.success(`Invoice auto-populated for "${clientInfo.clientName}"`)
       } catch (error) {
         console.error('Error parsing client data:', error)
-        toast({
-          title: "Error",
-          description: "Could not load client data. Please fill the form manually.",
-          variant: "destructive",
-        })
+                  toast.error("Could not load client data. Please fill the form manually.")
       }
     }
   }, [clients, toast])
+
+  // Handle edit mode data loading when clients are available
+  useEffect(() => {
+    const storedEditData = sessionStorage.getItem('edit-invoice-data')
+    
+    // Only process edit data if we have clients loaded and edit data exists
+    if (storedEditData && clients.length > 0) {
+      try {
+        const editInfo = JSON.parse(storedEditData)
+        
+        // Set invoice number (don't auto-generate for editing)
+        setInvoiceNumber(editInfo.invoiceNumber)
+        
+        // Set dates
+        if (editInfo.issueDate) {
+          setInvoiceDate(new Date(editInfo.issueDate))
+        }
+        if (editInfo.dueDate) {
+          setDueDate(new Date(editInfo.dueDate))
+        }
+        
+        // Set currency
+        if (editInfo.currency) {
+          setClientCurrency(editInfo.currency)
+        }
+        
+        // Set notes
+        if (editInfo.notes) {
+          setNotes(editInfo.notes)
+        }
+        
+        // Set items
+        if (editInfo.items && editInfo.items.length > 0) {
+          setItems(editInfo.items.map((item: any, index: number) => ({
+            id: (index + 1).toString(),
+            description: item.description || '',
+            quantity: item.quantity || 1,
+            rate: item.rate || 0
+          })))
+        }
+        
+        // Set tax information
+        if (editInfo.taxAmount > 0 && editInfo.amount > 0) {
+          const taxRate = (editInfo.taxAmount / editInfo.amount) * 100
+          setTaxEnabled(true)
+          setCustomTaxRate(taxRate.toFixed(2))
+        }
+        
+        // Find and select the client if we have client data
+        if (editInfo.clientId || editInfo.clientName) {
+          let matchingClient = null
+          
+          // First try to find by ID if available
+          if (editInfo.clientId) {
+            matchingClient = clients.find(c => c.id === editInfo.clientId)
+          }
+          
+          // If not found by ID, try by name/company
+          if (!matchingClient && editInfo.clientName) {
+            matchingClient = clients.find(c => 
+              c.name === editInfo.clientName || 
+              (editInfo.clientCompany && c.company === editInfo.clientCompany)
+            )
+          }
+          
+          if (matchingClient) {
+            setSelectedClientId(matchingClient.id)
+            setSelectedClient(matchingClient)
+            
+            // Fetch projects for this client
+            fetchProjectsForClient(matchingClient.id).then(() => {
+              // Try to select the project if we have project data
+              if (editInfo.projectName) {
+                const matchingProject = projects.find(p => p.name === editInfo.projectName)
+                if (matchingProject) {
+                  setSelectedProject(matchingProject)
+                }
+              }
+            })
+          } else {
+            // If no client found, show a warning
+            toast.error(`Could not find client "${editInfo.clientName}". Please select a client manually.`)
+          }
+        }
+        
+        // Clear the session storage after loading
+        sessionStorage.removeItem('edit-invoice-data')
+        
+        // Show success notification
+        toast.success(`Invoice ${editInfo.invoiceNumber} loaded for editing`)
+      } catch (error) {
+        console.error('Error parsing edit invoice data:', error)
+        toast.error("Could not load invoice data for editing. Please try again.")
+      }
+    }
+  }, [clients, toast])
+
+  // Check for edit mode from URL parameters
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const editParam = urlParams.get('edit')
+    if (editParam === 'true') {
+      setIsEditMode(true)
+    }
+  }, [])
 
   async function fetchClients() {
     try {
@@ -391,11 +491,7 @@ export default function GenerateInvoicePage() {
 
   const handleAddNewClient = async () => {
     if (!newClient.name) {
-      toast({
-        title: "Validation Error",
-        description: "Client name is required.",
-        variant: "destructive",
-      })
+      toast.error("Client name is required")
       return
     }
 
@@ -462,17 +558,10 @@ export default function GenerateInvoicePage() {
       setNewClient({ country: "United States" })
       setShowNewClientDialog(false)
       
-      toast({
-        title: "Client Added",
-        description: "New client has been created and selected for this invoice.",
-      })
+      toast.success("New client has been created and selected for this invoice")
     } catch (error) {
       console.error('Error adding client:', error)
-      toast({
-        title: "Error",
-        description: "Failed to add client. Please try again.",
-        variant: "destructive",
-      })
+      toast.error("Failed to add client. Please try again.")
     }
   }
 
@@ -516,32 +605,164 @@ export default function GenerateInvoicePage() {
            dueDate
   }
 
+  const handleSaveDraft = async () => {
+    if (!selectedClient) {
+      toast.error("Please select a client before saving the draft")
+      return
+    }
+
+    if (!invoiceDate) {
+      toast.error("Please set an invoice date")
+      return
+    }
+
+    setIsSavingDraft(true)
+    
+    try {
+      // Use the pre-generated invoice number from state
+      const subtotal = calculateSubtotal()
+      const tax = calculateTax()
+      const total = calculateTotal()
+      
+      // Save invoice to database or add to session storage for demo
+      if (isSupabaseConfigured()) {
+        console.log('Saving draft to Supabase...')
+        
+        // Calculate tax rate as percentage
+        const taxRatePercent = taxEnabled ? parseFloat(customTaxRate) : 0
+        
+        // Prepare invoice data matching exact database schema
+        const invoiceInsertData = {
+          invoice_number: invoiceNumber,
+          client_id: selectedClient.id,
+          project_id: selectedProject?.id || null,
+          amount: subtotal,
+          tax_rate: taxRatePercent,
+          tax_amount: tax,
+          total_amount: total,
+          status: 'draft', // Save as draft
+          issue_date: invoiceDate.toISOString().split('T')[0],
+          due_date: (dueDate?.toISOString() || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()).split('T')[0],
+          notes: notes || '',
+          terms: ''
+        }
+
+        console.log('Draft invoice insert data:', invoiceInsertData)
+
+        // Insert the main invoice record
+        const { data: invoiceData, error: invoiceError } = await supabase
+          .from('invoices')
+          .insert([invoiceInsertData])
+          .select()
+          .single()
+
+        if (invoiceError) {
+          console.error('Failed to insert draft invoice:', invoiceError)
+          throw new Error(`Failed to save draft: ${invoiceError.message}`)
+        }
+
+        console.log('Draft invoice saved successfully:', invoiceData)
+
+        // Now save the invoice items
+        const invoiceItemsData = items.map(item => ({
+          invoice_id: invoiceData.id,
+          description: item.description,
+          quantity: item.quantity,
+          rate: item.rate,
+          amount: item.quantity * item.rate
+        }))
+
+        const { error: itemsError } = await supabase
+          .from('invoice_items')
+          .insert(invoiceItemsData)
+
+        if (itemsError) {
+          console.error('Failed to insert invoice items:', itemsError)
+          throw new Error(`Failed to save draft items: ${itemsError.message}`)
+        }
+
+        toast.success("Draft saved successfully")
+      } else {
+        // For demo mode, store in sessionStorage
+        const existingInvoices = JSON.parse(sessionStorage.getItem('demo-invoices') || '[]')
+        
+        const mockId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+        
+        const draftInvoice = {
+          id: mockId,
+          invoice_number: invoiceNumber,
+          client_id: selectedClient.id,
+          project_id: selectedProject?.id || null,
+          issue_date: invoiceDate.toISOString().split('T')[0],
+          due_date: (dueDate?.toISOString() || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()).split('T')[0],
+          amount: subtotal,
+          tax_rate: taxEnabled ? parseFloat(customTaxRate) : 0,
+          tax_amount: tax,
+          total_amount: total,
+          status: 'draft' as const,
+          notes: notes || '',
+          terms: '',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          clients: {
+            name: selectedClient.name,
+            company: selectedClient.company
+          },
+          projects: selectedProject ? {
+            name: selectedProject.name
+          } : null,
+          _currency: clientCurrency,
+          _items: items
+        }
+        
+        existingInvoices.push(draftInvoice)
+        sessionStorage.setItem('demo-invoices', JSON.stringify(existingInvoices))
+
+        toast.success("Draft saved successfully (demo mode)")
+      }
+      
+      // Redirect to invoices page after successful save
+      setTimeout(() => {
+        window.location.href = '/dashboard/invoices'
+      }, 1000)
+      
+    } catch (error: any) {
+      console.warn('Error saving draft:', 
+        (error as any)?.message || (error as any)?.code || JSON.stringify(error) || 'Unknown error')
+      
+      let errorMessage = "Failed to save draft. Please try again."
+      
+      if (error instanceof Error && error.message) {
+        errorMessage = error.message
+      } else if (typeof error === 'string' && error.length > 0) {
+        errorMessage = error
+      } else if (error && typeof error === 'object') {
+        const errorStr = JSON.stringify(error)
+        if (errorStr !== '{}') {
+          errorMessage = errorStr
+        }
+      }
+      
+      toast.error(errorMessage)
+    } finally {
+      setIsSavingDraft(false)
+    }
+  }
+
   const handleGenerateInvoice = async () => {
     if (!isReadyToGenerate()) {
-      toast({
-        title: "Validation Error",
-        description: "Please complete all required fields before generating the invoice.",
-        variant: "destructive",
-      })
+      toast.error("Please complete all required fields before generating the invoice")
       return
     }
 
     // Additional validation
     if (!selectedClient) {
-      toast({
-        title: "Validation Error",
-        description: "Please select a client before generating the invoice.",
-        variant: "destructive",
-      })
+      toast.error("Please select a client before generating the invoice")
       return
     }
 
     if (!invoiceDate) {
-      toast({
-        title: "Validation Error",
-        description: "Please set an invoice date.",
-        variant: "destructive",
-      })
+      toast.error("Please set an invoice date")
       return
     }
 
@@ -621,7 +842,6 @@ export default function GenerateInvoicePage() {
         const { data: itemsData, error: itemsError } = await supabase
           .from('invoice_items')
           .insert(invoiceItemsData)
-          .select()
 
         if (itemsError) {
           console.error('Failed to insert invoice items:', itemsError)
@@ -631,10 +851,7 @@ export default function GenerateInvoicePage() {
           console.log('Invoice items saved successfully:', itemsData)
         }
 
-        toast({
-          title: "Invoice Generated",
-          description: `Invoice ${invoiceNumber} has been created and saved to database.`,
-        })
+        toast.success("Invoice generated successfully")
       } else {
         console.log('Saving to session storage (demo mode)...')
         // For demo mode, store in sessionStorage to simulate database save
@@ -676,10 +893,7 @@ export default function GenerateInvoicePage() {
         existingInvoices.push(newInvoice)
         sessionStorage.setItem('demo-invoices', JSON.stringify(existingInvoices))
 
-        toast({
-          title: "Invoice Generated",
-          description: `Invoice ${invoiceNumber} has been created (demo mode - saved locally).`,
-        })
+        toast.success("Invoice generated successfully (demo mode)")
       }
       
       // Create invoice data for success dialog and PDF generation
@@ -702,28 +916,24 @@ export default function GenerateInvoicePage() {
       
       setGeneratedInvoiceData(dialogInvoiceData)
       setShowSuccessDialog(true)
-                } catch (error) {
-        console.warn('Error generating invoice:', 
-          (error as any)?.message || (error as any)?.code || JSON.stringify(error) || 'Unknown error')
-        
-        let errorMessage = "Failed to generate invoice. Please try again."
-        
-        if (error instanceof Error && error.message) {
-          errorMessage = error.message
-        } else if (typeof error === 'string' && error.length > 0) {
-          errorMessage = error
-        } else if (error && typeof error === 'object') {
-          const errorStr = JSON.stringify(error)
-          if (errorStr !== '{}') {
-            errorMessage = errorStr
-          }
+    } catch (error) {
+      console.warn('Error generating invoice:', 
+        (error as any)?.message || (error as any)?.code || JSON.stringify(error) || 'Unknown error')
+      
+      let errorMessage = "Failed to generate invoice. Please try again."
+      
+      if (error instanceof Error && error.message) {
+        errorMessage = error.message
+      } else if (typeof error === 'string' && error.length > 0) {
+        errorMessage = error
+      } else if (error && typeof error === 'object') {
+        const errorStr = JSON.stringify(error)
+        if (errorStr !== '{}') {
+          errorMessage = errorStr
         }
+      }
 
-      toast({
-        title: "Generation Failed",
-        description: errorMessage,
-        variant: "destructive",
-      })
+      toast.error(errorMessage)
     }
   }
 
@@ -769,17 +979,10 @@ export default function GenerateInvoicePage() {
         }
       })
       
-      toast({
-        title: "PDF Downloaded",
-        description: "Invoice PDF has been downloaded successfully.",
-      })
+      toast.success("Invoice PDF downloaded successfully")
     } catch (error) {
       console.error('Error generating PDF:', error)
-      toast({
-        title: "Download Failed",
-        description: "Failed to generate PDF. Please try again.",
-        variant: "destructive",
-      })
+      toast.error("Failed to generate PDF. Please try again.")
     } finally {
       setIsDownloading(false)
     }
@@ -793,39 +996,35 @@ export default function GenerateInvoicePage() {
       // Simulate sending invoice
       await new Promise(resolve => setTimeout(resolve, 2000))
       
-      toast({
-        title: "Invoice Sent",
-        description: `Invoice has been sent to ${generatedInvoiceData.client.email}`,
-      })
+      toast.success("Invoice sent successfully")
       
       // Close the dialog after successful send
       setShowSuccessDialog(false)
     } catch (error) {
-      toast({
-        title: "Send Failed",
-        description: "Failed to send invoice. Please try again.",
-        variant: "destructive",
-      })
+      toast.error("Failed to send invoice. Please try again.")
     } finally {
       setIsSending(false)
     }
   }
 
-
-
   return (
     <>
       <PageHeader
-        title="Generate Invoice"
+        title={isEditMode ? "Edit Invoice" : "Generate Invoice"}
         breadcrumbs={[
           { label: "Invoices", href: "/dashboard/invoices" },
-          { label: "Generate" }
+          { label: isEditMode ? "Edit Invoice" : "Generate Invoice" }
         ]}
         action={
           <div className="flex space-x-2">
-            <Button variant="outline" size="sm">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleSaveDraft}
+              disabled={isSavingDraft || !selectedClient || !invoiceDate}
+            >
               <Save className="mr-2 h-4 w-4" />
-              Save Draft
+              {isSavingDraft ? "Saving..." : "Save Draft"}
             </Button>
             <Button variant="outline" size="sm">
               <Eye className="mr-2 h-4 w-4" />
@@ -837,7 +1036,7 @@ export default function GenerateInvoicePage() {
               disabled={!isReadyToGenerate()}
             >
               <Download className="mr-2 h-4 w-4" />
-              Generate Invoice
+              {isEditMode ? "Update Invoice" : "Generate Invoice"}
             </Button>
           </div>
         }
@@ -849,8 +1048,15 @@ export default function GenerateInvoicePage() {
         <div className="lg:col-span-2 space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-xl font-medium">Invoice Details</CardTitle>
-              <CardDescription>Basic information about this invoice.</CardDescription>
+              <CardTitle className="text-xl font-medium">
+                {isEditMode ? "Edit Invoice Details" : "Invoice Details"}
+              </CardTitle>
+              <CardDescription>
+                {isEditMode 
+                  ? "Update the information for this invoice." 
+                  : "Basic information about this invoice."
+                }
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Client Selection */}
@@ -1413,157 +1619,151 @@ export default function GenerateInvoicePage() {
 
       {/* Success Dialog */}
       <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
-        <DialogPortal>
-          <DialogOverlay className="fixed inset-0 z-50 bg-white/95 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-          <div className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-2xl translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-0 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg">
-            <DialogHeader className="sr-only">
-              <DialogTitle>Invoice Generated Successfully</DialogTitle>
-            </DialogHeader>
-          <div className="border border-gray-200 shadow-sm bg-white rounded-lg">            
-            <div className="p-6">
-              {/* Header with Success Icon */}
-              <div className="flex justify-between items-start mb-6">
-                <div className="space-y-3">
-                  <div className="bg-green-100 border border-green-200 rounded-full p-2.5 w-fit shadow-sm">
-                    <CheckCircle className="h-5 w-5 text-green-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-900">Invoice Generated Successfully!</h3>
-                    <p className="text-sm text-gray-500 mt-1">Your invoice is ready to download or send</p>
-                  </div>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {isEditMode ? "Invoice Updated Successfully" : "Invoice Generated Successfully"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6">
+            {/* Header with Success Icon */}
+            <div className="flex justify-between items-start">
+              <div className="space-y-3">
+                <div className="bg-green-100 border border-green-200 rounded-full p-2.5 w-fit shadow-sm">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
                 </div>
-                <div className="text-right">
-                  <p className="text-sm text-gray-500">Invoice number</p>
-                  <p className="text-sm font-medium text-gray-900 font-mono">{generatedInvoiceData?.invoiceNumber}</p>
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900">
+                    {isEditMode ? "Invoice Updated Successfully!" : "Invoice Generated Successfully!"}
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {isEditMode 
+                      ? "Your invoice has been updated and is ready to download or send" 
+                      : "Your invoice is ready to download or send"
+                    }
+                  </p>
                 </div>
               </div>
+              <div className="text-right">
+                <p className="text-sm text-gray-500">Invoice number</p>
+                <p className="text-sm font-medium text-gray-900 font-mono">{generatedInvoiceData?.invoiceNumber}</p>
+              </div>
+            </div>
 
-              {generatedInvoiceData && (
-                <>
-                  {/* Client & Date Info */}
-                  <div className="space-y-4 mb-6">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="text-sm text-gray-500">Bill to</p>
-                        <p className="font-medium text-gray-900">{generatedInvoiceData.client.name}</p>
-                        {generatedInvoiceData.client.company && (
-                          <p className="text-sm text-gray-600">{generatedInvoiceData.client.company}</p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex justify-between items-start text-sm">
-                      <div>
-                        <p className="text-gray-500">Issue date</p>
-                        <p className="text-gray-900 font-medium">{new Date(generatedInvoiceData.invoiceDate).toLocaleDateString()}</p>
-                      </div>
-                      {generatedInvoiceData.dueDate && (
-                        <div>
-                          <p className="text-gray-500">Due date</p>
-                          <p className="text-gray-900 font-medium">{new Date(generatedInvoiceData.dueDate).toLocaleDateString()}</p>
-                        </div>
+            {generatedInvoiceData && (
+              <>
+                {/* Client & Date Info */}
+                <div className="space-y-4">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-sm text-gray-500">Bill to</p>
+                      <p className="font-medium text-gray-900">{generatedInvoiceData.client.name}</p>
+                      {generatedInvoiceData.client.company && (
+                        <p className="text-sm text-gray-600">{generatedInvoiceData.client.company}</p>
                       )}
                     </div>
                   </div>
 
-                  {/* Invoice Items */}
-                  {generatedInvoiceData.items.length > 0 && (
-                    <div className="mb-6">
-                      <div className="border-t border-dotted border-gray-300 -mx-6 mb-4"></div>
-                      <h4 className="text-sm font-medium text-gray-900 mb-3">Items</h4>
-                      <div className="space-y-3">
-                        {generatedInvoiceData.items.map((item: any, index: number) => (
-                          <div key={index} className="flex justify-between items-center">
-                            <div className="flex items-center space-x-4 flex-1 min-w-0">
-                              <p className="text-sm font-medium text-gray-900 truncate">
-                                {item.description || `Item ${index + 1}`}
-                              </p>
-                              <span className="text-xs text-gray-400">•</span>
-                              <p className="text-xs text-gray-500 flex-shrink-0">
-                                {item.quantity} × {formatCurrency(item.rate, generatedInvoiceData.currency)}
-                              </p>
-                            </div>
-                            <div className="ml-4 flex-shrink-0">
-                              <p className="text-sm font-medium tabular-nums text-gray-900">
-                                {formatCurrency(item.quantity * item.rate, generatedInvoiceData.currency)}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                  <div className="flex justify-between items-start text-sm">
+                    <div>
+                      <p className="text-gray-500">Issue date</p>
+                      <p className="text-gray-900 font-medium">{new Date(generatedInvoiceData.invoiceDate).toLocaleDateString()}</p>
                     </div>
-                  )}
-
-                  {/* Amount Breakdown */}
-                  <div>
-                    <div className="border-t border-dotted border-gray-300 -mx-6 mb-6"></div>
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">Subtotal</span>
-                        <span className="text-sm font-medium tabular-nums">{formatCurrency(generatedInvoiceData.subtotal, generatedInvoiceData.currency)}</span>
+                    {generatedInvoiceData.dueDate && (
+                      <div>
+                        <p className="text-gray-500">Due date</p>
+                        <p className="text-gray-900 font-medium">{new Date(generatedInvoiceData.dueDate).toLocaleDateString()}</p>
                       </div>
-                      
-                      {generatedInvoiceData.taxEnabled && (
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-gray-600">{generatedInvoiceData.taxName} ({generatedInvoiceData.taxRate}%)</span>
-                          <span className="text-sm font-medium tabular-nums">{formatCurrency(generatedInvoiceData.tax, generatedInvoiceData.currency)}</span>
-                        </div>
-                      )}
-                      
-                      <div className="border-t border-gray-100 pt-3 mt-3">
-                        <div className="flex justify-between items-center">
-                          <span className="text-base font-medium text-gray-900">Total</span>
-                          <span className="text-lg font-semibold tabular-nums text-gray-900">
-                            {formatCurrency(generatedInvoiceData.total, generatedInvoiceData.currency)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Action Buttons - Horizontally Stacked */}
-                  <div className="mt-6 pt-4 border-t border-gray-100">
-                    <div className="flex gap-3">
-                      <Button 
-                        onClick={handleDownloadPDF}
-                        disabled={isDownloading}
-                        className="flex-1"
-                      >
-                        <Download className="mr-2 h-4 w-4" />
-                        {isDownloading ? 'Generating PDF...' : 'Download PDF'}
-                      </Button>
-                      
-                      <Button 
-                        variant="outline"
-                        onClick={handleSendInvoice}
-                        disabled={isSending || !generatedInvoiceData.client.email}
-                        className="flex-1"
-                      >
-                        <Send className="mr-2 h-4 w-4" />
-                        {isSending ? 'Sending...' : 'Send Invoice'}
-                      </Button>
-
-                      <Button 
-                        variant="outline"
-                        onClick={() => setShowSuccessDialog(false)}
-                        className="flex-1"
-                      >
-                        Close
-                      </Button>
-                    </div>
-
-                    {!generatedInvoiceData.client.email && (
-                      <p className="text-xs text-muted-foreground text-center mt-2">
-                        Client email not provided - cannot send invoice directly
-                      </p>
                     )}
                   </div>
-                </>
-              )}
-            </div>
+                </div>
+
+                {/* Invoice Items */}
+                {generatedInvoiceData.items.length > 0 && (
+                  <div>
+                    <div className="border-t border-dotted border-gray-300 -mx-6 mb-4"></div>
+                    <h4 className="text-sm font-medium text-gray-900 mb-3">Items</h4>
+                    <div className="space-y-3">
+                      {generatedInvoiceData.items.map((item: any, index: number) => (
+                        <div key={index} className="flex justify-between items-center">
+                          <div className="flex items-center space-x-4 flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                              {item.description || `Item ${index + 1}`}
+                            </p>
+                            <span className="text-xs text-gray-400">•</span>
+                            <p className="text-xs text-gray-500 flex-shrink-0">
+                              {item.quantity} × {formatCurrency(item.rate, generatedInvoiceData.currency)}
+                            </p>
+                          </div>
+                          <div className="ml-4 flex-shrink-0">
+                            <p className="text-sm font-medium tabular-nums text-gray-900">
+                              {formatCurrency(item.quantity * item.rate, generatedInvoiceData.currency)}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Amount Breakdown */}
+                <div>
+                  <div className="border-t border-dotted border-gray-300 -mx-6 mb-6"></div>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Subtotal</span>
+                      <span className="text-sm font-medium tabular-nums">{formatCurrency(generatedInvoiceData.subtotal, generatedInvoiceData.currency)}</span>
+                    </div>
+                    
+                    {generatedInvoiceData.taxEnabled && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">{generatedInvoiceData.taxName} ({generatedInvoiceData.taxRate}%)</span>
+                        <span className="text-sm font-medium tabular-nums">{formatCurrency(generatedInvoiceData.tax, generatedInvoiceData.currency)}</span>
+                      </div>
+                    )}
+                    
+                    <div className="border-t border-gray-100 pt-3 mt-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-base font-medium text-gray-900">Total</span>
+                        <span className="text-lg font-semibold tabular-nums text-gray-900">
+                          {formatCurrency(generatedInvoiceData.total, generatedInvoiceData.currency)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons - Only Download and Send */}
+                <div className="flex gap-3">
+                  <Button 
+                    onClick={handleDownloadPDF}
+                    disabled={isDownloading}
+                    className="flex-1"
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    {isDownloading ? 'Generating PDF...' : 'Download PDF'}
+                  </Button>
+                  
+                  <Button 
+                    variant="outline"
+                    onClick={handleSendInvoice}
+                    disabled={isSending || !generatedInvoiceData.client.email}
+                    className="flex-1"
+                  >
+                    <Send className="mr-2 h-4 w-4" />
+                    {isSending ? 'Sending...' : 'Send Invoice'}
+                  </Button>
+                </div>
+
+                {!generatedInvoiceData.client.email && (
+                  <p className="text-xs text-muted-foreground text-center">
+                    Client email not provided - cannot send invoice directly
+                  </p>
+                )}
+              </>
+            )}
           </div>
-          </div>
-        </DialogPortal>
+        </DialogContent>
       </Dialog>
     </>
   )

@@ -28,14 +28,12 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { PageHeader, PageContent, PageTitle } from "@/components/page-header"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Upload } from "lucide-react"
+import { Upload, Loader2 } from "lucide-react"
 import { DataTable } from "@/components/clients/data-table"
 import { createColumns, type Client } from "@/components/clients/columns"
-
-import ClientsLoading from "./loading"
 
 // Mock data fallback
 const mockClients: Client[] = [
@@ -145,12 +143,22 @@ export default function ClientsPage() {
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [editingClient, setEditingClient] = useState<Partial<Client>>({})
+  const [undoData, setUndoData] = useState<{ items: Client[], timeout: NodeJS.Timeout } | null>(null)
 
-  const { toast } = useToast()
+
 
   useEffect(() => {
     fetchClients()
   }, [])
+
+  // Cleanup undo timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (undoData) {
+        clearTimeout(undoData.timeout)
+      }
+    }
+  }, [undoData])
 
   async function fetchClients() {
     try {
@@ -226,9 +234,8 @@ export default function ClientsPage() {
       clientCountry: client.country,
     }))
     
-    toast({
-      title: "Creating Invoice",
-      description: `Redirecting to create invoice for ${client.name}`,
+    toast.success(`Creating invoice for ${client.name}`, {
+      description: "Redirecting to generate invoice..."
     })
     
     // Navigate to invoices page
@@ -245,9 +252,8 @@ export default function ClientsPage() {
       clientCompany: client.company,
     }))
     
-    toast({
-      title: "Creating Project",
-      description: `Opening project form with ${client.name} pre-selected.`,
+    toast.success(`Creating project for ${client.name}`, {
+      description: "Opening project form..."
     })
     
     // Navigate to projects page with action parameter
@@ -259,6 +265,79 @@ export default function ClientsPage() {
   const handleDeleteClient = (client: Client) => {
     setSelectedClient(client)
     setShowDeleteDialog(true)
+  }
+
+  const handleBatchDelete = (clients: Client[], onUndo: (items: Client[]) => void) => {
+    if (clients.length === 0) return
+    confirmBatchDelete(clients, onUndo)
+  }
+
+  const handleUndo = (deletedClients: Client[]) => {
+    // Clear any existing undo timeout
+    if (undoData) {
+      clearTimeout(undoData.timeout)
+    }
+    
+    // Restore the deleted clients
+    setClients(prev => [...deletedClients, ...prev])
+    setUndoData(null)
+    
+    toast.success(`${deletedClients.length} client${deletedClients.length > 1 ? 's' : ''} restored successfully`)
+  }
+
+  const confirmBatchDelete = async (clientsToDelete: Client[], onUndo: (items: Client[]) => void) => {
+    try {
+      const deletedIds: string[] = []
+      
+      for (const client of clientsToDelete) {
+        try {
+          if (isSupabaseConfigured()) {
+            const { error } = await supabase.from("clients").delete().eq("id", client.id)
+            if (error) throw error
+          }
+          
+          deletedIds.push(client.id)
+        } catch (error) {
+          console.error(`Error deleting client ${client.name}:`, error)
+        }
+      }
+      
+      // Get the successfully deleted clients
+      const deletedClients = clientsToDelete.filter(client => deletedIds.includes(client.id))
+      
+      // Remove successfully deleted clients from local state
+      setClients(prev => prev.filter(client => !deletedIds.includes(client.id)))
+      
+      if (deletedIds.length === clientsToDelete.length) {
+        // Clear any existing undo timeout
+        if (undoData) {
+          clearTimeout(undoData.timeout)
+        }
+        
+        // Set up new undo timeout (30 seconds)
+        const timeout = setTimeout(() => {
+          setUndoData(null)
+        }, 30000)
+        
+        setUndoData({ items: deletedClients, timeout })
+        
+        // Show toast with undo action
+        toast(`${deletedIds.length} client${deletedIds.length > 1 ? 's' : ''} deleted successfully`, {
+          action: {
+            label: "Undo",
+            onClick: () => handleUndo(deletedClients),
+          },
+        })
+      } else {
+        toast.success(`${deletedIds.length} of ${clientsToDelete.length} clients deleted successfully`)
+        if (deletedIds.length < clientsToDelete.length) {
+          toast.error(`${clientsToDelete.length - deletedIds.length} client${clientsToDelete.length - deletedIds.length > 1 ? 's' : ''} failed to delete`)
+        }
+      }
+    } catch (error) {
+      console.error('Error during batch delete:', error)
+      toast.error("Failed to delete clients. Please try again.")
+    }
   }
 
   const confirmDelete = async () => {
@@ -274,16 +353,9 @@ export default function ClientsPage() {
       // Remove from local state
       setClients(clients.filter((c) => c.id !== selectedClient.id))
 
-      toast({
-        title: "Client Deleted",
-        description: `${selectedClient.name} has been deleted successfully.`,
-      })
+      toast.success(`${selectedClient.name} has been deleted successfully`)
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete client. Please try again.",
-        variant: "destructive",
-      })
+      toast.error("Failed to delete client. Please try again.")
     } finally {
       setShowDeleteDialog(false)
       setSelectedClient(null)
@@ -294,11 +366,7 @@ export default function ClientsPage() {
     try {
       // Validate required fields
       if (!editingClient.name?.trim()) {
-        toast({
-          title: "Validation Error",
-          description: "Client name is required.",
-          variant: "destructive",
-        })
+        toast.error("Client name is required")
         return
       }
 
@@ -401,10 +469,7 @@ export default function ClientsPage() {
         }
       }
 
-      toast({
-        title: selectedClient ? "Client Updated" : "Client Added",
-        description: `${editingClient.name} has been ${selectedClient ? "updated" : "added"} successfully.`,
-      })
+      toast.success(`${editingClient.name} has been ${selectedClient ? "updated" : "added"} successfully`)
 
       setShowEditDialog(false)
       setShowAddDialog(false)
@@ -420,11 +485,7 @@ export default function ClientsPage() {
         errorMessage = JSON.stringify(error)
       }
       
-      toast({
-        title: "Error",
-        description: `Failed to ${selectedClient ? "update" : "add"} client: ${errorMessage}`,
-        variant: "destructive",
-      })
+      toast.error(`Failed to ${selectedClient ? "update" : "add"} client: ${errorMessage}`)
     }
   }
 
@@ -439,7 +500,28 @@ export default function ClientsPage() {
   })
 
   if (loading) {
-    return <ClientsLoading />
+    return (
+      <>
+        <PageHeader
+          title="Clients"
+          breadcrumbs={[{ label: "Clients" }]}
+        />
+        <PageContent>
+          <div className="flex items-center justify-center h-[calc(100vh-300px)]">
+            <div className="flex flex-col items-center space-y-4">
+              <div className="relative">
+                <div className="w-12 h-12 rounded-full border-2 border-gray-200 dark:border-gray-700"></div>
+                <div className="absolute top-0 left-0 w-12 h-12 rounded-full border-2 border-primary border-t-transparent animate-spin"></div>
+              </div>
+              <div className="text-center">
+                <p className="text-sm font-medium text-zinc-600">Loading clients</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Please wait a moment...</p>
+              </div>
+            </div>
+          </div>
+        </PageContent>
+      </>
+    )
   }
 
   return (
@@ -455,7 +537,19 @@ export default function ClientsPage() {
           error={error}
         />
 
-        <DataTable columns={columns} data={clients} onAddClient={handleAddClient} />
+        <DataTable 
+          columns={columns} 
+          data={clients} 
+          onAddClient={handleAddClient} 
+          onBatchDelete={handleBatchDelete}
+          contextActions={{
+            onViewDetails: handleViewDetails,
+            onEditClient: handleEditClient,
+            onCreateInvoice: handleCreateInvoice,
+            onNewProject: handleNewProject,
+            onDeleteClient: handleDeleteClient,
+          }}
+        />
       </PageContent>
 
       {/* View Details Dialog */}

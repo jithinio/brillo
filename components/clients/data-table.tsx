@@ -14,29 +14,62 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { ChevronDown, LayoutGrid, Search } from "lucide-react"
-
-
+import { ChevronDown, LayoutGrid, Search, Eye, Edit, FileText, FolderPlus, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Badge } from "@/components/ui/badge"
+import { AlertTriangle } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
   onAddClient?: () => void
+  onBatchDelete?: (items: TData[], onUndo: (items: TData[]) => void) => void
+  contextActions?: {
+    onViewDetails: (item: TData) => void
+    onEditClient: (item: TData) => void
+    onCreateInvoice: (item: TData) => void
+    onNewProject: (item: TData) => void
+    onDeleteClient: (item: TData) => void
+  }
 }
 
-export function DataTable<TData, TValue>({ columns, data, onAddClient }: DataTableProps<TData, TValue>) {
+export function DataTable<TData, TValue>({ 
+  columns, 
+  data, 
+  onAddClient,
+  onBatchDelete,
+  contextActions 
+}: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
@@ -45,6 +78,8 @@ export function DataTable<TData, TValue>({ columns, data, onAddClient }: DataTab
     pageIndex: 0,
     pageSize: 10,
   })
+  const [batchDeleteOpen, setBatchDeleteOpen] = React.useState(false)
+  const [itemsToDelete, setItemsToDelete] = React.useState<TData[]>([])
 
   // Load column visibility from localStorage on mount
   React.useEffect(() => {
@@ -101,6 +136,30 @@ export function DataTable<TData, TValue>({ columns, data, onAddClient }: DataTab
       pagination,
     },
   })
+
+  const selectedRows = table.getFilteredSelectedRowModel().rows
+  const selectedCount = selectedRows.length
+
+  const handleBatchDelete = () => {
+    if (selectedRows.length > 0) {
+      const selectedItems = selectedRows.map(row => row.original)
+      setItemsToDelete(selectedItems)
+      setBatchDeleteOpen(true)
+    }
+  }
+
+  const handleUndo = (items: TData[]) => {
+    // This will be called by the parent component to restore items
+  }
+
+  const confirmBatchDelete = () => {
+    if (onBatchDelete && itemsToDelete.length > 0) {
+      onBatchDelete(itemsToDelete, handleUndo)
+      setBatchDeleteOpen(false)
+      setItemsToDelete([])
+      setRowSelection({}) // Clear selection after deletion
+    }
+  }
 
   return (
     <div className="w-full max-w-full space-y-4">
@@ -165,7 +224,25 @@ export function DataTable<TData, TValue>({ columns, data, onAddClient }: DataTab
                 })}
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={onAddClient}>
+          {selectedCount > 0 && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleBatchDelete}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
+          <Button 
+            type="button"
+            size="sm" 
+            className="bg-primary text-primary-foreground hover:bg-primary/90" 
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              onAddClient?.()
+            }}
+          >
             <span className="hidden lg:inline">Add Client</span>
             <span className="lg:hidden">Add</span>
           </Button>
@@ -197,33 +274,75 @@ export function DataTable<TData, TValue>({ columns, data, onAddClient }: DataTab
           <TableBody>
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
-                  {row.getVisibleCells().map((cell) => {
-                    const isActionsColumn = cell.column.id === "actions"
-                    return (
-                      <TableCell 
-                        key={cell.id} 
-                        style={{ width: cell.column.getSize() }} 
-                        className={`whitespace-nowrap ${
-                          isActionsColumn 
-                            ? "sticky right-0 bg-background shadow-[-4px_0_4px_-2px_rgba(0,0,0,0.1)]" 
-                            : ""
-                        }`}
+                <ContextMenu key={row.id}>
+                  <ContextMenuTrigger asChild>
+                    <TableRow 
+                      data-state={row.getIsSelected() && "selected"}
+                      className="cursor-default"
+                    >
+                      {row.getVisibleCells().map((cell) => {
+                        const isActionsColumn = cell.column.id === "actions"
+                        return (
+                          <TableCell 
+                            key={cell.id} 
+                            style={{ width: cell.column.getSize() }} 
+                            className={`whitespace-nowrap ${
+                              isActionsColumn ? "sticky right-0 bg-background shadow-[-4px_0_4px_-2px_rgba(0,0,0,0.1)]" : ""
+                            }`}
+                          >
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </TableCell>
+                        )
+                      })}
+                    </TableRow>
+                  </ContextMenuTrigger>
+                  {contextActions && (
+                    <ContextMenuContent className="w-48">
+                      <ContextMenuItem 
+                        onClick={() => contextActions.onViewDetails(row.original)}
                       >
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
-                    )
-                  })}
-                </TableRow>
+                        <Eye className="mr-2 h-4 w-4" />
+                        View Details
+                      </ContextMenuItem>
+                      <ContextMenuItem 
+                        onClick={() => contextActions.onEditClient(row.original)}
+                      >
+                        <Edit className="mr-2 h-4 w-4" />
+                        Edit Client
+                      </ContextMenuItem>
+                      <ContextMenuSeparator />
+                      <ContextMenuItem 
+                        onClick={() => contextActions.onCreateInvoice(row.original)}
+                      >
+                        <FileText className="mr-2 h-4 w-4" />
+                        Create Invoice
+                      </ContextMenuItem>
+                      <ContextMenuItem 
+                        onClick={() => contextActions.onNewProject(row.original)}
+                      >
+                        <FolderPlus className="mr-2 h-4 w-4" />
+                        New Project
+                      </ContextMenuItem>
+                      <ContextMenuSeparator />
+                      <ContextMenuItem 
+                        onClick={() => contextActions.onDeleteClient(row.original)}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete Client
+                      </ContextMenuItem>
+                    </ContextMenuContent>
+                  )}
+                </ContextMenu>
               ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={columns.length} className="h-24 text-center">
-                    No results.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
+            ) : (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="h-24 text-center">
+                  No results.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
           </Table>
         </div>
       </div>
@@ -280,6 +399,28 @@ export function DataTable<TData, TValue>({ columns, data, onAddClient }: DataTab
           </div>
         </div>
       </div>
+
+      {/* Batch Delete Confirmation Dialog */}
+      <AlertDialog open={batchDeleteOpen} onOpenChange={setBatchDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete {itemsToDelete.length} client{itemsToDelete.length !== 1 ? 's' : ''}. 
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setItemsToDelete([])}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmBatchDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
