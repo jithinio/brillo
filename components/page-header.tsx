@@ -9,7 +9,8 @@ import {
 } from "@/components/ui/breadcrumb"
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
-import { ThemeToggle } from "@/components/theme-toggle"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { AlertTriangle } from "lucide-react"
 
 interface PageHeaderProps {
   title: string
@@ -49,7 +50,6 @@ export function PageHeader({ title, description, breadcrumbs = [], action, error
         </Breadcrumb>
       </div>
       <div className="ml-auto px-6 flex items-center gap-2">
-        <ThemeToggle />
         {action}
       </div>
     </header>
@@ -66,10 +66,17 @@ export function PageTitle({
   error,
 }: { title: string; description?: string; error?: string | null }) {
   return (
-    <div className="space-y-1">
+    <div className="space-y-2">
       <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
       {description && <p className="text-sm text-muted-foreground">{description}</p>}
-      {error && <p className="text-sm text-yellow-600">⚠️ {error}</p>}
+      {error && (
+        <Alert className="border-yellow-200 bg-yellow-50">
+          <AlertTriangle className="h-4 w-4 text-yellow-600" />
+          <AlertDescription className="text-yellow-800">
+            {error}
+          </AlertDescription>
+        </Alert>
+      )}
     </div>
   )
 }

@@ -1,4 +1,3 @@
-import { ThemeToggle } from "@/components/theme-toggle"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -28,9 +27,7 @@ export function SiteHeader() {
           </BreadcrumbList>
         </Breadcrumb>
       </div>
-      <div className="ml-auto px-4">
-        <ThemeToggle />
-      </div>
+
     </header>
   )
 }

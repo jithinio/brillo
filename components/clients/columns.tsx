@@ -48,18 +48,27 @@ export type Client = {
   }>
 }
 
-const statusColors = {
-  active: "bg-green-600",
-  completed: "bg-blue-600",
-  on_hold: "bg-yellow-600",
-  cancelled: "bg-red-600",
-}
-
-const statusLabels = {
-  active: "Active",
-  completed: "Completed",
-  on_hold: "On Hold",
-  cancelled: "Cancelled",
+const statusConfig = {
+  active: {
+    label: "Active",
+    variant: "outline" as const,
+    iconClassName: "text-green-500",
+  },
+  completed: {
+    label: "Completed",
+    variant: "outline" as const,
+    iconClassName: "text-blue-500",
+  },
+  on_hold: {
+    label: "On Hold",
+    variant: "outline" as const,
+    iconClassName: "text-yellow-500",
+  },
+  cancelled: {
+    label: "Cancelled",
+    variant: "outline" as const,
+    iconClassName: "text-gray-400",
+  },
 }
 
 interface ColumnActions {
@@ -68,6 +77,7 @@ interface ColumnActions {
   onCreateInvoice: (client: Client) => void
   onNewProject: (client: Client) => void
   onDeleteClient: (client: Client) => void
+  onProjectClick?: (projectId: string) => void
 }
 
 export function createColumns(actions: ColumnActions): ColumnDef<Client>[] {
@@ -121,12 +131,18 @@ export function createColumns(actions: ColumnActions): ColumnDef<Client>[] {
               <AvatarImage src={client.avatar_url || "/placeholder-user.jpg"} alt={name} />
               <AvatarFallback className="text-xs">{initials}</AvatarFallback>
             </Avatar>
-            <span className="font-medium truncate" title={name}>{name}</span>
-                     </div>
-         )
-       },
-       size: 220,
-     },
+            <span 
+              className="font-medium truncate cursor-pointer hover:text-blue-600 hover:underline transition-colors" 
+              title={name}
+              onClick={() => actions.onViewDetails(client)}
+            >
+              {name}
+            </span>
+          </div>
+        )
+      },
+      size: 220,
+    },
     {
       accessorKey: "company",
       header: ({ column }) => {
@@ -242,12 +258,24 @@ export function createColumns(actions: ColumnActions): ColumnDef<Client>[] {
             <div className="space-y-1 min-w-[180px]">
               <div className="flex items-center space-x-2">
                 <Badge
-                  variant="secondary"
-                  className={`text-white text-xs flex-shrink-0 ${statusColors[project.status as keyof typeof statusColors]}`}
+                  variant={statusConfig[project.status as keyof typeof statusConfig]?.variant || "outline"}
+                  className="text-xs flex-shrink-0 text-zinc-700 font-medium"
                 >
-                  {statusLabels[project.status as keyof typeof statusLabels]}
+                  <div className={`w-2 h-2 rounded-full mr-1.5 ${statusConfig[project.status as keyof typeof statusConfig]?.iconClassName?.replace('text-', 'bg-') || 'bg-gray-400'}`}></div>
+                  {statusConfig[project.status as keyof typeof statusConfig]?.label || project.status}
                 </Badge>
-                <span className="text-sm truncate" title={project.name}>
+                <span 
+                  className="text-sm truncate cursor-pointer hover:text-blue-600 hover:underline transition-colors font-medium" 
+                  title={project.name}
+                  onClick={() => {
+                    if (actions.onProjectClick) {
+                      actions.onProjectClick(project.id)
+                    } else {
+                      // Fallback to navigating to projects page
+                      window.location.href = `/dashboard/projects#${project.id}`
+                    }
+                  }}
+                >
                   {project.name}
                 </span>
               </div>

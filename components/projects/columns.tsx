@@ -48,22 +48,26 @@ const statusConfig = {
   active: {
     label: "In Progress",
     icon: Clock,
-    className: "text-muted-foreground",
+    variant: "outline" as const,
+    iconClassName: "text-blue-500",
   },
   completed: {
     label: "Done",
     icon: CheckCircle,
-    className: "text-muted-foreground",
+    variant: "outline" as const,
+    iconClassName: "text-green-500",
   },
   on_hold: {
     label: "On Hold",
     icon: Pause,
-    className: "text-muted-foreground",
+    variant: "outline" as const,
+    iconClassName: "text-yellow-500",
   },
   cancelled: {
     label: "Cancelled",
     icon: XCircle,
-    className: "text-muted-foreground",
+    variant: "outline" as const,
+    iconClassName: "text-gray-400",
   },
 }
 
@@ -118,7 +122,11 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
         const project = row.original
         return (
           <div className="min-w-[200px] max-w-[250px]">
-            <div className="truncate font-medium" title={project.name}>
+            <div 
+              className="truncate font-medium cursor-pointer hover:text-blue-600 hover:underline transition-colors" 
+              title={project.name}
+              onClick={() => actions.onViewDetails(project)}
+            >
               {project.name}
             </div>
           </div>
@@ -172,8 +180,8 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
 
         return (
           <div className="min-w-[120px]">
-            <Badge className="font-normal" variant="outline">
-              <Icon className="mr-1.5 h-3 w-3" />
+            <Badge variant={config.variant} className="text-zinc-700 font-medium">
+              <Icon className={`mr-1.5 h-3 w-3 ${config.iconClassName}`} />
               {config.label}
             </Badge>
           </div>

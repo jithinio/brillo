@@ -119,18 +119,27 @@ const mockClients: Client[] = [
   },
 ]
 
-const statusColors = {
-  active: "bg-green-500",
-  completed: "bg-blue-500",
-  on_hold: "bg-yellow-500",
-  cancelled: "bg-red-500",
-}
-
-const statusLabels = {
-  active: "Active",
-  completed: "Completed",
-  on_hold: "On Hold",
-  cancelled: "Cancelled",
+const statusConfig = {
+  active: {
+    label: "Active",
+    variant: "outline" as const,
+    iconClassName: "text-green-500",
+  },
+  completed: {
+    label: "Completed",
+    variant: "outline" as const,
+    iconClassName: "text-blue-500",
+  },
+  on_hold: {
+    label: "On Hold",
+    variant: "outline" as const,
+    iconClassName: "text-yellow-500",
+  },
+  cancelled: {
+    label: "Cancelled",
+    variant: "outline" as const,
+    iconClassName: "text-gray-400",
+  },
 }
 
 export default function ClientsPage() {
@@ -608,12 +617,21 @@ export default function ClientsPage() {
                   <div className="space-y-2 mt-2">
                     {selectedClient.projects.map((project) => (
                       <div key={project.id} className="flex items-center justify-between p-2 border rounded">
-                        <span className="text-sm">{project.name}</span>
-                        <Badge
-                          variant="secondary"
-                          className={`text-white text-xs ${statusColors[project.status as keyof typeof statusColors]}`}
+                        <span 
+                          className="text-sm cursor-pointer hover:text-blue-600 hover:underline transition-colors font-medium"
+                          onClick={() => {
+                            // Navigate to projects page and highlight this project
+                            window.location.href = `/dashboard/projects#${project.id}`
+                          }}
                         >
-                          {statusLabels[project.status as keyof typeof statusLabels]}
+                          {project.name}
+                        </span>
+                        <Badge
+                          variant={statusConfig[project.status as keyof typeof statusConfig]?.variant || "outline"}
+                          className="text-xs text-zinc-700 font-medium"
+                        >
+                          <div className={`w-2 h-2 rounded-full mr-1.5 ${statusConfig[project.status as keyof typeof statusConfig]?.iconClassName?.replace('text-', 'bg-') || 'bg-gray-400'}`}></div>
+                          {statusConfig[project.status as keyof typeof statusConfig]?.label || project.status}
                         </Badge>
                       </div>
                     ))}

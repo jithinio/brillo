@@ -578,6 +578,36 @@ export default function InvoicesPage() {
     return configs[status as keyof typeof configs] || configs.draft
   }
 
+  const getProjectStatusConfig = (status: string) => {
+    const configs = {
+      active: {
+        label: "Active",
+        variant: "outline" as const,
+        iconClassName: "text-green-500",
+      },
+      completed: {
+        label: "Completed",
+        variant: "outline" as const,
+        iconClassName: "text-blue-500",
+      },
+      on_hold: {
+        label: "On Hold",
+        variant: "outline" as const,
+        iconClassName: "text-yellow-500",
+      },
+      cancelled: {
+        label: "Cancelled",
+        variant: "outline" as const,
+        iconClassName: "text-gray-400",
+      },
+    }
+    return configs[status as keyof typeof configs] || {
+      label: status.replace('_', ' ').toUpperCase(),
+      variant: "outline" as const,
+      iconClassName: "text-gray-400",
+    }
+  }
+
   const handleClientClick = async (client: { name: string; company?: string; id?: string }) => {
     try {
       // Try to fetch full client details if we have an ID
@@ -646,6 +676,11 @@ export default function InvoicesPage() {
     await handleStatusChange(invoice.id, newStatus)
   }
 
+  const handleProjectClick = (projectName: string) => {
+    // Navigate to projects page and search for the project
+    window.location.href = `/dashboard/projects?search=${encodeURIComponent(projectName)}`
+  }
+
   const columnActions = {
     onViewDetails: handleViewDetails,
     onEditInvoice: handleEditInvoice,
@@ -654,6 +689,7 @@ export default function InvoicesPage() {
     onDeleteInvoice: handleDeleteInvoice,
     onStatusChange: handleStatusChangeFromActions,
     onClientClick: handleClientClick,
+    onProjectClick: handleProjectClick,
     downloadingPDF,
   }
 
@@ -906,7 +942,13 @@ export default function InvoicesPage() {
                         {selectedInvoice.projects?.name && (
                           <div>
                             <p className="text-sm text-gray-500 mb-1">Project</p>
-                            <p className="text-sm font-medium text-gray-900">{selectedInvoice.projects.name}</p>
+                            <Button
+                              variant="link"
+                              className="p-0 h-auto text-sm font-medium text-gray-900 hover:text-blue-600 hover:underline"
+                              onClick={() => handleProjectClick(selectedInvoice.projects!.name)}
+                            >
+                              {selectedInvoice.projects.name}
+                            </Button>
                           </div>
                         )}
                         {selectedInvoice.notes && (
@@ -1162,14 +1204,19 @@ export default function InvoicesPage() {
                         <div className="space-y-2">
                           {selectedClient.projects.map((project: any) => (
                             <div key={project.id} className="flex items-center justify-between p-3 border rounded">
-                              <span className="text-sm font-medium">{project.name}</span>
-                              <Badge variant="secondary" className={`
-                                ${project.status === 'active' ? 'bg-green-100 text-green-700' : ''}
-                                ${project.status === 'completed' ? 'bg-blue-100 text-blue-700' : ''}
-                                ${project.status === 'on_hold' ? 'bg-yellow-100 text-yellow-700' : ''}
-                                ${project.status === 'cancelled' ? 'bg-red-100 text-red-700' : ''}
-                              `}>
-                                {project.status.replace('_', ' ').toUpperCase()}
+                              <Button
+                                variant="link"
+                                className="p-0 h-auto text-sm font-medium text-gray-900 hover:text-blue-600 hover:underline"
+                                onClick={() => handleProjectClick(project.name)}
+                              >
+                                {project.name}
+                              </Button>
+                              <Badge
+                                variant={getProjectStatusConfig(project.status).variant}
+                                className="text-xs text-zinc-700 font-medium"
+                              >
+                                <div className={`w-2 h-2 rounded-full mr-1.5 ${getProjectStatusConfig(project.status).iconClassName?.replace('text-', 'bg-') || 'bg-gray-400'}`}></div>
+                                {getProjectStatusConfig(project.status).label}
                               </Badge>
                             </div>
                           ))}

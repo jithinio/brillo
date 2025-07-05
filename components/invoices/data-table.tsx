@@ -162,7 +162,7 @@ export function DataTable<TData, TValue>({
     }
   }
 
-    return (
+  return (
     <div className="w-full">
       <div className="flex items-center justify-between py-4">
         <div className="flex items-center space-x-2">
@@ -234,12 +234,12 @@ export function DataTable<TData, TValue>({
               <Trash2 className="h-4 w-4" />
             </Button>
           )}
-          {onCreateInvoice && (
-            <Button onClick={onCreateInvoice} size="sm">
-              <Plus className="mr-2 h-4 w-4" />
-              Create Invoice
-            </Button>
-          )}
+        {onCreateInvoice && (
+          <Button onClick={onCreateInvoice} size="sm">
+            <Plus className="mr-2 h-4 w-4" />
+            Create Invoice
+          </Button>
+        )}
         </div>
       </div>
       <div className="overflow-hidden rounded-md border">
@@ -275,30 +275,30 @@ export function DataTable<TData, TValue>({
                 table.getRowModel().rows.map((row) => (
                   <ContextMenu key={row.id}>
                     <ContextMenuTrigger asChild>
-                      <TableRow
-                        data-state={row.getIsSelected() && "selected"}
+                  <TableRow
+                    data-state={row.getIsSelected() && "selected"}
                         className="cursor-default"
-                      >
-                        {row.getVisibleCells().map((cell) => {
-                          const isActionsColumn = cell.column.id === "actions"
-                          return (
-                            <TableCell 
-                              key={cell.id} 
-                              style={{ width: cell.column.getSize() }} 
-                              className={`whitespace-nowrap ${
-                                isActionsColumn 
-                                  ? "sticky right-0 bg-background shadow-[-4px_0_4px_-2px_rgba(0,0,0,0.1)]" 
-                                  : ""
-                              }`}
-                            >
-                              {flexRender(
-                                cell.column.columnDef.cell,
-                                cell.getContext()
-                              )}
-                            </TableCell>
-                          )
-                        })}
-                      </TableRow>
+                  >
+                    {row.getVisibleCells().map((cell) => {
+                      const isActionsColumn = cell.column.id === "actions"
+                      return (
+                        <TableCell 
+                          key={cell.id} 
+                          style={{ width: cell.column.getSize() }} 
+                          className={`whitespace-nowrap ${
+                            isActionsColumn 
+                              ? "sticky right-0 bg-background shadow-[-4px_0_4px_-2px_rgba(0,0,0,0.1)]" 
+                              : ""
+                          }`}
+                        >
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </TableCell>
+                      )
+                    })}
+                  </TableRow>
                     </ContextMenuTrigger>
                     {contextActions && (
                       <ContextMenuContent className="w-48">

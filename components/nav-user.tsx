@@ -11,12 +11,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar"
-import { BadgeCheck, Bell, ChevronsUpDown, CreditCard, LogOut, Sparkles } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { BadgeCheck, Bell, ChevronsUpDown, CreditCard, LogOut, Sparkles, Moon, Sun, Monitor, Palette } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
+import { useTheme } from "next-themes"
 
 export function NavUser() {
   const { user, signOut } = useAuth()
   const { isMobile } = useSidebar()
+  const { theme, setTheme } = useTheme()
 
   // Fallback user data if no user is available
   const currentUser = user
@@ -41,6 +44,32 @@ export function NavUser() {
 
   const handleSignOut = async () => {
     await signOut()
+  }
+
+  const getThemeIcon = (theme: string | undefined) => {
+    switch (theme) {
+      case "light":
+        return <Sun className="h-3 w-3" />
+      case "dark":
+        return <Moon className="h-3 w-3" />
+      case "system":
+        return <Monitor className="h-3 w-3" />
+      default:
+        return <Monitor className="h-3 w-3" />
+    }
+  }
+
+  const getThemeLabel = (theme: string | undefined) => {
+    switch (theme) {
+      case "light":
+        return "Light"
+      case "dark":
+        return "Dark"
+      case "system":
+        return "System"
+      default:
+        return "System"
+    }
   }
 
   return (
@@ -102,6 +131,41 @@ export function NavUser() {
                 <Bell />
                 Notifications
               </DropdownMenuItem>
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <div className="flex items-center gap-2 px-2 py-1.5 text-sm">
+                <Palette className="h-4 w-4" />
+                <span className="flex-1">Theme</span>
+                <Select value={theme} onValueChange={setTheme}>
+                  <SelectTrigger className="h-8 w-28 text-xs">
+                    <div className="flex items-center gap-1">
+                      {getThemeIcon(theme)}
+                      <span className="text-xs">{getThemeLabel(theme)}</span>
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="light">
+                      <div className="flex items-center gap-2">
+                        <Sun className="h-3 w-3" />
+                        Light
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="dark">
+                      <div className="flex items-center gap-2">
+                        <Moon className="h-3 w-3" />
+                        Dark
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="system">
+                      <div className="flex items-center gap-2">
+                        <Monitor className="h-3 w-3" />
+                        System
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleSignOut}>

@@ -513,7 +513,7 @@ export default function ProjectsPage() {
                 <div>
                   <Label className="text-sm font-medium">Status</Label>
                   <div className="mt-1">
-                    <Badge variant="outline" className="text-muted-foreground px-1.5">
+                    <Badge variant="outline" className="text-zinc-700 font-medium">
                       {selectedProject.status === "completed" ? (
                         <>
                           <Eye className="fill-green-500 dark:fill-green-400 mr-1 h-3 w-3" />

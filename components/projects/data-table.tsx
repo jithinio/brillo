@@ -277,21 +277,21 @@ export function DataTable<TData, TValue>({ columns, data, onAddProject, onBatchD
                       data-state={row.getIsSelected() && "selected"}
                       className="cursor-default"
                     >
-                      {row.getVisibleCells().map((cell) => {
-                        const isActionsColumn = cell.column.id === "actions"
-                        return (
-                          <TableCell 
-                            key={cell.id} 
-                            style={{ width: cell.column.getSize() }} 
-                            className={`whitespace-nowrap ${
+                  {row.getVisibleCells().map((cell) => {
+                    const isActionsColumn = cell.column.id === "actions"
+                    return (
+                      <TableCell 
+                        key={cell.id} 
+                        style={{ width: cell.column.getSize() }} 
+                        className={`whitespace-nowrap ${
                               isActionsColumn ? "sticky right-0 bg-background shadow-[-4px_0_4px_-2px_rgba(0,0,0,0.1)]" : ""
-                            }`}
-                          >
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                          </TableCell>
-                        )
-                      })}
-                    </TableRow>
+                        }`}
+                      >
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    )
+                  })}
+                </TableRow>
                   </ContextMenuTrigger>
                   {contextActions && (
                     <ContextMenuContent className="w-48">

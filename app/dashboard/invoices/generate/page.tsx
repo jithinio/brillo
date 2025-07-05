@@ -12,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Switch } from "@/components/ui/switch"
 import { DatePicker } from "@/components/ui/date-picker"
-import { Plus, Trash2, Send, Save, UserPlus, Building, Mail, Phone, MapPin, Receipt, Eye, Download, CheckCircle } from "lucide-react"
+import { Plus, Trash2, Send, Save, UserPlus, Building, Mail, Phone, MapPin, Receipt, Eye, Download, CheckCircle, CalendarDays, Plus as PlusIcon, RefreshCw, Loader2, Check, Users, Calendar, DollarSign, FileText, AlertTriangle } from "lucide-react"
 import { toast } from "sonner"
 import { formatCurrency, CURRENCIES, getDefaultCurrency } from "@/lib/currency"
 import { PageHeader, PageContent } from "@/components/page-header"
@@ -21,6 +21,7 @@ import { useSettings } from "@/components/settings-provider"
 import type { Client } from "@/components/clients/columns"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { generateInvoicePDF } from "@/lib/pdf-generator"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 interface InvoiceItem {
   id: string
@@ -115,7 +116,7 @@ const mockClients: Client[] = [
 
 export default function GenerateInvoicePage() {
 
-  const { settings } = useSettings()
+  const { settings, isLoading: settingsLoading } = useSettings()
   
   // Check if we're in edit mode
   const [isEditMode, setIsEditMode] = useState(false)
@@ -942,6 +943,30 @@ export default function GenerateInvoicePage() {
 
     setIsDownloading(true)
     try {
+      // Get company information from localStorage
+      const savedCompanyInfo = localStorage.getItem('company-info')
+      
+      let companyInfo = {
+        companyName: "Your Company",
+        companyAddress: "123 Business St\nCity, State 12345\nUnited States",
+        companyEmail: "contact@yourcompany.com", 
+        companyPhone: "+1 (555) 123-4567",
+      }
+
+      if (savedCompanyInfo) {
+        try {
+          const parsed = JSON.parse(savedCompanyInfo)
+          companyInfo = {
+            companyName: parsed.companyName || companyInfo.companyName,
+            companyAddress: parsed.companyAddress || companyInfo.companyAddress,
+            companyEmail: parsed.companyEmail || companyInfo.companyEmail,
+            companyPhone: parsed.companyPhone || companyInfo.companyPhone,
+          }
+        } catch (error) {
+          console.error('Error parsing company info:', error)
+        }
+      }
+
       // Create mock invoice data that matches the expected Invoice type
       const mockInvoice = {
         id: generatedInvoiceData.invoiceNumber,
@@ -970,10 +995,8 @@ export default function GenerateInvoicePage() {
         invoice: mockInvoice,
         filename: `invoice-${generatedInvoiceData.invoiceNumber}.pdf`,
         template: {
-          companyName: "Your Company",
-          companyAddress: "123 Business St\nCity, State 12345\nUnited States",
-          companyEmail: "contact@yourcompany.com", 
-          companyPhone: "+1 (555) 123-4567",
+          ...companyInfo,
+          logoUrl: settings.companyLogo || "",
           primaryColor: "#000000",
           accentColor: "#6366f1"
         }
@@ -1489,10 +1512,13 @@ export default function GenerateInvoicePage() {
 
           {/* Currency Override Warning - Moved outside summary card */}
           {clientCurrency !== getDefaultCurrency() && (
-            <div className="text-xs text-muted-foreground p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-              <div className="font-medium">Currency Override</div>
-              <div>This invoice uses {CURRENCIES[clientCurrency].name} instead of the default {CURRENCIES[getDefaultCurrency()].name}</div>
-            </div>
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Currency Override</AlertTitle>
+              <AlertDescription>
+                This invoice uses {CURRENCIES[clientCurrency].name} instead of the default {CURRENCIES[getDefaultCurrency()].name}
+              </AlertDescription>
+            </Alert>
           )}
         </div>
       </div>
@@ -1630,7 +1656,7 @@ export default function GenerateInvoicePage() {
             <div className="flex justify-between items-start">
               <div className="space-y-3">
                 <div className="bg-green-100 border border-green-200 rounded-full p-2.5 w-fit shadow-sm">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <Check className="h-5 w-5 text-green-600" />
                 </div>
                 <div>
                   <h3 className="text-lg font-medium text-gray-900">

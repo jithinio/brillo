@@ -9,6 +9,7 @@ interface GeneratePDFOptions {
     companyAddress: string
     companyEmail: string
     companyPhone: string
+    logoUrl?: string
     primaryColor: string
     accentColor: string
   }
@@ -98,6 +99,7 @@ async function renderInvoiceToHTML(invoice: Invoice, template?: any): Promise<st
     companyAddress: "123 Business St\nCity, State 12345\nUnited States",
     companyEmail: "contact@yourcompany.com",
     companyPhone: "+1 (555) 123-4567",
+    logoUrl: "",
     primaryColor: "#000000",
     accentColor: "#6366f1"
   }
@@ -127,21 +129,30 @@ async function renderInvoiceToHTML(invoice: Invoice, template?: any): Promise<st
     ">
       <!-- Header -->
       <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px;">
-        <div>
-          <h1 style="
-            font-size: 24px;
-            font-weight: bold;
-            margin-bottom: 12px;
-            color: ${currentTemplate.primaryColor};
-            margin: 0 0 12px 0;
-          ">
-            ${currentTemplate.companyName}
-          </h1>
-          <div style="font-size: 12px; color: #666; white-space: pre-line;">
-            ${currentTemplate.companyAddress}
-          </div>
-          <div style="font-size: 12px; color: #666; margin-top: 8px;">
-            ${currentTemplate.companyEmail} • ${currentTemplate.companyPhone}
+        <div style="display: flex; align-items: flex-start; gap: 16px;">
+          ${currentTemplate.logoUrl ? `
+            <img 
+              src="${currentTemplate.logoUrl}" 
+              alt="Company Logo" 
+              style="width: 60px; height: 60px; object-fit: contain;"
+            />
+          ` : ''}
+          <div>
+            <h1 style="
+              font-size: 24px;
+              font-weight: bold;
+              margin-bottom: 12px;
+              color: ${currentTemplate.primaryColor};
+              margin: 0 0 12px 0;
+            ">
+              ${currentTemplate.companyName}
+            </h1>
+            <div style="font-size: 12px; color: #666; white-space: pre-line;">
+              ${currentTemplate.companyAddress}
+            </div>
+            <div style="font-size: 12px; color: #666; margin-top: 8px;">
+              ${currentTemplate.companyEmail} • ${currentTemplate.companyPhone}
+            </div>
           </div>
         </div>
         

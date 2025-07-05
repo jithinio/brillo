@@ -67,32 +67,32 @@ const statusConfig = {
   draft: {
     label: "Draft",
     icon: Clock,
-    className: "text-gray-700",
-    color: "bg-gray-100",
+    variant: "outline" as const,
+    iconClassName: "text-gray-500",
   },
   sent: {
     label: "Sent",
     icon: Send,
-    className: "text-blue-700",
-    color: "bg-blue-100",
+    variant: "outline" as const,
+    iconClassName: "text-blue-500",
   },
   paid: {
     label: "Paid",
     icon: CheckCircle,
-    className: "text-green-700",
-    color: "bg-green-100",
+    variant: "outline" as const,
+    iconClassName: "text-green-500",
   },
   overdue: {
     label: "Overdue",
     icon: XCircle,
-    className: "text-red-700",
-    color: "bg-red-100",
+    variant: "outline" as const,
+    iconClassName: "text-red-500",
   },
   cancelled: {
     label: "Cancelled",
     icon: XCircle,
-    className: "text-gray-600",
-    color: "bg-gray-50",
+    variant: "outline" as const,
+    iconClassName: "text-gray-400",
   },
 }
 
@@ -104,6 +104,7 @@ interface ColumnActions {
   onDeleteInvoice: (invoice: Invoice) => void
   onStatusChange: (invoice: Invoice, newStatus: string) => void
   onClientClick: (client: { name: string; company?: string; id?: string }) => void
+  onProjectClick?: (projectName: string) => void
   downloadingPDF?: string | null
 }
 
@@ -210,9 +211,21 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
         const project = row.original.projects
         return project ? (
           <div className="min-w-[120px] max-w-[150px]">
-            <div className="truncate text-sm" title={project.name}>
-              {project.name}
-            </div>
+            <Button
+              variant="link"
+              className="p-0 h-auto font-medium text-sm hover:underline truncate"
+              onClick={() => {
+                if (actions.onProjectClick) {
+                  actions.onProjectClick(project.name)
+                } else {
+                  // Fallback to navigating to projects page
+                  window.location.href = '/dashboard/projects'
+                }
+              }}
+              title={project.name}
+            >
+              <span className="truncate">{project.name}</span>
+            </Button>
           </div>
         ) : (
           <span className="text-muted-foreground text-sm min-w-[120px] block">—</span>
@@ -237,10 +250,10 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
         return (
           <div className="min-w-[100px]">
             <Badge 
-              variant="secondary" 
-              className={`font-normal ${config.color} ${config.className}`}
+              variant={config.variant}
+              className="text-zinc-700 font-medium"
             >
-              <Icon className="mr-1.5 h-3 w-3" />
+              <Icon className={`mr-1.5 h-3 w-3 ${config.iconClassName}`} />
               {config.label}
             </Badge>
           </div>

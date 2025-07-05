@@ -16,6 +16,7 @@ import { toast } from "sonner"
 import { PageHeader, PageContent, PageTitle } from "@/components/page-header"
 import { setDefaultCurrency, getDefaultCurrency } from "@/lib/currency"
 import { useSettings } from "@/components/settings-provider"
+import { uploadCompanyLogo } from "@/lib/company-settings"
 
 export default function SettingsPage() {
   const [notifications, setNotifications] = useState({
@@ -26,7 +27,7 @@ export default function SettingsPage() {
 
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [companyLogo, setCompanyLogo] = useState("")
+  const [companyLogo, setCompanyLogo] = useState("") // Always start empty, will be set by settings provider
   
   // General settings state
   const [generalSettings, setGeneralSettings] = useState({
@@ -63,7 +64,9 @@ export default function SettingsPage() {
   })
 
 
-  const { updateSetting } = useSettings()
+  const { updateSetting, settings, isLoading } = useSettings()
+
+
 
   // Load settings from localStorage on component mount
   useEffect(() => {
@@ -71,13 +74,17 @@ export default function SettingsPage() {
     const savedCompany = localStorage.getItem('company-info')
     const savedTax = localStorage.getItem('tax-info')
     const savedNotifications = localStorage.getItem('notifications')
-    const savedLogo = localStorage.getItem('company_logo')
+    // No longer loading logo from localStorage - using settings provider only
 
     if (savedGeneral) {
       const parsed = JSON.parse(savedGeneral)
-      setGeneralSettings(parsed)
+      setGeneralSettings(prev => ({
+        ...prev,
+        defaultCurrency: parsed.defaultCurrency || prev.defaultCurrency,
+        invoicePrefix: parsed.invoicePrefix || prev.invoicePrefix,
+      }))
       // Sync currency with global currency system
-      if (parsed.defaultCurrency !== getDefaultCurrency()) {
+      if (parsed.defaultCurrency && parsed.defaultCurrency !== getDefaultCurrency()) {
         setDefaultCurrency(parsed.defaultCurrency)
       }
     } else {
@@ -88,47 +95,49 @@ export default function SettingsPage() {
     
     if (savedCompany) {
       const parsed = JSON.parse(savedCompany)
-      setCompanyInfo({
-        companyName: parsed.companyName || "Suitebase",
-        companyAddress: parsed.companyAddress || "123 Business St, City, State 12345",
-        companyPhone: parsed.companyPhone || "+1 (555) 123-4567",
-        companyWebsite: parsed.companyWebsite || "https://suitebase.com",
-        companyEmail: parsed.companyEmail || "contact@suitebase.com",
-        companyRegistration: parsed.companyRegistration || "",
-      })
+      setCompanyInfo(prev => ({
+        companyName: parsed.companyName || prev.companyName,
+        companyAddress: parsed.companyAddress || prev.companyAddress,
+        companyPhone: parsed.companyPhone || prev.companyPhone,
+        companyWebsite: parsed.companyWebsite || prev.companyWebsite,
+        companyEmail: parsed.companyEmail || prev.companyEmail,
+        companyRegistration: parsed.companyRegistration || prev.companyRegistration,
+      }))
     }
     if (savedTax) {
       const parsed = JSON.parse(savedTax)
-      setTaxInfo({
-        taxId: parsed.taxId || "",
-        defaultTaxRate: parsed.defaultTaxRate || "8.00",
-        taxName: parsed.taxName || "Sales Tax",
-        taxJurisdiction: parsed.taxJurisdiction || "",
-        taxAddress: parsed.taxAddress || "",
-        includeTaxInPrices: parsed.includeTaxInPrices || false,
-        autoCalculateTax: parsed.autoCalculateTax !== undefined ? parsed.autoCalculateTax : true,
-      })
+      setTaxInfo(prev => ({
+        taxId: parsed.taxId || prev.taxId,
+        defaultTaxRate: parsed.defaultTaxRate || prev.defaultTaxRate,
+        taxName: parsed.taxName || prev.taxName,
+        taxJurisdiction: parsed.taxJurisdiction || prev.taxJurisdiction,
+        taxAddress: parsed.taxAddress || prev.taxAddress,
+        includeTaxInPrices: parsed.includeTaxInPrices !== undefined ? parsed.includeTaxInPrices : prev.includeTaxInPrices,
+        autoCalculateTax: parsed.autoCalculateTax !== undefined ? parsed.autoCalculateTax : prev.autoCalculateTax,
+      }))
     }
     if (savedNotifications) {
-      setNotifications(JSON.parse(savedNotifications))
+      const parsed = JSON.parse(savedNotifications)
+      setNotifications(prev => ({
+        email: parsed.email !== undefined ? parsed.email : prev.email,
+        push: parsed.push !== undefined ? parsed.push : prev.push,
+        marketing: parsed.marketing !== undefined ? parsed.marketing : prev.marketing,
+      }))
     }
-    if (savedLogo) {
-      setCompanyLogo(savedLogo)
-    }
-  }, [])
+    
+    // Always use settings provider as the source of truth for logo
+    setCompanyLogo(settings.companyLogo || "")
+  }, [settings.companyLogo])
 
   const handleSaveSettings = async () => {
     try {
       setSaving(true)
       
-      // Save all settings to localStorage
+      // Save all settings to localStorage (except logo which is managed by settings provider)
       localStorage.setItem('general-settings', JSON.stringify(generalSettings))
       localStorage.setItem('company-info', JSON.stringify(companyInfo))
       localStorage.setItem('tax-info', JSON.stringify(taxInfo))
       localStorage.setItem('notifications', JSON.stringify(notifications))
-      if (companyLogo) {
-        localStorage.setItem('company_logo', companyLogo)
-      }
       
       // Update global currency setting
       setDefaultCurrency(generalSettings.defaultCurrency)
@@ -136,6 +145,7 @@ export default function SettingsPage() {
       
       // Update other settings in the global provider
       updateSetting('companyName', companyInfo.companyName)
+      updateSetting('companyLogo', companyLogo)
       updateSetting('taxRate', parseFloat(taxInfo.defaultTaxRate))
       updateSetting('taxName', taxInfo.taxName)
       updateSetting('includeTaxInPrices', taxInfo.includeTaxInPrices)
@@ -205,17 +215,40 @@ export default function SettingsPage() {
 
       const file = event.target.files[0]
 
-      // For demo purposes, create a local URL
+      // Create a local URL for immediate preview
       const localUrl = URL.createObjectURL(file)
       setCompanyLogo(localUrl)
-      localStorage.setItem("company_logo", localUrl)
+      
+      // Upload to Supabase storage
+      const publicUrl = await uploadCompanyLogo(file)
+      
+      if (publicUrl) {
+        // Add cache-busting parameter to force browser to reload
+        const cacheBustedUrl = `${publicUrl}?t=${Date.now()}`
+        
+        // Update with the cache-busted public URL
+        setCompanyLogo(cacheBustedUrl)
+        
+        // Save to settings provider (original URL without cache-busting)
+        await updateSetting('companyLogo', publicUrl)
 
-      toast.success("Company logo uploaded successfully")
+        toast.success("Company logo uploaded successfully")
+      } else {
+        // If upload fails, keep local URL as fallback
+        await updateSetting('companyLogo', localUrl)
+        toast.success("Company logo saved locally (storage upload failed)")
+      }
     } catch (error) {
       console.error("Error uploading logo:", error)
       toast.error("Failed to upload company logo")
     } finally {
       setUploading(false)
+      
+      // Reset the file input so the same file can be selected again
+      const fileInput = event.target
+      if (fileInput) {
+        fileInput.value = ''
+      }
     }
   }
 
@@ -302,12 +335,24 @@ export default function SettingsPage() {
                   <div className="space-y-2">
                     <Label htmlFor="companyLogo">Company Logo</Label>
                     <div className="flex items-center space-x-4">
-                      {companyLogo ? (
+                      {isLoading ? (
+                        // Loading skeleton
+                        <div className="w-16 h-16 border rounded-lg bg-muted animate-pulse flex items-center justify-center">
+                          <div className="w-8 h-8 bg-muted-foreground/20 rounded"></div>
+                        </div>
+                      ) : companyLogo ? (
                         <div className="w-16 h-16 border rounded-lg overflow-hidden bg-muted flex items-center justify-center">
                           <img
+                            key={companyLogo} // Force re-render when logo changes
                             src={companyLogo || "/placeholder.svg"}
                             alt="Company Logo"
                             className="w-full h-full object-contain"
+                            onLoad={() => {
+                              // Clean up blob URLs to prevent memory leaks
+                              if (companyLogo.startsWith('blob:')) {
+                                URL.revokeObjectURL(companyLogo)
+                              }
+                            }}
                           />
                         </div>
                       ) : (

@@ -11,6 +11,7 @@ interface InvoiceTemplateProps {
     companyAddress: string
     companyEmail: string
     companyPhone: string
+    logoUrl?: string
     primaryColor: string
     accentColor: string
   }
@@ -23,6 +24,7 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
       companyAddress: "123 Business St\nCity, State 12345\nUnited States",
       companyEmail: "contact@yourcompany.com",
       companyPhone: "+1 (555) 123-4567",
+      logoUrl: "",
       primaryColor: "#000000",
       accentColor: "#6366f1"
     }
@@ -41,18 +43,27 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
       >
         {/* Header */}
         <div className="flex justify-between items-start mb-8">
-          <div>
-            <h1 
-              className="text-3xl font-bold mb-3"
-              style={{ color: currentTemplate.primaryColor }}
-            >
-              {currentTemplate.companyName}
-            </h1>
-            <div className="text-sm text-gray-600 whitespace-pre-line">
-              {currentTemplate.companyAddress}
-            </div>
-            <div className="text-sm text-gray-600 mt-2">
-              {currentTemplate.companyEmail} • {currentTemplate.companyPhone}
+          <div className="flex items-start space-x-4">
+            {currentTemplate.logoUrl && (
+              <img 
+                src={currentTemplate.logoUrl} 
+                alt="Company Logo" 
+                className="w-20 h-20 object-contain"
+              />
+            )}
+            <div>
+              <h1 
+                className="text-3xl font-bold mb-3"
+                style={{ color: currentTemplate.primaryColor }}
+              >
+                {currentTemplate.companyName}
+              </h1>
+              <div className="text-sm text-gray-600 whitespace-pre-line">
+                {currentTemplate.companyAddress}
+              </div>
+              <div className="text-sm text-gray-600 mt-2">
+                {currentTemplate.companyEmail} • {currentTemplate.companyPhone}
+              </div>
             </div>
           </div>
           
