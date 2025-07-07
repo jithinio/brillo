@@ -104,21 +104,176 @@ export async function renderInvoiceHTML(invoice: any, template: any): Promise<st
     return parts.join('\n')
   }
 
-  // Add Tailwind CSS classes for styling
+  // Enhanced Tailwind styles with better table support
   const tailwindStyles = `
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-      * { box-sizing: border-box; }
+      * { 
+        box-sizing: border-box; 
+        margin: 0;
+        padding: 0;
+      }
       body { 
         margin: 0; 
         padding: 0; 
         background-color: ${template.backgroundColor || '#FFFFFF'};
         color: ${template.primaryColor || '#000000'};
+        font-family: ${getFontFamily()};
       }
       html {
         background-color: ${template.backgroundColor || '#FFFFFF'};
       }
+      
+      /* Enhanced table styles for better PDF rendering */
+      .invoice-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 0;
+        font-size: ${fontSize}px;
+      }
+      
+      .invoice-table th {
+        padding: 12px 8px;
+        text-align: left;
+        font-weight: 600;
+        font-size: ${tableHeaderSize}px;
+        border-bottom: 2px solid ${template.borderColor || '#E5E7EB'};
+      }
+      
+      .invoice-table td {
+        padding: 16px 8px;
+        border-bottom: 1px solid ${template.borderColor || '#E5E7EB'};
+        vertical-align: top;
+      }
+      
+      .invoice-table th:last-child,
+      .invoice-table td:last-child {
+        text-align: right;
+      }
+      
+      .invoice-table th:nth-child(3),
+      .invoice-table td:nth-child(3) {
+        text-align: right;
+      }
+      
+      .invoice-table th:nth-child(2),
+      .invoice-table td:nth-child(2) {
+        text-align: center;
+      }
+      
+      /* Grid system for non-table layouts */
+      .grid-container {
+        display: table;
+        width: 100%;
+        table-layout: fixed;
+      }
+      
+      .grid-row {
+        display: table-row;
+      }
+      
+      .grid-cell {
+        display: table-cell;
+        padding: 12px 8px;
+        vertical-align: top;
+      }
+      
+      .grid-header {
+        font-weight: 600;
+        font-size: ${tableHeaderSize}px;
+        border-bottom: 2px solid ${template.borderColor || '#E5E7EB'};
+        padding-bottom: 8px;
+        margin-bottom: 8px;
+      }
+      
+      /* Responsive utilities */
+      .text-right { text-align: right; }
+      .text-center { text-align: center; }
+      .text-left { text-align: left; }
+      .font-semibold { font-weight: 600; }
+      .font-bold { font-weight: 700; }
+      .font-medium { font-weight: 500; }
+      
+      /* Spacing utilities */
+      .mb-2 { margin-bottom: 8px; }
+      .mb-4 { margin-bottom: 16px; }
+      .mb-8 { margin-bottom: 32px; }
+      .mb-12 { margin-bottom: 48px; }
+      .mt-2 { margin-top: 8px; }
+      .mt-4 { margin-top: 16px; }
+      .py-2 { padding-top: 8px; padding-bottom: 8px; }
+      .py-3 { padding-top: 12px; padding-bottom: 12px; }
+      .py-4 { padding-top: 16px; padding-bottom: 16px; }
+      .px-4 { padding-left: 16px; padding-right: 16px; }
+      .p-4 { padding: 16px; }
+      .p-6 { padding: 24px; }
+      .p-8 { padding: 32px; }
+      
+      /* Flexbox utilities */
+      .flex { display: flex; }
+      .items-center { align-items: center; }
+      .items-baseline { align-items: baseline; }
+      .items-start { align-items: flex-start; }
+      .justify-between { justify-content: space-between; }
+      .justify-end { justify-content: flex-end; }
+      .space-y-2 > * + * { margin-top: 8px; }
+      .gap-4 { gap: 16px; }
+      .gap-8 { gap: 32px; }
+      .gap-12 { gap: 48px; }
+      
+      /* Width utilities */
+      .w-full { width: 100%; }
+      .w-64 { width: 256px; }
+      .w-80 { width: 320px; }
+      .flex-1 { flex: 1; }
+      
+      /* Grid utilities for better PDF support */
+      .grid { display: grid; }
+      .grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+      .grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
+      .grid-cols-4 { grid-template-columns: repeat(4, 1fr); }
+      .grid-cols-12 { grid-template-columns: repeat(12, 1fr); }
+      .col-span-2 { grid-column: span 2; }
+      .col-span-3 { grid-column: span 3; }
+      .col-span-4 { grid-column: span 4; }
+      .col-span-6 { grid-column: span 6; }
+      .col-span-8 { grid-column: span 8; }
+      
+      /* Border utilities */
+      .border { border: 1px solid ${template.borderColor || '#E5E7EB'}; }
+      .border-b { border-bottom: 1px solid ${template.borderColor || '#E5E7EB'}; }
+      .border-t { border-top: 1px solid ${template.borderColor || '#E5E7EB'}; }
+      .rounded { border-radius: 6px; }
+      .rounded-lg { border-radius: 8px; }
+      .rounded-xl { border-radius: 12px; }
+      .rounded-full { border-radius: 50%; }
+      .overflow-hidden { overflow: hidden; }
+      
+      /* Object utilities */
+      .object-contain { object-fit: contain; }
+      
+      /* Typography utilities */
+      .text-xs { font-size: 12px; }
+      .text-sm { font-size: 14px; }
+      .text-base { font-size: 16px; }
+      .text-lg { font-size: 18px; }
+      .text-xl { font-size: 20px; }
+      .text-2xl { font-size: 24px; }
+      .text-3xl { font-size: 32px; }
+      .uppercase { text-transform: uppercase; }
+      .whitespace-pre-line { white-space: pre-line; }
+      .letter-spacing-tight { letter-spacing: -0.025em; }
+      .letter-spacing-wide { letter-spacing: 0.05em; }
+      
+      /* Shadow utilities */
+      .shadow-sm { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); }
+      .shadow { box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+      
+      /* Opacity utilities */
+      .opacity-80 { opacity: 0.8; }
+      .opacity-70 { opacity: 0.7; }
+      .opacity-60 { opacity: 0.6; }
     </style>
   `
 
@@ -184,27 +339,27 @@ export async function renderInvoiceHTML(invoice: any, template: any): Promise<st
 
         <!-- Items Table -->
         <div class="mb-12">
-          <table class="w-full">
+          <table class="invoice-table">
             <thead>
-              <tr style="border-bottom: 1px solid ${template.borderColor};">
-                <th class="text-left py-3" style="font-weight: 600; font-size: ${tableHeaderSize}px;">Description</th>
-                <th class="text-right py-3" style="font-weight: 600; font-size: ${tableHeaderSize}px;">Qty</th>
-                <th class="text-right py-3" style="font-weight: 600; font-size: ${tableHeaderSize}px;">Rate</th>
-                <th class="text-right py-3" style="font-weight: 600; font-size: ${tableHeaderSize}px;">Amount</th>
+              <tr>
+                <th style="width: 50%;">Description</th>
+                <th style="width: 15%;">Qty</th>
+                <th style="width: 20%;">Rate</th>
+                <th style="width: 15%;">Amount</th>
               </tr>
             </thead>
             <tbody>
               ${invoiceData.items.map((item: any) => `
-                <tr style="border-bottom: 1px solid ${template.borderColor};">
-                  <td class="py-4">
-                    <div style="font-weight: 500;">${item.description}</div>
+                <tr>
+                  <td>
+                    <div style="font-weight: 500; margin-bottom: 4px;">${item.description}</div>
                     ${template.showItemDetails && item.details ? `
-                      <div style="color: ${template.secondaryColor}; font-size: 13px; margin-top: 4px;">${item.details}</div>
+                      <div style="color: ${template.secondaryColor}; font-size: 13px; line-height: 1.4;">${item.details}</div>
                     ` : ''}
                   </td>
-                  <td class="text-right py-4">${item.quantity}</td>
-                  <td class="text-right py-4">${getCurrencySymbol(invoiceData.currency)}${item.rate.toFixed(2)}</td>
-                  <td class="text-right py-4" style="font-weight: 500;">
+                  <td style="text-align: center;">${item.quantity}</td>
+                  <td>${getCurrencySymbol(invoiceData.currency)}${item.rate.toFixed(2)}</td>
+                  <td style="font-weight: 500;">
                     ${getCurrencySymbol(invoiceData.currency)}${item.amount.toFixed(2)}
                   </td>
                 </tr>
@@ -237,7 +392,7 @@ export async function renderInvoiceHTML(invoice: any, template: any): Promise<st
         ${template.showNotes && invoiceData.notes ? `
           <div>
             <div style="font-weight: 600; margin-bottom: 8px;">Notes</div>
-            <div style="color: ${template.secondaryColor}; font-size: 14px;">${invoiceData.notes}</div>
+            <div style="color: ${template.secondaryColor}; font-size: 14px; line-height: 1.6;">${invoiceData.notes}</div>
           </div>
         ` : ''}
       </div>
@@ -292,7 +447,7 @@ export async function renderInvoiceHTML(invoice: any, template: any): Promise<st
             <div style="font-weight: 600; font-size: 18px; margin-bottom: 8px;">
               ${companyInfo.name}
             </div>
-            <div style="color: ${template.secondaryColor}; white-space: pre-line;">
+            <div style="color: ${template.secondaryColor}; white-space: pre-line; line-height: 1.5;">
               ${companyInfo.address}
             </div>
             <div style="color: ${template.secondaryColor}; margin-top: 8px;">
@@ -307,7 +462,7 @@ export async function renderInvoiceHTML(invoice: any, template: any): Promise<st
             <div style="font-weight: 600; font-size: 18px; margin-bottom: 8px;">
               ${invoiceData.client.name}
             </div>
-            <div style="color: ${template.secondaryColor}; white-space: pre-line;">
+            <div style="color: ${template.secondaryColor}; white-space: pre-line; line-height: 1.5;">
               ${invoiceData.client.address}
             </div>
             <div style="color: ${template.secondaryColor}; margin-top: 8px;">
@@ -322,28 +477,30 @@ export async function renderInvoiceHTML(invoice: any, template: any): Promise<st
             Services
           </div>
 
-          ${invoiceData.items.map((item: any, index: number) => `
-            <div class="py-6" style="border-bottom: ${index < invoiceData.items.length - 1 ? `1px solid ${template.borderColor}` : 'none'};">
-              <div class="flex justify-between items-start">
-                <div class="flex-1">
+          <div class="grid-container">
+            ${invoiceData.items.map((item: any, index: number) => `
+              <div class="grid-row" style="border-bottom: ${index < invoiceData.items.length - 1 ? `1px solid ${template.borderColor}` : 'none'};">
+                <div class="grid-cell" style="width: 70%; padding: 24px 0;">
                   <div style="font-weight: 600; font-size: 16px; margin-bottom: 4px;">
                     ${item.description}
                   </div>
                   ${template.showItemDetails && item.details ? `
-                    <div style="color: ${template.secondaryColor}; font-size: 14px;">
+                    <div style="color: ${template.secondaryColor}; font-size: 14px; line-height: 1.4; margin-bottom: 8px;">
                       ${item.details}
                     </div>
                   ` : ''}
-                  <div style="color: ${template.secondaryColor}; font-size: 14px; margin-top: 8px;">
+                  <div style="color: ${template.secondaryColor}; font-size: 14px;">
                     ${item.quantity} × ${getCurrencySymbol(invoiceData.currency)}${item.rate.toFixed(2)}
                   </div>
                 </div>
-                <div style="font-weight: 600; font-size: 18px;">
-                  ${getCurrencySymbol(invoiceData.currency)}${item.amount.toFixed(2)}
+                <div class="grid-cell" style="width: 30%; text-align: right; padding: 24px 0;">
+                  <div style="font-weight: 600; font-size: 18px;">
+                    ${getCurrencySymbol(invoiceData.currency)}${item.amount.toFixed(2)}
+                  </div>
                 </div>
               </div>
-            </div>
-          `).join('')}
+            `).join('')}
+          </div>
         </div>
 
         <!-- Total -->
@@ -362,7 +519,7 @@ export async function renderInvoiceHTML(invoice: any, template: any): Promise<st
         ${template.showNotes && invoiceData.notes ? `
           <div>
             <div style="font-weight: 600; margin-bottom: 8px;">Notes</div>
-            <div style="color: ${template.secondaryColor};">
+            <div style="color: ${template.secondaryColor}; line-height: 1.6;">
               ${invoiceData.notes}
             </div>
           </div>
@@ -465,35 +622,38 @@ export async function renderInvoiceHTML(invoice: any, template: any): Promise<st
           ` : ''}
         </div>
 
-        <!-- Items -->
+        <!-- Items Table -->
         <div class="mb-12">
-          <div class="rounded-xl overflow-hidden" style="background-color: ${template.backgroundColor}; box-shadow: 0 0 0 1px ${template.borderColor};">
-            <div class="p-4" style="background-color: ${template.primaryColor}; color: ${template.backgroundColor};">
-              <div class="grid grid-cols-12 gap-4 font-semibold" style="font-size: ${tableHeaderSize}px;">
-                <div class="col-span-6">Description</div>
-                <div class="col-span-2 text-right">Quantity</div>
-                <div class="col-span-2 text-right">Rate</div>
-                <div class="col-span-2 text-right">Amount</div>
-              </div>
-            </div>
-            
-            ${invoiceData.items.map((item: any, index: number) => `
-              <div class="p-4 grid grid-cols-12 gap-4" style="border-bottom: ${index < invoiceData.items.length - 1 ? `1px solid ${template.borderColor}` : 'none'}; background-color: ${index % 2 === 0 ? 'transparent' : template.borderColor + '10'};">
-                <div class="col-span-6">
-                  <div style="font-weight: 600; color: ${template.primaryColor};">${item.description}</div>
-                  ${template.showItemDetails && item.details ? `
-                    <div style="color: ${template.secondaryColor}; font-size: 13px; margin-top: 4px; line-height: 1.5;">
-                      ${item.details}
-                    </div>
-                  ` : ''}
-                </div>
-                <div class="col-span-2 text-right" style="font-weight: 500;">${item.quantity}</div>
-                <div class="col-span-2 text-right" style="font-weight: 500;">${getCurrencySymbol(invoiceData.currency)}${item.rate.toFixed(2)}</div>
-                <div class="col-span-2 text-right" style="font-weight: 700; color: ${template.primaryColor};">
-                  ${getCurrencySymbol(invoiceData.currency)}${item.amount.toFixed(2)}
-                </div>
-              </div>
-            `).join('')}
+          <div class="rounded-xl overflow-hidden border">
+            <table class="invoice-table" style="margin: 0;">
+              <thead>
+                <tr style="background-color: ${template.primaryColor}; color: ${template.backgroundColor};">
+                  <th style="width: 45%; padding: 16px; font-size: ${tableHeaderSize}px;">Description</th>
+                  <th style="width: 15%; padding: 16px; font-size: ${tableHeaderSize}px;">Quantity</th>
+                  <th style="width: 20%; padding: 16px; font-size: ${tableHeaderSize}px;">Rate</th>
+                  <th style="width: 20%; padding: 16px; font-size: ${tableHeaderSize}px;">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${invoiceData.items.map((item: any, index: number) => `
+                  <tr style="background-color: ${index % 2 === 0 ? 'transparent' : template.borderColor + '10'};">
+                    <td style="padding: 16px;">
+                      <div style="font-weight: 600; color: ${template.primaryColor}; margin-bottom: 4px;">${item.description}</div>
+                      ${template.showItemDetails && item.details ? `
+                        <div style="color: ${template.secondaryColor}; font-size: 13px; line-height: 1.4;">
+                          ${item.details}
+                        </div>
+                      ` : ''}
+                    </td>
+                    <td style="padding: 16px; text-align: center; font-weight: 500;">${item.quantity}</td>
+                    <td style="padding: 16px; font-weight: 500;">${getCurrencySymbol(invoiceData.currency)}${item.rate.toFixed(2)}</td>
+                    <td style="padding: 16px; font-weight: 700; color: ${template.primaryColor};">
+                      ${getCurrencySymbol(invoiceData.currency)}${item.amount.toFixed(2)}
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
           </div>
         </div>
 
@@ -561,7 +721,7 @@ export async function renderInvoiceHTML(invoice: any, template: any): Promise<st
           <div>
             <div style="font-size: 12px; color: ${template.secondaryColor}; margin-bottom: 4px;">From</div>
             <div style="font-weight: 600;">${companyInfo.name}</div>
-            <div style="color: ${template.secondaryColor}; font-size: 14px; white-space: pre-line; margin-top: 4px;">
+            <div style="color: ${template.secondaryColor}; font-size: 14px; white-space: pre-line; margin-top: 4px; line-height: 1.5;">
               ${companyInfo.address}
             </div>
           </div>
@@ -569,47 +729,50 @@ export async function renderInvoiceHTML(invoice: any, template: any): Promise<st
           <div>
             <div style="font-size: 12px; color: ${template.secondaryColor}; margin-bottom: 4px;">To</div>
             <div style="font-weight: 600;">${invoiceData.client.name}</div>
-            <div style="color: ${template.secondaryColor}; font-size: 14px; white-space: pre-line; margin-top: 4px;">
+            <div style="color: ${template.secondaryColor}; font-size: 14px; white-space: pre-line; margin-top: 4px; line-height: 1.5;">
               ${invoiceData.client.address}
             </div>
           </div>
         </div>
 
-        <!-- Clean Items List -->
+        <!-- Clean Items Table -->
         <div class="mb-12">
-          <div style="border-bottom: 1px solid ${template.borderColor}; padding-bottom: 8px; margin-bottom: 8px;">
-            <div class="grid grid-cols-12 gap-4" style="font-size: ${tableHeaderSize}px; color: ${template.secondaryColor};">
-              <div class="col-span-8">Item</div>
-              <div class="col-span-2 text-right">Qty</div>
-              <div class="col-span-2 text-right">Amount</div>
-            </div>
-          </div>
-          
-          ${invoiceData.items.map((item: any) => `
-            <div class="py-3 grid grid-cols-12 gap-4">
-              <div class="col-span-8">
-                <div>${item.description}</div>
-                ${template.showItemDetails && item.details ? `
-                  <div style="color: ${template.secondaryColor}; font-size: 13px; margin-top: 2px;">
-                    ${item.details}
-                  </div>
-                ` : ''}
-              </div>
-              <div class="col-span-2 text-right">${item.quantity}</div>
-              <div class="col-span-2 text-right">${getCurrencySymbol(invoiceData.currency)}${item.amount.toFixed(2)}</div>
-            </div>
-          `).join('')}
+          <table class="invoice-table" style="border: none;">
+            <thead>
+              <tr style="border-bottom: 2px solid ${template.borderColor};">
+                <th style="width: 50%; font-size: ${tableHeaderSize}px; color: ${template.secondaryColor}; padding: 8px 0;">Item</th>
+                <th style="width: 15%; font-size: ${tableHeaderSize}px; color: ${template.secondaryColor}; padding: 8px 0;">Qty</th>
+                <th style="width: 20%; font-size: ${tableHeaderSize}px; color: ${template.secondaryColor}; padding: 8px 0;">Rate</th>
+                <th style="width: 15%; font-size: ${tableHeaderSize}px; color: ${template.secondaryColor}; padding: 8px 0;">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${invoiceData.items.map((item: any) => `
+                <tr style="border-bottom: 1px solid ${template.borderColor}20;">
+                  <td style="padding: 12px 0;">
+                    <div style="margin-bottom: 2px;">${item.description}</div>
+                    ${template.showItemDetails && item.details ? `
+                      <div style="color: ${template.secondaryColor}; font-size: 13px; line-height: 1.4;">
+                        ${item.details}
+                      </div>
+                    ` : ''}
+                  </td>
+                  <td style="padding: 12px 0; text-align: center;">${item.quantity}</td>
+                  <td style="padding: 12px 0;">${getCurrencySymbol(invoiceData.currency)}${item.rate.toFixed(2)}</td>
+                  <td style="padding: 12px 0; font-weight: 500;">${getCurrencySymbol(invoiceData.currency)}${item.amount.toFixed(2)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
         </div>
 
         <!-- Simple Total -->
         <div class="flex justify-end mb-12">
-          <div>
-            <div class="flex gap-12 items-baseline">
-              <span style="font-size: 14px; color: ${template.secondaryColor};">Total</span>
-              <span style="font-size: 24px; font-weight: 700;">
-                ${getCurrencySymbol(invoiceData.currency)}${invoiceData.total.toFixed(2)}
-              </span>
-            </div>
+          <div style="display: flex; align-items: baseline; gap: 48px;">
+            <span style="font-size: 14px; color: ${template.secondaryColor};">Total</span>
+            <span style="font-size: 24px; font-weight: 700;">
+              ${getCurrencySymbol(invoiceData.currency)}${invoiceData.total.toFixed(2)}
+            </span>
           </div>
         </div>
 
@@ -625,7 +788,7 @@ export async function renderInvoiceHTML(invoice: any, template: any): Promise<st
             ${template.showNotes && invoiceData.notes ? `
               <div>
                 <div style="font-size: 12px; color: ${template.secondaryColor}; margin-bottom: 4px;">Notes</div>
-                <div style="font-size: 14px; color: ${template.secondaryColor};">
+                <div style="font-size: 14px; color: ${template.secondaryColor}; line-height: 1.6;">
                   ${invoiceData.notes}
                 </div>
               </div>

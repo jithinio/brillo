@@ -42,7 +42,7 @@ const mockInvoices: Invoice[] = [
     },
     projects: {
       name: "Website Redesign"
-    }
+      }
   },
   {
     id: "2",
@@ -515,7 +515,7 @@ export default function InvoicesPage() {
       
       // Generate PDF using the preview approach
       await generatePDFFromPreview(enhancedInvoice, fullTemplate)
-      
+
       toast.success(`Invoice ${invoice.invoice_number} downloaded successfully!`)
     } catch (error) {
       console.error('Error generating PDF:', error)

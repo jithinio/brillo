@@ -432,7 +432,7 @@ export default function CustomizeInvoicePage() {
             <div 
               className="flex justify-between py-3 mt-2"
               style={{ borderTop: `2px solid ${template.primaryColor}` }}
-            >
+                          >
               <span style={{ fontWeight: '600' }}>Total</span>
               <span style={{ fontWeight: '600', fontSize: '18px' }}>
                 {getCurrencySymbol(template.currency)}{invoiceData.total.toFixed(2)}
@@ -702,7 +702,7 @@ export default function CustomizeInvoicePage() {
                 }}>
                   {invoiceData.number}
                 </div>
-              )}
+                  )}
             </div>
           </div>
           <div style={{ height: '3px', backgroundColor: template.accentColor, borderRadius: '2px' }} />
@@ -773,15 +773,15 @@ export default function CustomizeInvoicePage() {
                           style={{ 
               backgroundColor: template.backgroundColor,
               boxShadow: `0 0 0 1px ${template.borderColor}`,
-            }}
-          >
-            <div 
+                                }}
+                              >
+                              <div 
               className="p-4"
                                 style={{ 
                 backgroundColor: template.primaryColor,
                 color: template.backgroundColor
-              }}
-            >
+                                }}
+                              >
               <div className="grid grid-cols-12 gap-4 font-semibold" style={{ fontSize: `${template.tableHeaderSize[0]}px` }}>
                 <div className="col-span-6">Description</div>
                 <div className="col-span-2 text-right">Quantity</div>
@@ -791,14 +791,14 @@ export default function CustomizeInvoicePage() {
                           </div>
                           
             {invoiceData.items.map((item: any, index: number) => (
-              <div 
+                            <div 
                 key={index}
                 className="p-4 grid grid-cols-12 gap-4 transition-colors hover:bg-opacity-50"
                 style={{ 
                   borderBottom: index < invoiceData.items.length - 1 ? `1px solid ${template.borderColor}` : 'none',
                   backgroundColor: index % 2 === 0 ? 'transparent' : template.borderColor + '10'
                 }}
-              >
+                            >
                 <div className="col-span-6">
                   <div style={{ fontWeight: '600', color: template.primaryColor }}>{item.description}</div>
                   {template.showItemDetails && item.details && (
@@ -824,8 +824,8 @@ export default function CustomizeInvoicePage() {
                             style={{ 
               backgroundColor: template.borderColor + '20',
               boxShadow: `0 0 0 1px ${template.borderColor}`,
-            }}
-          >
+                            }}
+                          >
             <div className="p-6 space-y-4">
               <div className="flex justify-between items-center">
                 <span style={{ color: template.secondaryColor, fontSize: '14px' }}>Subtotal</span>
@@ -886,7 +886,7 @@ export default function CustomizeInvoicePage() {
                 className="object-contain"
               />
             )}
-            <div 
+                            <div 
               className="text-xs font-medium px-3 py-1.5 rounded-full"
                               style={{ 
                 backgroundColor: invoiceData.status === 'PAID' 
@@ -896,8 +896,8 @@ export default function CustomizeInvoicePage() {
                   ? template.accentColor 
                   : template.secondaryColor,
                 border: `1px solid ${invoiceData.status === 'PAID' ? template.accentColor : template.secondaryColor}30`
-              }}
-            >
+                              }}
+                            >
               {invoiceData.status}
                             </div>
                             </div>
@@ -964,7 +964,7 @@ export default function CustomizeInvoicePage() {
 
         {/* Info Blocks */}
         <div className="grid grid-cols-2 gap-4 mb-12">
-          <div 
+                            <div 
             className="p-5 rounded-lg transition-all hover:shadow-sm"
                               style={{ 
               backgroundColor: template.backgroundColor,
@@ -998,7 +998,7 @@ export default function CustomizeInvoicePage() {
             )}
                         </div>
                         
-          <div 
+                            <div 
             className="p-5 rounded-lg transition-all hover:shadow-sm"
                               style={{ 
               backgroundColor: template.backgroundColor,
@@ -1124,13 +1124,13 @@ export default function CustomizeInvoicePage() {
 
         {/* Payment Info */}
         {(template.showPaymentTerms || template.showNotes) && (
-          <div 
+                      <div 
             className="p-6 rounded-xl"
                         style={{ 
               backgroundColor: template.accentColor + '08',
               border: `1px solid ${template.accentColor}20`
-            }}
-          >
+                        }}
+                      >
             {template.showPaymentTerms && (
               <div className="mb-4">
                 <div style={{ 

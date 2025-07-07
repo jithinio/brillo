@@ -78,7 +78,7 @@ const inconsolata = Inconsolata({
 export const metadata: Metadata = {
   title: "Suitebase - Business Management Platform",
   description: "Manage your clients, projects, and invoices with ease",
-  generator: 'v0.dev'
+    generator: 'v0.dev'
 }
 
 export default function RootLayout({

@@ -17,7 +17,7 @@ export async function generatePDFFromElement(element: HTMLElement, fileName: str
     // Append cloned element to container
     container.appendChild(clonedElement)
     document.body.appendChild(container)
-    
+
     // Set the element to exact A4 dimensions
     clonedElement.style.width = '794px'
     clonedElement.style.minHeight = '1123px'
@@ -27,13 +27,13 @@ export async function generatePDFFromElement(element: HTMLElement, fileName: str
     
     // Wait for images to load
     await waitForImagesToLoad(container)
-    
+
     // Wait a bit for layout to stabilize
     await new Promise(resolve => setTimeout(resolve, 100))
     
     // Force all computed styles to be inline
     await inlineAllStyles(clonedElement)
-    
+
     // Generate canvas with better options
     const canvas = await html2canvas(clonedElement, {
       scale: 3, // Even higher quality
@@ -58,7 +58,7 @@ export async function generatePDFFromElement(element: HTMLElement, fileName: str
       format: [794, 1123], // A4 in pixels
       compress: true
     })
-    
+
     // Calculate dimensions to fit page
     const pageWidth = pdf.internal.pageSize.getWidth()
     const pageHeight = pdf.internal.pageSize.getHeight()
@@ -89,7 +89,7 @@ export async function generatePDFFromElement(element: HTMLElement, fileName: str
       
       yPosition += pageHeight
     }
-    
+
     // Save PDF
     pdf.save(fileName)
     
@@ -331,13 +331,13 @@ export async function generatePDFFromHTML(invoice: any, template: any, container
         break
       default:
         html = generateStripeHTML()
-    }
+  }
 
     // Helper function to generate Stripe template HTML
     function generateStripeHTML() {
-      return `
+  return `
         <div style="${styleToString(baseStyles)}">
-          <!-- Header -->
+      <!-- Header -->
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 48px;">
             <div>
               ${template.showLogo && companyInfo.logoUrl ? `
@@ -346,7 +346,7 @@ export async function generatePDFFromHTML(invoice: any, template: any, container
               <div style="font-size: 24px; font-weight: 600; margin-bottom: 8px;">Invoice</div>
               ${template.showInvoiceNumber ? `
                 <div style="color: ${template.secondaryColor}; font-size: 14px;">${invoiceData.number}</div>
-              ` : ''}
+          ` : ''}
             </div>
             <div style="text-align: right;">
               <div style="font-weight: 600; margin-bottom: 4px;">${companyInfo.name}</div>
@@ -355,9 +355,9 @@ export async function generatePDFFromHTML(invoice: any, template: any, container
               ${template.showTaxId && companyInfo.taxId ? `
                 <div style="color: ${template.secondaryColor}; font-size: 14px; margin-top: 4px;">${companyInfo.taxId}</div>
               ` : ''}
-            </div>
           </div>
-
+        </div>
+        
           <!-- Bill To & Dates -->
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-bottom: 48px;">
             <div>
@@ -490,8 +490,8 @@ export async function generatePDFFromHTML(invoice: any, template: any, container
               </div>
               <div style="color: ${template.secondaryColor}; font-size: 14px; margin-top: 8px;">
                 ${companyInfo.email}<br>${companyInfo.phone}
-              </div>
-            </div>
+        </div>
+      </div>
 
             <div style="flex: 1;">
               <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: ${template.accentColor}; margin-bottom: 16px;">
@@ -533,15 +533,15 @@ export async function generatePDFFromHTML(invoice: any, template: any, container
                     <div style="font-weight: 600; font-size: 16px; color: ${template.primaryColor};">${item.description}</div>
                     ${template.showItemDetails && item.details ? `
                       <div style="color: ${template.secondaryColor}; font-size: 14px; margin-top: 4px;">${item.details}</div>
-                    ` : ''}
+          ` : ''}
                   </div>
                   <div style="flex: 1; text-align: center; font-weight: 600; color: ${template.primaryColor};">${item.quantity}</div>
                   <div style="flex: 1; text-align: right; font-weight: 600; color: ${template.primaryColor};">${formatCurrency(item.rate, template.currency)}</div>
                   <div style="flex: 1; text-align: right; font-weight: 600; font-size: 16px; color: ${template.primaryColor};">${formatCurrency(item.amount, template.currency)}</div>
                 </div>
               `).join('')}
-            </div>
-          </div>
+        </div>
+      </div>
 
           <!-- Total -->
           <div style="display: flex; justify-content: flex-end; margin-bottom: 64px;">
@@ -581,7 +581,7 @@ export async function generatePDFFromHTML(invoice: any, template: any, container
               <div>
                 ${template.showLogo && companyInfo.logoUrl ? `
                   <img src="${companyInfo.logoUrl}" alt="Company Logo" style="height: ${logoSize}px; margin-bottom: 12px; border-radius: ${logoBorderRadius}px;">
-                ` : ''}
+      ` : ''}
                 <div style="font-size: 20px; font-weight: 700; margin-bottom: 4px; color: ${template.primaryColor};">
                   ${companyInfo.name}
                 </div>
@@ -636,8 +636,8 @@ export async function generatePDFFromHTML(invoice: any, template: any, container
                 <div style="color: ${template.secondaryColor}; white-space: pre-line;">
                   ${invoiceData.client.address}
                 </div>
-              </div>
-            </div>
+          </div>
+        </div>
 
             ${template.showDates ? `
               <div style="flex: 1;">
@@ -649,7 +649,7 @@ export async function generatePDFFromHTML(invoice: any, template: any, container
                     <span style="color: ${template.secondaryColor};">Date: </span>
                     <span style="font-weight: 600; color: ${template.primaryColor};">${invoiceData.date.toLocaleDateString()}</span>
                   </div>
-                  <div>
+                <div>
                     <span style="color: ${template.secondaryColor};">Due: </span>
                     <span style="font-weight: 600; color: ${template.primaryColor};">${invoiceData.dueDate.toLocaleDateString()}</span>
                   </div>
@@ -729,9 +729,9 @@ export async function generatePDFFromHTML(invoice: any, template: any, container
               ` : ''}
             </div>
           ` : ''}
-        </div>
-      `
-    }
+              </div>
+            `
+          }
 
     function generateNotionHTML() {
       return `
@@ -777,8 +777,8 @@ export async function generatePDFFromHTML(invoice: any, template: any, container
                 <div style="color: ${template.secondaryColor}; line-height: 1.6; white-space: pre-line;">
                   ${companyInfo.address}
                 </div>
-              </div>
-            </div>
+        </div>
+      </div>
 
             <div style="flex: 1; padding: 20px; border-radius: 8px; background-color: ${template.backgroundColor}; border: 1px solid ${template.borderColor}60;">
               <div style="font-size: 11px; color: ${template.secondaryColor}; margin-bottom: 12px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;">
@@ -792,8 +792,8 @@ export async function generatePDFFromHTML(invoice: any, template: any, container
                   ${invoiceData.client.address}
                 </div>
               </div>
-            </div>
-
+             </div>
+             
             ${template.showDates ? `
               <div style="flex: 1; padding: 20px; border-radius: 8px; background-color: ${template.backgroundColor}; border: 1px solid ${template.borderColor}60;">
                 <div style="font-size: 11px; color: ${template.secondaryColor}; margin-bottom: 12px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;">
@@ -809,8 +809,8 @@ export async function generatePDFFromHTML(invoice: any, template: any, container
                     <span style="font-weight: 700; color: ${template.primaryColor};">${invoiceData.dueDate.toLocaleDateString()}</span>
                   </div>
                 </div>
-              </div>
-            ` : ''}
+               </div>
+             ` : ''}
           </div>
 
           <!-- Items Table -->
@@ -854,10 +854,10 @@ export async function generatePDFFromHTML(invoice: any, template: any, container
                 <div style="display: flex; justify-content: space-between; padding-top: 16px; border-top: 2px solid ${template.accentColor}30;">
                   <span style="font-weight: 700; font-size: 16px; color: ${template.primaryColor};">Total</span>
                   <span style="font-weight: 700; font-size: 22px; color: ${template.accentColor};">${formatCurrency(invoiceData.total, template.currency)}</span>
-                </div>
-              </div>
-            </div>
+             </div>
           </div>
+        </div>
+      </div>
 
           <!-- Notes -->
           ${(template.showPaymentTerms || (template.showNotes && invoiceData.notes)) ? `
@@ -869,8 +869,8 @@ export async function generatePDFFromHTML(invoice: any, template: any, container
                   </div>
                   <div style="font-size: 14px; color: ${template.secondaryColor}; line-height: 1.6;">
                     Net 30
-                  </div>
-                </div>
+        </div>
+      </div>
               ` : ''}
               ${template.showNotes && invoiceData.notes ? `
                 <div>
@@ -879,13 +879,13 @@ export async function generatePDFFromHTML(invoice: any, template: any, container
                   </div>
                   <div style="font-size: 14px; color: ${template.secondaryColor}; line-height: 1.6;">
                     ${invoiceData.notes}
-                  </div>
-                </div>
+        </div>
+      </div>
               ` : ''}
             </div>
           ` : ''}
-        </div>
-      `
+    </div>
+  `
     }
 
     // Helper to convert style object to string
