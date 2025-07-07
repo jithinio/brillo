@@ -20,8 +20,8 @@ import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { useSettings } from "@/components/settings-provider"
 import type { Client } from "@/components/clients/columns"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { generateInvoicePDF } from "@/lib/pdf-generator"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { generatePDFFromPreview } from '@/lib/pdf-generator'
 
 interface InvoiceItem {
   id: string
@@ -943,21 +943,49 @@ export default function GenerateInvoicePage() {
 
     setIsDownloading(true)
     try {
-      // Get company information from localStorage
-      const savedCompanyInfo = localStorage.getItem('company-info')
+      console.log('📥 Generate PDF - Starting download for generated invoice')
       
+      // Get saved template settings from Supabase settings
+      let templateSettings = null
+      
+      console.log('📥 Generate PDF - Checking settings.invoiceTemplate:', settings.invoiceTemplate)
+      console.log('📥 Generate PDF - Settings object keys:', Object.keys(settings.invoiceTemplate || {}))
+      
+      // First try to get from settings (Supabase)
+      if (settings.invoiceTemplate && Object.keys(settings.invoiceTemplate).length > 0) {
+        templateSettings = settings.invoiceTemplate
+        console.log('✅ Generate PDF - Template settings loaded from Supabase:', templateSettings)
+      } else {
+        console.log('❌ Generate PDF - No Supabase template found, checking localStorage')
+        // Fallback to localStorage if no Supabase template exists
+        const savedTemplate = localStorage.getItem('invoice-template-settings')
+        if (savedTemplate) {
+          try {
+            templateSettings = JSON.parse(savedTemplate)
+            console.log('✅ Generate PDF - Template settings loaded from localStorage:', templateSettings)
+          } catch (error) {
+            console.error('❌ Generate PDF - Error parsing saved template:', error)
+          }
+        } else {
+          console.log('❌ Generate PDF - No template found in localStorage either')
+        }
+      }
+      
+      // Get company information from settings
       let companyInfo = {
-        companyName: "Your Company",
+        companyName: settings.companyName || "Your Company",
         companyAddress: "123 Business St\nCity, State 12345\nUnited States",
         companyEmail: "contact@yourcompany.com", 
         companyPhone: "+1 (555) 123-4567",
       }
 
+      // Load company info from settings
+      const savedCompanyInfo = localStorage.getItem('company-info')
       if (savedCompanyInfo) {
         try {
           const parsed = JSON.parse(savedCompanyInfo)
           companyInfo = {
-            companyName: parsed.companyName || companyInfo.companyName,
+            companyName: parsed.companyName || settings.companyName || companyInfo.companyName,
             companyAddress: parsed.companyAddress || companyInfo.companyAddress,
             companyEmail: parsed.companyEmail || companyInfo.companyEmail,
             companyPhone: parsed.companyPhone || companyInfo.companyPhone,
@@ -987,20 +1015,74 @@ export default function GenerateInvoicePage() {
           email: generatedInvoiceData.client.email || 'client@email.com'
         },
         projects: undefined,
-        // Add the items array for detailed PDF generation
         items: generatedInvoiceData.items
       }
 
-      await generateInvoicePDF({ 
-        invoice: mockInvoice,
-        filename: `invoice-${generatedInvoiceData.invoiceNumber}.pdf`,
-        template: {
-          ...companyInfo,
-          logoUrl: settings.companyLogo || "",
-          primaryColor: "#000000",
-          accentColor: "#6366f1"
-        }
+      // Merge all template settings with company info
+      console.log('🔧 Generate PDF - Building full template...')
+      console.log('🔧 Generate PDF - Template settings to merge:', templateSettings)
+      console.log('🔧 Generate PDF - Company info:', companyInfo)
+      
+      const defaultTemplate = {
+        templateId: 'stripe-inspired',
+        logoSize: [80],
+        logoBorderRadius: [8],
+        invoicePadding: [48],
+        fontFamily: 'inter',
+        fontSize: [14],
+        lineHeight: [1.6],
+        tableHeaderSize: [13],
+        primaryColor: '#000000',
+        secondaryColor: '#666666',
+        accentColor: '#0066FF',
+        backgroundColor: '#FFFFFF',
+        borderColor: '#E5E5E5',
+        currency: 'USD',
+        showLogo: true,
+        showInvoiceNumber: true,
+        showDates: true,
+        showPaymentTerms: true,
+        showNotes: true,
+        showTaxId: false,
+        showItemDetails: true,
+        notes: '',
+      }
+      
+      console.log('🔧 Generate PDF - Default template:', defaultTemplate)
+      
+      const fullTemplate = {
+        ...defaultTemplate,
+        // Override with saved template settings from Supabase
+        ...templateSettings,
+        // Override with company info
+        companyName: companyInfo.companyName,
+        companyAddress: companyInfo.companyAddress,
+        companyEmail: companyInfo.companyEmail,
+        companyPhone: companyInfo.companyPhone,
+        logoUrl: templateSettings?.logoUrl || settings.companyLogo || ""
+      }
+      
+      console.log('🔧 Generate PDF - Final merged template:', fullTemplate)
+      console.log('🔧 Generate PDF - Final colors check:', {
+        primary: fullTemplate.primaryColor,
+        secondary: fullTemplate.secondaryColor,
+        accent: fullTemplate.accentColor,
+        border: fullTemplate.borderColor,
+        background: fullTemplate.backgroundColor
       })
+
+      // Use react-pdf to generate and download the PDF
+      console.log('Download - Full template being passed:', fullTemplate)
+      console.log('Download - Template ID:', fullTemplate.templateId)
+      console.log('Download - Template colors:', {
+        primary: fullTemplate.primaryColor,
+        secondary: fullTemplate.secondaryColor,
+        accent: fullTemplate.accentColor,
+        border: fullTemplate.borderColor
+      })
+      
+      // Generate PDF using the preview approach
+      await generatePDFFromPreview(mockInvoice, fullTemplate)
       
       toast.success("Invoice PDF downloaded successfully")
     } catch (error) {

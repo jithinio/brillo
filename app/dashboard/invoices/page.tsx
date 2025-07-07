@@ -11,9 +11,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { PageHeader, PageContent, PageTitle } from "@/components/page-header"
-import { supabase } from "@/lib/supabase"
-
-import { isSupabaseConfigured } from "@/lib/supabase"
+import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { createColumns, type Invoice } from "@/components/invoices/columns"
@@ -21,37 +19,30 @@ import { DataTable } from "@/components/invoices/data-table"
 import { formatCurrency, formatCurrencyWithConversion, getDefaultCurrency } from "@/lib/currency"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useSettings } from "@/components/settings-provider"
+import { generatePDFFromPreview } from '@/lib/pdf-generator'
 
 // Mock data fallback
 const mockInvoices: Invoice[] = [
   {
     id: "1",
     invoice_number: "INV-2024-001",
-    amount: 2450,
-    tax_amount: 245,
-    total_amount: 2695,
+    amount: 2500,
+    tax_amount: 250,
+    total_amount: 2750,
     currency: "USD",
-    status: "sent",
+    status: "paid",
     issue_date: "2024-01-15",
     due_date: "2024-02-15",
-    notes: "Web development services",
+    notes: "Thank you for your business!",
     created_at: "2024-01-15T00:00:00Z",
     clients: {
-      name: "John Doe",
-      company: "Acme Corp",
+      name: "John Smith",
+      company: "Acme Corporation"
     },
     projects: {
-      name: "E-commerce Website",
-    },
-    items: [
-      {
-        id: "1",
-        description: "Website Design and Development",
-        quantity: 1,
-        rate: 2450,
-        amount: 2450
-      }
-    ]
+      name: "Website Redesign"
+    }
   },
   {
     id: "2",
@@ -171,8 +162,73 @@ const mockInvoices: Invoice[] = [
   },
 ]
 
+// Mock clients data with full details
+const mockClients = [
+  {
+    id: "1",
+    name: "John Smith",
+    email: "john.smith@acmecorp.com",
+    phone: "+1 (555) 123-4567",
+    company: "Acme Corporation",
+    address: "123 Business Ave",
+    city: "New York",
+    state: "NY",
+    zip_code: "10001",
+    country: "United States"
+  },
+  {
+    id: "2",
+    name: "Sarah Johnson",
+    email: "sarah@techstart.io",
+    phone: "+1 (555) 234-5678",
+    company: "TechStart Inc.",
+    address: "456 Innovation Dr",
+    city: "San Francisco",
+    state: "CA",
+    zip_code: "94105",
+    country: "United States"
+  },
+  {
+    id: "3",
+    name: "Michael Brown",
+    email: "mbrown@globalsolutions.com",
+    phone: "+1 (555) 345-6789",
+    company: "Global Solutions LLC",
+    address: "789 Enterprise Blvd",
+    city: "Chicago",
+    state: "IL",
+    zip_code: "60601",
+    country: "United States"
+  },
+  {
+    id: "4",
+    name: "Emily Davis",
+    email: "emily.davis@creativestudio.com",
+    phone: "+1 (555) 456-7890",
+    company: "Creative Studio",
+    address: "321 Design St",
+    city: "Los Angeles",
+    state: "CA",
+    zip_code: "90210",
+    country: "United States"
+  },
+  {
+    id: "5",
+    name: "David Wilson",
+    email: "david@retailplus.com",
+    phone: "+1 (555) 567-8901",
+    company: "Retail Plus",
+    address: "654 Commerce Way",
+    city: "Miami",
+    state: "FL",
+    zip_code: "33101",
+    country: "United States"
+  }
+]
+
 export default function InvoicesPage() {
   const router = useRouter()
+  const { settings } = useSettings()
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -314,19 +370,152 @@ export default function InvoicesPage() {
 
   const handleDownloadPDF = async (invoice: Invoice) => {
     if (downloadingPDF) return // Prevent multiple simultaneous downloads
-    
     setDownloadingPDF(invoice.id)
-    
     try {
-      // Import the PDF generator dynamically to avoid SSR issues
-      const { generateInvoicePDF } = await import('@/lib/pdf-generator')
+      console.log('📥 Download PDF - Starting download for invoice:', invoice.invoice_number)
       
-      // Generate and download the PDF
-      await generateInvoicePDF({
-        invoice,
-        filename: `${invoice.invoice_number}.pdf`
-      })
+      // Get saved template settings from Supabase settings
+      let templateSettings = null
+      
+      console.log('📥 Download PDF - Checking settings.invoiceTemplate:', settings.invoiceTemplate)
+      console.log('📥 Download PDF - Settings object keys:', Object.keys(settings.invoiceTemplate || {}))
+      
+      // First try to get from settings (Supabase)
+      if (settings.invoiceTemplate && Object.keys(settings.invoiceTemplate).length > 0) {
+        templateSettings = settings.invoiceTemplate
+        console.log('✅ Download PDF - Template settings loaded from Supabase:', templateSettings)
+      } else {
+        console.log('❌ Download PDF - No Supabase template found, checking localStorage')
+        // Fallback to localStorage if no Supabase template exists
+        const savedTemplate = localStorage.getItem('invoice-template-settings')
+        if (savedTemplate) {
+          try {
+            templateSettings = JSON.parse(savedTemplate)
+            console.log('✅ Download PDF - Template settings loaded from localStorage:', templateSettings)
+          } catch (error) {
+            console.error('❌ Download PDF - Error parsing saved template:', error)
+          }
+        } else {
+          console.log('❌ Download PDF - No template found in localStorage either')
+        }
+      }
+      
+      // Get company information from settings
+      let companyInfo = {
+        companyName: settings.companyName || "Your Company",
+        companyAddress: "123 Business St\nCity, State 12345",
+        companyEmail: "contact@yourcompany.com", 
+        companyPhone: "+1 (555) 123-4567",
+      }
 
+      // Load company info from settings
+      const savedCompanyInfo = localStorage.getItem('company-info')
+      if (savedCompanyInfo) {
+        try {
+          const parsed = JSON.parse(savedCompanyInfo)
+          companyInfo = {
+            companyName: parsed.companyName || settings.companyName || companyInfo.companyName,
+            companyAddress: parsed.companyAddress || companyInfo.companyAddress,
+            companyEmail: parsed.companyEmail || companyInfo.companyEmail,
+            companyPhone: parsed.companyPhone || companyInfo.companyPhone,
+          }
+        } catch (error) {
+          console.error('Error parsing company info:', error)
+        }
+      }
+      
+      // Fetch full client details if we have a client ID
+      let fullClientData = null
+      if (invoice.clients) {
+        // For demo mode, try to find client in mock data
+        const mockClient = mockClients.find(c => c.name === invoice.clients?.name || c.company === invoice.clients?.company)
+        if (mockClient) {
+          fullClientData = mockClient
+        }
+      }
+      
+      // Create enhanced invoice with full client data
+      const enhancedInvoice: any = {
+        ...invoice,
+        clients: fullClientData ? {
+          name: fullClientData.name,
+          company: fullClientData.company,
+          email: fullClientData.email,
+          phone: fullClientData.phone,
+          address: fullClientData.address,
+          city: fullClientData.city,
+          state: fullClientData.state,
+          zip_code: fullClientData.zip_code,
+          country: fullClientData.country
+        } : invoice.clients
+      }
+      
+      // Merge all template settings with company info
+      console.log('🔧 Download PDF - Building full template...')
+      console.log('🔧 Download PDF - Template settings to merge:', templateSettings)
+      console.log('🔧 Download PDF - Company info:', companyInfo)
+      
+      const defaultTemplate = {
+        templateId: 'stripe-inspired',
+        logoSize: [80],
+        logoBorderRadius: [8],
+        invoicePadding: [48],
+        fontFamily: 'inter',
+        fontSize: [14],
+        lineHeight: [1.6],
+        tableHeaderSize: [13],
+        primaryColor: '#000000',
+        secondaryColor: '#666666',
+        accentColor: '#0066FF',
+        backgroundColor: '#FFFFFF',
+        borderColor: '#E5E5E5',
+        currency: 'USD',
+        showLogo: true,
+        showInvoiceNumber: true,
+        showDates: true,
+        showPaymentTerms: true,
+        showNotes: true,
+        showTaxId: false,
+        showItemDetails: true,
+        notes: '',
+      }
+      
+      console.log('🔧 Download PDF - Default template:', defaultTemplate)
+      
+      const fullTemplate = {
+        ...defaultTemplate,
+        // Override with saved template settings from Supabase
+        ...templateSettings,
+        // Override with company info
+        companyName: companyInfo.companyName,
+        companyAddress: companyInfo.companyAddress,
+        companyEmail: companyInfo.companyEmail,
+        companyPhone: companyInfo.companyPhone,
+        logoUrl: templateSettings?.logoUrl || settings.companyLogo || ""
+      }
+      
+      console.log('🔧 Download PDF - Final merged template:', fullTemplate)
+      console.log('🔧 Download PDF - Final colors check:', {
+        primary: fullTemplate.primaryColor,
+        secondary: fullTemplate.secondaryColor,
+        accent: fullTemplate.accentColor,
+        border: fullTemplate.borderColor,
+        background: fullTemplate.backgroundColor
+      })
+      
+      // Use react-pdf to generate and download the PDF
+      console.log('Download - Full template being passed:', fullTemplate)
+      console.log('Download - Template ID:', fullTemplate.templateId)
+      console.log('Download - Template colors:', {
+        primary: fullTemplate.primaryColor,
+        secondary: fullTemplate.secondaryColor,
+        accent: fullTemplate.accentColor,
+        border: fullTemplate.borderColor
+      })
+      
+      // Generate PDF using the preview approach
+      await generatePDFFromPreview(enhancedInvoice, fullTemplate)
+      
       toast.success(`Invoice ${invoice.invoice_number} downloaded successfully!`)
     } catch (error) {
       console.error('Error generating PDF:', error)

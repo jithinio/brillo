@@ -18,6 +18,7 @@ interface AppSettings {
   includeTaxInPrices: boolean
   autoCalculateTax: boolean
   invoicePrefix: string
+  invoiceTemplate?: any
 }
 
 interface SettingsContextType {
@@ -95,6 +96,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             includeTaxInPrices: dbSettings.include_tax_in_prices || prev.includeTaxInPrices,
             autoCalculateTax: dbSettings.auto_calculate_tax || prev.autoCalculateTax,
             invoicePrefix: dbSettings.invoice_prefix || prev.invoicePrefix,
+            invoiceTemplate: dbSettings.invoice_template || prev.invoiceTemplate,
           }))
           
           // Cache the logo to localStorage for faster subsequent loads
@@ -156,6 +158,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           break
         case 'invoicePrefix':
           dbSettingsUpdate.invoice_prefix = value
+          break
+        case 'invoiceTemplate':
+          dbSettingsUpdate.invoice_template = value
           break
       }
       

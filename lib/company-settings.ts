@@ -16,6 +16,7 @@ export interface CompanySettings {
   include_tax_in_prices: boolean
   auto_calculate_tax: boolean
   invoice_prefix: string
+  invoice_template?: any // JSON object for invoice template settings
   created_at?: string
   updated_at?: string
 }

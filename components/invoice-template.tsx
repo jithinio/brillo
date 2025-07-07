@@ -1,6 +1,6 @@
 "use client"
 
-import { forwardRef } from "react"
+import { forwardRef, useEffect } from "react"
 import { formatCurrency } from "@/lib/currency"
 import type { Invoice } from "@/components/invoices/columns"
 
@@ -15,10 +15,11 @@ interface InvoiceTemplateProps {
     primaryColor: string
     accentColor: string
   }
+  onLoad?: () => void
 }
 
 export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
-  ({ invoice, template }, ref) => {
+  ({ invoice, template, onLoad }, ref) => {
     const defaultTemplate = {
       companyName: "Your Company",
       companyAddress: "123 Business St\nCity, State 12345\nUnited States",
@@ -30,6 +31,12 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
     }
 
     const currentTemplate = { ...defaultTemplate, ...template }
+    
+    useEffect(() => {
+      if (onLoad) {
+        onLoad()
+      }
+    }, [])
 
     return (
       <div 
