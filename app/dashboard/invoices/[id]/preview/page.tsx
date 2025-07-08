@@ -494,30 +494,39 @@ export default function InvoicePreviewPage() {
         <div className="space-y-6">
           {getSuccessMessage()}
           
-          {/* Invoice Preview - Centered with top spacing */}
-          <div className="flex justify-center pt-6">
-            <div className="w-full max-w-4xl">
+          {/* Invoice Preview - Centered and responsive */}
+          <div className="flex justify-center pt-6 px-4">
+            {/* Container that adapts to invoice width + padding */}
+            <div 
+              className="w-full mx-auto min-w-0"
+              style={{
+                // A4 width (210mm) - padding is now internal
+                maxWidth: '210mm'
+              }}
+            >
               {/* Clean container for PDF generation */}
-              <div className="shadow-lg rounded-lg overflow-hidden border bg-white">
-                {invoiceHTML ? (
-                  <div 
-                    id="invoice-preview"
-                    className="print:shadow-none w-full"
-                    style={{ 
-                      backgroundColor: finalTemplateSettings?.backgroundColor || '#FFFFFF',
-                      minHeight: '800px' // Ensure minimum height for consistent rendering
-                    }}
-                    dangerouslySetInnerHTML={{ 
-                      __html: invoiceHTML 
-                    }}
-                  />
-                ) : (
+              {invoiceHTML ? (
+                <div 
+                  id="invoice-preview"
+                  className="print:shadow-none w-full"
+                  style={{ 
+                    backgroundColor: finalTemplateSettings?.backgroundColor || '#FFFFFF',
+                    minHeight: '297mm', // A4 height
+                    isolation: 'isolate', // Create stacking context to prevent style bleed
+                    position: 'relative'
+                  }}
+                  dangerouslySetInnerHTML={{ 
+                    __html: invoiceHTML 
+                  }}
+                />
+              ) : (
+                <div className="shadow-lg rounded-lg overflow-hidden border bg-white">
                   <div className="p-8 text-center text-muted-foreground">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
                     Rendering invoice preview...
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

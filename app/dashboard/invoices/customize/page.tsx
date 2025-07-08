@@ -226,8 +226,8 @@ export default function CustomizeInvoicePage() {
     setTemplate(prev => ({ ...prev, currency: defaultCurrency }))
   }, [settings.companyLogo])
 
-  // Update template styles based on selection
-  useEffect(() => {
+  // Function to apply default template styles when user selects a new template
+  const applyDefaultTemplateStyles = (templateId: string) => {
     const templateStyles = {
       'stripe-inspired': {
         primaryColor: '#0A2540',
@@ -263,11 +263,11 @@ export default function CustomizeInvoicePage() {
       }
     }
 
-    const styles = templateStyles[template.templateId as keyof typeof templateStyles]
+    const styles = templateStyles[templateId as keyof typeof templateStyles]
     if (styles) {
-      setTemplate(prev => ({ ...prev, ...styles }))
+      setTemplate(prev => ({ ...prev, templateId, ...styles }))
     }
-  }, [template.templateId])
+  }
 
   const getFontFamily = () => {
     const fontMap: { [key: string]: string } = {
@@ -1326,7 +1326,7 @@ export default function CustomizeInvoicePage() {
                               ? "border-primary bg-primary/5 shadow-sm"
                               : "border-gray-200 hover:border-primary/50"
                           )}
-                          onClick={() => setTemplate(prev => ({ ...prev, templateId: tmpl.id }))}
+                          onClick={() => applyDefaultTemplateStyles(tmpl.id)}
                         >
                           <div className="flex items-center justify-between mb-1">
                             <h3 className="font-medium text-sm">{tmpl.name}</h3>

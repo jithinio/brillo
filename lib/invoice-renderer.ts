@@ -102,18 +102,19 @@ export async function renderInvoiceHTML(invoice: any, template: any): Promise<st
     return parts.join('\n')
   }
 
-  // Enhanced styles for A4 PDF rendering
+  // Enhanced styles for A4 PDF rendering (scoped to invoice preview only)
   const tailwindStyles = `
     <style>
-      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-      
-      * {
+      /* Scoped reset and styles - only apply within invoice preview */
+      #invoice-preview * {
         margin: 0;
         padding: 0;
         box-sizing: border-box;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
       }
       
-      body {
+      #invoice-preview {
         font-family: ${getFontFamily()}, system-ui, -apple-system, sans-serif;
         font-size: ${template.fontSize}px;
         line-height: ${template.lineHeight};
@@ -123,15 +124,52 @@ export async function renderInvoiceHTML(invoice: any, template: any): Promise<st
         print-color-adjust: exact;
       }
       
-      .a4-container {
+      #invoice-preview .a4-container {
         width: 210mm;
+        max-width: 100%;
         min-height: 297mm;
         margin: 0 auto;
         background-color: ${template.backgroundColor};
-        padding: ${template.invoicePadding}px;
+        padding: 0;
         position: relative;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
+        /* Add shadow and border styling */
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        border-radius: 0.5rem;
+        border: 1px solid #e5e7eb;
+      }
+      
+      #invoice-preview .invoice-content {
+        width: 100%;
+        height: 100%;
+        padding: ${padding}px;
+        box-sizing: border-box;
+      }
+      
+      /* Remove shadow and border for print/PDF */
+      @media print {
+        #invoice-preview .a4-container {
+          box-shadow: none !important;
+          border: none !important;
+          border-radius: 0 !important;
+        }
+      }
+      
+      /* Responsive adjustments for smaller screens */
+      @media (max-width: 210mm) {
+        #invoice-preview .a4-container {
+          width: 100%;
+          margin: 0;
+          /* Maintain styling on smaller screens */
+          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+          border-radius: 0.5rem;
+          border: 1px solid #e5e7eb;
+        }
+        
+        #invoice-preview .invoice-content {
+          padding: ${Math.max(padding * 0.5, 12)}px;
+        }
       }
       
       .invoice-wrapper {
@@ -142,8 +180,8 @@ export async function renderInvoiceHTML(invoice: any, template: any): Promise<st
         print-color-adjust: exact;
       }
       
-      /* PDF-specific styles for Status badge */
-      .status-badge {
+      /* PDF-specific styles for Status badge - scoped to invoice preview */
+      #invoice-preview .status-badge {
         display: inline-block;
         padding: 8px 16px;
         border-radius: 9999px;
@@ -157,138 +195,133 @@ export async function renderInvoiceHTML(invoice: any, template: any): Promise<st
         print-color-adjust: exact;
       }
       
-      /* Ensure proper styling for grid layouts */
-      .grid {
+      /* Scoped utility classes - only apply within invoice preview */
+      #invoice-preview .grid {
         display: grid;
       }
       
-      .grid-cols-2 {
+      #invoice-preview .grid-cols-2 {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
       
-      .grid-cols-3 {
+      #invoice-preview .grid-cols-3 {
         grid-template-columns: repeat(3, minmax(0, 1fr));
       }
       
-      .gap-3 {
+      #invoice-preview .gap-3 {
         gap: 0.75rem;
       }
       
-      .gap-4 {
+      #invoice-preview .gap-4 {
         gap: 1rem;
       }
       
-      .gap-8 {
+      #invoice-preview .gap-8 {
         gap: 2rem;
       }
       
-      .gap-12 {
+      #invoice-preview .gap-12 {
         gap: 3rem;
       }
       
-      .mb-2 {
+      #invoice-preview .mb-2 {
         margin-bottom: 0.5rem;
       }
       
-      .mb-4 {
+      #invoice-preview .mb-4 {
         margin-bottom: 1rem;
       }
       
-      .mb-6 {
+      #invoice-preview .mb-6 {
         margin-bottom: 1.5rem;
       }
       
-      .mb-8 {
+      #invoice-preview .mb-8 {
         margin-bottom: 2rem;
       }
       
-      .mb-12 {
+      #invoice-preview .mb-12 {
         margin-bottom: 3rem;
       }
       
-      .mb-16 {
+      #invoice-preview .mb-16 {
         margin-bottom: 4rem;
       }
       
-      .p-6 {
+      #invoice-preview .p-6 {
         padding: 1.5rem;
       }
       
-      .flex {
+      #invoice-preview .flex {
         display: flex;
       }
       
-      .flex-1 {
+      #invoice-preview .flex-1 {
         flex: 1 1 0%;
       }
       
-      .items-start {
+      #invoice-preview .items-start {
         align-items: flex-start;
       }
       
-      .items-center {
+      #invoice-preview .items-center {
         align-items: center;
       }
       
-      .items-baseline {
+      #invoice-preview .items-baseline {
         align-items: baseline;
       }
       
-      .justify-between {
+      #invoice-preview .justify-between {
         justify-content: space-between;
       }
       
-      .justify-end {
+      #invoice-preview .justify-end {
         justify-content: flex-end;
       }
       
-      .text-right {
+      #invoice-preview .text-right {
         text-align: right;
       }
       
-      .text-xs {
+      #invoice-preview .text-xs {
         font-size: 0.75rem;
       }
       
-      .font-semibold {
+      #invoice-preview .font-semibold {
         font-weight: 600;
       }
       
-      .object-contain {
+      #invoice-preview .object-contain {
         object-fit: contain;
       }
       
-      .rounded-lg {
+      #invoice-preview .rounded-lg {
         border-radius: 0.5rem;
       }
       
-      .space-y-2 > * + * {
+      #invoice-preview .space-y-2 > * + * {
         margin-top: 0.5rem;
       }
       
-      .space-y-16 > * + * {
+      #invoice-preview .space-y-16 > * + * {
         margin-top: 4rem;
       }
       
-      /* Table-specific styling for PDF */
-      table {
+      /* Table-specific styling for PDF - scoped to invoice preview */
+      #invoice-preview table {
         border-collapse: collapse !important;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
       }
       
-      th, td {
+      #invoice-preview th, 
+      #invoice-preview td {
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
       }
       
-      [style*="border"] {
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-      }
-      
-      /* Ensure colors are preserved in PDF */
-      * {
+      #invoice-preview [style*="border"] {
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
       }
@@ -301,8 +334,9 @@ export async function renderInvoiceHTML(invoice: any, template: any): Promise<st
     return `
       ${tailwindStyles}
       <div class="a4-container">
-        <div class="invoice-wrapper" style="${Object.entries(baseStyles).map(([k, v]) => `${k.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${v}`).join('; ')}">
-          <!-- Header -->
+        <div class="invoice-content">
+          <div class="invoice-wrapper" style="${Object.entries(baseStyles).map(([k, v]) => `${k.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${v}`).join('; ')}">
+            <!-- Header -->
         <div class="flex justify-between items-start mb-12">
           <div>
             ${template.showLogo && companyInfo.logoUrl ? `
@@ -405,6 +439,7 @@ export async function renderInvoiceHTML(invoice: any, template: any): Promise<st
             </div>
           ` : ''}
         </div>
+        </div>
       </div>
     `
   }
@@ -413,8 +448,9 @@ export async function renderInvoiceHTML(invoice: any, template: any): Promise<st
     return `
       ${tailwindStyles}
       <div class="a4-container">
-        <div class="invoice-wrapper" style="${Object.entries(baseStyles).map(([k, v]) => `${k.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${v}`).join('; ')}">
-          <!-- Bold Header -->
+        <div class="invoice-content">
+          <div class="invoice-wrapper" style="${Object.entries(baseStyles).map(([k, v]) => `${k.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${v}`).join('; ')}">
+            <!-- Bold Header -->
                   <div class="mb-16">
           <div class="flex items-center justify-between mb-8">
             ${template.showLogo && companyInfo.logoUrl ? `
@@ -540,6 +576,7 @@ export async function renderInvoiceHTML(invoice: any, template: any): Promise<st
             </div>
           ` : ''}
         </div>
+        </div>
       </div>
     `
   }
@@ -548,8 +585,9 @@ export async function renderInvoiceHTML(invoice: any, template: any): Promise<st
     return `
       ${tailwindStyles}
       <div class="a4-container">
-        <div class="invoice-wrapper" style="${Object.entries(baseStyles).map(([k, v]) => `${k.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${v}`).join('; ')}">
-          <!-- Professional Header -->
+        <div class="invoice-content">
+          <div class="invoice-wrapper" style="${Object.entries(baseStyles).map(([k, v]) => `${k.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${v}`).join('; ')}">
+            <!-- Professional Header -->
         <div class="mb-12">
           <div class="flex justify-between items-start mb-8">
             <div>
@@ -703,6 +741,7 @@ export async function renderInvoiceHTML(invoice: any, template: any): Promise<st
             </div>
           ` : ''}
         </div>
+        </div>
       </div>
     `
   }
@@ -711,8 +750,9 @@ export async function renderInvoiceHTML(invoice: any, template: any): Promise<st
     return `
       ${tailwindStyles}
       <div class="a4-container">
-        <div class="invoice-wrapper" style="${Object.entries(baseStyles).map(([k, v]) => `${k.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${v}`).join('; ')}">
-          <!-- Minimal Header -->
+        <div class="invoice-content">
+          <div class="invoice-wrapper" style="${Object.entries(baseStyles).map(([k, v]) => `${k.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${v}`).join('; ')}">
+            <!-- Minimal Header -->
           <div class="mb-12">
             <div class="flex items-start justify-between mb-6">
               ${template.showLogo && companyInfo.logoUrl ? `
@@ -877,6 +917,7 @@ export async function renderInvoiceHTML(invoice: any, template: any): Promise<st
               ` : ''}
             </div>
           ` : ''}
+        </div>
         </div>
       </div>
     `
