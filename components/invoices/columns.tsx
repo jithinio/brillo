@@ -100,7 +100,7 @@ interface ColumnActions {
   onViewDetails: (invoice: Invoice) => void
   onEditInvoice: (invoice: Invoice) => void
   onSendInvoice: (invoice: Invoice) => void
-  onDownloadPDF: (invoice: Invoice) => void
+  onViewInvoice: (invoice: Invoice) => void
   onDeleteInvoice: (invoice: Invoice) => void
   onStatusChange: (invoice: Invoice, newStatus: string) => void
   onClientClick: (client: { name: string; company?: string; id?: string }) => void
@@ -482,16 +482,11 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
                   Send Invoice
                 </DropdownMenuItem>
                 <DropdownMenuItem 
-                  onClick={() => actions.onDownloadPDF(invoice)} 
+                  onClick={() => actions.onViewInvoice(invoice)} 
                   className="whitespace-nowrap"
-                  disabled={actions.downloadingPDF === invoice.id}
                 >
-                  {actions.downloadingPDF === invoice.id ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Download className="mr-2 h-4 w-4" />
-                  )}
-                  Download PDF
+                  <Eye className="mr-2 h-4 w-4" />
+                  View Invoice
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem

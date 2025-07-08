@@ -65,7 +65,7 @@ interface DataTableProps<TData, TValue> {
     onViewDetails: (item: TData) => void
     onEditInvoice: (item: TData) => void
     onSendInvoice: (item: TData) => void
-    onDownloadPDF: (item: TData) => void
+    onViewInvoice: (item: TData) => void
     onDeleteInvoice: (item: TData) => void
     onStatusChange: (item: TData, status: string) => void
     downloadingPDF?: string | null
@@ -364,11 +364,10 @@ export function DataTable<TData, TValue>({
                           Send Invoice
                         </ContextMenuItem>
                         <ContextMenuItem 
-                          onClick={() => contextActions.onDownloadPDF(row.original)}
-                          disabled={contextActions.downloadingPDF === (row.original as any).id}
+                          onClick={() => contextActions.onViewInvoice(row.original)}
                         >
-                          <Download className="mr-2 h-4 w-4" />
-                          Download PDF
+                          <Eye className="mr-2 h-4 w-4" />
+                          View Invoice
                         </ContextMenuItem>
                         <ContextMenuSeparator />
                         <ContextMenuItem 

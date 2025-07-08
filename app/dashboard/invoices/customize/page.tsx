@@ -122,6 +122,7 @@ export default function CustomizeInvoicePage() {
   useEffect(() => {
     // First try to load from settings (account-level)
     if (settings.invoiceTemplate && Object.keys(settings.invoiceTemplate).length > 0) {
+      console.log('✅ Loading template from Supabase:', settings.invoiceTemplate.templateId)
       setTemplate(prev => ({
         ...prev,
         ...settings.invoiceTemplate
@@ -132,6 +133,7 @@ export default function CustomizeInvoicePage() {
       if (savedTemplate) {
         try {
           const parsed = JSON.parse(savedTemplate)
+          console.log('✅ Loading template from localStorage:', parsed.templateId)
           setTemplate(prev => ({
             ...prev,
             ...parsed
@@ -434,7 +436,7 @@ export default function CustomizeInvoicePage() {
               style={{ borderTop: `2px solid ${template.primaryColor}` }}
                           >
               <span style={{ fontWeight: '600' }}>Total</span>
-              <span style={{ fontWeight: '600', fontSize: '18px' }}>
+              <span style={{ fontWeight: '600', fontSize: '18px', color: template.accentColor }}>
                 {getCurrencySymbol(template.currency)}{invoiceData.total.toFixed(2)}
               </span>
                                   </div>
@@ -1259,7 +1261,7 @@ export default function CustomizeInvoicePage() {
       })
       
     } catch (error) {
-      console.error('Error saving template:', error)
+      console.error('❌ Error saving template:', error)
       toast.error('Failed to save template', {
         description: 'Please try again. Your changes were saved locally.'
       })

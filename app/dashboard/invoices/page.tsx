@@ -20,7 +20,6 @@ import { formatCurrency, formatCurrencyWithConversion, getDefaultCurrency } from
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useSettings } from "@/components/settings-provider"
-import { generatePDFFromPreview } from '@/lib/pdf-generator'
 
 // Mock data fallback
 const mockInvoices: Invoice[] = [
@@ -377,13 +376,10 @@ export default function InvoicesPage() {
       // Get saved template settings from Supabase settings
       let templateSettings = null
       
-      console.log('📥 Download PDF - Checking settings.invoiceTemplate:', settings.invoiceTemplate)
-      console.log('📥 Download PDF - Settings object keys:', Object.keys(settings.invoiceTemplate || {}))
-      
       // First try to get from settings (Supabase)
       if (settings.invoiceTemplate && Object.keys(settings.invoiceTemplate).length > 0) {
         templateSettings = settings.invoiceTemplate
-        console.log('✅ Download PDF - Template settings loaded from Supabase:', templateSettings)
+        console.log('✅ Download PDF - Template settings loaded from Supabase')
       } else {
         console.log('❌ Download PDF - No Supabase template found, checking localStorage')
         // Fallback to localStorage if no Supabase template exists
@@ -391,7 +387,7 @@ export default function InvoicesPage() {
         if (savedTemplate) {
           try {
             templateSettings = JSON.parse(savedTemplate)
-            console.log('✅ Download PDF - Template settings loaded from localStorage:', templateSettings)
+            console.log('✅ Download PDF - Template settings loaded from localStorage')
           } catch (error) {
             console.error('❌ Download PDF - Error parsing saved template:', error)
           }
@@ -451,10 +447,6 @@ export default function InvoicesPage() {
       }
       
       // Merge all template settings with company info
-      console.log('🔧 Download PDF - Building full template...')
-      console.log('🔧 Download PDF - Template settings to merge:', templateSettings)
-      console.log('🔧 Download PDF - Company info:', companyInfo)
-      
       const defaultTemplate = {
         templateId: 'stripe-inspired',
         logoSize: [80],
@@ -480,8 +472,6 @@ export default function InvoicesPage() {
         notes: '',
       }
       
-      console.log('🔧 Download PDF - Default template:', defaultTemplate)
-      
       const fullTemplate = {
         ...defaultTemplate,
         // Override with saved template settings from Supabase
@@ -494,27 +484,36 @@ export default function InvoicesPage() {
         logoUrl: templateSettings?.logoUrl || settings.companyLogo || ""
       }
       
-      console.log('🔧 Download PDF - Final merged template:', fullTemplate)
-      console.log('🔧 Download PDF - Final colors check:', {
-        primary: fullTemplate.primaryColor,
-        secondary: fullTemplate.secondaryColor,
-        accent: fullTemplate.accentColor,
-        border: fullTemplate.borderColor,
-        background: fullTemplate.backgroundColor
-      })
+      console.log('🔧 Download PDF - Using template:', fullTemplate.templateId)
       
-      // Use react-pdf to generate and download the PDF
-      console.log('Download - Full template being passed:', fullTemplate)
-      console.log('Download - Template ID:', fullTemplate.templateId)
-      console.log('Download - Template colors:', {
-        primary: fullTemplate.primaryColor,
-        secondary: fullTemplate.secondaryColor,
-        accent: fullTemplate.accentColor,
-        border: fullTemplate.borderColor
+      // Generate PDF using the Puppeteer API
+      const response = await fetch('/api/generate-pdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          invoice: enhancedInvoice,
+          template: fullTemplate,
+          companyInfo: companyInfo
+        })
       })
-      
-      // Generate PDF using the preview approach
-      await generatePDFFromPreview(enhancedInvoice, fullTemplate)
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(`PDF generation failed: ${errorData.details}`)
+      }
+
+      // Download the PDF
+      const pdfBlob = await response.blob()
+      const url = window.URL.createObjectURL(pdfBlob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `invoice-${invoice.invoice_number}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
 
       toast.success(`Invoice ${invoice.invoice_number} downloaded successfully!`)
     } catch (error) {
@@ -833,6 +832,10 @@ export default function InvoicesPage() {
     }
   }
 
+  const handleViewInvoice = (invoice: Invoice) => {
+    router.push(`/dashboard/invoices/${invoice.id}/preview?action=view`)
+  }
+
   const handleEditInvoice = (invoice: Invoice) => {
     // Store invoice data for editing
     const editData = {
@@ -874,7 +877,7 @@ export default function InvoicesPage() {
     onViewDetails: handleViewDetails,
     onEditInvoice: handleEditInvoice,
     onSendInvoice: handleSendInvoice,
-    onDownloadPDF: handleDownloadPDF,
+    onViewInvoice: handleViewInvoice,
     onDeleteInvoice: handleDeleteInvoice,
     onStatusChange: handleStatusChangeFromActions,
     onClientClick: handleClientClick,
@@ -927,7 +930,7 @@ export default function InvoicesPage() {
               onViewDetails: handleViewDetails,
               onEditInvoice: handleEditInvoice,
               onSendInvoice: handleSendInvoice,
-              onDownloadPDF: handleDownloadPDF,
+              onViewInvoice: handleViewInvoice,
               onDeleteInvoice: handleDeleteInvoice,
               onStatusChange: handleStatusChangeFromActions,
               downloadingPDF,

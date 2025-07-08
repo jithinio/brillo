@@ -84,6 +84,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       // Then try to load from database immediately (don't wait)
       try {
         const dbSettings = await getCompanySettings()
+        
         if (dbSettings) {
           // Update settings state with database values
           setSettings(prev => ({
@@ -98,6 +99,68 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             invoicePrefix: dbSettings.invoice_prefix || prev.invoicePrefix,
             invoiceTemplate: dbSettings.invoice_template || prev.invoiceTemplate,
           }))
+          
+          console.log('🔍 Database settings loaded:', {
+            invoiceTemplate: dbSettings.invoice_template,
+            hasTemplate: !!dbSettings.invoice_template,
+            templateId: dbSettings.invoice_template?.templateId
+          })
+          
+          // Check if localStorage has a newer template than database
+          const localStorageTemplate = localStorage.getItem('setting_invoiceTemplate') || localStorage.getItem('invoice-template-settings')
+          if (localStorageTemplate) {
+            try {
+              const parsedLocalTemplate = JSON.parse(localStorageTemplate)
+              const dbTemplateId = dbSettings.invoice_template?.templateId
+              const localTemplateId = parsedLocalTemplate.templateId
+              
+              console.log('🔄 Template sync check:', {
+                database: dbTemplateId,
+                localStorage: localTemplateId,
+                needsSync: dbTemplateId !== localTemplateId
+              })
+              
+              // If localStorage template is different from database, prefer localStorage (newer)
+              if (localTemplateId && localTemplateId !== dbTemplateId) {
+                console.log('⚠️ Template mismatch! Using localStorage template and syncing to database...')
+                
+                // Use localStorage template instead of database
+                setSettings(prev => ({
+                  ...prev,
+                  companyName: dbSettings.company_name || prev.companyName,
+                  companyLogo: dbSettings.company_logo || "",
+                  defaultCurrency: dbSettings.default_currency || prev.defaultCurrency,
+                  taxRate: dbSettings.tax_rate || prev.taxRate,
+                  taxName: dbSettings.tax_name || prev.taxName,
+                  includeTaxInPrices: dbSettings.include_tax_in_prices || prev.includeTaxInPrices,
+                  autoCalculateTax: dbSettings.auto_calculate_tax || prev.autoCalculateTax,
+                  invoicePrefix: dbSettings.invoice_prefix || prev.invoicePrefix,
+                  invoiceTemplate: parsedLocalTemplate, // Use localStorage template
+                }))
+                
+                // Sync localStorage template to database in background
+                try {
+                  const updateResult = await upsertCompanySettings({ invoice_template: parsedLocalTemplate })
+                  if (updateResult) {
+                    console.log('✅ Template synced to database:', localTemplateId)
+                  }
+                } catch (syncError) {
+                  console.error('❌ Failed to sync template to database:', syncError)
+                }
+                
+                return // Exit early since we've set the settings
+              }
+            } catch (error) {
+              console.error('❌ Error parsing localStorage template:', error)
+            }
+          }
+          
+          if (dbSettings.invoice_template) {
+            console.log('✅ Template loaded from database:', dbSettings.invoice_template.templateId)
+            console.log('✅ Template details:', dbSettings.invoice_template)
+          } else {
+            console.log('❌ No invoice template found in database')
+          }
           
           // Cache the logo to localStorage for faster subsequent loads
           if (dbSettings.company_logo) {

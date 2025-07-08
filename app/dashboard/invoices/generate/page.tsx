@@ -21,7 +21,7 @@ import { useSettings } from "@/components/settings-provider"
 import type { Client } from "@/components/clients/columns"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { generatePDFFromPreview } from '@/lib/pdf-generator'
+import { useRouter } from "next/navigation"
 
 interface InvoiceItem {
   id: string
@@ -115,7 +115,7 @@ const mockClients: Client[] = [
 ]
 
 export default function GenerateInvoicePage() {
-
+  const router = useRouter()
   const { settings, isLoading: settingsLoading } = useSettings()
   
   // Check if we're in edit mode
@@ -164,6 +164,7 @@ export default function GenerateInvoicePage() {
   
   // Invoice number state
   const [invoiceNumber, setInvoiceNumber] = useState<string>("")
+  const [editInvoiceId, setEditInvoiceId] = useState<string | null>(null)
 
   // Load clients on component mount
   useEffect(() => {
@@ -303,6 +304,11 @@ export default function GenerateInvoicePage() {
     if (storedEditData && clients.length > 0) {
       try {
         const editInfo = JSON.parse(storedEditData)
+        
+        // Set invoice ID for updating
+        if (editInfo.invoiceId) {
+          setEditInvoiceId(editInfo.invoiceId)
+        }
         
         // Set invoice number (don't auto-generate for editing)
         setInvoiceNumber(editInfo.invoiceNumber)
@@ -722,10 +728,8 @@ export default function GenerateInvoicePage() {
         toast.success("Draft saved successfully (demo mode)")
       }
       
-      // Redirect to invoices page after successful save
-      setTimeout(() => {
-        window.location.href = '/dashboard/invoices'
-      }, 1000)
+      // No redirect for draft save - user stays on the page
+      // They can continue editing or generate the invoice
       
     } catch (error: any) {
       console.warn('Error saving draft:', 
@@ -815,21 +819,53 @@ export default function GenerateInvoicePage() {
 
         console.log('Invoice insert data:', invoiceInsertData)
 
-        // Insert the main invoice record
-        const { data: invoiceData, error: invoiceError } = await supabase
-          .from('invoices')
-          .insert([invoiceInsertData])
-          .select()
-          .single()
-
-        if (invoiceError) {
-          console.error('Failed to insert invoice:', invoiceError)
-          throw new Error(`Failed to save invoice: ${invoiceError.message}`)
+        // Insert or update the main invoice record
+        let invoiceData
+        let invoiceError
+        
+        if (isEditMode && editInvoiceId) {
+          // Update existing invoice
+          const { data, error } = await supabase
+            .from('invoices')
+            .update(invoiceInsertData)
+            .eq('id', editInvoiceId)
+            .select()
+            .single()
+          
+          invoiceData = data
+          invoiceError = error
+        } else {
+          // Insert new invoice
+          const { data, error } = await supabase
+            .from('invoices')
+            .insert([invoiceInsertData])
+            .select()
+            .single()
+          
+          invoiceData = data
+          invoiceError = error
         }
 
-        console.log('Invoice saved successfully:', invoiceData)
+        if (invoiceError) {
+          console.error(isEditMode ? 'Failed to update invoice:' : 'Failed to insert invoice:', invoiceError)
+          throw new Error(`Failed to ${isEditMode ? 'update' : 'save'} invoice: ${invoiceError.message}`)
+        }
+
+        console.log(isEditMode ? 'Invoice updated successfully:' : 'Invoice saved successfully:', invoiceData)
 
         // Now save the invoice items
+        if (isEditMode && editInvoiceId) {
+          // Delete existing items first
+          const { error: deleteError } = await supabase
+            .from('invoice_items')
+            .delete()
+            .eq('invoice_id', editInvoiceId)
+          
+          if (deleteError) {
+            console.error('Failed to delete existing invoice items:', deleteError)
+          }
+        }
+        
         const invoiceItemsData = items.map(item => ({
           invoice_id: invoiceData.id,
           description: item.description,
@@ -847,76 +883,96 @@ export default function GenerateInvoicePage() {
         if (itemsError) {
           console.error('Failed to insert invoice items:', itemsError)
           // Don't throw error here, invoice is already saved
-          console.warn('Invoice saved but items failed to save:', itemsError.message)
+          console.warn(`Invoice ${isEditMode ? 'updated' : 'saved'} but items failed to save:`, itemsError.message)
         } else {
           console.log('Invoice items saved successfully:', itemsData)
         }
 
-        toast.success("Invoice generated successfully")
+        toast.success(isEditMode ? "Invoice updated successfully" : "Invoice generated successfully")
+        
+        // Redirect to preview page with appropriate action
+        router.push(`/dashboard/invoices/${invoiceData.id}/preview?action=${isEditMode ? 'updated' : 'created'}`)
+        
       } else {
         console.log('Saving to session storage (demo mode)...')
         // For demo mode, store in sessionStorage to simulate database save
-        const existingInvoices = JSON.parse(sessionStorage.getItem('demo-invoices') || '[]')
+        let existingInvoices = JSON.parse(sessionStorage.getItem('demo-invoices') || '[]')
         
-        // Create a mock UUID for session storage
-        const mockId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+        let invoiceId: string
         
-        const newInvoice = {
-          id: mockId,
-          invoice_number: invoiceNumber,
-          client_id: selectedClient.id,
-          project_id: selectedProject?.id || null,
-          issue_date: invoiceDate.toISOString().split('T')[0],
-          due_date: (dueDate?.toISOString() || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()).split('T')[0],
-          amount: subtotal,
-          tax_rate: taxEnabled ? parseFloat(customTaxRate) : 0,
-          tax_amount: tax,
-          total_amount: total,
-          status: 'draft' as const,
-          notes: notes || '',
-          terms: '',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          // Include client and project data for UI compatibility
-          clients: {
-            name: selectedClient.name,
-            company: selectedClient.company
-          },
-          projects: selectedProject ? {
-            name: selectedProject.name
-          } : null,
-          // Store currency separately for UI (not part of DB schema)
-          _currency: clientCurrency, // Prefix with _ to indicate UI-only field
-          _items: items // Store items for reference
+        if (isEditMode && editInvoiceId) {
+          // Update existing invoice
+          invoiceId = editInvoiceId
+          existingInvoices = existingInvoices.map((inv: any) => {
+            if (inv.id === editInvoiceId) {
+              return {
+                ...inv,
+                invoice_number: invoiceNumber,
+                client_id: selectedClient.id,
+                project_id: selectedProject?.id || null,
+                issue_date: invoiceDate.toISOString().split('T')[0],
+                due_date: (dueDate?.toISOString() || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()).split('T')[0],
+                amount: subtotal,
+                tax_rate: taxEnabled ? parseFloat(customTaxRate) : 0,
+                tax_amount: tax,
+                total_amount: total,
+                notes: notes || '',
+                updated_at: new Date().toISOString(),
+                clients: {
+                  name: selectedClient.name,
+                  company: selectedClient.company
+                },
+                projects: selectedProject ? {
+                  name: selectedProject.name
+                } : null,
+                _currency: clientCurrency,
+                _items: items
+              }
+            }
+            return inv
+          })
+        } else {
+          // Create new invoice
+          const mockId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+          invoiceId = mockId
+          
+          const newInvoice = {
+            id: mockId,
+            invoice_number: invoiceNumber,
+            client_id: selectedClient.id,
+            project_id: selectedProject?.id || null,
+            issue_date: invoiceDate.toISOString().split('T')[0],
+            due_date: (dueDate?.toISOString() || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()).split('T')[0],
+            amount: subtotal,
+            tax_rate: taxEnabled ? parseFloat(customTaxRate) : 0,
+            tax_amount: tax,
+            total_amount: total,
+            status: 'draft' as const,
+            notes: notes || '',
+            terms: '',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            clients: {
+              name: selectedClient.name,
+              company: selectedClient.company
+            },
+            projects: selectedProject ? {
+              name: selectedProject.name
+            } : null,
+            _currency: clientCurrency,
+            _items: items
+          }
+          
+          existingInvoices.push(newInvoice)
         }
         
-        console.log('Adding invoice to session storage:', newInvoice)
-        existingInvoices.push(newInvoice)
         sessionStorage.setItem('demo-invoices', JSON.stringify(existingInvoices))
 
-        toast.success("Invoice generated successfully (demo mode)")
+        toast.success(isEditMode ? "Invoice updated successfully (demo mode)" : "Invoice generated successfully (demo mode)")
+        
+        // Redirect to preview page with appropriate action
+        router.push(`/dashboard/invoices/${invoiceId}/preview?action=${isEditMode ? 'updated' : 'created'}`)
       }
-      
-      // Create invoice data for success dialog and PDF generation
-      const dialogInvoiceData = {
-        invoiceNumber,
-        client: selectedClient,
-        invoiceDate,
-        dueDate,
-        items,
-        subtotal,
-        tax,
-        total,
-        notes,
-        currency: clientCurrency,
-        taxName: settings.taxName,
-        taxEnabled,
-        customTaxRate,
-        taxRate: taxEnabled ? customTaxRate : '0'
-      }
-      
-      setGeneratedInvoiceData(dialogInvoiceData)
-      setShowSuccessDialog(true)
     } catch (error) {
       console.warn('Error generating invoice:', 
         (error as any)?.message || (error as any)?.code || JSON.stringify(error) || 'Unknown error')
@@ -948,13 +1004,10 @@ export default function GenerateInvoicePage() {
       // Get saved template settings from Supabase settings
       let templateSettings = null
       
-      console.log('📥 Generate PDF - Checking settings.invoiceTemplate:', settings.invoiceTemplate)
-      console.log('📥 Generate PDF - Settings object keys:', Object.keys(settings.invoiceTemplate || {}))
-      
       // First try to get from settings (Supabase)
       if (settings.invoiceTemplate && Object.keys(settings.invoiceTemplate).length > 0) {
         templateSettings = settings.invoiceTemplate
-        console.log('✅ Generate PDF - Template settings loaded from Supabase:', templateSettings)
+        console.log('✅ Generate PDF - Template settings loaded from Supabase')
       } else {
         console.log('❌ Generate PDF - No Supabase template found, checking localStorage')
         // Fallback to localStorage if no Supabase template exists
@@ -962,7 +1015,7 @@ export default function GenerateInvoicePage() {
         if (savedTemplate) {
           try {
             templateSettings = JSON.parse(savedTemplate)
-            console.log('✅ Generate PDF - Template settings loaded from localStorage:', templateSettings)
+            console.log('✅ Generate PDF - Template settings loaded from localStorage')
           } catch (error) {
             console.error('❌ Generate PDF - Error parsing saved template:', error)
           }
@@ -1019,10 +1072,6 @@ export default function GenerateInvoicePage() {
       }
 
       // Merge all template settings with company info
-      console.log('🔧 Generate PDF - Building full template...')
-      console.log('🔧 Generate PDF - Template settings to merge:', templateSettings)
-      console.log('🔧 Generate PDF - Company info:', companyInfo)
-      
       const defaultTemplate = {
         templateId: 'stripe-inspired',
         logoSize: [80],
@@ -1048,8 +1097,6 @@ export default function GenerateInvoicePage() {
         notes: '',
       }
       
-      console.log('🔧 Generate PDF - Default template:', defaultTemplate)
-      
       const fullTemplate = {
         ...defaultTemplate,
         // Override with saved template settings from Supabase
@@ -1062,27 +1109,36 @@ export default function GenerateInvoicePage() {
         logoUrl: templateSettings?.logoUrl || settings.companyLogo || ""
       }
       
-      console.log('🔧 Generate PDF - Final merged template:', fullTemplate)
-      console.log('🔧 Generate PDF - Final colors check:', {
-        primary: fullTemplate.primaryColor,
-        secondary: fullTemplate.secondaryColor,
-        accent: fullTemplate.accentColor,
-        border: fullTemplate.borderColor,
-        background: fullTemplate.backgroundColor
+      console.log('🔧 Generate PDF - Using template:', fullTemplate.templateId)
+      
+      // Generate PDF using the Puppeteer API
+      const response = await fetch('/api/generate-pdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          invoice: mockInvoice,
+          template: fullTemplate,
+          companyInfo: companyInfo
+        })
       })
 
-      // Use react-pdf to generate and download the PDF
-      console.log('Download - Full template being passed:', fullTemplate)
-      console.log('Download - Template ID:', fullTemplate.templateId)
-      console.log('Download - Template colors:', {
-        primary: fullTemplate.primaryColor,
-        secondary: fullTemplate.secondaryColor,
-        accent: fullTemplate.accentColor,
-        border: fullTemplate.borderColor
-      })
-      
-      // Generate PDF using the preview approach
-      await generatePDFFromPreview(mockInvoice, fullTemplate)
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(`PDF generation failed: ${errorData.details}`)
+      }
+
+      // Download the PDF
+      const pdfBlob = await response.blob()
+      const url = window.URL.createObjectURL(pdfBlob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `invoice-${mockInvoice.invoice_number}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
       
       toast.success("Invoice PDF downloaded successfully")
     } catch (error) {
