@@ -1,47 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createBrowser } from '@/lib/pdf-browser'
 
 export async function GET() {
   try {
-    const isProduction = process.env.NODE_ENV === 'production'
-    console.log('🧪 Testing Puppeteer with environment:', isProduction ? 'production' : 'development')
+    console.log('🧪 Testing Puppeteer with environment-specific configuration...')
     
-    let browser
-    
-    if (isProduction) {
-      // Production: Use puppeteer-core + @sparticuz/chromium for serverless
-      const puppeteer = (await import('puppeteer-core')).default
-      const chromium = (await import('@sparticuz/chromium')).default
-      
-      browser = await puppeteer.launch({
-        args: [
-          ...chromium.args,
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-web-security'
-        ],
-        executablePath: await chromium.executablePath(),
-        headless: true,
-        timeout: 30000
-      })
-    } else {
-      // Development: Use regular puppeteer
-      const puppeteer = (await import('puppeteer')).default
-      
-      browser = await puppeteer.launch({
-        headless: true,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-web-security'
-        ],
-        timeout: 30000
-      })
-    }
-    
+    const browser = await createBrowser()
     const page = await browser.newPage()
-    await page.setContent('<html><body><h1>Test PDF Generation</h1><p>Environment: ' + (isProduction ? 'Production' : 'Development') + '</p></body></html>')
+    
+    await page.setContent(`
+      <html>
+        <body>
+          <h1>Test PDF Generation</h1>
+          <p>Environment: ${process.env.NODE_ENV}</p>
+          <p>Platform: ${process.platform}</p>
+          <p>Architecture: ${process.arch}</p>
+          <p>Node Version: ${process.version}</p>
+          <p>Working Directory: ${process.cwd()}</p>
+        </body>
+      </html>
+    `)
     
     const pdfBuffer = await page.pdf({
       format: 'A4',

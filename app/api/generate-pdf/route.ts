@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { renderInvoiceHTML } from '@/lib/invoice-renderer'
-
-// Dynamic imports for different environments
-const isProduction = process.env.NODE_ENV === 'production'
+import { createBrowser } from '@/lib/pdf-browser'
 
 export async function POST(request: NextRequest) {
   try {
     const { invoice, template, companyInfo } = await request.json()
     
     console.log('🚀 Starting PDF generation for invoice:', invoice?.invoice_number)
-    console.log('🌍 Environment:', isProduction ? 'production' : 'development')
 
     // Ensure template values are properly formatted (handle arrays)
     const normalizedTemplate = {
@@ -28,8 +25,6 @@ export async function POST(request: NextRequest) {
       companyTaxId: companyInfo?.taxId || companyInfo?.companyTaxId || template.companyTaxId || '',
       logoUrl: companyInfo?.logoUrl || template.logoUrl || ''
     }
-
-
 
     // Generate the complete HTML
     const invoiceHTML = await renderInvoiceHTML(invoice, normalizedTemplate)
@@ -92,7 +87,7 @@ export async function POST(request: NextRequest) {
     /* Total amount cards specific styling for PDF */
     [style*="background-color: ${normalizedTemplate.primaryColor}"] {
       background-color: ${normalizedTemplate.primaryColor} !important;
-      color: ${normalizedTemplate.backgroundColor} !important;
+      color: ${normalizedTemplate.backgroundColor}
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
     }
@@ -166,126 +161,10 @@ export async function POST(request: NextRequest) {
 </body>
 </html>`
 
-
-
-    // Launch Puppeteer with environment-specific configuration
+    // Launch browser using the utility function
     let browser
     try {
-      if (isProduction) {
-        // Production: Use puppeteer-core + @sparticuz/chromium for serverless
-        const puppeteer = (await import('puppeteer-core')).default
-        const chromium = (await import('@sparticuz/chromium')).default
-        
-        browser = await puppeteer.launch({
-          args: [
-            ...chromium.args,
-            // Essential serverless flags
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            
-            // Memory optimization
-            '--disable-web-security',
-            '--disable-features=VizDisplayCompositor',
-            '--disable-background-timer-throttling',
-            '--disable-backgrounding-occluded-windows',
-            '--disable-renderer-backgrounding',
-            
-            // Serverless-specific optimizations
-            '--disable-gpu',
-            '--disable-software-rasterizer',
-            '--disable-background-networking',
-            '--disable-default-apps',
-            '--disable-extensions',
-            '--disable-sync',
-            '--disable-translate',
-            '--hide-scrollbars',
-            '--metrics-recording-only',
-            '--mute-audio',
-            '--no-first-run',
-            '--safebrowsing-disable-auto-update',
-            '--ignore-certificate-errors',
-            '--ignore-ssl-errors',
-            '--ignore-certificate-errors-spki-list',
-            
-            // Performance optimizations
-            '--disable-ipc-flooding-protection',
-            '--disable-hang-monitor',
-            '--disable-prompt-on-repost',
-            '--disable-component-update',
-            '--disable-domain-reliability',
-            '--disable-features=TranslateUI',
-            '--disable-client-side-phishing-detection',
-            '--run-all-compositor-stages-before-draw',
-            '--disable-threaded-animation',
-            '--disable-threaded-scrolling',
-            '--disable-checker-imaging',
-            '--disable-new-content-rendering-timeout',
-            '--disable-image-animation-resync',
-            '--disable-partial-raster',
-            '--disable-skia-runtime-opts',
-            '--disable-color-correct-rendering',
-            '--disable-2d-canvas-clip-aa',
-            '--disable-gl-drawing-for-tests',
-            '--disable-canvas-aa',
-            '--disable-3d-apis',
-            '--disable-accelerated-2d-canvas',
-            '--disable-accelerated-jpeg-decoding',
-            '--disable-accelerated-mjpeg-decode',
-            '--disable-app-list-dismiss-on-blur',
-            '--disable-accelerated-video-decode',
-            '--disable-gpu-sandbox',
-            '--disable-rtc-smoothness-algorithm',
-            '--disable-webgl',
-            '--disable-webgl2',
-            
-            // Font and rendering optimizations
-            '--disable-remote-fonts',
-            '--disable-lcd-text',
-            '--font-render-hinting=none',
-            '--disable-font-subpixel-positioning',
-            '--disable-plugins-discovery',
-            '--disable-preconnect',
-            '--disable-print-preview',
-            '--disable-speech-api',
-            '--disable-file-system',
-            '--disable-presentation-api',
-            '--disable-permissions-api',
-            '--disable-notifications',
-            '--disable-desktop-notifications',
-            '--disable-geolocation',
-            '--disable-reading-from-canvas',
-            '--single-process' // Use single process for better serverless compatibility
-          ],
-          // Use the optimized Chromium binary for serverless
-          executablePath: await chromium.executablePath(),
-          headless: true,
-          // Serverless-optimized settings
-          timeout: 30000,
-          protocolTimeout: 30000,
-          ignoreDefaultArgs: ['--disable-extensions'],
-          // Use minimal resources
-          defaultViewport: {
-            width: 794,
-            height: 1123,
-            deviceScaleFactor: 1 // Reduced from 2 for better serverless performance
-          }
-        })
-      } else {
-        // Development: Use regular puppeteer
-        const puppeteer = (await import('puppeteer')).default
-        
-        browser = await puppeteer.launch({
-          headless: true,
-          args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-web-security'
-          ],
-          timeout: 30000
-        })
-      }
+      browser = await createBrowser()
     } catch (browserError) {
       console.error('❌ Failed to launch browser:', browserError)
       throw new Error(`Browser launch failed: ${browserError instanceof Error ? browserError.message : 'Unknown browser error'}`)
@@ -306,9 +185,6 @@ export async function POST(request: NextRequest) {
         waitUntil: ['load', 'networkidle0'],
         timeout: 30000
       })
-
-      // Wait for fonts to load
-      await page.evaluateHandle(() => document.fonts.ready)
 
       // Generate PDF with high quality settings
       const pdfBuffer = await page.pdf({

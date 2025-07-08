@@ -10,12 +10,12 @@ const nextConfig = {
     unoptimized: true,
   },
   // Serverless optimizations
-  serverExternalPackages: ['puppeteer-core', '@sparticuz/chromium'],
+  serverExternalPackages: ['puppeteer-core'],
   // Optimize bundle size
   webpack: (config, { isServer }) => {
     if (isServer) {
-      // Externalize puppeteer-core and chromium to reduce bundle size
-      config.externals = [...config.externals, 'puppeteer-core', '@sparticuz/chromium']
+      // Only externalize puppeteer-core, keep @sparticuz/chromium bundled
+      config.externals = [...config.externals, 'puppeteer-core']
     }
     return config
   },
