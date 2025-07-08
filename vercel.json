@@ -1,0 +1,17 @@
+{
+  "functions": {
+    "app/api/generate-pdf/route.ts": {
+      "maxDuration": 30,
+      "memory": 1024
+    },
+    "app/api/test-puppeteer/route.ts": {
+      "maxDuration": 30,
+      "memory": 1024
+    }
+  },
+  "build": {
+    "env": {
+      "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD": "true"
+    }
+  }
+} 
