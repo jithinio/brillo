@@ -1,57 +1,68 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { generateInvoicePDF } from '@/lib/invoice-pdf-renderer'
+import { renderInvoiceHTML } from '@/lib/invoice-renderer'
 
 export async function GET() {
   try {
-    console.log('🧪 Testing React-PDF generation...')
+    console.log('🧪 Testing PDF generation with html2canvas + jsPDF...')
     
-    // Create a test invoice
+    // Sample invoice data
     const testInvoice = {
-      invoice_number: 'TEST-001',
-      issue_date: new Date().toISOString(),
-      due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      status: 'DRAFT',
-      amount: 1000,
-      tax_amount: 80,
-      total_amount: 1080,
-      notes: 'This is a test invoice generated using React-PDF',
+      invoice_number: 'INV-2024-001',
+      issue_date: '2024-01-15',
+      due_date: '2024-02-14',
+      status: 'PENDING',
+      amount: 1200.00,
+      tax_amount: 120.00,
+      total_amount: 1320.00,
+      currency: 'USD',
+      notes: 'Thank you for your business!',
       clients: {
-        name: 'Test Client',
-        email: 'test@example.com',
-        address: '123 Test St',
-        city: 'Test City',
-        state: 'TC',
-        zip_code: '12345',
-        country: 'Test Country'
+        name: 'Acme Corporation',
+        email: 'billing@acme.com',
+        address: '123 Business Ave',
+        city: 'San Francisco',
+        state: 'CA',
+        zip_code: '94105',
+        country: 'United States'
       },
       items: [
         {
-          description: 'Test Service',
-          details: 'This is a test service item',
-          quantity: 1,
-          rate: 1000,
-          amount: 1000
+          description: 'Web Development Services',
+          details: 'Frontend and backend development',
+          quantity: 40,
+          rate: 25.00,
+          amount: 1000.00
+        },
+        {
+          description: 'Project Management',
+          details: 'Coordination and planning',
+          quantity: 8,
+          rate: 25.00,
+          amount: 200.00
         }
-      ]
+      ],
+      projects: {
+        name: 'Website Redesign Project'
+      }
     }
-    
-    // Create test template
+
+    // Sample template settings
     const testTemplate = {
       templateId: 'stripe-inspired',
-      companyName: 'Test Company',
-      companyAddress: '456 Company Ave\nBusiness City, BC 67890',
-      companyEmail: 'hello@testcompany.com',
+      companyName: 'Your Company',
+      companyAddress: '456 Company St\nBusiness City, BC 12345',
+      companyEmail: 'hello@yourcompany.com',
       companyPhone: '+1 (555) 123-4567',
-      companyTaxId: 'TAX123456',
+      companyTaxId: 'TAX-123456',
       logoUrl: '',
       primaryColor: '#000000',
       secondaryColor: '#666666',
       accentColor: '#0066FF',
       backgroundColor: '#FFFFFF',
       borderColor: '#E5E5E5',
-      fontFamily: 'helvetica',
-      fontSize: 14,
-      lineHeight: 1.6,
+      fontFamily: 'inter',
+      fontSize: [14],
+      lineHeight: [1.6],
       currency: 'USD',
       showLogo: true,
       showInvoiceNumber: true,
@@ -60,33 +71,24 @@ export async function GET() {
       showNotes: true,
       showTaxId: true,
       showItemDetails: true,
-      notes: 'Thank you for your business!'
+      notes: 'Payment terms: Net 30 days',
     }
+
+    // Generate HTML for the invoice
+    const invoiceHTML = await renderInvoiceHTML(testInvoice, testTemplate)
     
-    const pdfBuffer = await generateInvoicePDF(testInvoice, testTemplate)
-    
-    console.log('✅ React-PDF test successful!')
-    console.log('📊 PDF size:', `${(pdfBuffer.length / 1024).toFixed(1)}KB`)
-    console.log('🌍 Environment:', process.env.NODE_ENV)
-    console.log('📋 Platform:', process.platform)
-    console.log('🏗️ Architecture:', process.arch)
-    console.log('⚡ Node Version:', process.version)
-    
-    return new NextResponse(pdfBuffer, {
-      headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': 'attachment; filename="test-react-pdf.pdf"',
-      },
+    // Return HTML that will be converted to PDF on the client side
+    return NextResponse.json({ 
+      html: invoiceHTML,
+      success: true,
+      message: 'Test HTML generated successfully! Convert to PDF on client side using html2canvas + jsPDF.'
     })
     
   } catch (error) {
-    console.error('❌ React-PDF test failed:', error)
-    return NextResponse.json(
-      { 
-        error: 'React-PDF test failed', 
-        details: error instanceof Error ? error.message : 'Unknown error' 
-      },
-      { status: 500 }
-    )
+    console.error('❌ Test PDF generation error:', error)
+    return NextResponse.json({ 
+      error: 'Failed to generate test PDF', 
+      details: error instanceof Error ? error.message : 'Unknown error' 
+    }, { status: 500 })
   }
 } 

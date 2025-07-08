@@ -8,8 +8,8 @@ import { Card } from '@/components/ui/card'
 import { toast } from 'sonner'
 import { useSettings } from '@/components/settings-provider'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
-import { renderInvoiceHTML } from '@/lib/invoice-renderer'
 import { PageHeader, PageContent, PageTitle } from '@/components/page-header'
+import { renderInvoiceHTML } from '@/lib/invoice-renderer'
 
 interface Invoice {
   id: string
@@ -46,74 +46,6 @@ interface Invoice {
   }
 }
 
-// Helper function to render invoice HTML
-async function renderInvoiceForPreview(invoice: Invoice, templateSettings: any, settings: any) {
-  // Get company info from settings or localStorage
-  let companyInfo = {
-    companyName: settings.companyName || 'Your Company',
-    companyAddress: '123 Business St\nCity, State 12345',
-    companyEmail: 'contact@yourcompany.com',
-    companyPhone: '+1 (555) 123-4567',
-    companyTaxId: '',
-    logoUrl: settings.companyLogo || ''
-  }
-  
-  // Try to load company info from localStorage
-  const savedCompanyInfo = localStorage.getItem('company-info')
-  if (savedCompanyInfo) {
-    try {
-      const parsed = JSON.parse(savedCompanyInfo)
-      companyInfo = {
-        companyName: parsed.companyName || settings.companyName || companyInfo.companyName,
-        companyAddress: parsed.companyAddress || companyInfo.companyAddress,
-        companyEmail: parsed.companyEmail || companyInfo.companyEmail,
-        companyPhone: parsed.companyPhone || companyInfo.companyPhone,
-        companyTaxId: parsed.companyTaxId || '',
-        logoUrl: parsed.logoUrl || settings.companyLogo || companyInfo.logoUrl
-      }
-    } catch (error) {
-      console.error('Error parsing company info:', error)
-    }
-  }
-  
-  // Create full template with all settings - use saved templateId if available
-  const fullTemplate = {
-    templateId: templateSettings.templateId || 'stripe-inspired',
-    logoSize: templateSettings.logoSize || [80],
-    logoBorderRadius: templateSettings.logoBorderRadius || [8],
-    invoicePadding: templateSettings.invoicePadding || [48],
-    fontFamily: templateSettings.fontFamily || 'inter',
-    fontSize: templateSettings.fontSize || [14],
-    lineHeight: templateSettings.lineHeight || [1.6],
-    tableHeaderSize: templateSettings.tableHeaderSize || [13],
-    primaryColor: templateSettings.primaryColor || '#000000',
-    secondaryColor: templateSettings.secondaryColor || '#666666',
-    accentColor: templateSettings.accentColor || '#0066FF',
-    backgroundColor: templateSettings.backgroundColor || '#FFFFFF',
-    borderColor: templateSettings.borderColor || '#E5E5E5',
-    currency: templateSettings.currency || 'USD',
-    showLogo: templateSettings.showLogo !== undefined ? templateSettings.showLogo : true,
-    showInvoiceNumber: templateSettings.showInvoiceNumber !== undefined ? templateSettings.showInvoiceNumber : true,
-    showDates: templateSettings.showDates !== undefined ? templateSettings.showDates : true,
-    showPaymentTerms: templateSettings.showPaymentTerms !== undefined ? templateSettings.showPaymentTerms : true,
-    showNotes: templateSettings.showNotes !== undefined ? templateSettings.showNotes : true,
-    showTaxId: templateSettings.showTaxId !== undefined ? templateSettings.showTaxId : false,
-    showItemDetails: templateSettings.showItemDetails !== undefined ? templateSettings.showItemDetails : true,
-    notes: templateSettings.notes || '',
-    ...companyInfo
-  }
-  
-  // Format invoice data for renderer
-  const formattedInvoice = {
-    ...invoice,
-    currency: invoice.currency || settings.defaultCurrency || 'USD',
-    items: invoice.items || []
-  }
-  
-  const html = await renderInvoiceHTML(formattedInvoice, fullTemplate)
-  return html
-}
-
 export default function InvoicePreviewPage() {
   const params = useParams()
   const router = useRouter()
@@ -139,14 +71,14 @@ export default function InvoicePreviewPage() {
     // If settings.invoiceTemplate is empty, try to load from localStorage
     if (!settings.invoiceTemplate || Object.keys(settings.invoiceTemplate).length === 0) {
       const savedTemplate = localStorage.getItem('invoice-template-settings')
-              if (savedTemplate) {
-          try {
-            const parsed = JSON.parse(savedTemplate)
-            setLocalTemplateSettings(parsed)
-          } catch (error) {
-            console.error('Error parsing localStorage template:', error)
-          }
+      if (savedTemplate) {
+        try {
+          const parsed = JSON.parse(savedTemplate)
+          setLocalTemplateSettings(parsed)
+        } catch (error) {
+          console.error('Error parsing localStorage template:', error)
         }
+      }
     }
   }, [settings.invoiceTemplate])
   
@@ -171,6 +103,74 @@ export default function InvoicePreviewPage() {
     }
     renderInvoice()
   }, [invoice, finalTemplateSettings, settings])
+
+  // Helper function to render invoice HTML
+  async function renderInvoiceForPreview(invoice: Invoice, templateSettings: any, settings: any) {
+    // Get company info from settings or localStorage
+    let companyInfo = {
+      companyName: settings.companyName || 'Your Company',
+      companyAddress: '123 Business St\nCity, State 12345',
+      companyEmail: 'contact@yourcompany.com',
+      companyPhone: '+1 (555) 123-4567',
+      companyTaxId: '',
+      logoUrl: settings.companyLogo || ''
+    }
+    
+    // Try to load company info from localStorage
+    const savedCompanyInfo = localStorage.getItem('company-info')
+    if (savedCompanyInfo) {
+      try {
+        const parsed = JSON.parse(savedCompanyInfo)
+        companyInfo = {
+          companyName: parsed.companyName || settings.companyName || companyInfo.companyName,
+          companyAddress: parsed.companyAddress || companyInfo.companyAddress,
+          companyEmail: parsed.companyEmail || companyInfo.companyEmail,
+          companyPhone: parsed.companyPhone || companyInfo.companyPhone,
+          companyTaxId: parsed.companyTaxId || '',
+          logoUrl: parsed.logoUrl || settings.companyLogo || companyInfo.logoUrl
+        }
+      } catch (error) {
+        console.error('Error parsing company info:', error)
+      }
+    }
+    
+    // Create full template with all settings - use saved templateId if available
+    const fullTemplate = {
+      templateId: templateSettings.templateId || 'stripe-inspired',
+      logoSize: templateSettings.logoSize || [80],
+      logoBorderRadius: templateSettings.logoBorderRadius || [8],
+      invoicePadding: templateSettings.invoicePadding || [48],
+      fontFamily: templateSettings.fontFamily || 'inter',
+      fontSize: templateSettings.fontSize || [14],
+      lineHeight: templateSettings.lineHeight || [1.6],
+      tableHeaderSize: templateSettings.tableHeaderSize || [13],
+      primaryColor: templateSettings.primaryColor || '#000000',
+      secondaryColor: templateSettings.secondaryColor || '#666666',
+      accentColor: templateSettings.accentColor || '#0066FF',
+      backgroundColor: templateSettings.backgroundColor || '#FFFFFF',
+      borderColor: templateSettings.borderColor || '#E5E5E5',
+      currency: templateSettings.currency || 'USD',
+      showLogo: templateSettings.showLogo !== undefined ? templateSettings.showLogo : true,
+      showInvoiceNumber: templateSettings.showInvoiceNumber !== undefined ? templateSettings.showInvoiceNumber : true,
+      showDates: templateSettings.showDates !== undefined ? templateSettings.showDates : true,
+      showPaymentTerms: templateSettings.showPaymentTerms !== undefined ? templateSettings.showPaymentTerms : true,
+      showNotes: templateSettings.showNotes !== undefined ? templateSettings.showNotes : true,
+      showTaxId: templateSettings.showTaxId !== undefined ? templateSettings.showTaxId : false,
+      showItemDetails: templateSettings.showItemDetails !== undefined ? templateSettings.showItemDetails : true,
+      notes: templateSettings.notes || '',
+      ...companyInfo
+    }
+    
+    // Format invoice data for renderer
+    const formattedInvoice = {
+      ...invoice,
+      currency: invoice.currency || settings.defaultCurrency || 'USD',
+      items: invoice.items || []
+    }
+    
+    const html = await renderInvoiceHTML(formattedInvoice, fullTemplate)
+    return html
+  }
 
   async function loadInvoice() {
     try {
@@ -257,99 +257,57 @@ export default function InvoicePreviewPage() {
       toast.loading('Generating PDF...', {
         id: 'pdf-download'
       })
-      
 
-      
-      // Prepare company info
-      const companyInfo = {
-        name: settings.companyName || 'Your Company',
-        address: '123 Business St\nCity, State 12345',
-        email: 'contact@yourcompany.com',
-        phone: '+1 (555) 123-4567',
-        logoUrl: settings.companyLogo || ''
+      // Dynamically import html2canvas and jsPDF
+      const [html2canvas, { jsPDF }] = await Promise.all([
+        import('html2canvas'),
+        import('jspdf')
+      ])
+
+      // Get the invoice preview element
+      const element = document.getElementById('invoice-preview')
+      if (!element) {
+        throw new Error('Invoice preview element not found')
       }
-      
-      // Try to load company info from localStorage
-      const savedCompanyInfo = localStorage.getItem('company-info')
-      if (savedCompanyInfo) {
-        try {
-          const parsed = JSON.parse(savedCompanyInfo)
-          Object.assign(companyInfo, {
-            name: parsed.companyName || companyInfo.name,
-            address: parsed.companyAddress || companyInfo.address,
-            email: parsed.companyEmail || companyInfo.email,
-            phone: parsed.companyPhone || companyInfo.phone,
-            logoUrl: parsed.logoUrl || companyInfo.logoUrl
-          })
-        } catch (error) {
-          console.error('Error parsing company info:', error)
-        }
-      }
-      
-      // Create full template with all settings
-      const fullTemplate = {
-        templateId: finalTemplateSettings.templateId || 'stripe-inspired',
-        logoSize: finalTemplateSettings.logoSize || [80],
-        logoBorderRadius: finalTemplateSettings.logoBorderRadius || [8],
-        invoicePadding: finalTemplateSettings.invoicePadding || [48],
-        fontFamily: finalTemplateSettings.fontFamily || 'inter',
-        fontSize: finalTemplateSettings.fontSize || [14],
-        lineHeight: finalTemplateSettings.lineHeight || [1.6],
-        tableHeaderSize: finalTemplateSettings.tableHeaderSize || [13],
-        primaryColor: finalTemplateSettings.primaryColor || '#000000',
-        secondaryColor: finalTemplateSettings.secondaryColor || '#666666',
-        accentColor: finalTemplateSettings.accentColor || '#0066FF',
-        backgroundColor: finalTemplateSettings.backgroundColor || '#FFFFFF',
-        borderColor: finalTemplateSettings.borderColor || '#E5E5E5',
-        currency: finalTemplateSettings.currency || 'USD',
-        showLogo: finalTemplateSettings.showLogo !== undefined ? finalTemplateSettings.showLogo : true,
-        showInvoiceNumber: finalTemplateSettings.showInvoiceNumber !== undefined ? finalTemplateSettings.showInvoiceNumber : true,
-        showDates: finalTemplateSettings.showDates !== undefined ? finalTemplateSettings.showDates : true,
-        showPaymentTerms: finalTemplateSettings.showPaymentTerms !== undefined ? finalTemplateSettings.showPaymentTerms : true,
-        showNotes: finalTemplateSettings.showNotes !== undefined ? finalTemplateSettings.showNotes : true,
-        showTaxId: finalTemplateSettings.showTaxId !== undefined ? finalTemplateSettings.showTaxId : false,
-        showItemDetails: finalTemplateSettings.showItemDetails !== undefined ? finalTemplateSettings.showItemDetails : true,
-        notes: finalTemplateSettings.notes || '',
-        ...companyInfo
-      }
-      
-      // Format invoice data
-      const formattedInvoice = {
-        ...invoice,
-        currency: invoice.currency || settings.defaultCurrency || 'USD',
-        items: invoice.items || []
-      }
-      
-      // Call the PDF API
-      const response = await fetch('/api/generate-pdf', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          invoice: formattedInvoice,
-          template: fullTemplate,
-          companyInfo: companyInfo
-        })
+
+      // Generate canvas from HTML
+      const canvas = await html2canvas.default(element, {
+        scale: 2, // Higher resolution
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: finalTemplateSettings?.backgroundColor || '#FFFFFF',
+        width: element.scrollWidth,
+        height: element.scrollHeight,
+        scrollX: 0,
+        scrollY: 0,
       })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(`PDF generation failed: ${errorData.details}`)
-      }
+      // Create PDF
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+        compress: true,
+      })
 
-      // Get the PDF blob
-      const pdfBlob = await response.blob()
+      // Calculate dimensions for A4
+      const imgWidth = 210 // A4 width in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width
       
-      // Create download link
-      const url = window.URL.createObjectURL(pdfBlob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `invoice-${invoice.invoice_number || 'preview'}.pdf`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
+      // Add image to PDF
+      pdf.addImage(
+        canvas.toDataURL('image/png', 1.0),
+        'PNG',
+        0,
+        0,
+        imgWidth,
+        imgHeight,
+        undefined,
+        'FAST'
+      )
+
+      // Save PDF
+      pdf.save(`invoice-${invoice.invoice_number || 'preview'}.pdf`)
 
       toast.success('PDF downloaded successfully!', {
         id: 'pdf-download'
@@ -546,7 +504,7 @@ export default function InvoicePreviewPage() {
                     id="invoice-preview"
                     className="print:shadow-none w-full"
                     style={{ 
-                      backgroundColor: templateSettings?.backgroundColor || '#FFFFFF',
+                      backgroundColor: finalTemplateSettings?.backgroundColor || '#FFFFFF',
                       minHeight: '800px' // Ensure minimum height for consistent rendering
                     }}
                     dangerouslySetInnerHTML={{ 
