@@ -21,6 +21,7 @@ interface Invoice {
   tax_amount: number
   total_amount: number
   notes: string | null
+  terms?: string | null
   client_id: string
   project_id: string | null
   created_at: string
@@ -356,6 +357,7 @@ export default function InvoicePreviewPage() {
       issueDate: invoice.issue_date,
       dueDate: invoice.due_date,
       notes: invoice.notes,
+      paymentTerms: invoice.terms,
       items: invoice.items || [],
       projectName: invoice.projects?.name
     }

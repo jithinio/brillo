@@ -852,6 +852,7 @@ export default function InvoicesPage() {
       issueDate: invoice.issue_date,
       dueDate: invoice.due_date,
       notes: invoice.notes,
+      paymentTerms: invoice.terms,
       items: invoice.items || [],
       projectName: invoice.projects?.name
     }
@@ -1127,8 +1128,8 @@ export default function InvoicesPage() {
                     </div>
                   </div>
 
-                  {/* Project & Notes Information */}
-                  {(selectedInvoice.projects?.name || selectedInvoice.notes) && (
+                  {/* Project, Terms & Notes Information */}
+                  {(selectedInvoice.projects?.name || selectedInvoice.terms || selectedInvoice.notes) && (
                     <div className="mt-6 pt-4 border-t border-gray-100">
                       <div className="space-y-4">
                         {selectedInvoice.projects?.name && (
@@ -1141,6 +1142,12 @@ export default function InvoicesPage() {
                             >
                               {selectedInvoice.projects.name}
                             </Button>
+                          </div>
+                        )}
+                        {selectedInvoice.terms && (
+                          <div>
+                            <p className="text-sm text-gray-500 mb-1">Payment Terms</p>
+                            <p className="text-sm text-gray-700">{selectedInvoice.terms}</p>
                           </div>
                         )}
                         {selectedInvoice.notes && (

@@ -128,6 +128,7 @@ export default function GenerateInvoicePage() {
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined)
   const [clientCurrency, setClientCurrency] = useState(getDefaultCurrency())
   const [notes, setNotes] = useState("")
+  const [paymentTerms, setPaymentTerms] = useState("Net 30")
   const [items, setItems] = useState<InvoiceItem[]>([{ id: "1", description: "", quantity: 1, rate: 0 }])
   
   // Tax state
@@ -329,6 +330,11 @@ export default function GenerateInvoicePage() {
         // Set notes
         if (editInfo.notes) {
           setNotes(editInfo.notes)
+        }
+        
+        // Set payment terms
+        if (editInfo.paymentTerms) {
+          setPaymentTerms(editInfo.paymentTerms)
         }
         
         // Set items
@@ -651,7 +657,7 @@ export default function GenerateInvoicePage() {
           issue_date: invoiceDate.toISOString().split('T')[0],
           due_date: (dueDate?.toISOString() || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()).split('T')[0],
           notes: notes || '',
-          terms: ''
+          terms: paymentTerms || ''
         }
 
         console.log('Draft invoice insert data:', invoiceInsertData)
@@ -708,7 +714,7 @@ export default function GenerateInvoicePage() {
           total_amount: total,
           status: 'draft' as const,
           notes: notes || '',
-          terms: '',
+          terms: paymentTerms || '',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           clients: {
@@ -814,7 +820,7 @@ export default function GenerateInvoicePage() {
           issue_date: invoiceDate.toISOString().split('T')[0], // DATE format (YYYY-MM-DD)
           due_date: (dueDate?.toISOString() || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()).split('T')[0], // DATE format
           notes: notes || '',
-          terms: '' // Empty for now, can be added later
+          terms: paymentTerms || ''
         }
 
         console.log('Invoice insert data:', invoiceInsertData)
@@ -917,6 +923,7 @@ export default function GenerateInvoicePage() {
                 tax_amount: tax,
                 total_amount: total,
                 notes: notes || '',
+                terms: paymentTerms || '',
                 updated_at: new Date().toISOString(),
                 clients: {
                   name: selectedClient.name,
@@ -949,7 +956,7 @@ export default function GenerateInvoicePage() {
             total_amount: total,
             status: 'draft' as const,
             notes: notes || '',
-            terms: '',
+            terms: paymentTerms || '',
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
             clients: {
@@ -1489,19 +1496,42 @@ export default function GenerateInvoicePage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-xl font-medium">Notes</CardTitle>
-              <CardDescription>Additional notes or payment terms for this invoice.</CardDescription>
+              <CardTitle className="text-xl font-medium">Notes & Terms</CardTitle>
+              <CardDescription>Additional notes and payment terms for this invoice.</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea
-                  id="notes"
-                  placeholder="Additional notes or payment terms..."
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows={4}
-                />
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="paymentTerms">Payment Terms</Label>
+                  <Select value={paymentTerms} onValueChange={setPaymentTerms}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select payment terms" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Due on receipt">Due on receipt</SelectItem>
+                      <SelectItem value="Net 7">Net 7 days</SelectItem>
+                      <SelectItem value="Net 15">Net 15 days</SelectItem>
+                      <SelectItem value="Net 30">Net 30 days</SelectItem>
+                      <SelectItem value="Net 60">Net 60 days</SelectItem>
+                      <SelectItem value="Net 90">Net 90 days</SelectItem>
+                      <SelectItem value="2/10 Net 30">2/10 Net 30</SelectItem>
+                      <SelectItem value="1/10 Net 30">1/10 Net 30</SelectItem>
+                      <SelectItem value="EOM">End of month</SelectItem>
+                      <SelectItem value="COD">Cash on delivery</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="notes">Notes</Label>
+                  <Textarea
+                    id="notes"
+                    placeholder="Additional notes for this invoice..."
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows={4}
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>

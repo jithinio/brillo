@@ -12,6 +12,11 @@ const USE_DATABASE_SETTINGS = true
 interface AppSettings {
   defaultCurrency: string
   companyName: string
+  companyAddress: string
+  companyEmail: string
+  companyPhone: string
+  companyWebsite: string
+  companyRegistration: string
   companyLogo: string
   taxRate: number
   taxName: string
@@ -31,6 +36,11 @@ interface SettingsContextType {
 const defaultSettings: AppSettings = {
   defaultCurrency: "USD",
   companyName: "Suitebase",
+  companyAddress: "123 Business St, City, State 12345",
+  companyEmail: "contact@suitebase.com",
+  companyPhone: "+1 (555) 123-4567",
+  companyWebsite: "https://suitebase.com",
+  companyRegistration: "",
   companyLogo: "",
   taxRate: 8.0,
   taxName: "Sales Tax",
@@ -90,6 +100,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           setSettings(prev => ({
             ...prev,
             companyName: dbSettings.company_name || prev.companyName,
+            companyAddress: dbSettings.company_address || prev.companyAddress,
+            companyEmail: dbSettings.company_email || prev.companyEmail,
+            companyPhone: dbSettings.company_phone || prev.companyPhone,
+            companyWebsite: dbSettings.company_website || prev.companyWebsite,
+            companyRegistration: dbSettings.company_registration || prev.companyRegistration,
             companyLogo: dbSettings.company_logo || "", // Always use database value for logo
             defaultCurrency: dbSettings.default_currency || prev.defaultCurrency,
             taxRate: dbSettings.tax_rate || prev.taxRate,
@@ -128,6 +143,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                 setSettings(prev => ({
                   ...prev,
                   companyName: dbSettings.company_name || prev.companyName,
+                  companyAddress: dbSettings.company_address || prev.companyAddress,
+                  companyEmail: dbSettings.company_email || prev.companyEmail,
+                  companyPhone: dbSettings.company_phone || prev.companyPhone,
+                  companyWebsite: dbSettings.company_website || prev.companyWebsite,
+                  companyRegistration: dbSettings.company_registration || prev.companyRegistration,
                   companyLogo: dbSettings.company_logo || "",
                   defaultCurrency: dbSettings.default_currency || prev.defaultCurrency,
                   taxRate: dbSettings.tax_rate || prev.taxRate,
@@ -200,6 +220,21 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       switch (key) {
         case 'companyName':
           dbSettingsUpdate.company_name = value
+          break
+        case 'companyAddress':
+          dbSettingsUpdate.company_address = value
+          break
+        case 'companyEmail':
+          dbSettingsUpdate.company_email = value
+          break
+        case 'companyPhone':
+          dbSettingsUpdate.company_phone = value
+          break
+        case 'companyWebsite':
+          dbSettingsUpdate.company_website = value
+          break
+        case 'companyRegistration':
+          dbSettingsUpdate.company_registration = value
           break
         case 'companyLogo':
           dbSettingsUpdate.company_logo = value

@@ -68,54 +68,77 @@ export default function SettingsPage() {
 
 
 
-  // Load settings from localStorage on component mount
+  // Load settings from localStorage and settings provider on component mount
   useEffect(() => {
     const savedGeneral = localStorage.getItem('general-settings')
-    const savedCompany = localStorage.getItem('company-info')
     const savedTax = localStorage.getItem('tax-info')
     const savedNotifications = localStorage.getItem('notifications')
-    // No longer loading logo from localStorage - using settings provider only
-
+    
+    // Load general settings
     if (savedGeneral) {
       const parsed = JSON.parse(savedGeneral)
       setGeneralSettings(prev => ({
         ...prev,
-        defaultCurrency: parsed.defaultCurrency || prev.defaultCurrency,
-        invoicePrefix: parsed.invoicePrefix || prev.invoicePrefix,
+        defaultCurrency: parsed.defaultCurrency || settings.defaultCurrency || prev.defaultCurrency,
+        invoicePrefix: parsed.invoicePrefix || settings.invoicePrefix || prev.invoicePrefix,
       }))
-      // Sync currency with global currency system
-      if (parsed.defaultCurrency && parsed.defaultCurrency !== getDefaultCurrency()) {
-        setDefaultCurrency(parsed.defaultCurrency)
-      }
     } else {
-      // Load current currency from global system
-      const currentCurrency = getDefaultCurrency()
-      setGeneralSettings(prev => ({ ...prev, defaultCurrency: currentCurrency }))
+      // Use settings provider values (from database) as fallback
+      setGeneralSettings(prev => ({
+        ...prev,
+        defaultCurrency: settings.defaultCurrency || prev.defaultCurrency,
+        invoicePrefix: settings.invoicePrefix || prev.invoicePrefix,
+      }))
     }
     
+    // Load company info from settings provider (database) first, then localStorage as override
+    const savedCompany = localStorage.getItem('company-info')
     if (savedCompany) {
       const parsed = JSON.parse(savedCompany)
       setCompanyInfo(prev => ({
-        companyName: parsed.companyName || prev.companyName,
-        companyAddress: parsed.companyAddress || prev.companyAddress,
-        companyPhone: parsed.companyPhone || prev.companyPhone,
-        companyWebsite: parsed.companyWebsite || prev.companyWebsite,
-        companyEmail: parsed.companyEmail || prev.companyEmail,
-        companyRegistration: parsed.companyRegistration || prev.companyRegistration,
+        companyName: parsed.companyName || settings.companyName || prev.companyName,
+        companyAddress: parsed.companyAddress || settings.companyAddress || prev.companyAddress,
+        companyPhone: parsed.companyPhone || settings.companyPhone || prev.companyPhone,
+        companyWebsite: parsed.companyWebsite || settings.companyWebsite || prev.companyWebsite,
+        companyEmail: parsed.companyEmail || settings.companyEmail || prev.companyEmail,
+        companyRegistration: parsed.companyRegistration || settings.companyRegistration || prev.companyRegistration,
+      }))
+    } else {
+      // Use settings provider values (from database) as primary source
+      setCompanyInfo(prev => ({
+        companyName: settings.companyName || prev.companyName,
+        companyAddress: settings.companyAddress || prev.companyAddress,
+        companyPhone: settings.companyPhone || prev.companyPhone,
+        companyWebsite: settings.companyWebsite || prev.companyWebsite,
+        companyEmail: settings.companyEmail || prev.companyEmail,
+        companyRegistration: settings.companyRegistration || prev.companyRegistration,
       }))
     }
+    
+    // Load tax info 
     if (savedTax) {
       const parsed = JSON.parse(savedTax)
       setTaxInfo(prev => ({
         taxId: parsed.taxId || prev.taxId,
-        defaultTaxRate: parsed.defaultTaxRate || prev.defaultTaxRate,
-        taxName: parsed.taxName || prev.taxName,
+        defaultTaxRate: parsed.defaultTaxRate || settings.taxRate?.toString() || prev.defaultTaxRate,
+        taxName: parsed.taxName || settings.taxName || prev.taxName,
         taxJurisdiction: parsed.taxJurisdiction || prev.taxJurisdiction,
         taxAddress: parsed.taxAddress || prev.taxAddress,
-        includeTaxInPrices: parsed.includeTaxInPrices !== undefined ? parsed.includeTaxInPrices : prev.includeTaxInPrices,
-        autoCalculateTax: parsed.autoCalculateTax !== undefined ? parsed.autoCalculateTax : prev.autoCalculateTax,
+        includeTaxInPrices: parsed.includeTaxInPrices !== undefined ? parsed.includeTaxInPrices : settings.includeTaxInPrices || prev.includeTaxInPrices,
+        autoCalculateTax: parsed.autoCalculateTax !== undefined ? parsed.autoCalculateTax : settings.autoCalculateTax || prev.autoCalculateTax,
+      }))
+    } else {
+      // Use settings provider values (from database) as primary source
+      setTaxInfo(prev => ({
+        ...prev,
+        defaultTaxRate: settings.taxRate?.toString() || prev.defaultTaxRate,
+        taxName: settings.taxName || prev.taxName,
+        includeTaxInPrices: settings.includeTaxInPrices !== undefined ? settings.includeTaxInPrices : prev.includeTaxInPrices,
+        autoCalculateTax: settings.autoCalculateTax !== undefined ? settings.autoCalculateTax : prev.autoCalculateTax,
       }))
     }
+    
+    // Load notifications
     if (savedNotifications) {
       const parsed = JSON.parse(savedNotifications)
       setNotifications(prev => ({
@@ -127,13 +150,13 @@ export default function SettingsPage() {
     
     // Always use settings provider as the source of truth for logo
     setCompanyLogo(settings.companyLogo || "")
-  }, [settings.companyLogo])
+  }, [settings]) // Add settings as dependency so it updates when database values load
 
   const handleSaveSettings = async () => {
     try {
       setSaving(true)
       
-      // Save all settings to localStorage (except logo which is managed by settings provider)
+      // Save all settings to localStorage (for backup/faster loading)
       localStorage.setItem('general-settings', JSON.stringify(generalSettings))
       localStorage.setItem('company-info', JSON.stringify(companyInfo))
       localStorage.setItem('tax-info', JSON.stringify(taxInfo))
@@ -141,22 +164,28 @@ export default function SettingsPage() {
       
       // Update global currency setting
       setDefaultCurrency(generalSettings.defaultCurrency)
-      updateSetting('defaultCurrency', generalSettings.defaultCurrency)
       
-      // Update other settings in the global provider
+      // Update ALL settings in the global provider (which syncs to database)
+      updateSetting('defaultCurrency', generalSettings.defaultCurrency)
+      updateSetting('invoicePrefix', generalSettings.invoicePrefix)
+      
+      // Update company information
       updateSetting('companyName', companyInfo.companyName)
+      updateSetting('companyAddress', companyInfo.companyAddress)
+      updateSetting('companyEmail', companyInfo.companyEmail)
+      updateSetting('companyPhone', companyInfo.companyPhone)
+      updateSetting('companyWebsite', companyInfo.companyWebsite)
+      updateSetting('companyRegistration', companyInfo.companyRegistration)
       updateSetting('companyLogo', companyLogo)
+      
+      // Update tax information
       updateSetting('taxRate', parseFloat(taxInfo.defaultTaxRate))
       updateSetting('taxName', taxInfo.taxName)
       updateSetting('includeTaxInPrices', taxInfo.includeTaxInPrices)
       updateSetting('autoCalculateTax', taxInfo.autoCalculateTax)
-      updateSetting('invoicePrefix', generalSettings.invoicePrefix)
-      
-      // In a real app, you would send this to your backend API
-      // await api.saveUserSettings({ generalSettings, companyInfo, taxInfo, notifications })
       
       toast.success("Settings saved successfully", {
-        description: "Currency changes will reflect across the app."
+        description: "All changes have been saved to the database and will be available across sessions."
       })
     } catch (error) {
       console.error("Error saving settings:", error)

@@ -84,7 +84,7 @@ export async function renderInvoiceHTML(invoice: any, template: any): Promise<st
     subtotal: invoice.amount || 0,
     tax: invoice.tax_amount || 0,
     total: invoice.total_amount || 0,
-    paymentTerms: 'Net 30',
+    paymentTerms: invoice.terms || 'Net 30',
     notes: invoice.notes || template.notes || '',
     currency: template.currency || 'USD'
   }

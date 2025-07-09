@@ -196,7 +196,7 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
         <div className="mt-12 pt-6 border-t border-gray-300 text-xs text-gray-500 text-center">
           <div>Thank you for your business!</div>
           <div className="mt-2">
-            Please remit payment within 30 days of the due date.
+            Payment Terms: {invoice.terms || 'Net 30'}
           </div>
         </div>
       </div>

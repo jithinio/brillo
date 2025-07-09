@@ -45,6 +45,7 @@ export type Invoice = {
   issue_date: string
   due_date: string
   notes?: string
+  terms?: string
   created_at: string
   clients?: {
     id?: string
