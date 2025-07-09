@@ -51,25 +51,25 @@ const statusConfig = {
   active: {
     label: "In Progress",
     icon: Clock,
-    variant: "outline" as const,
+    variant: "outline-solid" as const,
     iconClassName: "text-blue-500",
   },
   completed: {
     label: "Done",
     icon: CheckCircle,
-    variant: "outline" as const,
+    variant: "outline-solid" as const,
     iconClassName: "text-green-500",
   },
   on_hold: {
     label: "On Hold",
     icon: Pause,
-    variant: "outline" as const,
+    variant: "outline-solid" as const,
     iconClassName: "text-yellow-500",
   },
   cancelled: {
     label: "Cancelled",
     icon: XCircle,
-    variant: "outline" as const,
+    variant: "outline-solid" as const,
     iconClassName: "text-gray-400",
   },
 }
@@ -157,7 +157,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
         const client = row.original.clients
         return client ? (
           <div className="flex items-center space-x-2 min-w-[150px] max-w-[180px]">
-            <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <User className="h-4 w-4 text-muted-foreground shrink-0" />
             <div className="truncate font-normal" title={client.name}>
               {client.name}
             </div>
@@ -335,7 +335,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
           return (
             <div className="min-w-[120px] max-w-[140px]">
               <div className="flex items-center space-x-2">
-                <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
                 <span className="text-sm truncate">{date.toLocaleDateString()}</span>
               </div>
               {row.original.status !== "completed" && (

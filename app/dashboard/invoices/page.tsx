@@ -825,28 +825,28 @@ export default function InvoicesPage() {
     const configs = {
       active: {
         label: "Active",
-        variant: "outline" as const,
+        variant: "outline-solid" as const,
         iconClassName: "text-green-500",
       },
       completed: {
         label: "Completed",
-        variant: "outline" as const,
+        variant: "outline-solid" as const,
         iconClassName: "text-blue-500",
       },
       on_hold: {
         label: "On Hold",
-        variant: "outline" as const,
+        variant: "outline-solid" as const,
         iconClassName: "text-yellow-500",
       },
       cancelled: {
         label: "Cancelled",
-        variant: "outline" as const,
+        variant: "outline-solid" as const,
         iconClassName: "text-gray-400",
       },
     }
     return configs[status as keyof typeof configs] || {
       label: status.replace('_', ' ').toUpperCase(),
-      variant: "outline" as const,
+      variant: "outline-solid" as const,
       iconClassName: "text-gray-400",
     }
   }
@@ -1127,11 +1127,11 @@ export default function InvoicesPage() {
                                 {item.description || `Item ${index + 1}`}
                               </p>
                               <span className="text-xs text-gray-400">•</span>
-                              <p className="text-xs text-gray-500 flex-shrink-0">
+                              <p className="text-xs text-gray-500 shrink-0">
                                 {item.quantity} × {formatCurrency(item.rate, selectedInvoice.currency)}
                               </p>
                             </div>
-                            <div className="ml-4 flex-shrink-0">
+                            <div className="ml-4 shrink-0">
                               <p className="text-sm font-medium tabular-nums text-gray-900">
                                 {formatCurrency(item.amount, selectedInvoice.currency)}
                               </p>

@@ -75,31 +75,31 @@ const statusConfig = {
   draft: {
     label: "Draft",
     icon: Clock,
-    variant: "outline" as const,
+    variant: "outline-solid" as const,
     iconClassName: "text-gray-500",
   },
   sent: {
     label: "Sent",
     icon: Send,
-    variant: "outline" as const,
+    variant: "outline-solid" as const,
     iconClassName: "text-blue-500",
   },
   paid: {
     label: "Paid",
     icon: CheckCircle,
-    variant: "outline" as const,
+    variant: "outline-solid" as const,
     iconClassName: "text-green-500",
   },
   overdue: {
     label: "Overdue",
     icon: XCircle,
-    variant: "outline" as const,
+    variant: "outline-solid" as const,
     iconClassName: "text-red-500",
   },
   cancelled: {
     label: "Cancelled",
     icon: XCircle,
-    variant: "outline" as const,
+    variant: "outline-solid" as const,
     iconClassName: "text-gray-400",
   },
 }
@@ -161,7 +161,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
         return (
           <div className="min-w-[120px] max-w-[150px]">
             <div className="flex items-center space-x-2">
-              <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
               <Button
                 variant="link"
                 className="p-0 h-auto font-medium text-sm hover:underline"
@@ -195,7 +195,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
         const client = row.original.clients
         return client ? (
           <div className="flex items-center space-x-2 min-w-[120px] max-w-[150px]">
-            <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <User className="h-4 w-4 text-muted-foreground shrink-0" />
             <Button
               variant="link"
               className="p-0 h-auto font-medium text-sm hover:underline"
@@ -325,7 +325,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
           return (
             <div className="min-w-[100px] max-w-[120px]">
               <div className="flex items-center space-x-2">
-                <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
                 <span className="text-sm truncate">{date.toLocaleDateString()}</span>
               </div>
             </div>
@@ -363,7 +363,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
           return (
             <div className="min-w-[120px] max-w-[140px]">
               <div className="flex items-center space-x-2">
-                <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
                 <span className="text-sm truncate">{date.toLocaleDateString()}</span>
               </div>
               {status !== "paid" && status !== "cancelled" && (

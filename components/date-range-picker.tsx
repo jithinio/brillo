@@ -22,7 +22,7 @@ export function CalendarDateRangePicker({ className }: React.HTMLAttributes<HTML
         <PopoverTrigger asChild>
           <Button
             id="date"
-            variant={"outline"}
+            variant={"outline-solid"}
             className={cn("w-[300px] justify-start text-left font-normal", !date && "text-muted-foreground")}
           >
             <CalendarIcon className="mr-2 h-4 w-4" />

@@ -123,22 +123,22 @@ const mockClients: Client[] = [
 const statusConfig = {
   active: {
     label: "Active",
-    variant: "outline" as const,
+    variant: "outline-solid" as const,
     iconClassName: "text-green-500",
   },
   completed: {
     label: "Completed",
-    variant: "outline" as const,
+    variant: "outline-solid" as const,
     iconClassName: "text-blue-500",
   },
   on_hold: {
     label: "On Hold",
-    variant: "outline" as const,
+    variant: "outline-solid" as const,
     iconClassName: "text-yellow-500",
   },
   cancelled: {
     label: "Cancelled",
-    variant: "outline" as const,
+    variant: "outline-solid" as const,
     iconClassName: "text-gray-400",
   },
 }
@@ -629,7 +629,7 @@ export default function ClientsPage() {
                           {project.name}
                         </span>
                         <Badge
-                          variant={statusConfig[project.status as keyof typeof statusConfig]?.variant || "outline"}
+                          variant={statusConfig[project.status as keyof typeof statusConfig]?.variant || "outline-solid"}
                           className="text-xs text-zinc-700 font-medium"
                         >
                           <div className={`w-2 h-2 rounded-full mr-1.5 ${statusConfig[project.status as keyof typeof statusConfig]?.iconClassName?.replace('text-', 'bg-') || 'bg-gray-400'}`}></div>

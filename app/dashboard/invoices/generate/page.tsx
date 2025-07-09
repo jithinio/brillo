@@ -1735,11 +1735,11 @@ export default function GenerateInvoicePage() {
                             {item.description || `Item ${index + 1}`}
                           </p>
                           <span className="text-xs text-gray-400">•</span>
-                          <p className="text-xs text-gray-500 flex-shrink-0">
+                          <p className="text-xs text-gray-500 shrink-0">
                             {item.quantity} × {formatCurrency(item.rate, clientCurrency)}
                           </p>
                         </div>
-                        <div className="ml-4 flex-shrink-0">
+                        <div className="ml-4 shrink-0">
                           <p className="text-sm font-medium tabular-nums text-gray-900">
                             {formatCurrency(item.quantity * item.rate, clientCurrency)}
                           </p>
@@ -2001,11 +2001,11 @@ export default function GenerateInvoicePage() {
                               {item.description || `Item ${index + 1}`}
                             </p>
                             <span className="text-xs text-gray-400">•</span>
-                            <p className="text-xs text-gray-500 flex-shrink-0">
+                            <p className="text-xs text-gray-500 shrink-0">
                               {item.quantity} × {formatCurrency(item.rate, generatedInvoiceData.currency)}
                             </p>
                           </div>
-                          <div className="ml-4 flex-shrink-0">
+                          <div className="ml-4 shrink-0">
                             <p className="text-sm font-medium tabular-nums text-gray-900">
                               {formatCurrency(item.quantity * item.rate, generatedInvoiceData.currency)}
                             </p>

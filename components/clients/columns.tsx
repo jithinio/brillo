@@ -51,22 +51,22 @@ export type Client = {
 const statusConfig = {
   active: {
     label: "Active",
-    variant: "outline" as const,
+    variant: "outline-solid" as const,
     iconClassName: "text-green-500",
   },
   completed: {
     label: "Completed",
-    variant: "outline" as const,
+    variant: "outline-solid" as const,
     iconClassName: "text-blue-500",
   },
   on_hold: {
     label: "On Hold",
-    variant: "outline" as const,
+    variant: "outline-solid" as const,
     iconClassName: "text-yellow-500",
   },
   cancelled: {
     label: "Cancelled",
-    variant: "outline" as const,
+    variant: "outline-solid" as const,
     iconClassName: "text-gray-400",
   },
 }
@@ -161,7 +161,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Client>[] {
         const company = row.getValue("company") as string
         return company ? (
           <div className="flex items-center space-x-2 min-w-[180px]">
-            <Building className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <Building className="h-4 w-4 text-muted-foreground shrink-0" />
             <span className="truncate" title={company}>
               {company}
             </span>
@@ -191,7 +191,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Client>[] {
         const email = row.getValue("email") as string
         return email ? (
           <div className="flex items-center space-x-2 min-w-[220px]">
-            <Mail className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
             <span className="truncate lowercase" title={email}>
               {email}
             </span>
@@ -210,7 +210,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Client>[] {
         const phone = row.getValue("phone") as string
         return phone ? (
           <div className="flex items-center space-x-2 min-w-[140px]">
-            <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
             <span className="truncate" title={phone}>
               {phone}
             </span>
@@ -230,7 +230,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Client>[] {
         const location = client.city || client.state
         return location ? (
           <div className="flex items-center space-x-2 min-w-[140px]">
-            <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
             <span
               className="truncate"
               title={`${client.city}${client.city && client.state ? ", " : ""}${client.state}`}
@@ -258,8 +258,8 @@ export function createColumns(actions: ColumnActions): ColumnDef<Client>[] {
             <div className="space-y-1 min-w-[180px]">
               <div className="flex items-center space-x-2">
                 <Badge
-                  variant={statusConfig[project.status as keyof typeof statusConfig]?.variant || "outline"}
-                  className="text-xs flex-shrink-0 text-zinc-700 font-medium"
+                  variant={statusConfig[project.status as keyof typeof statusConfig]?.variant || "outline-solid"}
+                  className="text-xs shrink-0 text-zinc-700 font-medium"
                 >
                   <div className={`w-2 h-2 rounded-full mr-1.5 ${statusConfig[project.status as keyof typeof statusConfig]?.iconClassName?.replace('text-', 'bg-') || 'bg-gray-400'}`}></div>
                   {statusConfig[project.status as keyof typeof statusConfig]?.label || project.status}
