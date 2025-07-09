@@ -1942,7 +1942,7 @@ export default function CustomizeInvoicePage() {
                   </div>
 
           <div className="lg:col-span-3">
-            <Card className="sticky top-6 border-gray-200 shadow-sm">
+            <Card className="border-gray-200 shadow-sm">
               <CardHeader className="pb-4">
                 <CardTitle className="text-base font-medium">Live Preview</CardTitle>
                 <CardDescription className="text-sm">See your invoice design in real-time</CardDescription>

@@ -26,12 +26,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { PageHeader, PageContent, PageTitle } from "@/components/page-header"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { toast } from "sonner"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Upload, Loader2 } from "lucide-react"
+import { Upload, Loader2, AlertTriangle } from "lucide-react"
 import { DataTable } from "@/components/clients/data-table"
 import { createColumns, type Client } from "@/components/clients/columns"
 
@@ -538,11 +539,14 @@ export default function ClientsPage() {
         title="Clients"
       />
       <PageContent>
-        <PageTitle
-          title="Clients"
-          description="Manage your client relationships and contact information"
-          error={error}
-        />
+        {error && (
+          <Alert className="border-yellow-200 bg-yellow-50 mb-4">
+            <AlertTriangle className="h-4 w-4 text-yellow-600" />
+            <AlertDescription className="text-yellow-800">
+              {error}
+            </AlertDescription>
+          </Alert>
+        )}
 
         <DataTable 
           columns={columns} 

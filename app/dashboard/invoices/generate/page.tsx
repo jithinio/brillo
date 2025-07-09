@@ -1329,9 +1329,8 @@ export default function GenerateInvoicePage() {
       />
 
       <PageContent>
-      <div className="pt-8 min-h-screen">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:items-start">
-        <div className="lg:col-span-2 space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:items-start">
+          <div className="lg:col-span-2 space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="text-xl font-medium">
@@ -1655,7 +1654,7 @@ export default function GenerateInvoicePage() {
           </Card>
         </div>
 
-        <div className="space-y-4 lg:sticky lg:top-8 lg:self-start">
+        <div className="space-y-4">
           {/* Status Alerts - Moved outside summary card */}
           {projectData && (
             <div className="p-3 bg-green-50 border border-green-200 rounded-md">
@@ -1807,7 +1806,6 @@ export default function GenerateInvoicePage() {
             </Alert>
           )}
         </div>
-      </div>
       </div>
       </PageContent>
 

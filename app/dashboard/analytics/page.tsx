@@ -51,7 +51,7 @@ export default function AnalyticsPage() {
         }
       />
       <PageContent>
-        <PageTitle title="Analytics" description="Track your business performance and key metrics" />
+
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
           {metrics.map((metric) => (

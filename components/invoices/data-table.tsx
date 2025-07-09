@@ -163,8 +163,8 @@ export function DataTable<TData, TValue>({
   }
 
   return (
-    <div className="w-full">
-      <div className="flex items-center justify-between py-4">
+    <div className="w-full space-y-4">
+      <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <div className="relative">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />

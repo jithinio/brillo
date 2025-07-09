@@ -342,8 +342,6 @@ export default function ProfilePage() {
         }
       />
       <PageContent>
-        <PageTitle title="Profile" description="Manage your personal profile and public information" error={error} />
-
         {error && (
           <Alert>
             <AlertCircle className="h-4 w-4" />

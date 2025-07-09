@@ -549,7 +549,7 @@ export default function InvoicePreviewPage() {
       <PageContent>
         <div className="space-y-6">
           {/* Invoice Preview - Centered and responsive */}
-          <div className="flex justify-center pt-6 px-4">
+          <div className="flex justify-center px-4">
             {/* Container that adapts to invoice width + padding */}
             <div 
               className="w-full mx-auto min-w-0"

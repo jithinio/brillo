@@ -544,7 +544,7 @@ export default function ProjectsPage() {
         title="Projects"
       />
       <PageContent>
-        <PageTitle title="Projects" description="Manage your projects and track their progress" />
+
 
         {/* Summary Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

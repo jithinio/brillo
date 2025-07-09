@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Plus, Eye, Mail, Download, Trash2, X, Send, Loader2, Edit, ChevronDown, User, Building, MapPin, Phone, Clock, CheckCircle, XCircle } from "lucide-react"
+import { Plus, Eye, Mail, Download, Trash2, X, Send, Loader2, Edit, ChevronDown, User, Building, MapPin, Phone, Clock, CheckCircle, XCircle, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { PageHeader, PageContent, PageTitle } from "@/components/page-header"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { toast } from "sonner"
@@ -972,7 +973,14 @@ export default function InvoicesPage() {
         title="Invoices"
       />
       <PageContent>
-        <PageTitle title="Invoices" description="Create, send, and track your invoices" error={error} />
+        {error && (
+          <Alert className="border-yellow-200 bg-yellow-50 mb-4">
+            <AlertTriangle className="h-4 w-4 text-yellow-600" />
+            <AlertDescription className="text-yellow-800">
+              {error}
+            </AlertDescription>
+          </Alert>
+        )}
         <div className="overflow-x-auto">
           <DataTable 
             columns={columns} 

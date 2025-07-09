@@ -297,7 +297,7 @@ export default function SettingsPage() {
         }
       />
       <PageContent>
-        <PageTitle title="Settings" description="Manage your account settings and preferences" />
+
 
         <Tabs defaultValue="general" className="space-y-6">
           <TabsList>
