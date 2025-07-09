@@ -64,29 +64,29 @@ const yearlyData = [
 const miniChartConfig: ChartConfig = {
   revenue: {
     label: "Revenue",
-    color: "#059669",
+    color: "hsl(var(--chart-1))",
   },
 }
 
 const revenueChartConfig: ChartConfig = {
   revenue: {
     label: "Revenue",
-    color: "#3b82f6",
+    color: "hsl(var(--chart-1))",
   },
   expenses: {
     label: "Expenses",
-    color: "#ef4444",
+    color: "hsl(var(--chart-2))",
   },
 }
 
 const yearlyChartConfig: ChartConfig = {
   revenue: {
     label: "Revenue",
-    color: "#3b82f6",
+    color: "hsl(var(--chart-1))",
   },
   expenses: {
     label: "Expenses",
-    color: "#ef4444",
+    color: "hsl(var(--chart-2))",
   },
 }
 
@@ -109,10 +109,10 @@ const MetricCard = ({
   onPeriodChange: (value: string) => void
   formatCurrency: (amount: number) => string
 }) => (
-  <Card className="relative overflow-hidden bg-neutral-100 dark:bg-neutral-800 rounded-3xl border-0 shadow-none">
+  <Card className="relative overflow-hidden bg-card rounded-3xl border-0 shadow-none">
     <CardHeader className="p-8 pb-3">
       <div className="flex items-center justify-between">
-        <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">{title}</CardTitle>
+        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
         <Select value={period} onValueChange={onPeriodChange}>
           <SelectTrigger className="w-auto h-7 text-xs">
             <SelectValue />
@@ -138,21 +138,21 @@ const MetricCard = ({
     <CardContent className="px-8 pt-0 pb-8">
       <div className="space-y-4">
         <div className="space-y-1">
-          <div className="text-3xl font-normal text-slate-900 dark:text-slate-100">
+          <div className="text-3xl font-normal text-foreground">
             {formatCurrency(current)}
           </div>
           <div className="flex items-center gap-3" style={{ marginTop: '12px' }}>
             <div className="flex items-center gap-1">
               {trend === 'up' ? (
-                <TrendingUp className="h-3 w-3 text-emerald-600" />
+                <TrendingUp className="h-3 w-3 text-green-600" />
               ) : (
                 <TrendingDown className="h-3 w-3 text-red-600" />
               )}
-              <span className={`text-xs font-normal ${trend === 'up' ? 'text-emerald-600' : 'text-red-600'}`}>
+              <span className={`text-xs font-normal ${trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
                 {percentage}%
               </span>
             </div>
-            <span className="text-xs text-slate-500 dark:text-slate-400">vs previous period</span>
+            <span className="text-xs text-muted-foreground">vs previous period</span>
           </div>
         </div>
         
@@ -163,7 +163,7 @@ const MetricCard = ({
               <Line 
                 type="monotone" 
                 dataKey="revenue" 
-                stroke={trend === 'up' ? '#059669' : '#dc2626'} 
+                stroke={trend === 'up' ? 'hsl(var(--chart-1))' : 'hsl(var(--chart-2))'} 
                 strokeWidth={2}
                 dot={false}
               />
@@ -256,10 +256,10 @@ const RevenueChart = ({
   const dynamicTrend = calculateDynamicTrend()
 
   return (
-  <Card className="bg-neutral-100 dark:bg-neutral-800 rounded-3xl border-0 shadow-none">
+  <Card className="bg-card rounded-3xl border-0 shadow-none">
     <CardHeader className="p-8 pb-3">
       <div className="flex items-center justify-between">
-        <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">
+        <CardTitle className="text-sm font-medium text-muted-foreground">
           {period === 'this-year' ? 'This Year Revenue' :
            period === 'monthly' ? 'Monthly Revenue' :
            period === 'quarterly' ? 'Quarterly Revenue' :
@@ -292,21 +292,21 @@ const RevenueChart = ({
     <CardContent className="px-8 pt-0 pb-8">
       <div className="space-y-4">
         <div className="space-y-1">
-          <div className="text-3xl font-normal text-slate-900 dark:text-slate-100">
+          <div className="text-3xl font-normal text-foreground">
             {formatCurrency(dynamicAmount)}
           </div>
           <div className="flex items-center gap-3" style={{ marginTop: '12px' }}>
             <div className="flex items-center gap-1">
               {dynamicTrend.trend === 'up' ? (
-                <TrendingUp className="h-3 w-3 text-emerald-600" />
+                <TrendingUp className="h-3 w-3 text-green-600" />
               ) : (
                 <TrendingDown className="h-3 w-3 text-red-600" />
               )}
-              <span className={`text-xs font-normal ${dynamicTrend.trend === 'up' ? 'text-emerald-600' : 'text-red-600'}`}>
+              <span className={`text-xs font-normal ${dynamicTrend.trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
                 {dynamicTrend.percentage}%
               </span>
             </div>
-            <span className="text-xs text-slate-500 dark:text-slate-400">vs previous period</span>
+            <span className="text-xs text-muted-foreground">vs previous period</span>
           </div>
         </div>
         
@@ -328,10 +328,10 @@ const RevenueChart = ({
               <Line 
                 type="monotone" 
                 dataKey={type} 
-                stroke={type === 'revenue' ? '#3b82f6' : '#ef4444'} 
+                stroke={type === 'revenue' ? 'hsl(var(--chart-1))' : 'hsl(var(--chart-2))'} 
                 strokeWidth={3}
-                dot={{ fill: type === 'revenue' ? '#3b82f6' : '#ef4444', strokeWidth: 0, r: 4 }}
-                activeDot={{ r: 6, stroke: type === 'revenue' ? '#3b82f6' : '#ef4444', strokeWidth: 2, fill: 'white' }}
+                dot={{ fill: type === 'revenue' ? 'hsl(var(--chart-1))' : 'hsl(var(--chart-2))', strokeWidth: 0, r: 4 }}
+                activeDot={{ r: 6, stroke: type === 'revenue' ? 'hsl(var(--chart-1))' : 'hsl(var(--chart-2))', strokeWidth: 2, fill: 'white' }}
               />
             </LineChart>
           </ChartContainer>
@@ -351,10 +351,10 @@ const YearlyBarChart = ({
   onTypeChange: (value: 'revenue' | 'expenses') => void
   formatCurrency: (amount: number) => string
 }) => (
-  <Card className="bg-neutral-100 dark:bg-neutral-800 rounded-3xl border-0 shadow-none">
+  <Card className="bg-card rounded-3xl border-0 shadow-none">
     <CardHeader className="p-8 pb-3">
       <div className="flex items-center justify-between">
-        <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">
+        <CardTitle className="text-sm font-medium text-muted-foreground">
           Yearly {type === 'revenue' ? 'Revenue' : 'Expenses'}
         </CardTitle>
         <Select value={type} onValueChange={onTypeChange}>
@@ -372,7 +372,7 @@ const YearlyBarChart = ({
       <div className="space-y-4">
         {/* Yearly Growth section */}
         <div className="space-y-1">
-          <div className="text-3xl font-normal text-slate-900 dark:text-slate-100">
+          <div className="text-3xl font-normal text-foreground">
             {(() => {
               // Calculate yearly growth percentage
               const currentYear = yearlyData[yearlyData.length - 1][type]
@@ -391,18 +391,18 @@ const YearlyBarChart = ({
                 return (
                   <>
                     {trend === 'up' ? (
-                      <TrendingUp className="h-3 w-3 text-emerald-600" />
+                      <TrendingUp className="h-3 w-3 text-green-600" />
                     ) : (
                       <TrendingDown className="h-3 w-3 text-red-600" />
                     )}
-                    <span className={`text-xs font-normal ${trend === 'up' ? 'text-emerald-600' : 'text-red-600'}`}>
+                    <span className={`text-xs font-normal ${trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
                       {Math.abs(growthPercentage).toFixed(1)}%
                     </span>
                   </>
                 )
               })()}
             </div>
-            <span className="text-xs text-slate-500 dark:text-slate-400">yearly growth</span>
+            <span className="text-xs text-muted-foreground">yearly growth</span>
           </div>
         </div>
 
@@ -414,12 +414,12 @@ const YearlyBarChart = ({
               dataKey="year" 
               axisLine={false}
               tickLine={false}
-              tick={{ fontSize: 12, fill: '#64748b' }}
-              className="dark:[&_.recharts-cartesian-axis-tick_text]:fill-slate-300"
+              tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+              className="[&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground"
             />
             <Bar 
               dataKey={type} 
-              fill={type === 'revenue' ? '#3b82f6' : '#ef4444'}
+              fill={type === 'revenue' ? 'hsl(var(--chart-1))' : 'hsl(var(--chart-2))'}
               radius={[64, 64, 0, 0]}
             >
               <LabelList 
@@ -427,8 +427,8 @@ const YearlyBarChart = ({
                 position="top" 
                 offset={16}
                 style={{ fontSize: '14px', fontWeight: '600' }}
-                fill="#374151"
-                className="dark:fill-slate-200"
+                fill="hsl(var(--foreground))"
+                className="fill-foreground"
                 formatter={(value: any) => `${formatCurrency(value / 1000)}k`}
               />
             </Bar>
@@ -464,10 +464,10 @@ export default function DashboardPage() {
     <div className="p-12">
       {/* Dynamic Greeting */}
       <div className="mb-8">
-        <h1 className="text-3xl font-normal text-slate-900 dark:text-slate-100 mb-2">
+        <h1 className="text-3xl font-normal text-foreground mb-2">
           {greeting}, {userName}! 👋
         </h1>
-        <p className="text-slate-600 dark:text-slate-300">Here's what's happening with your business today.</p>
+        <p className="text-muted-foreground">Here's what's happening with your business today.</p>
       </div>
 
       {/* Summary Section */}
