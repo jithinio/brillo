@@ -1515,10 +1515,6 @@ export default function CustomizeInvoicePage() {
     <>
       <PageHeader
         title="Customize Invoice Template"
-        breadcrumbs={[
-          { label: "Invoices", href: "/dashboard/invoices" },
-          { label: "Customize" }
-        ]}
         action={
           <Button size="sm" onClick={saveTemplate} disabled={saving}>
             {saving ? (

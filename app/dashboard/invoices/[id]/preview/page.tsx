@@ -468,10 +468,6 @@ export default function InvoicePreviewPage() {
       <>
         <PageHeader
           title="Invoice Preview"
-          breadcrumbs={[
-            { label: "Invoices", href: "/dashboard/invoices" },
-            { label: "Preview" }
-          ]}
         />
         <PageContent>
           <div className="flex items-center justify-center min-h-[400px]">
@@ -490,10 +486,6 @@ export default function InvoicePreviewPage() {
       <>
         <PageHeader
           title="Invoice Preview"
-          breadcrumbs={[
-            { label: "Invoices", href: "/dashboard/invoices" },
-            { label: "Preview" }
-          ]}
         />
         <PageContent>
           <div className="flex items-center justify-center min-h-[400px]">
@@ -513,10 +505,6 @@ export default function InvoicePreviewPage() {
     <>
       <PageHeader
         title={`Invoice ${invoice.invoice_number}`}
-        breadcrumbs={[
-          { label: "Invoices", href: "/dashboard/invoices" },
-          { label: "Preview" }
-        ]}
         action={
           <div className="flex items-center gap-2">
             <Button

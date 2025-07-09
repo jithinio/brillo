@@ -187,7 +187,7 @@ export default function GenerateInvoicePage() {
       const now = new Date()
       const year = now.getFullYear()
       const prefix = settings.invoicePrefix || 'INV'
-      
+
       if (isSupabaseConfigured()) {
         try {
           // Get all existing invoice numbers for the current year
@@ -201,8 +201,8 @@ export default function GenerateInvoicePage() {
             console.error('Error fetching existing invoices:', error)
             // Fallback to simple count
             const { count } = await supabase
-              .from('invoices')
-              .select('*', { count: 'exact', head: true })
+            .from('invoices')
+            .select('*', { count: 'exact', head: true })
             const invoiceCount = (count || 0) + 1
             const generatedNumber = `${prefix}-${year}-${String(invoiceCount).padStart(3, '0')}`
             setInvoiceNumber(generatedNumber)
@@ -244,7 +244,7 @@ export default function GenerateInvoicePage() {
         )
         const invoiceCount = currentYearInvoices.length + 1
         const generatedNumber = `${prefix}-${year}-${String(invoiceCount).padStart(3, '0')}`
-        setInvoiceNumber(generatedNumber)
+      setInvoiceNumber(generatedNumber)
       }
     }
 
@@ -1304,10 +1304,6 @@ export default function GenerateInvoicePage() {
     <>
       <PageHeader
         title={isEditMode ? "Edit Invoice" : "Generate Invoice"}
-        breadcrumbs={[
-          { label: "Invoices", href: "/dashboard/invoices" },
-          { label: isEditMode ? "Edit Invoice" : "Generate Invoice" }
-        ]}
         action={
           <div className="flex space-x-2">
             <Button 
@@ -1644,15 +1640,15 @@ export default function GenerateInvoicePage() {
                   </Select>
                 </div>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="notes">Notes</Label>
-                  <Textarea
-                    id="notes"
+              <div className="space-y-2">
+                <Label htmlFor="notes">Notes</Label>
+                <Textarea
+                  id="notes"
                     placeholder="Additional notes for this invoice..."
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    rows={4}
-                  />
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={4}
+                />
                 </div>
               </div>
             </CardContent>

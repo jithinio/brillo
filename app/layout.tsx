@@ -1,5 +1,7 @@
 import type React from "react"
 import type { Metadata } from "next"
+import { GeistSans } from "geist/font/sans"
+import { GeistMono } from "geist/font/mono"
 import { 
   Inter, 
   Roboto, 
@@ -88,7 +90,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} ${roboto.variable} ${openSans.variable} ${lato.variable} ${poppins.variable} ${montserrat.variable} ${playfair.variable} ${merriweather.variable} ${sourceCodePro.variable} ${jetbrainsMono.variable} ${inconsolata.variable}`}>
+      <body className={`${GeistSans.variable} ${GeistMono.variable} ${inter.variable} ${roboto.variable} ${openSans.variable} ${lato.variable} ${poppins.variable} ${montserrat.variable} ${playfair.variable} ${merriweather.variable} ${sourceCodePro.variable} ${jetbrainsMono.variable} ${inconsolata.variable}`}>
         <ClientProviders>
           {children}
         </ClientProviders>

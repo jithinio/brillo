@@ -22,6 +22,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
@@ -76,6 +79,7 @@ interface ColumnActions {
   onEditProject: (project: Project) => void
   onCreateInvoice: (project: Project) => void
   onDeleteProject: (project: Project) => void
+  onStatusChange: (project: Project, newStatus: string) => void
 }
 
 export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
@@ -396,7 +400,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
                   <span className="sr-only">Open actions menu</span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem onClick={() => actions.onViewDetails(project)} className="whitespace-nowrap">
                   <Eye className="mr-2 h-4 w-4" />
                   View Details
@@ -405,6 +409,46 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
                   <Edit className="mr-2 h-4 w-4" />
                   Edit Project
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                
+                {/* Status Change Submenu */}
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger className="whitespace-nowrap">
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    Change Status
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuItem 
+                      onClick={() => actions.onStatusChange(project, 'active')}
+                      disabled={project.status === 'active'}
+                    >
+                      <Clock className="mr-2 h-4 w-4 text-blue-600" />
+                      In Progress
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => actions.onStatusChange(project, 'completed')}
+                      disabled={project.status === 'completed'}
+                    >
+                      <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
+                      Completed
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => actions.onStatusChange(project, 'on_hold')}
+                      disabled={project.status === 'on_hold'}
+                    >
+                      <Pause className="mr-2 h-4 w-4 text-yellow-600" />
+                      On Hold
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => actions.onStatusChange(project, 'cancelled')}
+                      disabled={project.status === 'cancelled'}
+                    >
+                      <XCircle className="mr-2 h-4 w-4 text-gray-600" />
+                      Cancelled
+                    </DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+                
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => actions.onCreateInvoice(project)} className="whitespace-nowrap">
                   <FileText className="mr-2 h-4 w-4" />

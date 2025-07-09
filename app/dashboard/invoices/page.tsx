@@ -947,7 +947,6 @@ export default function InvoicesPage() {
       <>
         <PageHeader
           title="Invoices"
-          breadcrumbs={[{ label: "Invoices" }]}
         />
         <PageContent>
           <div className="flex items-center justify-center h-[calc(100vh-300px)]">
@@ -971,7 +970,6 @@ export default function InvoicesPage() {
     <>
       <PageHeader
         title="Invoices"
-        breadcrumbs={[{ label: "Invoices" }]}
       />
       <PageContent>
         <PageTitle title="Invoices" description="Create, send, and track your invoices" error={error} />
@@ -1324,7 +1322,7 @@ export default function InvoicesPage() {
                 {sendingEmail ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
-                  <Mail className="mr-2 h-4 w-4" />
+                <Mail className="mr-2 h-4 w-4" />
                 )}
                 {sendingEmail ? 'Sending...' : 'Send Invoice'}
               </Button>

@@ -73,7 +73,7 @@ export default function SettingsPage() {
     const savedGeneral = localStorage.getItem('general-settings')
     const savedTax = localStorage.getItem('tax-info')
     const savedNotifications = localStorage.getItem('notifications')
-    
+
     // Load general settings
     if (savedGeneral) {
       const parsed = JSON.parse(savedGeneral)
@@ -285,7 +285,6 @@ export default function SettingsPage() {
     <>
       <PageHeader
         title="Settings"
-        breadcrumbs={[{ label: "Settings" }]}
         action={
           <Button size="sm" onClick={handleSaveSettings} disabled={saving}>
             {saving ? (

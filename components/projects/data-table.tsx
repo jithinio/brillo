@@ -13,7 +13,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { ChevronDown, Search, LayoutGrid, Eye, Edit, FileText, Trash2 } from "lucide-react"
+import { ChevronDown, Search, LayoutGrid, Eye, Edit, FileText, Trash2, CheckCircle, Clock, Pause, XCircle } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -28,6 +28,9 @@ import {
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu"
 import { Input } from "@/components/ui/input"
@@ -58,6 +61,7 @@ interface DataTableProps<TData, TValue> {
     onEditProject: (item: TData) => void
     onCreateInvoice: (item: TData) => void
     onDeleteProject: (item: TData) => void
+    onStatusChange: (item: TData, status: string) => void
   }
 }
 
@@ -307,6 +311,42 @@ export function DataTable<TData, TValue>({ columns, data, onAddProject, onBatchD
                         <Edit className="mr-2 h-4 w-4" />
                         Edit Project
                       </ContextMenuItem>
+                      <ContextMenuSeparator />
+                      
+                      {/* Status Change Submenu */}
+                      <ContextMenuSub>
+                        <ContextMenuSubTrigger>
+                          <CheckCircle className="mr-2 h-4 w-4" />
+                          Change Status
+                        </ContextMenuSubTrigger>
+                        <ContextMenuSubContent>
+                          <ContextMenuItem 
+                            onClick={() => contextActions.onStatusChange(row.original, 'active')}
+                          >
+                            <Clock className="mr-2 h-4 w-4 text-blue-600" />
+                            In Progress
+                          </ContextMenuItem>
+                          <ContextMenuItem 
+                            onClick={() => contextActions.onStatusChange(row.original, 'completed')}
+                          >
+                            <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
+                            Completed
+                          </ContextMenuItem>
+                          <ContextMenuItem 
+                            onClick={() => contextActions.onStatusChange(row.original, 'on_hold')}
+                          >
+                            <Pause className="mr-2 h-4 w-4 text-yellow-600" />
+                            On Hold
+                          </ContextMenuItem>
+                          <ContextMenuItem 
+                            onClick={() => contextActions.onStatusChange(row.original, 'cancelled')}
+                          >
+                            <XCircle className="mr-2 h-4 w-4 text-gray-600" />
+                            Cancelled
+                          </ContextMenuItem>
+                        </ContextMenuSubContent>
+                      </ContextMenuSub>
+                      
                       <ContextMenuSeparator />
                       <ContextMenuItem 
                         onClick={() => contextActions.onCreateInvoice(row.original)}

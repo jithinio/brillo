@@ -26,30 +26,32 @@ interface PageHeaderProps {
 export function PageHeader({ title, description, breadcrumbs = [], action, error }: PageHeaderProps) {
   return (
     <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
-      <div className="flex items-center gap-2 px-6">
+      <div className="flex items-center gap-2 px-8">
         <SidebarTrigger className="-ml-1" />
         <Separator orientation="vertical" className="mr-2 h-4" />
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem className="hidden md:block">
-              <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
-            </BreadcrumbItem>
-            {breadcrumbs.map((crumb, index) => (
-              <div key={index} className="flex items-center">
-                <BreadcrumbSeparator className="hidden md:block" />
-                <BreadcrumbItem>
-                  {crumb.href ? (
-                    <BreadcrumbLink href={crumb.href}>{crumb.label}</BreadcrumbLink>
-                  ) : (
-                    <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
-                  )}
-                </BreadcrumbItem>
-              </div>
-            ))}
-          </BreadcrumbList>
-        </Breadcrumb>
+        {breadcrumbs.length > 0 && (
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem className="hidden md:block">
+                <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
+              </BreadcrumbItem>
+              {breadcrumbs.map((crumb, index) => (
+                <div key={index} className="flex items-center">
+                  <BreadcrumbSeparator className="hidden md:block" />
+                  <BreadcrumbItem>
+                    {crumb.href ? (
+                      <BreadcrumbLink href={crumb.href}>{crumb.label}</BreadcrumbLink>
+                    ) : (
+                      <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
+                    )}
+                  </BreadcrumbItem>
+                </div>
+              ))}
+            </BreadcrumbList>
+          </Breadcrumb>
+        )}
       </div>
-      <div className="ml-auto px-6 flex items-center gap-2">
+      <div className="ml-auto px-8 flex items-center gap-2">
         {action}
       </div>
     </header>
@@ -57,7 +59,7 @@ export function PageHeader({ title, description, breadcrumbs = [], action, error
 }
 
 export function PageContent({ children }: { children: React.ReactNode }) {
-  return <div className="flex flex-1 flex-col gap-4 px-6 pb-4 pt-0 max-w-full overflow-hidden">{children}</div>
+  return <div className="flex flex-1 flex-col gap-4 px-8 pb-4 pt-0 max-w-full overflow-hidden">{children}</div>
 }
 
 export function PageTitle({

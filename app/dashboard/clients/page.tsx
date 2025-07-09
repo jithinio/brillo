@@ -513,7 +513,6 @@ export default function ClientsPage() {
       <>
         <PageHeader
           title="Clients"
-          breadcrumbs={[{ label: "Clients" }]}
         />
         <PageContent>
           <div className="flex items-center justify-center h-[calc(100vh-300px)]">
@@ -537,7 +536,6 @@ export default function ClientsPage() {
     <>
       <PageHeader
         title="Clients"
-        breadcrumbs={[{ label: "Clients" }]}
       />
       <PageContent>
         <PageTitle

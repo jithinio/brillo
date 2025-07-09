@@ -320,7 +320,6 @@ export default function ProfilePage() {
     <>
       <PageHeader
         title="Profile"
-        breadcrumbs={[{ label: "Profile" }]}
         action={
           <div className="flex space-x-2">
             {isEditing ? (

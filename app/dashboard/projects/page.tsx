@@ -370,6 +370,17 @@ export default function ProjectsPage() {
     setIsDeleteDialogOpen(true)
   }
 
+  const handleStatusChange = (project: Project, newStatus: string) => {
+    // Update the project status in the local state
+    setProjects(projects.map(p => 
+      p.id === project.id ? { ...p, status: newStatus } : p
+    ))
+    
+    // Show success toast
+    const statusLabel = statusOptions.find(option => option.value === newStatus)?.label || newStatus
+    toast.success(`Project "${project.name}" status changed to ${statusLabel}`)
+  }
+
   const handleBatchDelete = (projects: Project[], onUndo: (items: Project[]) => void) => {
     if (projects.length === 0) return
     confirmBatchDelete(projects, onUndo)
@@ -515,6 +526,7 @@ export default function ProjectsPage() {
     onEditProject: handleEditProject,
     onCreateInvoice: handleCreateInvoice,
     onDeleteProject: handleDeleteProject,
+    onStatusChange: handleStatusChange,
   })
 
   // Summary calculations
@@ -530,7 +542,6 @@ export default function ProjectsPage() {
     <>
       <PageHeader
         title="Projects"
-        breadcrumbs={[{ label: "Projects" }]}
       />
       <PageContent>
         <PageTitle title="Projects" description="Manage your projects and track their progress" />
@@ -578,6 +589,7 @@ export default function ProjectsPage() {
             onEditProject: handleEditProject,
             onCreateInvoice: handleCreateInvoice,
             onDeleteProject: handleDeleteProject,
+            onStatusChange: handleStatusChange,
           }}
         />
       </PageContent>
@@ -731,17 +743,17 @@ export default function ProjectsPage() {
                             >
                               <div className="flex items-center space-x-2 flex-1">
                                 <Avatar className="h-8 w-8">
-                                  <AvatarImage src={client.avatar_url || "/placeholder-user.jpg"} alt={client.name} />
-                                  <AvatarFallback className="text-xs">
-                                    {client.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                                  </AvatarFallback>
-                                </Avatar>
+                            <AvatarImage src={client.avatar_url || "/placeholder-user.jpg"} alt={client.name} />
+                            <AvatarFallback className="text-xs">
+                              {client.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
                                 <div className="flex-1">
                                   <div className="font-medium">{client.name}</div>
                                   <div className="text-sm text-muted-foreground">
                                     {client.company && <span>{client.company}</span>}
                                     {client.email && <span> • {client.email}</span>}
-                                  </div>
+                        </div>
                                 </div>
                               </div>
                               <Check
@@ -751,7 +763,7 @@ export default function ProjectsPage() {
                                 )}
                               />
                             </CommandItem>
-                          ))}
+                    ))}
                         </CommandGroup>
                       </CommandList>
                     </Command>
@@ -924,17 +936,17 @@ export default function ProjectsPage() {
                             >
                               <div className="flex items-center space-x-2 flex-1">
                                 <Avatar className="h-8 w-8">
-                                  <AvatarImage src={client.avatar_url || "/placeholder-user.jpg"} alt={client.name} />
-                                  <AvatarFallback className="text-xs">
-                                    {client.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                                  </AvatarFallback>
-                                </Avatar>
+                            <AvatarImage src={client.avatar_url || "/placeholder-user.jpg"} alt={client.name} />
+                            <AvatarFallback className="text-xs">
+                              {client.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
                                 <div className="flex-1">
                                   <div className="font-medium">{client.name}</div>
                                   <div className="text-sm text-muted-foreground">
                                     {client.company && <span>{client.company}</span>}
                                     {client.email && <span> • {client.email}</span>}
-                                  </div>
+                        </div>
                                 </div>
                               </div>
                               <Check
@@ -944,7 +956,7 @@ export default function ProjectsPage() {
                                 )}
                               />
                             </CommandItem>
-                          ))}
+                    ))}
                         </CommandGroup>
                       </CommandList>
                     </Command>

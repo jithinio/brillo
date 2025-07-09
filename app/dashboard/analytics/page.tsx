@@ -43,7 +43,6 @@ export default function AnalyticsPage() {
     <>
       <PageHeader
         title="Analytics"
-        breadcrumbs={[{ label: "Analytics" }]}
         action={
           <div className="flex items-center space-x-2">
             <CalendarDateRangePicker />

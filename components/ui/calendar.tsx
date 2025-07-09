@@ -25,17 +25,17 @@ export const Calendar = ({
       showOutsideDays={showOutsideDays}
       className={cn("p-3", className)}
       classNames={{
-        [UI.Months]: "relative",
-        [UI.Month]: "space-y-4 ml-0",
-        [UI.MonthCaption]: "flex justify-center items-center h-7",
+        [UI.Months]: "flex flex-row space-x-4 space-y-0 relative",
+        [UI.Month]: "space-y-4",
+        [UI.MonthCaption]: "flex justify-center items-center h-7 pt-1 relative",
         [UI.CaptionLabel]: "text-sm font-medium",
         [UI.PreviousMonthButton]: cn(
           buttonVariants({ variant: "outline" }),
-          "absolute left-1 top-0 h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
+          "absolute left-1 top-0 h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 z-10",
         ),
         [UI.NextMonthButton]: cn(
           buttonVariants({ variant: "outline" }),
-          "absolute right-1 top-0 h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
+          "absolute right-1 top-0 h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 z-10",
         ),
         [UI.MonthGrid]: "w-full border-collapse space-y-1",
         [UI.Weekdays]: "flex",
@@ -62,6 +62,51 @@ export const Calendar = ({
       }}
       components={{
         Chevron: ({ ...props }) => <Chevron {...props} />,
+        Dropdown: ({ options, value, onChange, ...props }) => {
+          // Format options to use short form for months
+          const formattedOptions = options?.map((option) => {
+            // Check if this is a month option (typically 0-11 for months)
+            if (option.value >= 0 && option.value <= 11 && option.label.length > 3) {
+              // Convert full month name to short form
+              const monthShort = new Date(2024, option.value, 1).toLocaleDateString('en-US', { month: 'short' })
+              return { ...option, label: monthShort }
+            }
+            return option
+          })
+
+          return (
+            <select
+              value={value?.toString()}
+              onChange={(e) => {
+                const event = {
+                  target: { value: e.target.value }
+                } as React.ChangeEvent<HTMLSelectElement>
+                onChange?.(event)
+              }}
+              className={cn(
+                "flex h-7 w-auto min-w-0 items-center justify-center rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 focus:border-ring focus:ring-ring/50 focus:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive appearance-none cursor-pointer [&>span]:line-clamp-1"
+              )}
+              style={{
+                backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5'/%3e%3c/svg%3e")`,
+                backgroundPosition: 'right 0.5rem center',
+                backgroundRepeat: 'no-repeat',
+                backgroundSize: '1rem 1rem',
+                paddingRight: '2rem'
+              }}
+            >
+              {formattedOptions?.map((option) => (
+                <option key={option.value} value={option.value.toString()}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          )
+        },
+        DropdownNav: ({ children, className, ...props }) => (
+          <div className={cn("flex items-center justify-center gap-1", className)} {...props}>
+            {children}
+          </div>
+        ),
       }}
       {...props}
     />

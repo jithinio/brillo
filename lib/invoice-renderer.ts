@@ -1088,13 +1088,13 @@ export async function renderInvoiceHTML(invoice: any, template: any): Promise<st
                       Notes
                     </h3>
                     <div style="color: ${template.primaryColor};">
-                      ${invoiceData.notes}
-                    </div>
+                    ${invoiceData.notes}
                   </div>
-                ` : ''}
-              </div>
-            ` : ''}
-          </div>
+                </div>
+              ` : ''}
+            </div>
+          ` : ''}
+        </div>
         </div>
       </div>
     `

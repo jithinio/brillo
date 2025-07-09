@@ -7,7 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import type { ChartConfig } from "@/components/ui/chart"
 import { Line, LineChart, Bar, BarChart, XAxis, YAxis, LabelList } from "recharts"
-import { TrendingUp, TrendingDown, Calendar, DollarSign } from "lucide-react"
+import { TrendingUp, TrendingDown, Calendar, DollarSign, CalendarIcon } from "lucide-react"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { format } from "date-fns"
+import { DateRangePicker } from "@/components/ui/date-range-picker"
+import { DateRange } from "react-day-picker"
 
 import { formatCurrency } from "@/lib/currency"
 
@@ -108,7 +112,7 @@ const MetricCard = ({
       <div className="flex items-center justify-between">
         <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">{title}</CardTitle>
         <Select value={period} onValueChange={onPeriodChange}>
-          <SelectTrigger className="w-auto h-7 text-xs border-0 bg-white/60 dark:bg-neutral-700/60 shadow-none">
+          <SelectTrigger className="w-auto h-7 text-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -132,17 +136,17 @@ const MetricCard = ({
     <CardContent className="px-8 pt-0 pb-8">
       <div className="space-y-4">
         <div className="space-y-1">
-          <div className="text-3xl font-medium text-slate-900 dark:text-slate-100">
+          <div className="text-3xl font-normal text-slate-900 dark:text-slate-100">
             {formatCurrency(current, 'USD')}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3" style={{ marginTop: '12px' }}>
             <div className="flex items-center gap-1">
               {trend === 'up' ? (
                 <TrendingUp className="h-3 w-3 text-emerald-600" />
               ) : (
                 <TrendingDown className="h-3 w-3 text-red-600" />
               )}
-              <span className={`text-xs font-medium ${trend === 'up' ? 'text-emerald-600' : 'text-red-600'}`}>
+              <span className={`text-xs font-normal ${trend === 'up' ? 'text-emerald-600' : 'text-red-600'}`}>
                 {percentage}%
               </span>
             </div>
@@ -177,7 +181,9 @@ const RevenueChart = ({
   trend,
   percentage,
   onTypeChange, 
-  onPeriodChange 
+  onPeriodChange,
+  customDateRange,
+  setCustomDateRange 
 }: {
   type: 'revenue' | 'expenses'
   period: string
@@ -187,19 +193,86 @@ const RevenueChart = ({
   percentage: number
   onTypeChange: (value: 'revenue' | 'expenses') => void
   onPeriodChange: (value: string) => void
-}) => (
+  customDateRange: DateRange | undefined
+  setCustomDateRange: (value: DateRange | undefined) => void
+}) => {
+  // Filter data based on selected period
+  const getFilteredData = () => {
+    const currentDate = new Date()
+    const currentYear = currentDate.getFullYear()
+    const currentMonth = currentDate.getMonth()
+    
+    switch (period) {
+      case 'this-year':
+        // Show current year data up to current month only
+        const currentMonth = currentDate.getMonth() // 0-based (0 = January, 6 = July)
+        return revenueLineData.slice(0, currentMonth + 1)
+      case 'monthly':
+        // Show detailed monthly breakdown (full year)
+        return revenueLineData
+      case 'quarterly':
+        // Show quarterly data (group by quarters)
+        const quarterlyData = [
+          { month: 'Q1', revenue: 9000, expenses: 13598 },
+          { month: 'Q2', revenue: 7060, expenses: 12508 },
+          { month: 'Q3', revenue: 8490, expenses: 7700 },
+          { month: 'Q4', revenue: 6670, expenses: 14108 },
+        ]
+        return quarterlyData
+      case 'last-year':
+        // Show last year's monthly data (simulated)
+        return revenueLineData.map(item => ({
+          ...item,
+          revenue: item.revenue * 0.85,
+          expenses: item.expenses * 0.9
+        }))
+      case 'custom':
+        // Show custom date range data
+        const startMonth = customDateRange?.from ? customDateRange.from.getMonth() : 0
+        const endMonth = customDateRange?.to ? customDateRange.to.getMonth() : 11
+        return revenueLineData.slice(startMonth, endMonth + 1)
+      default:
+        return revenueLineData
+    }
+  }
+
+  const filteredData = getFilteredData()
+
+  // Calculate dynamic amount based on filtered data
+  const calculateDynamicAmount = () => {
+    if (filteredData.length === 0) return current
+    
+    const totalAmount = filteredData.reduce((sum, item) => sum + item[type], 0)
+    return totalAmount
+  }
+
+  // Calculate trend based on filtered data vs previous period
+  const calculateDynamicTrend = () => {
+    const dynamicAmount = calculateDynamicAmount()
+    const trendPercentage = ((dynamicAmount - previous) / previous) * 100
+    return {
+      percentage: Math.abs(trendPercentage).toFixed(1),
+      trend: trendPercentage >= 0 ? 'up' as const : 'down' as const
+    }
+  }
+
+  const dynamicAmount = calculateDynamicAmount()
+  const dynamicTrend = calculateDynamicTrend()
+
+  return (
   <Card className="bg-neutral-100 dark:bg-neutral-800 rounded-3xl border-0 shadow-none">
-    <CardHeader className="p-8">
+    <CardHeader className="p-8 pb-3">
       <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <CardTitle className="text-lg font-normal text-slate-900 dark:text-slate-100">
-            This Year
-          </CardTitle>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Track your financial performance over time</p>
-        </div>
+        <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">
+          {period === 'this-year' ? 'This Year Revenue' :
+           period === 'monthly' ? 'Monthly Revenue' :
+           period === 'quarterly' ? 'Quarterly Revenue' :
+           period === 'last-year' ? 'Last Year Revenue' :
+           period === 'custom' ? 'Custom Revenue' : 'This Year Revenue'}
+        </CardTitle>
         <div className="flex items-center gap-2">
           <Select value={type} onValueChange={onTypeChange}>
-            <SelectTrigger className="w-32 h-9 border-0 bg-white dark:bg-neutral-700 shadow-none">
+            <SelectTrigger className="w-32 h-9">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -207,59 +280,58 @@ const RevenueChart = ({
               <SelectItem value="expenses">Expenses</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={period} onValueChange={onPeriodChange}>
-            <SelectTrigger className="w-32 h-9 border-0 bg-white dark:bg-neutral-700 shadow-none">
+                    <Select value={period} onValueChange={onPeriodChange}>
+            <SelectTrigger className="w-32 h-9">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="this-year">This Year</SelectItem>
               <SelectItem value="monthly">Monthly</SelectItem>
               <SelectItem value="quarterly">Quarterly</SelectItem>
-              <SelectItem value="yearly">Yearly</SelectItem>
               <SelectItem value="last-year">Last Year</SelectItem>
               <SelectItem value="custom">Custom Date</SelectItem>
             </SelectContent>
           </Select>
+          {period === 'custom' && (
+            <DateRangePicker
+              date={customDateRange}
+              onDateChange={setCustomDateRange}
+              className="ml-2"
+            />
+          )}
         </div>
       </div>
     </CardHeader>
-    <CardContent className="px-8 pb-8">
-      <div className="space-y-6">
-        {/* Amount section */}
+    <CardContent className="px-8 pt-0 pb-8">
+      <div className="space-y-4">
         <div className="space-y-1">
-          <div className="text-3xl font-medium text-slate-900 dark:text-slate-100">
-            {formatCurrency(current, 'USD')}
+          <div className="text-3xl font-normal text-slate-900 dark:text-slate-100">
+            {formatCurrency(dynamicAmount, 'USD')}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3" style={{ marginTop: '12px' }}>
             <div className="flex items-center gap-1">
-              {trend === 'up' ? (
+              {dynamicTrend.trend === 'up' ? (
                 <TrendingUp className="h-3 w-3 text-emerald-600" />
               ) : (
                 <TrendingDown className="h-3 w-3 text-red-600" />
               )}
-              <span className={`text-xs font-medium ${trend === 'up' ? 'text-emerald-600' : 'text-red-600'}`}>
-                {percentage}%
+              <span className={`text-xs font-normal ${dynamicTrend.trend === 'up' ? 'text-emerald-600' : 'text-red-600'}`}>
+                {dynamicTrend.percentage}%
               </span>
             </div>
             <span className="text-xs text-slate-500 dark:text-slate-400">vs previous period</span>
           </div>
         </div>
-
+        
+        {/* Chart */}
         <div className="h-80 w-full" style={{ marginTop: '48px' }}>
           <ChartContainer config={revenueChartConfig} className="h-full w-full">
-            <LineChart data={revenueLineData} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
+            <LineChart data={filteredData} margin={{ top: 20, right: 20, left: 20, bottom: 0 }}>
               <XAxis 
                 dataKey="month" 
                 axisLine={false}
                 tickLine={false}
                 tick={{ fontSize: 12, fill: '#64748b' }}
-                className="dark:[&_.recharts-cartesian-axis-tick_text]:fill-slate-300"
-              />
-              <YAxis 
-                axisLine={false}
-                tickLine={false}
-                tick={{ fontSize: 12, fill: '#64748b' }}
-                tickFormatter={(value) => value === 0 ? '' : `$${value / 1000}k`}
-                width={46}
                 className="dark:[&_.recharts-cartesian-axis-tick_text]:fill-slate-300"
               />
               <ChartTooltip 
@@ -280,7 +352,8 @@ const RevenueChart = ({
       </div>
     </CardContent>
   </Card>
-)
+  )
+}
 
 const YearlyBarChart = ({ 
   type, 
@@ -290,16 +363,13 @@ const YearlyBarChart = ({
   onTypeChange: (value: 'revenue' | 'expenses') => void
 }) => (
   <Card className="bg-neutral-100 dark:bg-neutral-800 rounded-3xl border-0 shadow-none">
-    <CardHeader className="p-8">
+    <CardHeader className="p-8 pb-3">
       <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <CardTitle className="text-lg font-normal text-slate-900 dark:text-slate-100">
-            Yearly {type === 'revenue' ? 'Revenue' : 'Expenses'}
-          </CardTitle>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Annual performance across all years</p>
-        </div>
+        <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">
+          Yearly {type === 'revenue' ? 'Revenue' : 'Expenses'}
+        </CardTitle>
         <Select value={type} onValueChange={onTypeChange}>
-          <SelectTrigger className="w-32 h-9 border-0 bg-white dark:bg-neutral-700 shadow-none">
+          <SelectTrigger className="w-32 h-9">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -309,8 +379,46 @@ const YearlyBarChart = ({
         </Select>
       </div>
     </CardHeader>
-    <CardContent className="px-8 pb-8">
-      <div className="h-96 w-full" style={{ marginTop: '48px' }}>
+    <CardContent className="px-8 pt-0 pb-8">
+      <div className="space-y-4">
+        {/* Yearly Growth section */}
+        <div className="space-y-1">
+          <div className="text-3xl font-normal text-slate-900 dark:text-slate-100">
+            {(() => {
+              // Calculate yearly growth percentage
+              const currentYear = yearlyData[yearlyData.length - 1][type]
+              const previousYear = yearlyData[yearlyData.length - 2][type]
+              const growthPercentage = ((currentYear - previousYear) / previousYear) * 100
+              return `${growthPercentage.toFixed(1)}%`
+            })()}
+          </div>
+          <div className="flex items-center gap-3" style={{ marginTop: '12px' }}>
+            <div className="flex items-center gap-1">
+              {(() => {
+                const currentYear = yearlyData[yearlyData.length - 1][type]
+                const previousYear = yearlyData[yearlyData.length - 2][type]
+                const growthPercentage = ((currentYear - previousYear) / previousYear) * 100
+                const trend = growthPercentage >= 0 ? 'up' : 'down'
+                return (
+                  <>
+                    {trend === 'up' ? (
+                      <TrendingUp className="h-3 w-3 text-emerald-600" />
+                    ) : (
+                      <TrendingDown className="h-3 w-3 text-red-600" />
+                    )}
+                    <span className={`text-xs font-normal ${trend === 'up' ? 'text-emerald-600' : 'text-red-600'}`}>
+                      {Math.abs(growthPercentage).toFixed(1)}%
+                    </span>
+                  </>
+                )
+              })()}
+            </div>
+            <span className="text-xs text-slate-500 dark:text-slate-400">yearly growth</span>
+          </div>
+        </div>
+
+        {/* Chart */}
+        <div className="h-96 w-full" style={{ marginTop: '48px' }}>
         <ChartContainer config={yearlyChartConfig} className="h-full w-full">
           <BarChart data={yearlyData} barCategoryGap="20%" margin={{ top: 30, right: 30, left: 0, bottom: 0 }}>
             <XAxis 
@@ -318,14 +426,6 @@ const YearlyBarChart = ({
               axisLine={false}
               tickLine={false}
               tick={{ fontSize: 12, fill: '#64748b' }}
-              className="dark:[&_.recharts-cartesian-axis-tick_text]:fill-slate-300"
-            />
-            <YAxis 
-              axisLine={false}
-              tickLine={false}
-              tick={{ fontSize: 12, fill: '#64748b' }}
-              tickFormatter={(value) => value === 0 ? '' : `$${value / 1000}k`}
-              width={46}
               className="dark:[&_.recharts-cartesian-axis-tick_text]:fill-slate-300"
             />
             <Bar 
@@ -345,6 +445,7 @@ const YearlyBarChart = ({
             </Bar>
           </BarChart>
         </ChartContainer>
+        </div>
       </div>
     </CardContent>
   </Card>
@@ -354,10 +455,14 @@ export default function DashboardPage() {
   const [mrrPeriod, setMrrPeriod] = useState("current-month")
   const [arrPeriod, setArrPeriod] = useState("current-year")
   const [revenueType, setRevenueType] = useState<'revenue' | 'expenses'>('revenue')
-  const [revenuePeriod, setRevenuePeriod] = useState("yearly")
+  const [revenuePeriod, setRevenuePeriod] = useState("this-year")
   const [yearlyType, setYearlyType] = useState<'revenue' | 'expenses'>('revenue')
   const [greeting, setGreeting] = useState("")
   const [userName] = useState("Jithin") // Replace with actual user name from context/auth
+  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>({
+    from: new Date(2024, 0, 1), // January 1, 2024
+    to: new Date(2024, 11, 31) // December 31, 2024
+  })
 
   useEffect(() => {
     const getGreeting = () => {
@@ -414,6 +519,8 @@ export default function DashboardPage() {
             percentage={revenueData.percentage}
             onTypeChange={setRevenueType}
             onPeriodChange={setRevenuePeriod}
+            customDateRange={customDateRange}
+            setCustomDateRange={setCustomDateRange}
           />
         </div>
 
