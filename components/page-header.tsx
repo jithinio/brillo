@@ -33,25 +33,25 @@ export function PageHeader({ title, description, breadcrumbs = [], action, error
         {breadcrumbs.length > 0 && (
           <>
             <Separator orientation="vertical" className="mx-2 h-4" />
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem className="hidden md:block">
-                  <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem className="hidden md:block">
+              <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
+            </BreadcrumbItem>
+            {breadcrumbs.map((crumb, index) => (
+              <div key={index} className="flex items-center">
+                <BreadcrumbSeparator className="hidden md:block" />
+                <BreadcrumbItem>
+                  {crumb.href ? (
+                    <BreadcrumbLink href={crumb.href}>{crumb.label}</BreadcrumbLink>
+                  ) : (
+                    <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
+                  )}
                 </BreadcrumbItem>
-                {breadcrumbs.map((crumb, index) => (
-                  <div key={index} className="flex items-center">
-                    <BreadcrumbSeparator className="hidden md:block" />
-                    <BreadcrumbItem>
-                      {crumb.href ? (
-                        <BreadcrumbLink href={crumb.href}>{crumb.label}</BreadcrumbLink>
-                      ) : (
-                        <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
-                      )}
-                    </BreadcrumbItem>
-                  </div>
-                ))}
-              </BreadcrumbList>
-            </Breadcrumb>
+              </div>
+            ))}
+          </BreadcrumbList>
+        </Breadcrumb>
           </>
         )}
       </div>

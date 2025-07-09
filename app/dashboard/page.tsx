@@ -10,10 +10,10 @@ import { Line, LineChart, Bar, BarChart, XAxis, YAxis, LabelList } from "rechart
 import { TrendingUp, TrendingDown, Calendar, DollarSign, CalendarIcon } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { format } from "date-fns"
-import { DateRangePicker } from "@/components/ui/date-range-picker"
-import { DateRange } from "react-day-picker"
+
 
 import { formatCurrency } from "@/lib/currency"
+import { useSettings } from "@/components/settings-provider"
 
 // Sample data - replace with real data from your API
 const mrrData = {
@@ -97,7 +97,8 @@ const MetricCard = ({
   trend, 
   percentage, 
   period,
-  onPeriodChange 
+  onPeriodChange,
+  formatCurrency 
 }: {
   title: string
   current: number
@@ -106,6 +107,7 @@ const MetricCard = ({
   percentage: number
   period: string
   onPeriodChange: (value: string) => void
+  formatCurrency: (amount: number) => string
 }) => (
   <Card className="relative overflow-hidden bg-neutral-100 dark:bg-neutral-800 rounded-3xl border-0 shadow-none">
     <CardHeader className="p-8 pb-3">
@@ -137,7 +139,7 @@ const MetricCard = ({
       <div className="space-y-4">
         <div className="space-y-1">
           <div className="text-3xl font-normal text-slate-900 dark:text-slate-100">
-            {formatCurrency(current, 'USD')}
+            {formatCurrency(current)}
           </div>
           <div className="flex items-center gap-3" style={{ marginTop: '12px' }}>
             <div className="flex items-center gap-1">
@@ -182,8 +184,7 @@ const RevenueChart = ({
   percentage,
   onTypeChange, 
   onPeriodChange,
-  customDateRange,
-  setCustomDateRange 
+  formatCurrency 
 }: {
   type: 'revenue' | 'expenses'
   period: string
@@ -193,8 +194,7 @@ const RevenueChart = ({
   percentage: number
   onTypeChange: (value: 'revenue' | 'expenses') => void
   onPeriodChange: (value: string) => void
-  customDateRange: DateRange | undefined
-  setCustomDateRange: (value: DateRange | undefined) => void
+  formatCurrency: (amount: number) => string
 }) => {
   // Filter data based on selected period
   const getFilteredData = () => {
@@ -226,11 +226,7 @@ const RevenueChart = ({
           revenue: item.revenue * 0.85,
           expenses: item.expenses * 0.9
         }))
-      case 'custom':
-        // Show custom date range data
-        const startMonth = customDateRange?.from ? customDateRange.from.getMonth() : 0
-        const endMonth = customDateRange?.to ? customDateRange.to.getMonth() : 11
-        return revenueLineData.slice(startMonth, endMonth + 1)
+
       default:
         return revenueLineData
     }
@@ -267,8 +263,7 @@ const RevenueChart = ({
           {period === 'this-year' ? 'This Year Revenue' :
            period === 'monthly' ? 'Monthly Revenue' :
            period === 'quarterly' ? 'Quarterly Revenue' :
-           period === 'last-year' ? 'Last Year Revenue' :
-           period === 'custom' ? 'Custom Revenue' : 'This Year Revenue'}
+           period === 'last-year' ? 'Last Year Revenue' : 'This Year Revenue'}
         </CardTitle>
         <div className="flex items-center gap-2">
           <Select value={type} onValueChange={onTypeChange}>
@@ -289,16 +284,8 @@ const RevenueChart = ({
               <SelectItem value="monthly">Monthly</SelectItem>
               <SelectItem value="quarterly">Quarterly</SelectItem>
               <SelectItem value="last-year">Last Year</SelectItem>
-              <SelectItem value="custom">Custom Date</SelectItem>
             </SelectContent>
           </Select>
-          {period === 'custom' && (
-            <DateRangePicker
-              date={customDateRange}
-              onDateChange={setCustomDateRange}
-              className="ml-2"
-            />
-          )}
         </div>
       </div>
     </CardHeader>
@@ -306,7 +293,7 @@ const RevenueChart = ({
       <div className="space-y-4">
         <div className="space-y-1">
           <div className="text-3xl font-normal text-slate-900 dark:text-slate-100">
-            {formatCurrency(dynamicAmount, 'USD')}
+            {formatCurrency(dynamicAmount)}
           </div>
           <div className="flex items-center gap-3" style={{ marginTop: '12px' }}>
             <div className="flex items-center gap-1">
@@ -336,7 +323,7 @@ const RevenueChart = ({
               />
               <ChartTooltip 
                 content={<ChartTooltipContent />}
-                formatter={(value: any) => [formatCurrency(value, 'USD'), type]}
+                formatter={(value: any) => [formatCurrency(value), type]}
               />
               <Line 
                 type="monotone" 
@@ -357,10 +344,12 @@ const RevenueChart = ({
 
 const YearlyBarChart = ({ 
   type, 
-  onTypeChange 
+  onTypeChange,
+  formatCurrency 
 }: {
   type: 'revenue' | 'expenses'
   onTypeChange: (value: 'revenue' | 'expenses') => void
+  formatCurrency: (amount: number) => string
 }) => (
   <Card className="bg-neutral-100 dark:bg-neutral-800 rounded-3xl border-0 shadow-none">
     <CardHeader className="p-8 pb-3">
@@ -440,7 +429,7 @@ const YearlyBarChart = ({
                 style={{ fontSize: '14px', fontWeight: '600' }}
                 fill="#374151"
                 className="dark:fill-slate-200"
-                formatter={(value: any) => `$${(value / 1000).toFixed(0)}k`}
+                formatter={(value: any) => `${formatCurrency(value / 1000)}k`}
               />
             </Bar>
           </BarChart>
@@ -452,6 +441,7 @@ const YearlyBarChart = ({
 )
 
 export default function DashboardPage() {
+  const { settings, formatCurrency: settingsFormatCurrency } = useSettings()
   const [mrrPeriod, setMrrPeriod] = useState("current-month")
   const [arrPeriod, setArrPeriod] = useState("current-year")
   const [revenueType, setRevenueType] = useState<'revenue' | 'expenses'>('revenue')
@@ -459,10 +449,6 @@ export default function DashboardPage() {
   const [yearlyType, setYearlyType] = useState<'revenue' | 'expenses'>('revenue')
   const [greeting, setGreeting] = useState("")
   const [userName] = useState("Jithin") // Replace with actual user name from context/auth
-  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>({
-    from: new Date(2024, 0, 1), // January 1, 2024
-    to: new Date(2024, 11, 31) // December 31, 2024
-  })
 
   useEffect(() => {
     const getGreeting = () => {
@@ -496,6 +482,7 @@ export default function DashboardPage() {
             percentage={mrrData.percentage}
             period={mrrPeriod}
             onPeriodChange={setMrrPeriod}
+            formatCurrency={settingsFormatCurrency}
           />
           <MetricCard
             title="ARR"
@@ -505,6 +492,7 @@ export default function DashboardPage() {
             percentage={arrData.percentage}
             period={arrPeriod}
             onPeriodChange={setArrPeriod}
+            formatCurrency={settingsFormatCurrency}
           />
         </div>
 
@@ -519,8 +507,7 @@ export default function DashboardPage() {
             percentage={revenueData.percentage}
             onTypeChange={setRevenueType}
             onPeriodChange={setRevenuePeriod}
-            customDateRange={customDateRange}
-            setCustomDateRange={setCustomDateRange}
+            formatCurrency={settingsFormatCurrency}
           />
         </div>
 
@@ -529,6 +516,7 @@ export default function DashboardPage() {
           <YearlyBarChart
             type={yearlyType}
             onTypeChange={setYearlyType}
+            formatCurrency={settingsFormatCurrency}
           />
         </div>
       </div>

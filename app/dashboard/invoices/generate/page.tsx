@@ -1329,8 +1329,8 @@ export default function GenerateInvoicePage() {
       />
 
       <PageContent>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:items-start">
-          <div className="lg:col-span-2 space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:items-start">
+        <div className="lg:col-span-2 space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="text-xl font-medium">
@@ -1805,7 +1805,7 @@ export default function GenerateInvoicePage() {
               </AlertDescription>
             </Alert>
           )}
-        </div>
+      </div>
       </div>
       </PageContent>
 

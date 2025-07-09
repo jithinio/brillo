@@ -1392,12 +1392,12 @@ export default function CustomizeInvoicePage() {
                 }}>Notes</h3>
                 <div style={{ color: template.primaryColor }}>
                   {invoiceData.notes}
-                </div>
-              </div>
+                          </div>
+                          </div>
             )}
-          </div>
+                        </div>
         )}
-      </div>
+                      </div>
     )
   }
 
@@ -1562,21 +1562,21 @@ export default function CustomizeInvoicePage() {
                         <div key={tmpl.id}>
                           <Label
                             htmlFor={tmpl.id}
-                            className={cn(
+                          className={cn(
                               "flex cursor-pointer flex-col rounded-lg border-2 p-4 transition-all hover:shadow-md hover:border-primary/50",
-                              template.templateId === tmpl.id
-                                ? "border-primary bg-primary/5 shadow-sm"
+                            template.templateId === tmpl.id
+                              ? "border-primary bg-primary/5 shadow-sm"
                                 : "border-gray-200"
-                            )}
-                          >
-                            <div className="flex items-center justify-between mb-1">
-                              <h3 className="font-medium text-sm">{tmpl.name}</h3>
+                          )}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <h3 className="font-medium text-sm">{tmpl.name}</h3>
                               <RadioGroupItem
                                 value={tmpl.id}
                                 id={tmpl.id}
                                 className="h-4 w-4"
                               />
-                            </div>
+                    </div>
                             <p className="text-xs text-muted-foreground">{tmpl.description}</p>
                           </Label>
                         </div>

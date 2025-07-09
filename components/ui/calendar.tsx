@@ -25,7 +25,7 @@ export const Calendar = ({
       showOutsideDays={showOutsideDays}
       className={cn("p-3", className)}
       classNames={{
-        [UI.Months]: "flex flex-row space-x-4 space-y-0 relative",
+        [UI.Months]: "flex flex-row space-y-0 relative",
         [UI.Month]: "space-y-4",
         [UI.MonthCaption]: "flex justify-center items-center h-7 pt-1 relative",
         [UI.CaptionLabel]: "text-sm font-medium",
