@@ -385,19 +385,19 @@
 }
 
 /* Dialog animations - center-based with longer duration for modal feel */
-@utility slide-in-from-left-1\/2 {
+@utility slide-in-from-left-half {
   animation: slide-in-from-left-half 0.2s ease-out;
 }
 
-@utility slide-in-from-top-\[48\%\] {
+@utility slide-in-from-top-48 {
   animation: slide-in-from-top-48 0.2s ease-out;
 }
 
-@utility slide-out-to-left-1\/2 {
+@utility slide-out-to-left-half {
   animation: slide-out-to-left-half 0.2s ease-in;
 }
 
-@utility slide-out-to-top-\[48\%\] {
+@utility slide-out-to-top-48 {
   animation: slide-out-to-top-48 0.2s ease-in;
 }
 
