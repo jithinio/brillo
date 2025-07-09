@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Eye, Clock } from "lucide-react"
+import { Eye, Clock, Search, Check, ChevronsUpDown } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -19,6 +19,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 
 import { DatePicker } from "@/components/ui/date-picker"
 import { Label } from "@/components/ui/label"
@@ -33,6 +46,8 @@ import { PageHeader, PageContent, PageTitle } from "@/components/page-header"
 import { DataTable } from "@/components/projects/data-table"
 import { createColumns, type Project } from "@/components/projects/columns"
 import { formatCurrency } from "@/lib/currency"
+import { supabase, isSupabaseConfigured } from "@/lib/supabase"
+import { cn } from "@/lib/utils"
 
 // Mock data for projects with new fields
 const mockProjects: Project[] = [
@@ -118,13 +133,28 @@ const mockProjects: Project[] = [
   },
 ]
 
-// Mock clients data for project creation (matching clients page data)
-const mockClients = [
-  { id: "1", name: "John Smith", company: "Acme Corporation", avatar_url: undefined },
-  { id: "2", name: "Sarah Johnson", company: "TechStart Inc.", avatar_url: undefined },
-  { id: "3", name: "Michael Brown", company: "Global Solutions LLC", avatar_url: undefined },
-  { id: "4", name: "Emily Davis", company: "Creative Studio", avatar_url: undefined },
-  { id: "5", name: "David Wilson", company: "Retail Plus", avatar_url: undefined },
+// Client interface
+interface Client {
+  id: string
+  name: string
+  company?: string
+  email?: string
+  phone?: string
+  address?: string
+  city?: string
+  state?: string
+  zip_code?: string
+  country?: string
+  avatar_url?: string
+}
+
+// Mock clients data for project creation (fallback when database is not available)
+const mockClients: Client[] = [
+  { id: "1", name: "John Smith", company: "Acme Corporation", email: "john@acme.com", phone: "+1 (555) 123-4567", address: "123 Main St", city: "New York", state: "NY", zip_code: "10001", country: "United States", avatar_url: undefined },
+  { id: "2", name: "Sarah Johnson", company: "TechStart Inc.", email: "sarah@techstart.com", phone: "+1 (555) 234-5678", address: "456 Tech Ave", city: "San Francisco", state: "CA", zip_code: "94107", country: "United States", avatar_url: undefined },
+  { id: "3", name: "Michael Brown", company: "Global Solutions LLC", email: "michael@globalsolutions.com", phone: "+1 (555) 345-6789", address: "789 Business Blvd", city: "Chicago", state: "IL", zip_code: "60601", country: "United States", avatar_url: undefined },
+  { id: "4", name: "Emily Davis", company: "Creative Studio", email: "emily@creativestudio.com", phone: "+1 (555) 456-7890", address: "321 Creative Dr", city: "Los Angeles", state: "CA", zip_code: "90210", country: "United States", avatar_url: undefined },
+  { id: "5", name: "David Wilson", company: "Retail Plus", email: "david@retailplus.com", phone: "+1 (555) 567-8901", address: "654 Retail Rd", city: "Miami", state: "FL", zip_code: "33101", country: "United States", avatar_url: undefined },
 ]
 
 const statusOptions = [
@@ -155,6 +185,12 @@ export default function ProjectsPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false)
   const [undoData, setUndoData] = React.useState<{ items: Project[], timeout: NodeJS.Timeout } | null>(null)
 
+  // Client state management
+  const [clients, setClients] = React.useState<Client[]>(mockClients)
+  const [clientsLoading, setClientsLoading] = React.useState(true)
+  const [clientDropdownOpen, setClientDropdownOpen] = React.useState(false)
+  const [selectedClient, setSelectedClient] = React.useState<Client | null>(null)
+
   const [newProject, setNewProject] = React.useState<NewProject>({
     name: "",
     client_id: "",
@@ -168,6 +204,11 @@ export default function ProjectsPage() {
   })
 
 
+  // Fetch clients on component mount
+  React.useEffect(() => {
+    fetchClients()
+  }, [])
+
   // Cleanup undo timeout on unmount
   React.useEffect(() => {
     return () => {
@@ -176,6 +217,39 @@ export default function ProjectsPage() {
       }
     }
   }, [undoData])
+
+  // Fetch clients from Supabase
+  const fetchClients = async () => {
+    try {
+      setClientsLoading(true)
+      
+      if (isSupabaseConfigured()) {
+        const { data, error } = await supabase
+          .from('clients')
+          .select('*')
+          .order('name', { ascending: true })
+
+        if (error) {
+          console.error('Error fetching clients:', error)
+          throw error
+        }
+
+        setClients(data || [])
+        console.log('Fetched clients from Supabase:', data)
+      } else {
+        // Use mock data when Supabase is not configured
+        console.log('Using mock clients data')
+        setClients(mockClients)
+      }
+    } catch (error) {
+      console.error('Error fetching clients:', error)
+      // Fallback to mock data on error
+      setClients(mockClients)
+      toast.error('Failed to fetch clients. Using demo data.')
+    } finally {
+      setClientsLoading(false)
+    }
+  }
 
   // Check for client pre-selection from sessionStorage and URL parameters
   React.useEffect(() => {
@@ -190,7 +264,7 @@ export default function ProjectsPage() {
           const clientData = JSON.parse(clientDataStr)
           
           // Find matching client by name and company instead of ID
-          const matchingClient = mockClients.find(client => 
+          const matchingClient = clients.find(client => 
             client.name === clientData.clientName || 
             client.company === clientData.clientCompany
           )
@@ -201,11 +275,12 @@ export default function ProjectsPage() {
               ...prev,
               client_id: matchingClient.id
             }))
+            setSelectedClient(matchingClient)
             
             toast.success(`${clientData.clientName} has been pre-selected for the new project`)
           } else {
             // If no exact match, try to find by name similarity
-            const similarClient = mockClients.find(client => 
+            const similarClient = clients.find(client => 
               client.name.toLowerCase().includes(clientData.clientName.toLowerCase()) ||
               clientData.clientName.toLowerCase().includes(client.name.toLowerCase())
             )
@@ -215,6 +290,7 @@ export default function ProjectsPage() {
                 ...prev,
                 client_id: similarClient.id
               }))
+              setSelectedClient(similarClient)
               
               toast.success(`Selected ${similarClient.name} as the closest match for ${clientData.clientName}`)
             } else {
@@ -244,10 +320,14 @@ export default function ProjectsPage() {
 
   const handleEditProject = (project: Project) => {
     setSelectedProject(project)
+    // Find the client for this project
+    const projectClient = project.clients ? clients.find(c => c.name === project.clients!.name) : null
+    setSelectedClient(projectClient || null)
+    
     // Populate editing form with current project data
     setNewProject({
       name: project.name,
-      client_id: project.clients ? mockClients.find(c => c.name === project.clients!.name)?.id || "" : "",
+      client_id: projectClient?.id || "",
       status: project.status,
       start_date: project.start_date ? new Date(project.start_date) : undefined,
       end_date: project.end_date ? new Date(project.end_date) : undefined,
@@ -343,6 +423,7 @@ export default function ProjectsPage() {
 
   const handleAddProject = () => {
     setSelectedProject(null) // Clear any selected project
+    setSelectedClient(null) // Clear any selected client
     setNewProject({
       name: "",
       client_id: "",
@@ -363,7 +444,7 @@ export default function ProjectsPage() {
       return
     }
 
-    const selectedClient = mockClients.find(c => c.id === newProject.client_id)
+    const clientForProject = clients.find(c => c.id === newProject.client_id)
     
     const budget = newProject.budget ? parseFloat(newProject.budget) : 0
     const expenses = newProject.expenses ? parseFloat(newProject.expenses) : 0
@@ -382,9 +463,9 @@ export default function ProjectsPage() {
         expenses: expenses,
         received: received,
         pending: pending,
-        clients: selectedClient ? {
-          name: selectedClient.name,
-          company: selectedClient.company,
+        clients: clientForProject ? {
+          name: clientForProject.name,
+          company: clientForProject.company,
         } : undefined,
       }
 
@@ -404,9 +485,9 @@ export default function ProjectsPage() {
         received: received,
         pending: pending,
         created_at: new Date().toISOString(),
-        clients: selectedClient ? {
-          name: selectedClient.name,
-          company: selectedClient.company,
+        clients: clientForProject ? {
+          name: clientForProject.name,
+          company: clientForProject.company,
         } : undefined,
       }
 
@@ -417,6 +498,7 @@ export default function ProjectsPage() {
 
     // Reset form
     setSelectedProject(null)
+    setSelectedClient(null)
   }
 
   const confirmDelete = () => {
@@ -583,6 +665,7 @@ export default function ProjectsPage() {
         setIsAddDialogOpen(open)
         if (!open) {
           setSelectedProject(null)
+          setSelectedClient(null)
         }
       }}>
         <DialogContent className="max-w-2xl">
@@ -603,26 +686,77 @@ export default function ProjectsPage() {
               </div>
               <div>
                 <Label htmlFor="project-client">Client</Label>
-                <Select value={newProject.client_id} onValueChange={(value) => setNewProject({ ...newProject, client_id: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a client" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {mockClients.map((client) => (
-                      <SelectItem key={client.id} value={client.id}>
+                <Popover open={clientDropdownOpen} onOpenChange={setClientDropdownOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={clientDropdownOpen}
+                      className="w-full justify-between"
+                      disabled={clientsLoading}
+                    >
+                      {selectedClient ? (
                         <div className="flex items-center space-x-2">
                           <Avatar className="h-6 w-6">
-                            <AvatarImage src={client.avatar_url || "/placeholder-user.jpg"} alt={client.name} />
+                            <AvatarImage src={selectedClient.avatar_url || "/placeholder-user.jpg"} alt={selectedClient.name} />
                             <AvatarFallback className="text-xs">
-                              {client.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                              {selectedClient.name.split(' ').map(n => n[0]).join('').toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
-                          <span>{client.name} - {client.company}</span>
+                          <span>{selectedClient.name} - {selectedClient.company}</span>
                         </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                      ) : (
+                        <span className="text-muted-foreground">
+                          {clientsLoading ? "Loading clients..." : "Select a client"}
+                        </span>
+                      )}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0" style={{ maxHeight: '300px' }}>
+                    <Command>
+                      <CommandInput placeholder="Search clients..." />
+                      <CommandList style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                        <CommandEmpty>No client found.</CommandEmpty>
+                        <CommandGroup>
+                          {clients.map((client) => (
+                            <CommandItem
+                              key={client.id}
+                              value={`${client.name} ${client.company || ""} ${client.email || ""}`}
+                              onSelect={() => {
+                                setSelectedClient(client)
+                                setNewProject({ ...newProject, client_id: client.id })
+                                setClientDropdownOpen(false)
+                              }}
+                            >
+                              <div className="flex items-center space-x-2 flex-1">
+                                <Avatar className="h-8 w-8">
+                                  <AvatarImage src={client.avatar_url || "/placeholder-user.jpg"} alt={client.name} />
+                                  <AvatarFallback className="text-xs">
+                                    {client.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1">
+                                  <div className="font-medium">{client.name}</div>
+                                  <div className="text-sm text-muted-foreground">
+                                    {client.company && <span>{client.company}</span>}
+                                    {client.email && <span> • {client.email}</span>}
+                                  </div>
+                                </div>
+                              </div>
+                              <Check
+                                className={cn(
+                                  "ml-auto h-4 w-4",
+                                  selectedClient?.id === client.id ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -708,6 +842,7 @@ export default function ProjectsPage() {
             <Button variant="outline" onClick={() => {
               setIsAddDialogOpen(false)
               setSelectedProject(null)
+              setSelectedClient(null)
             }}>
               Cancel
             </Button>
@@ -723,6 +858,7 @@ export default function ProjectsPage() {
         setIsEditDialogOpen(open)
         if (!open) {
           setSelectedProject(null)
+          setSelectedClient(null)
         }
       }}>
         <DialogContent className="max-w-2xl">
@@ -743,26 +879,77 @@ export default function ProjectsPage() {
               </div>
               <div>
                 <Label htmlFor="edit-project-client">Client</Label>
-                <Select value={newProject.client_id} onValueChange={(value) => setNewProject({ ...newProject, client_id: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a client" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {mockClients.map((client) => (
-                      <SelectItem key={client.id} value={client.id}>
+                <Popover open={clientDropdownOpen} onOpenChange={setClientDropdownOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={clientDropdownOpen}
+                      className="w-full justify-between"
+                      disabled={clientsLoading}
+                    >
+                      {selectedClient ? (
                         <div className="flex items-center space-x-2">
                           <Avatar className="h-6 w-6">
-                            <AvatarImage src={client.avatar_url || "/placeholder-user.jpg"} alt={client.name} />
+                            <AvatarImage src={selectedClient.avatar_url || "/placeholder-user.jpg"} alt={selectedClient.name} />
                             <AvatarFallback className="text-xs">
-                              {client.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                              {selectedClient.name.split(' ').map(n => n[0]).join('').toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
-                          <span>{client.name} - {client.company}</span>
+                          <span>{selectedClient.name} - {selectedClient.company}</span>
                         </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                      ) : (
+                        <span className="text-muted-foreground">
+                          {clientsLoading ? "Loading clients..." : "Select a client"}
+                        </span>
+                      )}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0" style={{ maxHeight: '300px' }}>
+                    <Command>
+                      <CommandInput placeholder="Search clients..." />
+                      <CommandList style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                        <CommandEmpty>No client found.</CommandEmpty>
+                        <CommandGroup>
+                          {clients.map((client) => (
+                            <CommandItem
+                              key={client.id}
+                              value={`${client.name} ${client.company || ""} ${client.email || ""}`}
+                              onSelect={() => {
+                                setSelectedClient(client)
+                                setNewProject({ ...newProject, client_id: client.id })
+                                setClientDropdownOpen(false)
+                              }}
+                            >
+                              <div className="flex items-center space-x-2 flex-1">
+                                <Avatar className="h-8 w-8">
+                                  <AvatarImage src={client.avatar_url || "/placeholder-user.jpg"} alt={client.name} />
+                                  <AvatarFallback className="text-xs">
+                                    {client.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1">
+                                  <div className="font-medium">{client.name}</div>
+                                  <div className="text-sm text-muted-foreground">
+                                    {client.company && <span>{client.company}</span>}
+                                    {client.email && <span> • {client.email}</span>}
+                                  </div>
+                                </div>
+                              </div>
+                              <Check
+                                className={cn(
+                                  "ml-auto h-4 w-4",
+                                  selectedClient?.id === client.id ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -847,6 +1034,7 @@ export default function ProjectsPage() {
              <Button variant="outline" onClick={() => {
                setIsEditDialogOpen(false)
                setSelectedProject(null)
+               setSelectedClient(null)
              }}>
                Cancel
              </Button>

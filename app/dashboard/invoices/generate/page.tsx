@@ -12,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Switch } from "@/components/ui/switch"
 import { DatePicker } from "@/components/ui/date-picker"
-import { Plus, Trash2, Send, Save, UserPlus, Building, Mail, Phone, MapPin, Receipt, Eye, Download, CheckCircle, CalendarDays, Plus as PlusIcon, RefreshCw, Loader2, Check, Users, Calendar, DollarSign, FileText, AlertTriangle } from "lucide-react"
+import { Plus, Trash2, Send, Save, UserPlus, Building, Mail, Phone, MapPin, Receipt, Download, CheckCircle, CalendarDays, Plus as PlusIcon, RefreshCw, Loader2, Check, Users, Calendar, DollarSign, FileText, AlertTriangle } from "lucide-react"
 import { toast } from "sonner"
 import { formatCurrency, CURRENCIES, getDefaultCurrency } from "@/lib/currency"
 import { PageHeader, PageContent } from "@/components/page-header"
@@ -22,6 +22,7 @@ import type { Client } from "@/components/clients/columns"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useRouter } from "next/navigation"
+
 
 interface InvoiceItem {
   id: string
@@ -166,6 +167,8 @@ export default function GenerateInvoicePage() {
   // Invoice number state
   const [invoiceNumber, setInvoiceNumber] = useState<string>("")
   const [editInvoiceId, setEditInvoiceId] = useState<string | null>(null)
+  
+
 
   // Load clients on component mount
   useEffect(() => {
@@ -183,37 +186,66 @@ export default function GenerateInvoicePage() {
       
       const now = new Date()
       const year = now.getFullYear()
-      let invoiceCount = 1
-
+      const prefix = settings.invoicePrefix || 'INV'
+      
       if (isSupabaseConfigured()) {
         try {
-          // Get count from Supabase for the current year
-          const { count, error } = await supabase
+          // Get all existing invoice numbers for the current year
+          const { data: existingInvoices, error } = await supabase
             .from('invoices')
-            .select('*', { count: 'exact', head: true })
-            .like('invoice_number', `${settings.invoicePrefix || 'INV'}-${year}-%`)
+            .select('invoice_number')
+            .like('invoice_number', `${prefix}-${year}-%`)
+            .order('invoice_number', { ascending: false })
 
-          if (!error && count !== null) {
-            invoiceCount = count + 1
+          if (error) {
+            console.error('Error fetching existing invoices:', error)
+            // Fallback to simple count
+            const { count } = await supabase
+              .from('invoices')
+              .select('*', { count: 'exact', head: true })
+            const invoiceCount = (count || 0) + 1
+            const generatedNumber = `${prefix}-${year}-${String(invoiceCount).padStart(3, '0')}`
+            setInvoiceNumber(generatedNumber)
+            return
           }
+
+          // Extract numbers from existing invoice numbers and find the highest
+          let maxNumber = 0
+          if (existingInvoices && existingInvoices.length > 0) {
+            existingInvoices.forEach(invoice => {
+              const match = invoice.invoice_number.match(new RegExp(`${prefix}-${year}-(\\d+)`))
+              if (match) {
+                const num = parseInt(match[1], 10)
+                if (num > maxNumber) {
+                  maxNumber = num
+                }
+              }
+            })
+          }
+          
+          // Generate next sequential number
+          const nextNumber = maxNumber + 1
+          const generatedNumber = `${prefix}-${year}-${String(nextNumber).padStart(3, '0')}`
+          console.log(`Generated invoice number: ${generatedNumber} (next after ${maxNumber})`)
+          setInvoiceNumber(generatedNumber)
+          
         } catch (error) {
-          console.error('Error counting invoices:', error)
-          // Fallback to session storage count
-          const existingInvoices = JSON.parse(sessionStorage.getItem('demo-invoices') || '[]')
-          invoiceCount = existingInvoices.length + 1
+          console.error('Error generating invoice number:', error)
+          // Ultimate fallback - use timestamp
+          const timestamp = Date.now().toString().slice(-3)
+          const generatedNumber = `${prefix}-${year}-${timestamp}`
+          setInvoiceNumber(generatedNumber)
         }
       } else {
         // Demo mode: count from session storage
         const existingInvoices = JSON.parse(sessionStorage.getItem('demo-invoices') || '[]')
         const currentYearInvoices = existingInvoices.filter((inv: any) => 
-          inv.invoice_number?.startsWith(`${settings.invoicePrefix || 'INV'}-${year}-`)
+          inv.invoice_number?.startsWith(`${prefix}-${year}-`)
         )
-        invoiceCount = currentYearInvoices.length + 1
+        const invoiceCount = currentYearInvoices.length + 1
+        const generatedNumber = `${prefix}-${year}-${String(invoiceCount).padStart(3, '0')}`
+        setInvoiceNumber(generatedNumber)
       }
-      
-      // Format: INV-YYYY-001 (e.g., INV-2024-001)
-      const generatedNumber = `${settings.invoicePrefix || 'INV'}-${year}-${String(invoiceCount).padStart(3, '0')}`
-      setInvoiceNumber(generatedNumber)
     }
 
     generateInvoiceNumber()
@@ -804,6 +836,23 @@ export default function GenerateInvoicePage() {
       if (isSupabaseConfigured()) {
         console.log('Saving invoice to Supabase...')
         
+        // Validation checks
+        if (!selectedClient) {
+          throw new Error('Please select a client before generating the invoice')
+        }
+        if (!selectedClient.id) {
+          throw new Error('Selected client does not have a valid ID')
+        }
+        if (!invoiceNumber) {
+          throw new Error('Invoice number is required')
+        }
+        if (items.length === 0) {
+          throw new Error('Please add at least one item to the invoice')
+        }
+        if (subtotal <= 0) {
+          throw new Error('Invoice amount must be greater than zero')
+        }
+        
         // Calculate tax rate as percentage
         const taxRatePercent = taxEnabled ? parseFloat(customTaxRate) : 0
         
@@ -824,6 +873,9 @@ export default function GenerateInvoicePage() {
         }
 
         console.log('Invoice insert data:', invoiceInsertData)
+        console.log('Selected client:', selectedClient)
+        console.log('Selected project:', selectedProject)
+        console.log('Items:', items)
 
         // Insert or update the main invoice record
         let invoiceData
@@ -854,7 +906,25 @@ export default function GenerateInvoicePage() {
 
         if (invoiceError) {
           console.error(isEditMode ? 'Failed to update invoice:' : 'Failed to insert invoice:', invoiceError)
-          throw new Error(`Failed to ${isEditMode ? 'update' : 'save'} invoice: ${invoiceError.message}`)
+          console.error('Error details:', {
+            message: invoiceError.message,
+            details: invoiceError.details,
+            hint: invoiceError.hint,
+            code: invoiceError.code
+          })
+          
+          let errorMessage = `Failed to ${isEditMode ? 'update' : 'save'} invoice`
+          if (invoiceError.message) {
+            errorMessage += `: ${invoiceError.message}`
+          }
+          if (invoiceError.details) {
+            errorMessage += ` (${invoiceError.details})`
+          }
+          if (invoiceError.hint) {
+            errorMessage += ` - ${invoiceError.hint}`
+          }
+          
+          throw new Error(errorMessage)
         }
 
         console.log(isEditMode ? 'Invoice updated successfully:' : 'Invoice saved successfully:', invoiceData)
@@ -1011,9 +1081,23 @@ export default function GenerateInvoicePage() {
       // Get saved template settings from Supabase settings
       let templateSettings = null
       
+      // Template ID migration mapping
+      const migrateTemplateId = (templateId: string) => {
+        const migrationMap: { [key: string]: string } = {
+          'stripe-inspired': 'modern',
+          'contra-inspired': 'bold',
+          'mercury-inspired': 'classic',
+          'notion-inspired': 'slate'
+        }
+        return migrationMap[templateId] || templateId
+      }
+      
       // First try to get from settings (Supabase)
       if (settings.invoiceTemplate && Object.keys(settings.invoiceTemplate).length > 0) {
-        templateSettings = settings.invoiceTemplate
+        templateSettings = {
+          ...settings.invoiceTemplate,
+          templateId: migrateTemplateId(settings.invoiceTemplate.templateId)
+        }
         console.log('✅ Generate PDF - Template settings loaded from Supabase')
       } else {
         console.log('❌ Generate PDF - No Supabase template found, checking localStorage')
@@ -1021,7 +1105,11 @@ export default function GenerateInvoicePage() {
         const savedTemplate = localStorage.getItem('invoice-template-settings')
         if (savedTemplate) {
           try {
-            templateSettings = JSON.parse(savedTemplate)
+            const parsed = JSON.parse(savedTemplate)
+            templateSettings = {
+              ...parsed,
+              templateId: migrateTemplateId(parsed.templateId)
+            }
             console.log('✅ Generate PDF - Template settings loaded from localStorage')
           } catch (error) {
             console.error('❌ Generate PDF - Error parsing saved template:', error)
@@ -1080,7 +1168,7 @@ export default function GenerateInvoicePage() {
 
       // Merge all template settings with company info
       const defaultTemplate = {
-        templateId: 'stripe-inspired',
+        templateId: 'modern',
         logoSize: [80],
         logoBorderRadius: [8],
         invoicePadding: [48],
@@ -1159,21 +1247,58 @@ export default function GenerateInvoicePage() {
   const handleSendInvoice = async () => {
     if (!generatedInvoiceData) return
 
+    // Check if client has email
+    if (!generatedInvoiceData.client.email) {
+      toast.error('Client email not found', {
+        description: 'Please add an email address for this client before sending.'
+      })
+      return
+    }
+
     setIsSending(true)
     try {
-      // Simulate sending invoice
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      // We need to create a temporary invoice ID for the API
+      // In a real app, this would be saved to the database first
+      const tempInvoiceId = `temp-${Date.now()}`
       
-      toast.success("Invoice sent successfully")
+      const response = await fetch('/api/send-invoice', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          invoiceId: tempInvoiceId,
+          clientEmail: generatedInvoiceData.client.email,
+          clientName: generatedInvoiceData.client.name,
+          senderName: settings.companyName || 'Your Company',
+          senderEmail: 'invoices@yourcompany.com', // You can make this configurable
+          customMessage: `Thank you for your business! Please find your invoice ${generatedInvoiceData.invoiceNumber} attached.`
+        }),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to send email')
+      }
+
+      toast.success('Invoice sent successfully!', {
+        description: `Email sent to ${generatedInvoiceData.client.email}`
+      })
       
       // Close the dialog after successful send
       setShowSuccessDialog(false)
     } catch (error) {
-      toast.error("Failed to send invoice. Please try again.")
+      console.error('Error sending invoice:', error)
+      toast.error('Failed to send invoice', {
+        description: error instanceof Error ? error.message : 'Please try again later'
+      })
     } finally {
       setIsSending(false)
     }
   }
+
+
 
   return (
     <>
@@ -1194,10 +1319,7 @@ export default function GenerateInvoicePage() {
               <Save className="mr-2 h-4 w-4" />
               {isSavingDraft ? "Saving..." : "Save Draft"}
             </Button>
-            <Button variant="outline" size="sm">
-              <Eye className="mr-2 h-4 w-4" />
-              Preview
-            </Button>
+
             <Button 
               size="sm"
               onClick={handleGenerateInvoice}
@@ -1557,7 +1679,7 @@ export default function GenerateInvoicePage() {
             </div>
           )}
 
-          {/* Stripe-Inspired Summary Card */}
+          {/* Modern Summary Card */}
           <Card className="border border-gray-200 shadow-sm bg-zinc-50">            
             <CardContent className="p-6">
               {/* Header with Icon */}
@@ -1959,6 +2081,8 @@ export default function GenerateInvoicePage() {
           </div>
         </DialogContent>
       </Dialog>
+
+
     </>
   )
 }

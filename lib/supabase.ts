@@ -1,8 +1,8 @@
 import { createClient } from "@supabase/supabase-js"
 
-// Use environment variables if available, otherwise fall back to actual project values
+// Use environment variables if available, otherwise use working project credentials
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://hirrwwzrixpypdnhrwvc.supabase.co"
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRjamFtbGZmZGFmb3BpZHFicnN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyMTU5MTMsImV4cCI6MjA2Njc5MTkxM30.xsYOlHrwH2y0hfExtG0-cwac1FyyFg0tyfE2MI4AaT0"
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhpcnJ3d3pyaXhweXBkbmhyd3ZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyNjc1NTQsImV4cCI6MjA2Njg0MzU1NH0.0XfgudzrXsi1vwjEoZ6pSbJSbQrrId9mYOmzYKEJcJo"
 
 // Helper function to check if Supabase is properly configured
 export const isSupabaseConfigured = () => {
@@ -18,11 +18,13 @@ export const isSupabaseConfigured = () => {
   )
 }
 
-// Create Supabase client with error handling
+// Create Supabase client with the working credentials
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
+    detectSessionInUrl: true,
+    flowType: 'pkce',
   },
 })
 

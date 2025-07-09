@@ -241,6 +241,7 @@ export default function InvoicesPage() {
   const [selectedClient, setSelectedClient] = useState<any>(null)
   const [downloadingPDF, setDownloadingPDF] = useState<string | null>(null)
   const [undoData, setUndoData] = useState<{ items: Invoice[], timeout: NodeJS.Timeout } | null>(null)
+  const [sendingEmail, setSendingEmail] = useState(false)
   
   // Send invoice form state
   const [sendForm, setSendForm] = useState({
@@ -291,7 +292,7 @@ export default function InvoicesPage() {
           .from('invoices')
           .select(`
             *,
-            clients:client_id (id, name, company),
+            clients:client_id (id, name, company, email, phone, address, city, state, zip_code, country),
             projects:project_id (name),
             invoice_items (
               id,
@@ -359,10 +360,19 @@ export default function InvoicesPage() {
 
   const handleSendInvoice = (invoice: Invoice) => {
     setSelectedInvoice(invoice)
+    
+    // Check if client has email
+    if (!invoice.clients?.email) {
+      toast.error('Client email not found', {
+        description: 'Please add an email address for this client before sending.'
+      })
+      return
+    }
+    
     setSendForm({
-      to: invoice.clients?.name ? `${invoice.clients.name.toLowerCase().replace(' ', '.')}@example.com` : "",
-      subject: `Invoice ${invoice.invoice_number} from Your Company`,
-      message: `Dear ${invoice.clients?.name || 'Client'},\n\nPlease find attached your invoice ${invoice.invoice_number} for ${formatCurrency(invoice.total_amount)}.\n\nDue date: ${new Date(invoice.due_date).toLocaleDateString()}\n\nThank you for your business!\n\nBest regards,\nYour Company`
+      to: invoice.clients.email,
+      subject: `Invoice ${invoice.invoice_number} from ${settings.companyName || 'Your Company'}`,
+      message: `Dear ${invoice.clients?.name || 'Client'},\n\nPlease find attached your invoice ${invoice.invoice_number} for ${formatCurrency(invoice.total_amount)}.\n\nDue date: ${new Date(invoice.due_date).toLocaleDateString()}\n\nThank you for your business!\n\nBest regards,\n${settings.companyName || 'Your Company'}`
     })
     setSendInvoiceOpen(true)
   }
@@ -376,9 +386,23 @@ export default function InvoicesPage() {
       // Get saved template settings from Supabase settings
       let templateSettings = null
       
+      // Template ID migration mapping
+      const migrateTemplateId = (templateId: string) => {
+        const migrationMap: { [key: string]: string } = {
+          'stripe-inspired': 'modern',
+          'contra-inspired': 'bold',
+          'mercury-inspired': 'classic',
+          'notion-inspired': 'slate'
+        }
+        return migrationMap[templateId] || templateId
+      }
+      
       // First try to get from settings (Supabase)
       if (settings.invoiceTemplate && Object.keys(settings.invoiceTemplate).length > 0) {
-        templateSettings = settings.invoiceTemplate
+        templateSettings = {
+          ...settings.invoiceTemplate,
+          templateId: migrateTemplateId(settings.invoiceTemplate.templateId)
+        }
         console.log('✅ Download PDF - Template settings loaded from Supabase')
       } else {
         console.log('❌ Download PDF - No Supabase template found, checking localStorage')
@@ -386,7 +410,11 @@ export default function InvoicesPage() {
         const savedTemplate = localStorage.getItem('invoice-template-settings')
         if (savedTemplate) {
           try {
-            templateSettings = JSON.parse(savedTemplate)
+            const parsed = JSON.parse(savedTemplate)
+            templateSettings = {
+              ...parsed,
+              templateId: migrateTemplateId(parsed.templateId)
+            }
             console.log('✅ Download PDF - Template settings loaded from localStorage')
           } catch (error) {
             console.error('❌ Download PDF - Error parsing saved template:', error)
@@ -448,7 +476,7 @@ export default function InvoicesPage() {
       
       // Merge all template settings with company info
       const defaultTemplate = {
-        templateId: 'stripe-inspired',
+        templateId: 'modern',
         logoSize: [80],
         logoBorderRadius: [8],
         invoicePadding: [48],
@@ -686,11 +714,33 @@ export default function InvoicesPage() {
   }
 
   const handleSendInvoiceSubmit = async () => {
-    if (!selectedInvoice) return
+    if (!selectedInvoice || sendingEmail) return
 
+    setSendingEmail(true)
     try {
-      // In a real app, you would integrate with an email service here
-      // For now, just simulate success and update status
+      const response = await fetch('/api/send-invoice', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          invoiceId: selectedInvoice.id,
+          clientEmail: sendForm.to,
+          clientName: selectedInvoice.clients?.name || 'Client',
+          senderName: settings.companyName || 'Your Company',
+          senderEmail: 'noreply@jithin.io',
+          customMessage: sendForm.message,
+          subject: sendForm.subject
+        }),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to send email')
+      }
+
+      // Update invoice status to sent
       setInvoices(invoices.map(inv => 
         inv.id === selectedInvoice.id 
           ? { ...inv, status: 'sent' }
@@ -699,8 +749,12 @@ export default function InvoicesPage() {
       
       toast.success(`Invoice ${selectedInvoice.invoice_number} sent to ${sendForm.to}!`)
     } catch (error) {
-      toast.error("Failed to send invoice")
+      console.error('Error sending invoice:', error)
+      toast.error('Failed to send invoice', {
+        description: error instanceof Error ? error.message : 'Please try again later'
+      })
     } finally {
+      setSendingEmail(false)
       setSendInvoiceOpen(false)
       setSelectedInvoice(null)
     }
@@ -1266,9 +1320,13 @@ export default function InvoicesPage() {
               <Button variant="outline" onClick={() => setSendInvoiceOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleSendInvoiceSubmit}>
-                <Mail className="mr-2 h-4 w-4" />
-                Send Invoice
+              <Button onClick={handleSendInvoiceSubmit} disabled={sendingEmail}>
+                {sendingEmail ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Mail className="mr-2 h-4 w-4" />
+                )}
+                {sendingEmail ? 'Sending...' : 'Send Invoice'}
               </Button>
             </div>
           </div>

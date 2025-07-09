@@ -48,7 +48,7 @@ export async function GET() {
 
     // Sample template settings
     const testTemplate = {
-      templateId: 'stripe-inspired',
+      templateId: 'modern',
       companyName: 'Your Company',
       companyAddress: '456 Company St\nBusiness City, BC 12345',
       companyEmail: 'hello@yourcompany.com',

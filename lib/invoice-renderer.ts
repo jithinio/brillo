@@ -330,7 +330,7 @@ export async function renderInvoiceHTML(invoice: any, template: any): Promise<st
 
   // Template rendering functions will be defined below
 
-  function renderStripeTemplate() {
+  function renderModernTemplate() {
     return `
       ${tailwindStyles}
       <div class="a4-container">
@@ -444,7 +444,7 @@ export async function renderInvoiceHTML(invoice: any, template: any): Promise<st
     `
   }
 
-  function renderContraTemplate() {
+  function renderBoldTemplate() {
     return `
       ${tailwindStyles}
       <div class="a4-container">
@@ -581,7 +581,7 @@ export async function renderInvoiceHTML(invoice: any, template: any): Promise<st
     `
   }
 
-  function renderMercuryTemplate() {
+  function renderClassicTemplate() {
     return `
       ${tailwindStyles}
       <div class="a4-container">
@@ -746,7 +746,7 @@ export async function renderInvoiceHTML(invoice: any, template: any): Promise<st
     `
   }
 
-  function renderNotionTemplate() {
+  function renderSlateTemplate() {
     return `
       ${tailwindStyles}
       <div class="a4-container">
@@ -923,15 +923,194 @@ export async function renderInvoiceHTML(invoice: any, template: any): Promise<st
     `
   }
 
+  function renderEdgeTemplate() {
+    return `
+      ${tailwindStyles}
+      <div class="a4-container">
+        <div class="invoice-content">
+          <div class="invoice-wrapper" style="${Object.entries(baseStyles).map(([k, v]) => `${k.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${v}`).join('; ')}">
+                         <!-- Edge Header -->
+             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4rem;">
+               <h1 style="font-size: 5rem; font-weight: 300; color: ${template.primaryColor}; line-height: 1; margin: 0;">
+                 Invoice
+               </h1>
+               <div style="display: flex; align-items: center; gap: 0.75rem;">
+                 ${template.showLogo && companyInfo.logoUrl ? `
+                   <img 
+                     src="${companyInfo.logoUrl}" 
+                     alt="Company Logo" 
+                     style="height: ${logoSize}px; border-radius: ${logoBorderRadius}px;"
+                     class="object-contain"
+                   />
+                 ` : ''}
+               </div>
+             </div>
+
+            <!-- From, To, Details Section -->
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 3rem; margin-bottom: 4rem;">
+              <!-- From -->
+              <div>
+                <h3 style="color: ${template.secondaryColor}; font-weight: 500; margin-bottom: 24px; padding-bottom: 8px; border-bottom: 1px solid ${template.borderColor}; font-size: 16px;">
+                  From
+                </h3>
+                <div style="line-height: 1.6;">
+                  <div style="font-weight: 500; color: ${template.primaryColor}; margin-bottom: 4px;">
+                    ${companyInfo.name}
+                  </div>
+                  <div style="color: ${template.secondaryColor}; margin-bottom: 4px;">
+                    ${companyInfo.email}
+                  </div>
+                  <div style="color: ${template.secondaryColor}; margin-top: 16px; white-space: pre-line;">
+                    ${companyInfo.address}
+                  </div>
+                  ${companyInfo.phone ? `
+                    <div style="color: ${template.secondaryColor}; margin-top: 4px;">
+                      ${companyInfo.phone}
+                    </div>
+                  ` : ''}
+                  ${template.showTaxId && companyInfo.taxId ? `
+                    <div style="color: ${template.secondaryColor}; margin-top: 8px;">
+                      Tax ID: ${companyInfo.taxId}
+                    </div>
+                  ` : ''}
+                </div>
+              </div>
+
+              <!-- To -->
+              <div>
+                <h3 style="color: ${template.secondaryColor}; font-weight: 500; margin-bottom: 24px; padding-bottom: 8px; border-bottom: 1px solid ${template.borderColor}; font-size: 16px;">
+                  To
+                </h3>
+                <div style="line-height: 1.6;">
+                  <div style="font-weight: 500; color: ${template.primaryColor}; margin-bottom: 4px;">
+                    ${invoiceData.client.name}
+                  </div>
+                  <div style="color: ${template.secondaryColor}; margin-bottom: 4px;">
+                    ${invoiceData.client.email}
+                  </div>
+                  <div style="color: ${template.secondaryColor}; margin-top: 16px; white-space: pre-line;">
+                    ${invoiceData.client.address}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Details -->
+              <div>
+                <h3 style="color: ${template.secondaryColor}; font-weight: 500; margin-bottom: 24px; padding-bottom: 8px; border-bottom: 1px solid ${template.borderColor}; font-size: 16px;">
+                  Details
+                </h3>
+                <div style="line-height: 1.6;">
+                                     ${template.showInvoiceNumber ? `
+                     <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                       <span style="color: ${template.secondaryColor};">No:</span>
+                       <span style="color: ${template.primaryColor}; font-weight: 500;">${invoiceData.number}</span>
+                     </div>
+                   ` : ''}
+                  ${template.showDates ? `
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                      <span style="color: ${template.secondaryColor};">Issue date</span>
+                      <span style="color: ${template.primaryColor}; font-weight: 500;">${invoiceData.date.toLocaleDateString()}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                      <span style="color: ${template.secondaryColor};">Due date</span>
+                      <span style="color: ${template.primaryColor}; font-weight: 500;">${invoiceData.dueDate.toLocaleDateString()}</span>
+                    </div>
+                  ` : ''}
+                </div>
+              </div>
+            </div>
+
+            <!-- Line Items -->
+            <div class="mb-16">
+              <div style="border-bottom: 1px solid ${template.borderColor}; padding-bottom: 16px;">
+                <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 2rem;">
+                  <div style="color: ${template.secondaryColor}; font-weight: 500;">Line items</div>
+                  <div style="color: ${template.secondaryColor}; font-weight: 500; text-align: center;">Quantity</div>
+                  <div style="color: ${template.secondaryColor}; font-weight: 500; text-align: right;">Amount</div>
+                </div>
+              </div>
+              
+              <div>
+                ${invoiceData.items.map((item: any, index: number) => `
+                  <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 2rem; align-items: center; padding: 12px 0; border-bottom: 1px solid ${template.borderColor}40;">
+                    <div>
+                      <div style="color: ${template.primaryColor}; font-weight: 500;">
+                        ${item.description}
+                      </div>
+                      ${template.showItemDetails && item.details ? `
+                        <div style="color: ${template.secondaryColor}; font-size: 14px; margin-top: 4px;">
+                          ${item.details}
+                        </div>
+                      ` : ''}
+                    </div>
+                    <div style="color: ${template.primaryColor}; text-align: center;">${item.quantity}</div>
+                    <div style="color: ${template.primaryColor}; text-align: right; font-weight: 500;">
+                      ${getCurrencySymbol(invoiceData.currency)}${item.amount.toFixed(2)}
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+
+              <!-- Total -->
+              <div style="margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid ${template.borderColor};">
+                <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 2rem;">
+                  <div></div>
+                  <div style="font-size: 24px; font-weight: 500; color: ${template.primaryColor}; text-align: center;">
+                    Total
+                  </div>
+                  <div style="font-size: 24px; font-weight: 700; color: ${template.primaryColor}; text-align: right;">
+                    ${getCurrencySymbol(invoiceData.currency)}${invoiceData.total.toFixed(2)}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Terms and Notes -->
+            ${(template.showPaymentTerms || template.showNotes) ? `
+              <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 4rem; padding-top: 2rem; border-top: 1px solid ${template.borderColor};">
+                ${template.showPaymentTerms ? `
+                  <div>
+                    <h3 style="color: ${template.secondaryColor}; font-weight: 500; margin-bottom: 24px; font-size: 16px;">
+                      Terms
+                    </h3>
+                    <div style="line-height: 1.6;">
+                      <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+                        <span style="color: ${template.secondaryColor};">Payment Terms</span>
+                        <span style="color: ${template.primaryColor};">${invoiceData.paymentTerms}</span>
+                      </div>
+                    </div>
+                  </div>
+                ` : ''}
+
+                ${template.showNotes && invoiceData.notes ? `
+                  <div>
+                    <h3 style="color: ${template.secondaryColor}; font-weight: 500; margin-bottom: 24px; font-size: 16px;">
+                      Notes
+                    </h3>
+                    <div style="color: ${template.primaryColor};">
+                      ${invoiceData.notes}
+                    </div>
+                  </div>
+                ` : ''}
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      </div>
+    `
+  }
+
   // Template selection logic
   switch (template.templateId) {
-    case 'contra-inspired':
-      return renderContraTemplate()
-    case 'mercury-inspired':
-      return renderMercuryTemplate()
-    case 'notion-inspired':
-      return renderNotionTemplate()
+    case 'bold':
+      return renderBoldTemplate()
+    case 'classic':
+      return renderClassicTemplate()
+    case 'slate':
+      return renderSlateTemplate()
+    case 'edge':
+      return renderEdgeTemplate()
     default:
-      return renderStripeTemplate()
+      return renderModernTemplate()
   }
 }

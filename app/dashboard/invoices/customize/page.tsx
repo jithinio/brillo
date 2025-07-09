@@ -8,8 +8,8 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
-import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { getDefaultCurrency, getCurrencySymbol } from '@/lib/currency'
 import { Save, Palette, Settings2, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
@@ -21,33 +21,33 @@ interface InvoiceTemplate {
   id: string
   name: string
   description: string
-  preview: string
 }
 
 const invoiceTemplates: InvoiceTemplate[] = [
   {
-    id: 'stripe-inspired',
-    name: 'Stripe',
-    description: 'Clean minimal design with perfect typography',
-    preview: 'Minimal colors, clear hierarchy'
+    id: 'modern',
+    name: 'Modern',
+    description: 'Minimal colors, timeless'
   },
   {
-    id: 'contra-inspired',
-    name: 'Contra',
-    description: 'Modern creative design with bold elements',
-    preview: 'Bold typography, creative layout'
+    id: 'bold',
+    name: 'Bold',
+    description: 'Bold typo, creative layout'
   },
   {
-    id: 'mercury-inspired',
-    name: 'Mercury',
-    description: 'Banking-grade professional design',
-    preview: 'Corporate clean, structured'
+    id: 'classic',
+    name: 'Classic',
+    description: 'Corporate clean, structured'
   },
   {
-    id: 'notion-inspired',
-    name: 'Notion',
-    description: 'Clean workspace-style design',
-    preview: 'Minimal, functional, modern'
+    id: 'slate',
+    name: 'Slate',
+    description: 'Minimal, functional, modern'
+  },
+  {
+    id: 'edge',
+    name: 'Edge',
+    description: 'Ultra-modern and spacious'
   }
 ]
 
@@ -83,7 +83,7 @@ export default function CustomizeInvoicePage() {
   const [activeTab, setActiveTab] = useState('template')
   const [saving, setSaving] = useState(false)
   const [template, setTemplate] = useState({
-    templateId: 'stripe-inspired',
+    templateId: 'modern',
     logoUrl: '',
     logoSize: [80],
     logoBorderRadius: [8],
@@ -120,12 +120,27 @@ export default function CustomizeInvoicePage() {
 
   // Load saved template from settings
   useEffect(() => {
+    // Template ID migration mapping
+    const migrateTemplateId = (templateId: string) => {
+      const migrationMap: { [key: string]: string } = {
+        'stripe-inspired': 'modern',
+        'contra-inspired': 'bold',
+        'mercury-inspired': 'classic',
+        'notion-inspired': 'slate'
+      }
+      return migrationMap[templateId] || templateId
+    }
+
     // First try to load from settings (account-level)
     if (settings.invoiceTemplate && Object.keys(settings.invoiceTemplate).length > 0) {
       console.log('✅ Loading template from Supabase:', settings.invoiceTemplate.templateId)
+      const migratedTemplate = {
+        ...settings.invoiceTemplate,
+        templateId: migrateTemplateId(settings.invoiceTemplate.templateId)
+      }
       setTemplate(prev => ({
         ...prev,
-        ...settings.invoiceTemplate
+        ...migratedTemplate
       }))
     } else {
       // Fallback to localStorage if no account template exists
@@ -134,9 +149,13 @@ export default function CustomizeInvoicePage() {
         try {
           const parsed = JSON.parse(savedTemplate)
           console.log('✅ Loading template from localStorage:', parsed.templateId)
+          const migratedTemplate = {
+            ...parsed,
+            templateId: migrateTemplateId(parsed.templateId)
+          }
           setTemplate(prev => ({
             ...prev,
-            ...parsed
+            ...migratedTemplate
           }))
         } catch (error) {
           console.error('Error loading saved template:', error)
@@ -183,7 +202,7 @@ export default function CustomizeInvoicePage() {
     status: 'PENDING',
     client: {
       name: 'Client Company Inc.',
-      email: 'accounts@clientcompany.com',
+      email: 'contact@company.com',
       address: '456 Client Avenue\nNew York, NY 10001',
       taxId: 'TAX-987654321'
     },
@@ -229,7 +248,7 @@ export default function CustomizeInvoicePage() {
   // Function to apply default template styles when user selects a new template
   const applyDefaultTemplateStyles = (templateId: string) => {
     const templateStyles = {
-      'stripe-inspired': {
+      'modern': {
         primaryColor: '#0A2540',
         secondaryColor: '#425466',
         accentColor: '#635BFF',
@@ -237,7 +256,7 @@ export default function CustomizeInvoicePage() {
         fontFamily: 'inter',
         invoicePadding: [48]
       },
-      'contra-inspired': {
+      'bold': {
         primaryColor: '#000000',
         secondaryColor: '#666666',
         accentColor: '#FF5A5F',
@@ -245,7 +264,7 @@ export default function CustomizeInvoicePage() {
         fontFamily: 'helvetica',
         invoicePadding: [64]
       },
-      'mercury-inspired': {
+      'classic': {
         primaryColor: '#1A1A1A',
         secondaryColor: '#6B7280',
         accentColor: '#8B5CF6',
@@ -253,13 +272,21 @@ export default function CustomizeInvoicePage() {
         fontFamily: 'arial',
         invoicePadding: [40]
       },
-      'notion-inspired': {
+      'slate': {
         primaryColor: '#191919',
         secondaryColor: '#787774',
         accentColor: '#0084FF',
         borderColor: '#EDEDEC',
         fontFamily: 'inter',
         invoicePadding: [56]
+      },
+      'edge': {
+        primaryColor: '#111827',
+        secondaryColor: '#6B7280',
+        accentColor: '#000000',
+        borderColor: '#D1D5DB',
+        fontFamily: 'inter',
+        invoicePadding: [32]
       }
     }
 
@@ -303,21 +330,23 @@ export default function CustomizeInvoicePage() {
     } as React.CSSProperties
 
     switch (template.templateId) {
-      case 'stripe-inspired':
-        return <StripeInspiredInvoice {...{ template, companyInfo, invoiceData, baseStyles }} />
-      case 'contra-inspired':
-        return <ContraInspiredInvoice {...{ template, companyInfo, invoiceData, baseStyles }} />
-      case 'mercury-inspired':
-        return <MercuryInspiredInvoice {...{ template, companyInfo, invoiceData, baseStyles }} />
-      case 'notion-inspired':
-        return <NotionInspiredInvoice {...{ template, companyInfo, invoiceData, baseStyles }} />
+      case 'modern':
+        return <ModernInvoice {...{ template, companyInfo, invoiceData, baseStyles }} />
+      case 'bold':
+        return <BoldInvoice {...{ template, companyInfo, invoiceData, baseStyles }} />
+      case 'classic':
+        return <ClassicInvoice {...{ template, companyInfo, invoiceData, baseStyles }} />
+      case 'slate':
+        return <SlateInvoice {...{ template, companyInfo, invoiceData, baseStyles }} />
+      case 'edge':
+        return <EdgeInvoice {...{ template, companyInfo, invoiceData, baseStyles }} />
       default:
-        return <StripeInspiredInvoice {...{ template, companyInfo, invoiceData, baseStyles }} />
+        return <ModernInvoice {...{ template, companyInfo, invoiceData, baseStyles }} />
     }
   }
 
-  // Stripe-inspired Invoice Component
-  const StripeInspiredInvoice = ({ template, companyInfo, invoiceData, baseStyles }: any) => {
+  // Modern Invoice Component
+  const ModernInvoice = ({ template, companyInfo, invoiceData, baseStyles }: any) => {
   return (
       <div style={baseStyles}>
         {/* Header */}
@@ -468,8 +497,8 @@ export default function CustomizeInvoicePage() {
     )
   }
 
-  // Contra-inspired Invoice Component
-  const ContraInspiredInvoice = ({ template, companyInfo, invoiceData, baseStyles }: any) => {
+  // Bold Invoice Component
+  const BoldInvoice = ({ template, companyInfo, invoiceData, baseStyles }: any) => {
     return (
       <div style={baseStyles}>
         {/* Bold Header */}
@@ -651,8 +680,8 @@ export default function CustomizeInvoicePage() {
     )
   }
 
-  // Mercury-inspired Invoice Component
-  const MercuryInspiredInvoice = ({ template, companyInfo, invoiceData, baseStyles }: any) => {
+  // Classic Invoice Component
+  const ClassicInvoice = ({ template, companyInfo, invoiceData, baseStyles }: any) => {
     return (
       <div style={baseStyles}>
         {/* Professional Header */}
@@ -869,8 +898,8 @@ export default function CustomizeInvoicePage() {
     )
   }
 
-  // Notion-inspired Invoice Component
-  const NotionInspiredInvoice = ({ template, companyInfo, invoiceData, baseStyles }: any) => {
+  // Slate Invoice Component
+  const SlateInvoice = ({ template, companyInfo, invoiceData, baseStyles }: any) => {
     return (
       <div style={baseStyles}>
         {/* Minimal Header */}
@@ -1169,6 +1198,209 @@ export default function CustomizeInvoicePage() {
     )
   }
 
+  // Edge Invoice Component
+  const EdgeInvoice = ({ template, companyInfo, invoiceData, baseStyles }: any) => {
+    return (
+      <div style={baseStyles}>
+        {/* Header */}
+        <div className="flex justify-between items-center mb-16">
+          <h1 style={{ 
+            fontSize: '5rem', 
+            fontWeight: '300', 
+            color: template.primaryColor,
+            lineHeight: '1',
+            margin: '0'
+          }}>Invoice</h1>
+          <div className="flex items-center gap-3">
+            {template.showLogo && template.logoUrl && (
+              <img 
+                src={template.logoUrl} 
+                alt="Company Logo" 
+                style={{
+                  height: `${template.logoSize[0]}px`, 
+                  borderRadius: `${template.logoBorderRadius[0]}px`
+                }}
+                className="object-contain"
+              />
+            )}
+          </div>
+        </div>
+
+        {/* From, To, Details Section */}
+        <div className="grid grid-cols-3 gap-12 mb-16">
+          {/* From */}
+          <div>
+            <h3 style={{ 
+              color: template.secondaryColor, 
+              fontWeight: '500', 
+              marginBottom: '24px', 
+              paddingBottom: '8px', 
+              borderBottom: `1px solid ${template.borderColor}`,
+              fontSize: '16px'
+            }}>From</h3>
+            <div className="space-y-1">
+              <div style={{ fontWeight: '500', color: template.primaryColor }}>{companyInfo.name}</div>
+              <div style={{ color: template.secondaryColor }}>{companyInfo.email}</div>
+              <div style={{ color: template.secondaryColor, marginTop: '16px', whiteSpace: 'pre-line' }}>
+                {companyInfo.address}
+              </div>
+              {companyInfo.phone && (
+                <div style={{ color: template.secondaryColor }}>{companyInfo.phone}</div>
+              )}
+              {template.showTaxId && companyInfo.taxId && (
+                <div style={{ color: template.secondaryColor, marginTop: '8px' }}>
+                  Tax ID: {companyInfo.taxId}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* To */}
+          <div>
+            <h3 style={{ 
+              color: template.secondaryColor, 
+              fontWeight: '500', 
+              marginBottom: '24px', 
+              paddingBottom: '8px', 
+              borderBottom: `1px solid ${template.borderColor}`,
+              fontSize: '16px'
+            }}>To</h3>
+            <div className="space-y-1">
+              <div style={{ fontWeight: '500', color: template.primaryColor }}>{invoiceData.client.name}</div>
+              <div style={{ color: template.secondaryColor }}>{invoiceData.client.email}</div>
+              <div style={{ color: template.secondaryColor, marginTop: '16px', whiteSpace: 'pre-line' }}>
+                {invoiceData.client.address}
+              </div>
+            </div>
+          </div>
+
+          {/* Details */}
+          <div>
+            <h3 style={{ 
+              color: template.secondaryColor, 
+              fontWeight: '500', 
+              marginBottom: '24px', 
+              paddingBottom: '8px', 
+              borderBottom: `1px solid ${template.borderColor}`,
+              fontSize: '16px'
+            }}>Details</h3>
+            <div className="space-y-2">
+              {template.showInvoiceNumber && (
+                <div className="flex justify-between">
+                  <span style={{ color: template.secondaryColor }}>No:</span>
+                  <span style={{ color: template.primaryColor, fontWeight: '500' }}>{invoiceData.number}</span>
+                </div>
+              )}
+              {template.showDates && (
+                <>
+                  <div className="flex justify-between">
+                    <span style={{ color: template.secondaryColor }}>Issue date</span>
+                    <span style={{ color: template.primaryColor, fontWeight: '500' }}>{invoiceData.date.toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span style={{ color: template.secondaryColor }}>Due date</span>
+                    <span style={{ color: template.primaryColor, fontWeight: '500' }}>{invoiceData.dueDate.toLocaleDateString()}</span>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Line Items */}
+        <div className="mb-16">
+          <div style={{ borderBottom: `1px solid ${template.borderColor}`, paddingBottom: '16px' }}>
+            <div className="grid grid-cols-3 gap-8">
+              <div style={{ color: template.secondaryColor, fontWeight: '500' }}>Line items</div>
+              <div style={{ color: template.secondaryColor, fontWeight: '500', textAlign: 'center' }}>Quantity</div>
+              <div style={{ color: template.secondaryColor, fontWeight: '500', textAlign: 'right' }}>Amount</div>
+            </div>
+          </div>
+          
+          <div>
+            {invoiceData.items.map((item: any, index: number) => (
+              <div key={index} className="grid grid-cols-3 gap-8 items-center py-3" style={{ 
+                borderBottom: `1px solid ${template.borderColor}40`
+              }}>
+                <div>
+                  <div style={{ color: template.primaryColor, fontWeight: '500' }}>{item.description}</div>
+                  {template.showItemDetails && item.details && (
+                    <div style={{ color: template.secondaryColor, fontSize: '14px', marginTop: '4px' }}>
+                      {item.details}
+                    </div>
+                  )}
+                </div>
+                <div style={{ color: template.primaryColor, textAlign: 'center' }}>{item.quantity}</div>
+                <div style={{ color: template.primaryColor, textAlign: 'right', fontWeight: '500' }}>
+                  {getCurrencySymbol(template.currency)}{item.amount.toFixed(2)}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Total */}
+          <div className="mt-12 pt-6" style={{ borderTop: `1px solid ${template.borderColor}` }}>
+            <div className="grid grid-cols-3 gap-8">
+              <div></div>
+              <div style={{ 
+                fontSize: '24px', 
+                fontWeight: '500', 
+                color: template.primaryColor, 
+                textAlign: 'center' 
+              }}>Total</div>
+              <div style={{ 
+                fontSize: '24px', 
+                fontWeight: '700', 
+                color: template.primaryColor, 
+                textAlign: 'right' 
+              }}>
+                {getCurrencySymbol(template.currency)}{invoiceData.total.toFixed(2)}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Terms and Notes */}
+        {(template.showPaymentTerms || template.showNotes) && (
+          <div className="grid grid-cols-2 gap-16 pt-8" style={{ borderTop: `1px solid ${template.borderColor}` }}>
+            {/* Terms */}
+            {template.showPaymentTerms && (
+              <div>
+                <h3 style={{ 
+                  color: template.secondaryColor, 
+                  fontWeight: '500', 
+                  marginBottom: '24px',
+                  fontSize: '16px'
+                }}>Terms</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span style={{ color: template.secondaryColor }}>Payment Terms</span>
+                    <span style={{ color: template.primaryColor }}>{invoiceData.paymentTerms}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Notes */}
+            {template.showNotes && invoiceData.notes && (
+              <div>
+                <h3 style={{ 
+                  color: template.secondaryColor, 
+                  fontWeight: '500', 
+                  marginBottom: '24px',
+                  fontSize: '16px'
+                }}>Notes</h3>
+                <div style={{ color: template.primaryColor }}>
+                  {invoiceData.notes}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
+
   // Reset functions for each style section
   const resetBranding = () => {
     setTemplate(prev => ({
@@ -1191,10 +1423,11 @@ export default function CustomizeInvoicePage() {
 
   const resetLayout = () => {
     const templatePadding = {
-      'stripe-inspired': [48],
-      'contra-inspired': [64],
-      'mercury-inspired': [40],
-      'notion-inspired': [56]
+      'modern': [48],
+      'bold': [64],
+      'classic': [40],
+      'slate': [56],
+      'edge': [32]
     }
     
     const padding = templatePadding[template.templateId as keyof typeof templatePadding]
@@ -1205,7 +1438,7 @@ export default function CustomizeInvoicePage() {
 
   const resetColors = () => {
     const templateStyles = {
-      'stripe-inspired': {
+      'modern': {
         primaryColor: '#0A2540',
         secondaryColor: '#425466',
         accentColor: '#635BFF',
@@ -1213,7 +1446,7 @@ export default function CustomizeInvoicePage() {
         backgroundColor: '#FFFFFF',
         invoicePadding: [48]
       },
-      'contra-inspired': {
+      'bold': {
         primaryColor: '#000000',
         secondaryColor: '#666666',
         accentColor: '#FF5A5F',
@@ -1221,7 +1454,7 @@ export default function CustomizeInvoicePage() {
         backgroundColor: '#FFFFFF',
         invoicePadding: [64]
       },
-      'mercury-inspired': {
+      'classic': {
         primaryColor: '#1A1A1A',
         secondaryColor: '#6B7280',
         accentColor: '#8B5CF6',
@@ -1229,13 +1462,21 @@ export default function CustomizeInvoicePage() {
         backgroundColor: '#FFFFFF',
         invoicePadding: [40]
       },
-      'notion-inspired': {
+      'slate': {
         primaryColor: '#191919',
         secondaryColor: '#787774',
         accentColor: '#0084FF',
         borderColor: '#EDEDEC',
         backgroundColor: '#FFFFFF',
         invoicePadding: [56]
+      },
+      'edge': {
+        primaryColor: '#111827',
+        secondaryColor: '#6B7280',
+        accentColor: '#000000',
+        borderColor: '#D1D5DB',
+        backgroundColor: '#FFFFFF',
+        invoicePadding: [32]
       }
     }
 
@@ -1316,29 +1557,35 @@ export default function CustomizeInvoicePage() {
                     <CardDescription className="text-sm">Choose a design inspired by leading companies</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-2 gap-3">
+                    <RadioGroup 
+                      value={template.templateId} 
+                      onValueChange={(value) => applyDefaultTemplateStyles(value)}
+                      className="grid grid-cols-2 gap-3"
+                    >
                       {invoiceTemplates.map((tmpl) => (
-                        <div
-                          key={tmpl.id}
-                          className={cn(
-                            "group cursor-pointer rounded-lg border-2 p-4 transition-all hover:shadow-md",
-                            template.templateId === tmpl.id
-                              ? "border-primary bg-primary/5 shadow-sm"
-                              : "border-gray-200 hover:border-primary/50"
-                          )}
-                          onClick={() => applyDefaultTemplateStyles(tmpl.id)}
-                        >
-                          <div className="flex items-center justify-between mb-1">
-                            <h3 className="font-medium text-sm">{tmpl.name}</h3>
-                            {template.templateId === tmpl.id && (
-                              <Badge variant="default" className="text-xs h-5">Active</Badge>
-                      )}
-                    </div>
-                          <p className="text-xs text-muted-foreground mb-1">{tmpl.description}</p>
-                          <div className="text-xs text-muted-foreground/70">{tmpl.preview}</div>
+                        <div key={tmpl.id}>
+                          <Label
+                            htmlFor={tmpl.id}
+                            className={cn(
+                              "flex cursor-pointer flex-col rounded-lg border-2 p-4 transition-all hover:shadow-md hover:border-primary/50",
+                              template.templateId === tmpl.id
+                                ? "border-primary bg-primary/5 shadow-sm"
+                                : "border-gray-200"
+                            )}
+                          >
+                            <div className="flex items-center justify-between mb-1">
+                              <h3 className="font-medium text-sm">{tmpl.name}</h3>
+                              <RadioGroupItem
+                                value={tmpl.id}
+                                id={tmpl.id}
+                                className="h-4 w-4"
+                              />
+                            </div>
+                            <p className="text-xs text-muted-foreground">{tmpl.description}</p>
+                          </Label>
                         </div>
                       ))}
-                    </div>
+                    </RadioGroup>
                   </CardContent>
                 </Card>
 

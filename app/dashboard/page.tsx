@@ -1,50 +1,430 @@
 "use client"
 
-import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Overview } from "@/components/overview"
-import { RecentSales } from "@/components/recent-sales"
-import { SectionCards } from "@/components/section-cards"
-import { DataTable } from "@/components/data-table"
-import { PageHeader, PageContent, PageTitle } from "@/components/page-header"
-import data from "./data.json"
+import { useState, useEffect } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
+import type { ChartConfig } from "@/components/ui/chart"
+import { Line, LineChart, Bar, BarChart, XAxis, YAxis, LabelList } from "recharts"
+import { TrendingUp, TrendingDown, Calendar, DollarSign } from "lucide-react"
 
-export default function DashboardPage() {
-  const [dateRange, setDateRange] = useState<any>(null)
+import { formatCurrency } from "@/lib/currency"
 
-  return (
-    <>
-      <PageHeader title="Dashboard" breadcrumbs={[{ label: "Overview" }]} />
-      <PageContent>
-        <PageTitle title="Dashboard" description="Welcome to your business management dashboard" />
+// Sample data - replace with real data from your API
+const mrrData = {
+  current: 28420,
+  previous: 24350,
+  trend: 'up' as const,
+  percentage: 16.7
+}
 
-        {/* Section Cards */}
-        <SectionCards />
+const arrData = {
+  current: 341040,
+  previous: 292200,
+  trend: 'up' as const,
+  percentage: 16.7
+}
 
-        {/* Chart Section */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-          <Card className="col-span-4">
-            <CardHeader>
-              <CardTitle>Overview</CardTitle>
-            </CardHeader>
-            <CardContent className="pl-2">
-              <Overview />
-            </CardContent>
-          </Card>
-          <Card className="col-span-3">
-            <CardHeader>
-              <CardTitle>Recent Sales</CardTitle>
-              <CardDescription>You made 265 sales this month.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <RecentSales />
-            </CardContent>
-          </Card>
+const revenueData = {
+  current: 95000,
+  previous: 84000,
+  trend: 'up' as const,
+  percentage: 13.1
+}
+
+const revenueLineData = [
+  { month: 'Jan', revenue: 4000, expenses: 2400 },
+  { month: 'Feb', revenue: 3000, expenses: 1398 },
+  { month: 'Mar', revenue: 2000, expenses: 9800 },
+  { month: 'Apr', revenue: 2780, expenses: 3908 },
+  { month: 'May', revenue: 1890, expenses: 4800 },
+  { month: 'Jun', revenue: 2390, expenses: 3800 },
+  { month: 'Jul', revenue: 3490, expenses: 4300 },
+  { month: 'Aug', revenue: 4000, expenses: 2400 },
+  { month: 'Sep', revenue: 3000, expenses: 1398 },
+  { month: 'Oct', revenue: 2000, expenses: 9800 },
+  { month: 'Nov', revenue: 2780, expenses: 3908 },
+  { month: 'Dec', revenue: 1890, expenses: 4800 },
+]
+
+const yearlyData = [
+  { year: '2020', revenue: 45000, expenses: 32000 },
+  { year: '2021', revenue: 52000, expenses: 38000 },
+  { year: '2022', revenue: 68000, expenses: 45000 },
+  { year: '2023', revenue: 84000, expenses: 52000 },
+  { year: '2024', revenue: 95000, expenses: 58000 },
+]
+
+// Chart configurations
+const miniChartConfig: ChartConfig = {
+  revenue: {
+    label: "Revenue",
+    color: "#059669",
+  },
+}
+
+const revenueChartConfig: ChartConfig = {
+  revenue: {
+    label: "Revenue",
+    color: "#3b82f6",
+  },
+  expenses: {
+    label: "Expenses",
+    color: "#ef4444",
+  },
+}
+
+const yearlyChartConfig: ChartConfig = {
+  revenue: {
+    label: "Revenue",
+    color: "#3b82f6",
+  },
+  expenses: {
+    label: "Expenses",
+    color: "#ef4444",
+  },
+}
+
+const MetricCard = ({ 
+  title, 
+  current, 
+  previous, 
+  trend, 
+  percentage, 
+  period,
+  onPeriodChange 
+}: {
+  title: string
+  current: number
+  previous: number
+  trend: 'up' | 'down'
+  percentage: number
+  period: string
+  onPeriodChange: (value: string) => void
+}) => (
+  <Card className="relative overflow-hidden bg-neutral-100 dark:bg-neutral-800 rounded-3xl border-0 shadow-none">
+    <CardHeader className="p-8 pb-3">
+      <div className="flex items-center justify-between">
+        <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">{title}</CardTitle>
+        <Select value={period} onValueChange={onPeriodChange}>
+          <SelectTrigger className="w-auto h-7 text-xs border-0 bg-white/60 dark:bg-neutral-700/60 shadow-none">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {title === 'MRR' ? (
+              <>
+                <SelectItem value="current-month">This Month</SelectItem>
+                <SelectItem value="last-month">Last Month</SelectItem>
+                <SelectItem value="3-months">Last 3 Months</SelectItem>
+              </>
+            ) : (
+              <>
+                <SelectItem value="current-year">This Year</SelectItem>
+                <SelectItem value="last-year">Last Year</SelectItem>
+                <SelectItem value="2-years">Last 2 Years</SelectItem>
+              </>
+            )}
+          </SelectContent>
+        </Select>
+      </div>
+    </CardHeader>
+    <CardContent className="px-8 pt-0 pb-8">
+      <div className="space-y-4">
+        <div className="space-y-1">
+          <div className="text-3xl font-medium text-slate-900 dark:text-slate-100">
+            {formatCurrency(current, 'USD')}
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1">
+              {trend === 'up' ? (
+                <TrendingUp className="h-3 w-3 text-emerald-600" />
+              ) : (
+                <TrendingDown className="h-3 w-3 text-red-600" />
+              )}
+              <span className={`text-xs font-medium ${trend === 'up' ? 'text-emerald-600' : 'text-red-600'}`}>
+                {percentage}%
+              </span>
+            </div>
+            <span className="text-xs text-slate-500 dark:text-slate-400">vs previous period</span>
+          </div>
+        </div>
+        
+        {/* Mini chart */}
+        <div className="h-12 w-full" style={{ marginTop: '48px' }}>
+          <ChartContainer config={miniChartConfig} className="h-full w-full">
+            <LineChart data={revenueLineData.slice(-6)} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+              <Line 
+                type="monotone" 
+                dataKey="revenue" 
+                stroke={trend === 'up' ? '#059669' : '#dc2626'} 
+                strokeWidth={2}
+                dot={false}
+              />
+            </LineChart>
+          </ChartContainer>
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+)
+
+const RevenueChart = ({ 
+  type, 
+  period, 
+  current,
+  previous,
+  trend,
+  percentage,
+  onTypeChange, 
+  onPeriodChange 
+}: {
+  type: 'revenue' | 'expenses'
+  period: string
+  current: number
+  previous: number
+  trend: 'up' | 'down'
+  percentage: number
+  onTypeChange: (value: 'revenue' | 'expenses') => void
+  onPeriodChange: (value: string) => void
+}) => (
+  <Card className="bg-neutral-100 dark:bg-neutral-800 rounded-3xl border-0 shadow-none">
+    <CardHeader className="p-8">
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <CardTitle className="text-lg font-normal text-slate-900 dark:text-slate-100">
+            This Year
+          </CardTitle>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Track your financial performance over time</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Select value={type} onValueChange={onTypeChange}>
+            <SelectTrigger className="w-32 h-9 border-0 bg-white dark:bg-neutral-700 shadow-none">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="revenue">Revenue</SelectItem>
+              <SelectItem value="expenses">Expenses</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={period} onValueChange={onPeriodChange}>
+            <SelectTrigger className="w-32 h-9 border-0 bg-white dark:bg-neutral-700 shadow-none">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="monthly">Monthly</SelectItem>
+              <SelectItem value="quarterly">Quarterly</SelectItem>
+              <SelectItem value="yearly">Yearly</SelectItem>
+              <SelectItem value="last-year">Last Year</SelectItem>
+              <SelectItem value="custom">Custom Date</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+    </CardHeader>
+    <CardContent className="px-8 pb-8">
+      <div className="space-y-6">
+        {/* Amount section */}
+        <div className="space-y-1">
+          <div className="text-3xl font-medium text-slate-900 dark:text-slate-100">
+            {formatCurrency(current, 'USD')}
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1">
+              {trend === 'up' ? (
+                <TrendingUp className="h-3 w-3 text-emerald-600" />
+              ) : (
+                <TrendingDown className="h-3 w-3 text-red-600" />
+              )}
+              <span className={`text-xs font-medium ${trend === 'up' ? 'text-emerald-600' : 'text-red-600'}`}>
+                {percentage}%
+              </span>
+            </div>
+            <span className="text-xs text-slate-500 dark:text-slate-400">vs previous period</span>
+          </div>
         </div>
 
-        {/* Data Table Section */}
-        <DataTable data={data} />
-      </PageContent>
-    </>
+        <div className="h-80 w-full" style={{ marginTop: '48px' }}>
+          <ChartContainer config={revenueChartConfig} className="h-full w-full">
+            <LineChart data={revenueLineData} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
+              <XAxis 
+                dataKey="month" 
+                axisLine={false}
+                tickLine={false}
+                tick={{ fontSize: 12, fill: '#64748b' }}
+                className="dark:[&_.recharts-cartesian-axis-tick_text]:fill-slate-300"
+              />
+              <YAxis 
+                axisLine={false}
+                tickLine={false}
+                tick={{ fontSize: 12, fill: '#64748b' }}
+                tickFormatter={(value) => value === 0 ? '' : `$${value / 1000}k`}
+                width={46}
+                className="dark:[&_.recharts-cartesian-axis-tick_text]:fill-slate-300"
+              />
+              <ChartTooltip 
+                content={<ChartTooltipContent />}
+                formatter={(value: any) => [formatCurrency(value, 'USD'), type]}
+              />
+              <Line 
+                type="monotone" 
+                dataKey={type} 
+                stroke={type === 'revenue' ? '#3b82f6' : '#ef4444'} 
+                strokeWidth={3}
+                dot={{ fill: type === 'revenue' ? '#3b82f6' : '#ef4444', strokeWidth: 0, r: 4 }}
+                activeDot={{ r: 6, stroke: type === 'revenue' ? '#3b82f6' : '#ef4444', strokeWidth: 2, fill: 'white' }}
+              />
+            </LineChart>
+          </ChartContainer>
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+)
+
+const YearlyBarChart = ({ 
+  type, 
+  onTypeChange 
+}: {
+  type: 'revenue' | 'expenses'
+  onTypeChange: (value: 'revenue' | 'expenses') => void
+}) => (
+  <Card className="bg-neutral-100 dark:bg-neutral-800 rounded-3xl border-0 shadow-none">
+    <CardHeader className="p-8">
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <CardTitle className="text-lg font-normal text-slate-900 dark:text-slate-100">
+            Yearly {type === 'revenue' ? 'Revenue' : 'Expenses'}
+          </CardTitle>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Annual performance across all years</p>
+        </div>
+        <Select value={type} onValueChange={onTypeChange}>
+          <SelectTrigger className="w-32 h-9 border-0 bg-white dark:bg-neutral-700 shadow-none">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="revenue">Revenue</SelectItem>
+            <SelectItem value="expenses">Expenses</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+    </CardHeader>
+    <CardContent className="px-8 pb-8">
+      <div className="h-96 w-full" style={{ marginTop: '48px' }}>
+        <ChartContainer config={yearlyChartConfig} className="h-full w-full">
+          <BarChart data={yearlyData} barCategoryGap="20%" margin={{ top: 30, right: 30, left: 0, bottom: 0 }}>
+            <XAxis 
+              dataKey="year" 
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 12, fill: '#64748b' }}
+              className="dark:[&_.recharts-cartesian-axis-tick_text]:fill-slate-300"
+            />
+            <YAxis 
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 12, fill: '#64748b' }}
+              tickFormatter={(value) => value === 0 ? '' : `$${value / 1000}k`}
+              width={46}
+              className="dark:[&_.recharts-cartesian-axis-tick_text]:fill-slate-300"
+            />
+            <Bar 
+              dataKey={type} 
+              fill={type === 'revenue' ? '#3b82f6' : '#ef4444'}
+              radius={[64, 64, 0, 0]}
+            >
+              <LabelList 
+                dataKey={type} 
+                position="top" 
+                offset={16}
+                style={{ fontSize: '14px', fontWeight: '600' }}
+                fill="#374151"
+                className="dark:fill-slate-200"
+                formatter={(value: any) => `$${(value / 1000).toFixed(0)}k`}
+              />
+            </Bar>
+          </BarChart>
+        </ChartContainer>
+      </div>
+    </CardContent>
+  </Card>
+)
+
+export default function DashboardPage() {
+  const [mrrPeriod, setMrrPeriod] = useState("current-month")
+  const [arrPeriod, setArrPeriod] = useState("current-year")
+  const [revenueType, setRevenueType] = useState<'revenue' | 'expenses'>('revenue')
+  const [revenuePeriod, setRevenuePeriod] = useState("yearly")
+  const [yearlyType, setYearlyType] = useState<'revenue' | 'expenses'>('revenue')
+  const [greeting, setGreeting] = useState("")
+  const [userName] = useState("Jithin") // Replace with actual user name from context/auth
+
+  useEffect(() => {
+    const getGreeting = () => {
+      const hour = new Date().getHours()
+      if (hour < 12) return "Good morning"
+      if (hour < 17) return "Good afternoon"
+      return "Good evening"
+    }
+    setGreeting(getGreeting())
+  }, [])
+
+  return (
+    <div className="p-12">
+      {/* Dynamic Greeting */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-normal text-slate-900 dark:text-slate-100 mb-2">
+          {greeting}, {userName}! 👋
+        </h1>
+        <p className="text-slate-600 dark:text-slate-300">Here's what's happening with your business today.</p>
+      </div>
+
+      {/* Summary Section */}
+      <div className="mb-8">
+        {/* MRR and ARR Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <MetricCard
+            title="MRR"
+            current={mrrData.current}
+            previous={mrrData.previous}
+            trend={mrrData.trend}
+            percentage={mrrData.percentage}
+            period={mrrPeriod}
+            onPeriodChange={setMrrPeriod}
+          />
+          <MetricCard
+            title="ARR"
+            current={arrData.current}
+            previous={arrData.previous}
+            trend={arrData.trend}
+            percentage={arrData.percentage}
+            period={arrPeriod}
+            onPeriodChange={setArrPeriod}
+          />
+        </div>
+
+        {/* Revenue Line Chart */}
+        <div className="mb-8">
+          <RevenueChart
+            type={revenueType}
+            period={revenuePeriod}
+            current={revenueData.current}
+            previous={revenueData.previous}
+            trend={revenueData.trend}
+            percentage={revenueData.percentage}
+            onTypeChange={setRevenueType}
+            onPeriodChange={setRevenuePeriod}
+          />
+        </div>
+
+        {/* Yearly Bar Chart */}
+        <div>
+          <YearlyBarChart
+            type={yearlyType}
+            onTypeChange={setYearlyType}
+          />
+        </div>
+      </div>
+    </div>
   )
 }

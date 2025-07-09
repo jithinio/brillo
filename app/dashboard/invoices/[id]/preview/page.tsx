@@ -2,9 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
-import { ArrowLeft, Download, Edit, Mail, Check } from 'lucide-react'
+import { ArrowLeft, Download, Edit, Mail } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
 import { useSettings } from '@/components/settings-provider'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
@@ -59,6 +63,14 @@ export default function InvoicePreviewPage() {
   const [sendingEmail, setSendingEmail] = useState(false)
   const [invoiceHTML, setInvoiceHTML] = useState<string>('')
   
+  // Send email dialog state
+  const [sendEmailOpen, setSendEmailOpen] = useState(false)
+  const [sendForm, setSendForm] = useState({
+    to: "",
+    subject: "",
+    message: ""
+  })
+  
   // Get the action from query params (created, updated, or view)
   const action = searchParams.get('action') || 'view'
   
@@ -107,6 +119,18 @@ export default function InvoicePreviewPage() {
 
   // Helper function to render invoice HTML
   async function renderInvoiceForPreview(invoice: Invoice, templateSettings: any, settings: any) {
+    // Template ID migration mapping
+    const migrateTemplateId = (templateId: string) => {
+      if (!templateId) return 'modern'
+      const migrationMap: { [key: string]: string } = {
+        'stripe-inspired': 'modern',
+        'contra-inspired': 'bold',
+        'mercury-inspired': 'classic',
+        'notion-inspired': 'slate'
+      }
+      return migrationMap[templateId] || templateId
+    }
+    
     // Get company info from settings or localStorage
     let companyInfo = {
       companyName: settings.companyName || 'Your Company',
@@ -137,7 +161,7 @@ export default function InvoicePreviewPage() {
     
     // Create full template with all settings - use saved templateId if available
     const fullTemplate = {
-      templateId: templateSettings.templateId || 'stripe-inspired',
+      templateId: migrateTemplateId(templateSettings.templateId) || 'modern',
       logoSize: templateSettings.logoSize || [80],
       logoBorderRadius: templateSettings.logoBorderRadius || [8],
       invoicePadding: templateSettings.invoicePadding || [48],
@@ -325,15 +349,66 @@ export default function InvoicePreviewPage() {
   }
 
   async function handleSendEmail() {
+    if (!invoice) return
+    
+    // Check if client has email
+    if (!invoice.clients?.email) {
+      toast.error('Client email not found', {
+        description: 'Please add an email address for this client before sending.'
+      })
+      return
+    }
+    
+    // Use the client's actual email address since domain is verified
+    const emailToUse = invoice.clients.email
+    
+    // Set up the form and open dialog
+    setSendForm({
+      to: emailToUse,
+      subject: `Invoice ${invoice.invoice_number} from ${settings.companyName || 'Your Company'}`,
+      message: `Dear ${invoice.clients.name || 'Client'},\n\nPlease find attached your invoice ${invoice.invoice_number} for ${invoice.total_amount ? `$${invoice.total_amount.toFixed(2)}` : 'the requested amount'}.\n\nDue date: ${new Date(invoice.due_date).toLocaleDateString()}\n\nThank you for your business!\n\nBest regards,\n${settings.companyName || 'Your Company'}`
+    })
+    setSendEmailOpen(true)
+  }
+
+  async function handleSendEmailSubmit() {
     if (!invoice || sendingEmail) return
     
     setSendingEmail(true)
     try {
-      // TODO: Implement email sending functionality
-      toast.info('Email functionality coming soon!')
+      const response = await fetch('/api/send-invoice', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          invoiceId: invoice.id,
+          clientEmail: sendForm.to,
+          clientName: invoice.clients?.name || 'Client',
+          senderName: settings.companyName || 'Your Company',
+          senderEmail: 'noreply@resend.dev', // Use Resend's default domain
+          customMessage: sendForm.message,
+          subject: sendForm.subject
+        }),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to send email')
+      }
+
+      toast.success('Invoice sent successfully!', {
+        description: `Email sent to ${sendForm.to}`
+      })
+      
+      // Close dialog
+      setSendEmailOpen(false)
     } catch (error) {
       console.error('Error sending email:', error)
-      toast.error('Failed to send email')
+      toast.error('Failed to send invoice', {
+        description: error instanceof Error ? error.message : 'Please try again later'
+      })
     } finally {
       setSendingEmail(false)
     }
@@ -375,27 +450,18 @@ export default function InvoicePreviewPage() {
     }
   }
 
-  // Get success message based on action
-  function getSuccessMessage() {
-    switch (action) {
-      case 'created':
-        return (
-          <div className="flex items-center gap-2 text-green-600 dark:text-green-400 mb-4">
-            <Check className="h-5 w-5" />
-            <span className="font-medium">Invoice created successfully!</span>
-          </div>
-        )
-      case 'updated':
-        return (
-          <div className="flex items-center gap-2 text-green-600 dark:text-green-400 mb-4">
-            <Check className="h-5 w-5" />
-            <span className="font-medium">Invoice updated successfully!</span>
-          </div>
-        )
-      default:
-        return null
+  // Show success toast based on action
+  useEffect(() => {
+    if (action === 'created') {
+      toast.success('Invoice created successfully!', {
+        description: 'Your invoice has been created and is ready to download or send.'
+      })
+    } else if (action === 'updated') {
+      toast.success('Invoice updated successfully!', {
+        description: 'Your invoice has been updated and saved.'
+      })
     }
-  }
+  }, [action])
 
   if (loading) {
     return (
@@ -494,8 +560,6 @@ export default function InvoicePreviewPage() {
       />
       <PageContent>
         <div className="space-y-6">
-          {getSuccessMessage()}
-          
           {/* Invoice Preview - Centered and responsive */}
           <div className="flex justify-center pt-6 px-4">
             {/* Container that adapts to invoice width + padding */}
@@ -533,6 +597,62 @@ export default function InvoicePreviewPage() {
           </div>
         </div>
       </PageContent>
+
+      {/* Send Email Dialog */}
+      <Dialog open={sendEmailOpen} onOpenChange={setSendEmailOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <Mail className="h-5 w-5" />
+              <span>Send Invoice</span>
+            </DialogTitle>
+            <DialogDescription>
+              Send {invoice?.invoice_number} via email
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+             <div className="space-y-2">
+               <Label htmlFor="email-to">To</Label>
+               <Input
+                 id="email-to"
+                 value={sendForm.to}
+                 onChange={(e) => setSendForm({...sendForm, to: e.target.value})}
+                 placeholder="client@example.com"
+               />
+             </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="email-subject">Subject</Label>
+              <Input
+                id="email-subject"
+                value={sendForm.subject}
+                onChange={(e) => setSendForm({...sendForm, subject: e.target.value})}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="email-message">Message</Label>
+              <Textarea
+                id="email-message"
+                value={sendForm.message}
+                onChange={(e) => setSendForm({...sendForm, message: e.target.value})}
+                rows={6}
+              />
+            </div>
+            
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setSendEmailOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSendEmailSubmit} disabled={sendingEmail}>
+                <Mail className="mr-2 h-4 w-4" />
+                {sendingEmail ? 'Sending...' : 'Send Invoice'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   )
 } 

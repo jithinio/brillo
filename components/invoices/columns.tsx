@@ -51,6 +51,13 @@ export type Invoice = {
     id?: string
     name: string
     company?: string
+    email?: string
+    phone?: string
+    address?: string
+    city?: string
+    state?: string
+    zip_code?: string
+    country?: string
   }
   projects?: {
     name: string
@@ -104,7 +111,7 @@ interface ColumnActions {
   onViewInvoice: (invoice: Invoice) => void
   onDeleteInvoice: (invoice: Invoice) => void
   onStatusChange: (invoice: Invoice, newStatus: string) => void
-  onClientClick: (client: { name: string; company?: string; id?: string }) => void
+  onClientClick: (client: { name: string; company?: string; id?: string; email?: string }) => void
   onProjectClick?: (projectName: string) => void
   downloadingPDF?: string | null
 }
