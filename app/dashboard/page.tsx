@@ -109,7 +109,7 @@ const MetricCard = ({
   onPeriodChange: (value: string) => void
   formatCurrency: (amount: number) => string
 }) => (
-  <Card className="relative overflow-hidden bg-gray-100 dark:bg-gray-800 rounded-3xl border-0 shadow-none">
+  <Card className="relative overflow-hidden bg-zinc-100 dark:bg-zinc-800 rounded-3xl border-0 shadow-none">
     <CardHeader className="p-8 pb-3">
       <div className="flex items-center justify-between">
         <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
@@ -256,7 +256,7 @@ const RevenueChart = ({
   const dynamicTrend = calculateDynamicTrend()
 
   return (
-  <Card className="bg-gray-100 dark:bg-gray-800 rounded-3xl border-0 shadow-none">
+  <Card className="bg-zinc-100 dark:bg-zinc-800 rounded-3xl border-0 shadow-none">
     <CardHeader className="p-8 pb-3">
       <div className="flex items-center justify-between">
         <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -351,7 +351,7 @@ const YearlyBarChart = ({
   onTypeChange: (value: 'revenue' | 'expenses') => void
   formatCurrency: (amount: number) => string
 }) => (
-  <Card className="bg-gray-100 dark:bg-gray-800 rounded-3xl border-0 shadow-none">
+  <Card className="bg-zinc-100 dark:bg-zinc-800 rounded-3xl border-0 shadow-none">
     <CardHeader className="p-8 pb-3">
       <div className="flex items-center justify-between">
         <CardTitle className="text-sm font-medium text-muted-foreground">
