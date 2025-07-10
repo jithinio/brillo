@@ -141,11 +141,11 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
               </div>
             </div>
           </form>
-          <div className="relative hidden bg-muted md:block">
+          <div className="relative hidden bg-background md:block">
             <img
               src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/google-deepmind-UHiedDRzjgM-unsplash.jpg-GzinqHMK97xeCXXcE0AZzzbFBQoJ89.jpeg"
               alt="Modern 3D illustration with colorful glass objects"
-              className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
+              className="absolute inset-0 h-full w-full object-cover dark:brightness-75"
             />
           </div>
         </CardContent>
