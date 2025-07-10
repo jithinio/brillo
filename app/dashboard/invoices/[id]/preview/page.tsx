@@ -509,6 +509,7 @@ export default function InvoicePreviewPage() {
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
+              size="sm"
               onClick={handleBack}
               className="gap-2"
             >
@@ -518,6 +519,7 @@ export default function InvoicePreviewPage() {
             
             <Button
               variant="outline"
+              size="sm"
               onClick={handleEdit}
               className="gap-2"
             >
@@ -527,6 +529,7 @@ export default function InvoicePreviewPage() {
             
             <Button
               variant="outline"
+              size="sm"
               onClick={handleSendEmail}
               disabled={sendingEmail}
               className="gap-2"
@@ -538,6 +541,7 @@ export default function InvoicePreviewPage() {
             <Button
               onClick={handleDownloadPDF}
               disabled={downloadingPDF}
+              size="sm"
               className="gap-2"
             >
               <Download className="h-4 w-4" />

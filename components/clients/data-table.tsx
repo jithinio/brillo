@@ -14,7 +14,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { ChevronDown, LayoutGrid, Search, Eye, Edit, FileText, FolderPlus, Trash2 } from "lucide-react"
+import { ChevronDown, Settings2, Search, Eye, Edit, FileText, FolderPlus, Trash2, Plus } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -174,15 +174,12 @@ export function DataTable<TData, TValue>({
               className="max-w-sm pl-8"
             />
           </div>
-        </div>
-        <div className="flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="bg-background">
-                <LayoutGrid className="mr-2 h-4 w-4" />
-                <span className="hidden lg:inline">Customize Columns</span>
-                <span className="lg:hidden">Columns</span>
-                <ChevronDown className="ml-2 h-4 w-4" />
+              <Button variant="outline" size="sm">
+                <Settings2 className="mr-1.5 h-4 w-4" />
+                <span className="hidden lg:inline">View</span>
+                <span className="lg:hidden">View</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
@@ -224,27 +221,29 @@ export function DataTable<TData, TValue>({
                 })}
             </DropdownMenuContent>
           </DropdownMenu>
+        </div>
+        <div className="flex items-center gap-2">
           {selectedCount > 0 && (
             <Button
-              variant="destructive"
-              size="sm"
+              size="icon"
+              className="bg-red-100 text-red-600 hover:bg-red-200 rounded-full"
               onClick={handleBatchDelete}
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash2 className="h-3.5 w-3.5" />
             </Button>
           )}
           <Button 
             type="button"
-            size="sm" 
-            className="bg-primary text-primary-foreground hover:bg-primary/90" 
+            size="icon" 
+            className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full" 
             onClick={(e) => {
               e.preventDefault()
               e.stopPropagation()
               onAddClient?.()
             }}
+            title="Add Client"
           >
-            <span className="hidden lg:inline">Add Client</span>
-            <span className="lg:hidden">Add</span>
+            <Plus className="h-3.5 w-3.5" />
           </Button>
         </div>
       </div>
@@ -317,35 +316,35 @@ export function DataTable<TData, TValue>({
                       <ContextMenuItem 
                         onClick={() => contextActions.onViewDetails(row.original)}
                       >
-                        <Eye className="mr-2 h-4 w-4" />
-                        View Details
+                                                  <Eye className="mr-1.5 h-4 w-4" />
+                          View Details
                       </ContextMenuItem>
                       <ContextMenuItem 
                         onClick={() => contextActions.onEditClient(row.original)}
                       >
-                        <Edit className="mr-2 h-4 w-4" />
-                        Edit Client
+                                                  <Edit className="mr-1.5 h-4 w-4" />
+                          Edit Client
                       </ContextMenuItem>
                       <ContextMenuSeparator />
                       <ContextMenuItem 
                         onClick={() => contextActions.onCreateInvoice(row.original)}
                       >
-                        <FileText className="mr-2 h-4 w-4" />
-                        Create Invoice
+                                                  <FileText className="mr-1.5 h-4 w-4" />
+                          Create Invoice
                       </ContextMenuItem>
                       <ContextMenuItem 
                         onClick={() => contextActions.onNewProject(row.original)}
                       >
-                        <FolderPlus className="mr-2 h-4 w-4" />
-                        New Project
+                                                  <FolderPlus className="mr-1.5 h-4 w-4" />
+                          New Project
                       </ContextMenuItem>
                       <ContextMenuSeparator />
                       <ContextMenuItem 
                         onClick={() => contextActions.onDeleteClient(row.original)}
                         className="text-destructive focus:text-destructive"
                       >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete Client
+                                                  <Trash2 className="mr-1.5 h-4 w-4" />
+                          Delete Client
                       </ContextMenuItem>
                     </ContextMenuContent>
                   )}
@@ -397,7 +396,7 @@ export function DataTable<TData, TValue>({
             <Button
               variant="outline"
               className="h-8 w-8 bg-background"
-              size="icon"
+              size="sm"
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
             >
@@ -406,7 +405,7 @@ export function DataTable<TData, TValue>({
             <Button
               variant="outline"
               className="h-8 w-8 bg-background"
-              size="icon"
+              size="sm"
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
             >

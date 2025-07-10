@@ -13,7 +13,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { ChevronDown, Search, LayoutGrid, Eye, Edit, FileText, Trash2, CheckCircle, Clock, Pause, XCircle } from "lucide-react"
+import { ChevronDown, Search, Settings2, Eye, Edit, FileText, Trash2, CheckCircle, Clock, Pause, XCircle, Plus } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -170,15 +170,12 @@ export function DataTable<TData, TValue>({ columns, data, onAddProject, onBatchD
               className="max-w-sm pl-8"
             />
           </div>
-        </div>
-        <div className="flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="bg-background">
-                <LayoutGrid className="mr-2 h-4 w-4" />
-                <span className="hidden lg:inline">Customize Columns</span>
-                <span className="lg:hidden">Columns</span>
-                <ChevronDown className="ml-2 h-4 w-4" />
+              <Button variant="outline" size="sm">
+                <Settings2 className="mr-1.5 h-4 w-4" />
+                <span className="hidden lg:inline">View</span>
+                <span className="lg:hidden">View</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
@@ -224,27 +221,29 @@ export function DataTable<TData, TValue>({ columns, data, onAddProject, onBatchD
                 })}
             </DropdownMenuContent>
           </DropdownMenu>
+        </div>
+        <div className="flex items-center gap-2">
           {selectedCount > 0 && (
             <Button
-              variant="destructive"
-              size="sm"
+              size="icon"
+              className="bg-red-100 text-red-600 hover:bg-red-200 rounded-full"
               onClick={handleBatchDelete}
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash2 className="h-3.5 w-3.5" />
             </Button>
           )}
           <Button 
             type="button"
-            size="sm" 
-            className="bg-primary text-primary-foreground hover:bg-primary/90" 
+            size="icon" 
+            className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full" 
             onClick={(e) => {
               e.preventDefault()
               e.stopPropagation()
               onAddProject?.()
             }}
+            title="Add Project"
           >
-            <span className="hidden lg:inline">Add Project</span>
-            <span className="lg:hidden">Add</span>
+            <Plus className="h-3.5 w-3.5" />
           </Button>
         </div>
       </div>
@@ -318,13 +317,13 @@ export function DataTable<TData, TValue>({ columns, data, onAddProject, onBatchD
                       <ContextMenuItem 
                         onClick={() => contextActions.onViewDetails(row.original)}
                       >
-                        <Eye className="mr-2 h-4 w-4" />
+                        <Eye className="mr-1.5 h-4 w-4" />
                         View Details
                       </ContextMenuItem>
                       <ContextMenuItem 
                         onClick={() => contextActions.onEditProject(row.original)}
                       >
-                        <Edit className="mr-2 h-4 w-4" />
+                        <Edit className="mr-1.5 h-4 w-4" />
                         Edit Project
                       </ContextMenuItem>
                       <ContextMenuSeparator />
@@ -332,32 +331,32 @@ export function DataTable<TData, TValue>({ columns, data, onAddProject, onBatchD
                       {/* Status Change Submenu */}
                       <ContextMenuSub>
                         <ContextMenuSubTrigger>
-                          <CheckCircle className="mr-2 h-4 w-4" />
+                          <CheckCircle className="mr-1.5 h-4 w-4" />
                           Change Status
                         </ContextMenuSubTrigger>
                         <ContextMenuSubContent>
                           <ContextMenuItem 
                             onClick={() => contextActions.onStatusChange(row.original, 'active')}
                           >
-                            <Clock className="mr-2 h-4 w-4 text-blue-600" />
+                            <Clock className="mr-1.5 h-4 w-4 text-blue-600" />
                             In Progress
                           </ContextMenuItem>
                           <ContextMenuItem 
                             onClick={() => contextActions.onStatusChange(row.original, 'completed')}
                           >
-                            <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
+                            <CheckCircle className="mr-1.5 h-4 w-4 text-green-600" />
                             Completed
                           </ContextMenuItem>
                           <ContextMenuItem 
                             onClick={() => contextActions.onStatusChange(row.original, 'on_hold')}
                           >
-                            <Pause className="mr-2 h-4 w-4 text-yellow-600" />
+                            <Pause className="mr-1.5 h-4 w-4 text-yellow-600" />
                             On Hold
                           </ContextMenuItem>
                           <ContextMenuItem 
                             onClick={() => contextActions.onStatusChange(row.original, 'cancelled')}
                           >
-                            <XCircle className="mr-2 h-4 w-4 text-gray-600" />
+                            <XCircle className="mr-1.5 h-4 w-4 text-gray-600" />
                             Cancelled
                           </ContextMenuItem>
                         </ContextMenuSubContent>
@@ -367,7 +366,7 @@ export function DataTable<TData, TValue>({ columns, data, onAddProject, onBatchD
                       <ContextMenuItem 
                         onClick={() => contextActions.onCreateInvoice(row.original)}
                       >
-                        <FileText className="mr-2 h-4 w-4" />
+                        <FileText className="mr-1.5 h-4 w-4" />
                         Create Invoice
                       </ContextMenuItem>
                       <ContextMenuSeparator />
@@ -375,7 +374,7 @@ export function DataTable<TData, TValue>({ columns, data, onAddProject, onBatchD
                         onClick={() => contextActions.onDeleteProject(row.original)}
                         className="text-destructive focus:text-destructive"
                       >
-                        <Trash2 className="mr-2 h-4 w-4" />
+                        <Trash2 className="mr-1.5 h-4 w-4" />
                         Delete Project
                       </ContextMenuItem>
                     </ContextMenuContent>

@@ -23,7 +23,6 @@ const data = {
       title: "Dashboard",
       url: "/dashboard",
       icon: Gauge,
-      isActive: true,
     },
     {
       title: "Clients",
@@ -86,8 +85,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   <GalleryVerticalEnd className="size-4" />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">Suitebase</span>
-                  <span className="truncate text-xs">Business Platform</span>
+                  <span className="truncate font-semibold text-foreground">Suitebase</span>
+                  <span className="truncate text-xs text-foreground">Business Platform</span>
                 </div>
               </a>
             </SidebarMenuButton>

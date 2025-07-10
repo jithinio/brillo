@@ -86,8 +86,8 @@ export function NavUser() {
                 <AvatarFallback className="rounded-lg">{getInitials(currentUser.name)}</AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">{currentUser.name}</span>
-                <span className="truncate text-xs">{currentUser.email}</span>
+                <span className="truncate font-semibold text-foreground">{currentUser.name}</span>
+                <span className="truncate text-xs text-foreground">{currentUser.email}</span>
               </div>
               <ChevronsUpDown className="ml-auto" />
             </SidebarMenuButton>
@@ -105,8 +105,8 @@ export function NavUser() {
                   <AvatarFallback className="rounded-lg">{getInitials(currentUser.name)}</AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">{currentUser.name}</span>
-                  <span className="truncate text-xs">{currentUser.email}</span>
+                  <span className="truncate font-semibold text-foreground">{currentUser.name}</span>
+                  <span className="truncate text-xs text-foreground">{currentUser.email}</span>
                 </div>
               </div>
             </DropdownMenuLabel>

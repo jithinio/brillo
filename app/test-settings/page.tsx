@@ -284,7 +284,7 @@ export default function TestSettingsPage() {
               </div>
             </div>
             <div className="mt-4 flex gap-2">
-              <Button onClick={resetTestData} variant="outline">
+              <Button onClick={resetTestData} variant="outline" size="sm">
                 Reset Test Data
               </Button>
             </div>
@@ -301,7 +301,7 @@ export default function TestSettingsPage() {
           </CardHeader>
           <CardContent>
             <div className="flex gap-2">
-              <Button onClick={runAllTests} disabled={isRunning}>
+              <Button onClick={runAllTests} disabled={isRunning} size="sm">
                 {isRunning ? 'Running Tests...' : 'Run All Tests'}
               </Button>
             </div>

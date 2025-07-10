@@ -13,7 +13,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { ChevronDown, Plus, Search, Eye, Edit, Send, Download, Trash2, CheckCircle, Clock, XCircle, LayoutGrid } from "lucide-react"
+import { ChevronDown, Plus, Search, Eye, Edit, Send, Download, Trash2, CheckCircle, Clock, XCircle, Settings2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -179,9 +179,10 @@ export function DataTable<TData, TValue>({
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="ml-auto">
-                <LayoutGrid className="mr-2 h-4 w-4" />
-                Customize Columns <ChevronDown className="ml-2 h-4 w-4" />
+              <Button variant="outline" size="sm">
+                <Settings2 className="mr-1.5 h-4 w-4" />
+                <span className="hidden lg:inline">View</span>
+                <span className="lg:hidden">View</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -227,17 +228,16 @@ export function DataTable<TData, TValue>({
         <div className="flex items-center gap-2">
           {selectedCount > 0 && (
             <Button
-              variant="destructive"
-              size="sm"
+              size="icon"
+              className="bg-red-100 text-red-600 hover:bg-red-200 rounded-full"
               onClick={handleBatchDelete}
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash2 className="h-3.5 w-3.5" />
             </Button>
           )}
         {onCreateInvoice && (
-          <Button onClick={onCreateInvoice} size="sm">
-            <Plus className="mr-2 h-4 w-4" />
-            Create Invoice
+          <Button onClick={onCreateInvoice} size="icon" className="rounded-full" title="Create Invoice">
+            <Plus className="h-3.5 w-3.5" />
           </Button>
         )}
         </div>
@@ -321,13 +321,13 @@ export function DataTable<TData, TValue>({
                         <ContextMenuItem 
                           onClick={() => contextActions.onViewDetails(row.original)}
                         >
-                          <Eye className="mr-2 h-4 w-4" />
+                          <Eye className="mr-1.5 h-4 w-4" />
                           View Details
                         </ContextMenuItem>
                         <ContextMenuItem 
                           onClick={() => contextActions.onEditInvoice(row.original)}
                         >
-                          <Edit className="mr-2 h-4 w-4" />
+                          <Edit className="mr-1.5 h-4 w-4" />
                           Edit Invoice
                         </ContextMenuItem>
                         <ContextMenuSeparator />
@@ -335,38 +335,38 @@ export function DataTable<TData, TValue>({
                         {/* Status Change Submenu */}
                         <ContextMenuSub>
                           <ContextMenuSubTrigger>
-                            <CheckCircle className="mr-2 h-4 w-4" />
+                            <CheckCircle className="mr-1.5 h-4 w-4" />
                             Change Status
                           </ContextMenuSubTrigger>
                           <ContextMenuSubContent>
                             <ContextMenuItem 
                               onClick={() => contextActions.onStatusChange(row.original, 'draft')}
                             >
-                              <Clock className="mr-2 h-4 w-4 text-gray-600" />
+                              <Clock className="mr-1.5 h-4 w-4 text-gray-600" />
                               Draft
                             </ContextMenuItem>
                             <ContextMenuItem 
                               onClick={() => contextActions.onStatusChange(row.original, 'sent')}
                             >
-                              <Send className="mr-2 h-4 w-4 text-blue-600" />
+                              <Send className="mr-1.5 h-4 w-4 text-blue-600" />
                               Sent
                             </ContextMenuItem>
                             <ContextMenuItem 
                               onClick={() => contextActions.onStatusChange(row.original, 'paid')}
                             >
-                              <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
+                              <CheckCircle className="mr-1.5 h-4 w-4 text-green-600" />
                               Paid
                             </ContextMenuItem>
                             <ContextMenuItem 
                               onClick={() => contextActions.onStatusChange(row.original, 'overdue')}
                             >
-                              <XCircle className="mr-2 h-4 w-4 text-red-600" />
+                              <XCircle className="mr-1.5 h-4 w-4 text-red-600" />
                               Overdue
                             </ContextMenuItem>
                             <ContextMenuItem 
                               onClick={() => contextActions.onStatusChange(row.original, 'cancelled')}
                             >
-                              <XCircle className="mr-2 h-4 w-4 text-gray-600" />
+                              <XCircle className="mr-1.5 h-4 w-4 text-gray-600" />
                               Cancelled
                             </ContextMenuItem>
                           </ContextMenuSubContent>
@@ -376,13 +376,13 @@ export function DataTable<TData, TValue>({
                         <ContextMenuItem 
                           onClick={() => contextActions.onSendInvoice(row.original)}
                         >
-                          <Send className="mr-2 h-4 w-4" />
+                          <Send className="mr-1.5 h-4 w-4" />
                           Send Invoice
                         </ContextMenuItem>
                         <ContextMenuItem 
                           onClick={() => contextActions.onViewInvoice(row.original)}
                         >
-                          <Eye className="mr-2 h-4 w-4" />
+                          <Eye className="mr-1.5 h-4 w-4" />
                           View Invoice
                         </ContextMenuItem>
                         <ContextMenuSeparator />
@@ -390,7 +390,7 @@ export function DataTable<TData, TValue>({
                           onClick={() => contextActions.onDeleteInvoice(row.original)}
                           className="text-destructive focus:text-destructive"
                         >
-                          <Trash2 className="mr-2 h-4 w-4" />
+                          <Trash2 className="mr-1.5 h-4 w-4" />
                           Delete Invoice
                         </ContextMenuItem>
                       </ContextMenuContent>

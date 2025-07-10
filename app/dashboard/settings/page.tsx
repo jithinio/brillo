@@ -287,11 +287,11 @@ export default function SettingsPage() {
         title="Settings"
         action={
           <Button size="sm" onClick={handleSaveSettings} disabled={saving}>
-            {saving ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Save className="mr-2 h-4 w-4" />
-            )}
+                          {saving ? (
+                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="mr-1.5 h-4 w-4" />
+              )}
             {saving ? "Saving..." : "Save Changes"}
           </Button>
         }
@@ -392,11 +392,11 @@ export default function SettingsPage() {
                         <Label htmlFor="logo-upload" className="cursor-pointer">
                           <Button variant="outline" size="sm" disabled={uploading} asChild>
                             <span>
-                              {uploading ? (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              ) : (
-                                <Upload className="mr-2 h-4 w-4" />
-                              )}
+                                                    {uploading ? (
+                        <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Upload className="mr-1.5 h-4 w-4" />
+                      )}
                               {companyLogo ? "Change Logo" : "Upload Logo"}
                             </span>
                           </Button>
@@ -646,7 +646,7 @@ export default function SettingsPage() {
                     onChange={(e) => setSecuritySettings({...securitySettings, confirmPassword: e.target.value})}
                   />
                 </div>
-                <Button onClick={handleUpdatePassword}>Update Password</Button>
+                <Button size="sm" onClick={handleUpdatePassword}>Update Password</Button>
               </CardContent>
             </Card>
 
@@ -661,7 +661,7 @@ export default function SettingsPage() {
                     <p className="font-medium">Two-factor authentication</p>
                     <p className="text-sm text-muted-foreground">Not enabled</p>
                   </div>
-                  <Button variant="outline">Enable 2FA</Button>
+                  <Button variant="outline" size="sm">Enable 2FA</Button>
                 </div>
               </CardContent>
             </Card>
@@ -682,7 +682,7 @@ export default function SettingsPage() {
                     <p className="font-medium">Current Plan</p>
                     <p className="text-sm text-muted-foreground">Enterprise - $99/month</p>
                   </div>
-                  <Button variant="outline">Change Plan</Button>
+                  <Button variant="outline" size="sm">Change Plan</Button>
                 </div>
 
                 <div className="space-y-4">

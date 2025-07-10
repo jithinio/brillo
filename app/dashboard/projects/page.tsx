@@ -702,6 +702,7 @@ export default function ProjectsPage() {
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
+                      size="sm"
                       role="combobox"
                       aria-expanded={clientDropdownOpen}
                       className="w-full justify-between"
@@ -851,14 +852,14 @@ export default function ProjectsPage() {
 
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => {
+            <Button variant="outline" size="sm" onClick={() => {
               setIsAddDialogOpen(false)
               setSelectedProject(null)
               setSelectedClient(null)
             }}>
               Cancel
             </Button>
-            <Button onClick={handleSaveProject} disabled={!newProject.name}>
+            <Button size="sm" onClick={handleSaveProject} disabled={!newProject.name}>
               Create Project
             </Button>
           </DialogFooter>
@@ -895,6 +896,7 @@ export default function ProjectsPage() {
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
+                      size="sm"
                       role="combobox"
                       aria-expanded={clientDropdownOpen}
                       className="w-full justify-between"
@@ -1043,14 +1045,14 @@ export default function ProjectsPage() {
             </div>
           </div>
                      <DialogFooter>
-             <Button variant="outline" onClick={() => {
+             <Button variant="outline" size="sm" onClick={() => {
                setIsEditDialogOpen(false)
                setSelectedProject(null)
                setSelectedClient(null)
              }}>
                Cancel
              </Button>
-            <Button onClick={handleSaveProject} disabled={!newProject.name}>
+            <Button size="sm" onClick={handleSaveProject} disabled={!newProject.name}>
               Update Project
             </Button>
           </DialogFooter>
@@ -1067,10 +1069,10 @@ export default function ProjectsPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+            <Button variant="outline" size="sm" onClick={() => setIsDeleteDialogOpen(false)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={confirmDelete}>
+            <Button variant="destructive" size="sm" onClick={confirmDelete}>
               Delete
             </Button>
           </DialogFooter>

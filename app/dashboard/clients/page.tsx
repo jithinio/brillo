@@ -665,7 +665,7 @@ export default function ClientsPage() {
                 <Label htmlFor="edit-avatar-upload" className="cursor-pointer">
                   <Button variant="outline" size="sm" asChild>
                     <span>
-                      <Upload className="mr-2 h-4 w-4" />
+                      <Upload className="mr-1.5 h-4 w-4" />
                       Upload Avatar
                     </span>
                   </Button>
@@ -781,10 +781,10 @@ export default function ClientsPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+            <Button variant="outline" size="sm" onClick={() => setShowEditDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSaveClient} disabled={!editingClient.name}>
+            <Button size="sm" onClick={handleSaveClient} disabled={!editingClient.name}>
               Save Changes
             </Button>
           </DialogFooter>
@@ -811,7 +811,7 @@ export default function ClientsPage() {
                 <Label htmlFor="avatar-upload" className="cursor-pointer">
                   <Button variant="outline" size="sm" asChild>
                     <span>
-                      <Upload className="mr-2 h-4 w-4" />
+                      <Upload className="mr-1.5 h-4 w-4" />
                       Upload Avatar
                     </span>
                   </Button>
@@ -928,10 +928,10 @@ export default function ClientsPage() {
 
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddDialog(false)}>
+            <Button variant="outline" size="sm" onClick={() => setShowAddDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSaveClient} disabled={!editingClient.name}>
+            <Button size="sm" onClick={handleSaveClient} disabled={!editingClient.name}>
               Add Client
             </Button>
           </DialogFooter>

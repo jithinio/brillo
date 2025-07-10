@@ -1312,7 +1312,7 @@ export default function GenerateInvoicePage() {
               onClick={handleSaveDraft}
               disabled={isSavingDraft || !selectedClient || !invoiceDate}
             >
-              <Save className="mr-2 h-4 w-4" />
+              <Save className="mr-1.5 h-4 w-4" />
               {isSavingDraft ? "Saving..." : "Save Draft"}
             </Button>
 
@@ -1321,7 +1321,7 @@ export default function GenerateInvoicePage() {
               onClick={handleGenerateInvoice}
               disabled={!isReadyToGenerate()}
             >
-              <Download className="mr-2 h-4 w-4" />
+              <Download className="mr-1.5 h-4 w-4" />
               {isEditMode ? "Update Invoice" : "Generate Invoice"}
             </Button>
           </div>
@@ -2048,14 +2048,16 @@ export default function GenerateInvoicePage() {
                   <Button 
                     onClick={handleDownloadPDF}
                     disabled={isDownloading}
+                    size="sm"
                     className="flex-1"
                   >
-                    <Download className="mr-2 h-4 w-4" />
+                    <Download className="mr-1.5 h-4 w-4" />
                     {isDownloading ? 'Generating PDF...' : 'Download PDF'}
                   </Button>
                   
                   <Button 
                     variant="outline"
+                    size="sm"
                     onClick={handleSendInvoice}
                     disabled={isSending || !generatedInvoiceData.client.email}
                     className="flex-1"

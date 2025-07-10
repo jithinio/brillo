@@ -328,13 +328,13 @@ export default function ProfilePage() {
                   Cancel
                 </Button>
                 <Button size="sm" onClick={updateProfile} disabled={saving}>
-                  {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                  {saving ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Save className="mr-1.5 h-4 w-4" />}
                   Save Changes
                 </Button>
               </>
             ) : (
               <Button size="sm" onClick={() => setIsEditing(true)}>
-                <Edit className="mr-2 h-4 w-4" />
+                <Edit className="mr-1.5 h-4 w-4" />
                 Edit Profile
               </Button>
             )}

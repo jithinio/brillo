@@ -1226,25 +1226,27 @@ export default function InvoicesPage() {
                       <Button 
                         onClick={() => handleDownloadPDF(selectedInvoice)}
                         disabled={downloadingPDF === selectedInvoice.id}
+                        size="sm"
                         className="flex-1"
                       >
                         {downloadingPDF === selectedInvoice.id ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
                         ) : (
-                          <Download className="mr-2 h-4 w-4" />
+                          <Download className="mr-1.5 h-4 w-4" />
                         )}
                         {downloadingPDF === selectedInvoice.id ? 'Generating PDF...' : 'Download PDF'}
                       </Button>
                       
                       <Button 
                         variant="outline"
+                        size="sm"
                         onClick={() => {
                           setViewDetailsOpen(false)
                           handleSendInvoice(selectedInvoice)
                         }}
                         className="flex-1"
                       >
-                        <Send className="mr-2 h-4 w-4" />
+                        <Send className="mr-1.5 h-4 w-4" />
                         Send Invoice
                       </Button>
 
@@ -1252,13 +1254,14 @@ export default function InvoicesPage() {
                       {(['draft', 'sent', 'overdue'].includes(selectedInvoice.status)) && (
                         <Button 
                           variant="outline"
+                          size="sm"
                           onClick={() => {
                             setViewDetailsOpen(false)
                             handleEditInvoice(selectedInvoice)
                           }}
                           className="flex-1"
                         >
-                          <Edit className="mr-2 h-4 w-4" />
+                          <Edit className="mr-1.5 h-4 w-4" />
                           Edit
                         </Button>
                       )}
@@ -1498,9 +1501,10 @@ export default function InvoicesPage() {
                           router.push('/dashboard/clients')
                         }}
                         variant="outline"
+                        size="sm"
                         className="flex-1"
                       >
-                        <Edit className="mr-2 h-4 w-4" />
+                        <Edit className="mr-1.5 h-4 w-4" />
                         Edit Client
                       </Button>
                       
@@ -1516,14 +1520,16 @@ export default function InvoicesPage() {
                           setClientDetailsOpen(false)
                           router.push('/dashboard/invoices/generate')
                         }}
+                        size="sm"
                         className="flex-1"
                       >
-                        <Plus className="mr-2 h-4 w-4" />
+                        <Plus className="mr-1.5 h-4 w-4" />
                         Create Invoice
                       </Button>
 
                       <Button 
                         variant="outline"
+                        size="sm"
                         onClick={() => setClientDetailsOpen(false)}
                         className="flex-1"
                       >
