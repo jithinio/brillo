@@ -249,20 +249,36 @@ export function DataTable<TData, TValue>({ columns, data, onAddProject, onBatchD
         </div>
       </div>
 
-      <div className="rounded-md border max-w-full">
+      <div className="border max-w-full" style={{ borderRadius: 'var(--radius-md)' }}>
         <div className="w-full overflow-x-auto">
           <Table className="min-w-[1200px] table-auto">
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
+                    <TableHeader className="bg-card">
+            {table.getHeaderGroups().map((headerGroup, groupIndex) => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
+                {headerGroup.headers.map((header, headerIndex) => {
                   const isActionsColumn = header.column.id === "actions"
+                  const isFirstHeader = headerIndex === 0
+                  const isLastHeader = headerIndex === headerGroup.headers.length - 1
+                  
+                  let borderRadius: React.CSSProperties = {}
+                  if (groupIndex === 0) {
+                    if (isFirstHeader) {
+                      borderRadius.borderTopLeftRadius = 'var(--radius-md)'
+                    }
+                    if (isLastHeader) {
+                      borderRadius.borderTopRightRadius = 'var(--radius-md)'
+                    }
+                  }
+                  
                   return (
                     <TableHead 
                       key={header.id} 
-                      style={{ width: header.getSize() }} 
+                      style={{ 
+                        width: header.getSize(),
+                        ...borderRadius
+                      }} 
                       className={`whitespace-nowrap ${
-                        isActionsColumn ? "sticky right-0 bg-background shadow-[-4px_0_4px_-2px_rgba(0,0,0,0.1)]" : ""
+                        isActionsColumn ? "sticky right-0 bg-card shadow-[-4px_0_4px_-2px_rgba(0,0,0,0.1)]" : ""
                       }`}
                     >
                       {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}

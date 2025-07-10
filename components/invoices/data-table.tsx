@@ -242,20 +242,36 @@ export function DataTable<TData, TValue>({
         )}
         </div>
       </div>
-      <div className="overflow-hidden rounded-md border">
+      <div className="overflow-hidden border" style={{ borderRadius: 'var(--radius-md)' }}>
         <div className="overflow-x-auto">
           <Table className="min-w-[1200px] table-auto">
-            <TableHeader>
-              {table.getHeaderGroups().map((headerGroup) => (
+            <TableHeader className="bg-card">
+              {table.getHeaderGroups().map((headerGroup, groupIndex) => (
                 <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => {
+                  {headerGroup.headers.map((header, headerIndex) => {
                     const isActionsColumn = header.column.id === "actions"
+                    const isFirstHeader = headerIndex === 0
+                    const isLastHeader = headerIndex === headerGroup.headers.length - 1
+                    
+                    let borderRadius: React.CSSProperties = {}
+                    if (groupIndex === 0) {
+                      if (isFirstHeader) {
+                        borderRadius.borderTopLeftRadius = 'var(--radius-md)'
+                      }
+                      if (isLastHeader) {
+                        borderRadius.borderTopRightRadius = 'var(--radius-md)'
+                      }
+                    }
+                    
                     return (
                       <TableHead 
                         key={header.id} 
-                        style={{ width: header.getSize() }} 
+                        style={{ 
+                          width: header.getSize(),
+                          ...borderRadius
+                        }} 
                         className={`whitespace-nowrap ${
-                          isActionsColumn ? "sticky right-0 bg-background shadow-[-4px_0_4px_-2px_rgba(0,0,0,0.1)]" : ""
+                          isActionsColumn ? "sticky right-0 bg-card shadow-[-4px_0_4px_-2px_rgba(0,0,0,0.1)]" : ""
                         }`}
                       >
                         {header.isPlaceholder

@@ -21,12 +21,12 @@ export function DataTable({ data }: DataTableProps) {
       <CardContent className="max-w-full">
         <div className="w-full overflow-x-auto">
           <Table className="min-w-[600px] table-auto">
-          <TableHeader>
+          <TableHeader className="bg-card">
             <TableRow>
-              <TableHead>Name</TableHead>
+              <TableHead style={{ borderTopLeftRadius: 'var(--radius-md)' }}>Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Amount</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead style={{ borderTopRightRadius: 'var(--radius-md)' }}>Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

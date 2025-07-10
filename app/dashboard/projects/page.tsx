@@ -552,28 +552,28 @@ export default function ProjectsPage() {
             <div className="flex flex-row items-center justify-between space-y-0 pb-2">
               <h3 className="tracking-tight text-sm font-medium">Total Projects</h3>
             </div>
-            <div className="text-2xl font-bold">{totalProjects}</div>
+            <div className="text-2xl font-normal">{totalProjects}</div>
             <p className="text-xs text-muted-foreground">All projects in system</p>
           </div>
           <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
             <div className="flex flex-row items-center justify-between space-y-0 pb-2">
               <h3 className="tracking-tight text-sm font-medium">Total Budget</h3>
             </div>
-            <div className="text-2xl font-bold">{formatCurrency(totalBudget)}</div>
+            <div className="text-2xl font-normal">{formatCurrency(totalBudget)}</div>
             <p className="text-xs text-muted-foreground">Combined project value</p>
           </div>
           <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
             <div className="flex flex-row items-center justify-between space-y-0 pb-2">
               <h3 className="tracking-tight text-sm font-medium">Total Received</h3>
             </div>
-            <div className="text-2xl font-bold text-green-600">{formatCurrency(totalReceived)}</div>
+            <div className="text-2xl font-normal text-green-600">{formatCurrency(totalReceived)}</div>
             <p className="text-xs text-muted-foreground">Payments received</p>
           </div>
           <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
             <div className="flex flex-row items-center justify-between space-y-0 pb-2">
               <h3 className="tracking-tight text-sm font-medium">Total Pending</h3>
             </div>
-            <div className="text-2xl font-bold text-yellow-600">{formatCurrency(totalPending)}</div>
+            <div className="text-2xl font-normal text-yellow-600">{formatCurrency(totalPending)}</div>
             <p className="text-xs text-muted-foreground">Outstanding payments</p>
           </div>
         </div>

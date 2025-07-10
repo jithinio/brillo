@@ -64,29 +64,29 @@ const yearlyData = [
 const miniChartConfig: ChartConfig = {
   revenue: {
     label: "Revenue",
-    color: "hsl(var(--chart-1))",
+    color: "var(--chart-1)",
   },
 }
 
 const revenueChartConfig: ChartConfig = {
   revenue: {
     label: "Revenue",
-    color: "hsl(var(--chart-1))",
+    color: "var(--chart-1)",
   },
   expenses: {
     label: "Expenses",
-    color: "hsl(var(--chart-2))",
+    color: "var(--chart-2)",
   },
 }
 
 const yearlyChartConfig: ChartConfig = {
   revenue: {
     label: "Revenue",
-    color: "hsl(var(--chart-1))",
+    color: "var(--chart-1)",
   },
   expenses: {
     label: "Expenses",
-    color: "hsl(var(--chart-2))",
+    color: "var(--chart-2)",
   },
 }
 
@@ -109,7 +109,7 @@ const MetricCard = ({
   onPeriodChange: (value: string) => void
   formatCurrency: (amount: number) => string
 }) => (
-  <Card className="relative overflow-hidden bg-zinc-100 dark:bg-zinc-800 rounded-3xl border-0 shadow-none">
+  <Card className="relative overflow-hidden rounded-3xl border-0 shadow-none">
     <CardHeader className="p-8 pb-3">
       <div className="flex items-center justify-between">
         <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
@@ -163,7 +163,7 @@ const MetricCard = ({
               <Line 
                 type="monotone" 
                 dataKey="revenue" 
-                stroke={trend === 'up' ? 'hsl(var(--chart-1))' : 'hsl(var(--chart-2))'} 
+                stroke={trend === 'up' ? 'var(--chart-1)' : 'var(--chart-2)'} 
                 strokeWidth={2}
                 dot={false}
               />
@@ -256,7 +256,7 @@ const RevenueChart = ({
   const dynamicTrend = calculateDynamicTrend()
 
   return (
-  <Card className="bg-zinc-100 dark:bg-zinc-800 rounded-3xl border-0 shadow-none">
+  <Card className="rounded-3xl border-0 shadow-none">
     <CardHeader className="p-8 pb-3">
       <div className="flex items-center justify-between">
         <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -328,17 +328,17 @@ const RevenueChart = ({
               <Line 
                 type="monotone" 
                 dataKey={type} 
-                stroke={type === 'revenue' ? 'hsl(var(--chart-1))' : 'hsl(var(--chart-2))'} 
+                stroke={type === 'revenue' ? 'var(--chart-1)' : 'var(--chart-2)'} 
                 strokeWidth={3}
-                dot={{ fill: type === 'revenue' ? 'hsl(var(--chart-1))' : 'hsl(var(--chart-2))', strokeWidth: 0, r: 4 }}
-                activeDot={{ r: 6, stroke: type === 'revenue' ? 'hsl(var(--chart-1))' : 'hsl(var(--chart-2))', strokeWidth: 2, fill: 'white' }}
+                dot={{ fill: type === 'revenue' ? 'var(--chart-1)' : 'var(--chart-2)', strokeWidth: 0, r: 4 }}
+                activeDot={{ r: 6, stroke: type === 'revenue' ? 'var(--chart-1)' : 'var(--chart-2)', strokeWidth: 2, fill: 'white' }}
               />
             </LineChart>
           </ChartContainer>
         </div>
       </div>
-    </CardContent>
-  </Card>
+            </CardContent>
+          </Card>
   )
 }
 
@@ -351,7 +351,7 @@ const YearlyBarChart = ({
   onTypeChange: (value: 'revenue' | 'expenses') => void
   formatCurrency: (amount: number) => string
 }) => (
-  <Card className="bg-zinc-100 dark:bg-zinc-800 rounded-3xl border-0 shadow-none">
+  <Card className="rounded-3xl border-0 shadow-none">
     <CardHeader className="p-8 pb-3">
       <div className="flex items-center justify-between">
         <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -367,7 +367,7 @@ const YearlyBarChart = ({
           </SelectContent>
         </Select>
       </div>
-    </CardHeader>
+            </CardHeader>
     <CardContent className="px-8 pt-0 pb-8">
       <div className="space-y-4">
         {/* Yearly Growth section */}
@@ -414,12 +414,12 @@ const YearlyBarChart = ({
               dataKey="year" 
               axisLine={false}
               tickLine={false}
-              tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+              tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }}
               className="[&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground"
             />
             <Bar 
               dataKey={type} 
-              fill={type === 'revenue' ? 'hsl(var(--chart-1))' : 'hsl(var(--chart-2))'}
+              fill={type === 'revenue' ? 'var(--chart-1)' : 'var(--chart-2)'}
               radius={[64, 64, 0, 0]}
             >
               <LabelList 
@@ -427,7 +427,7 @@ const YearlyBarChart = ({
                 position="top" 
                 offset={16}
                 style={{ fontSize: '14px', fontWeight: '600' }}
-                fill="hsl(var(--foreground))"
+                fill="var(--foreground)"
                 className="fill-foreground"
                 formatter={(value: any) => `${formatCurrency(value / 1000)}k`}
               />
@@ -436,8 +436,8 @@ const YearlyBarChart = ({
         </ChartContainer>
         </div>
       </div>
-    </CardContent>
-  </Card>
+            </CardContent>
+          </Card>
 )
 
 export default function DashboardPage() {

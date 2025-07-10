@@ -283,9 +283,9 @@ export default function InvoicePreviewPage() {
         id: 'pdf-download'
       })
 
-      // Dynamically import html2canvas and jsPDF
+      // Dynamically import html2canvas-pro and jsPDF
       const [html2canvas, { jsPDF }] = await Promise.all([
-        import('html2canvas'),
+        import('html2canvas-pro'),
         import('jspdf')
       ])
 
