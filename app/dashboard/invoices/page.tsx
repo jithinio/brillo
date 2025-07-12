@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { PageHeader, PageContent, PageTitle } from "@/components/page-header"
+import { PageActionsMenu } from "@/components/page-actions-menu"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
@@ -19,7 +20,7 @@ import { createColumns, type Invoice } from "@/components/invoices/columns"
 import { DataTable } from "@/components/invoices/data-table"
 import { formatCurrency, formatCurrencyWithConversion, getDefaultCurrency } from "@/lib/currency"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { ClientAvatar } from "@/components/ui/client-avatar"
 import { useSettings } from "@/components/settings-provider"
 
 // Mock data fallback
@@ -42,7 +43,7 @@ const mockInvoices: Invoice[] = [
     },
     projects: {
       name: "Website Redesign"
-      }
+    },
   },
   {
     id: "2",
@@ -577,10 +578,32 @@ export default function InvoicesPage() {
   }
 
   const confirmBatchDelete = async (invoicesToDelete: Invoice[], onUndo: (items: Invoice[]) => void) => {
+    if (invoicesToDelete.length === 0) return
+
+    // Show progress toast for operations with 3+ items or after 1 second delay
+    const showProgress = invoicesToDelete.length >= 3
+    let progressToastId: string | number | undefined
+    let progressTimeout: NodeJS.Timeout | undefined
+
     try {
+      // Set up progress notification for longer operations
+      if (showProgress) {
+        progressToastId = toast.loading(`Deleting ${invoicesToDelete.length} invoice${invoicesToDelete.length > 1 ? 's' : ''}...`, {
+          description: "Please wait while we process your request."
+        })
+      } else {
+        // For smaller operations, show progress toast after 1 second delay
+        progressTimeout = setTimeout(() => {
+          progressToastId = toast.loading(`Deleting ${invoicesToDelete.length} invoice${invoicesToDelete.length > 1 ? 's' : ''}...`, {
+            description: "Please wait while we process your request."
+          })
+        }, 1000)
+      }
+
       const deletedIds: string[] = []
       
-      for (const invoice of invoicesToDelete) {
+      for (let i = 0; i < invoicesToDelete.length; i++) {
+        const invoice = invoicesToDelete[i]
         try {
           if (isSupabaseConfigured()) {
             // Delete from Supabase database
@@ -618,9 +641,26 @@ export default function InvoicesPage() {
           }
           
           deletedIds.push(invoice.id)
+
+          // Update progress for larger operations
+          if (progressToastId) {
+            const progress = Math.round(((i + 1) / invoicesToDelete.length) * 100)
+            toast.loading(`Deleting invoices... ${i + 1}/${invoicesToDelete.length} (${progress}%)`, {
+              id: progressToastId,
+              description: `Processing "${invoice.invoice_number}"`
+            })
+          }
         } catch (error) {
           console.error(`Error deleting invoice ${invoice.invoice_number}:`, error)
         }
+      }
+
+      // Clear progress notifications
+      if (progressTimeout) {
+        clearTimeout(progressTimeout)
+      }
+      if (progressToastId) {
+        toast.dismiss(progressToastId)
       }
       
       // Get the successfully deleted invoices
@@ -643,20 +683,29 @@ export default function InvoicesPage() {
         setUndoData({ items: deletedInvoices, timeout })
         
         // Show toast with undo action
-        toast(`${deletedIds.length} invoice${deletedIds.length > 1 ? 's' : ''} deleted successfully`, {
+        toast.success(`${deletedIds.length} invoice${deletedIds.length > 1 ? 's' : ''} deleted successfully`, {
           action: {
             label: "Undo",
             onClick: () => handleUndo(deletedInvoices),
           },
         })
       } else {
-        toast.success(`${deletedIds.length} of ${invoicesToDelete.length} invoices deleted successfully!`)
+        toast.success(`${deletedIds.length} of ${invoicesToDelete.length} invoices deleted successfully`)
         if (deletedIds.length < invoicesToDelete.length) {
-          toast.error(`${invoicesToDelete.length - deletedIds.length} invoice${invoicesToDelete.length - deletedIds.length > 1 ? 's' : ''} failed to delete.`)
+          toast.error(`${invoicesToDelete.length - deletedIds.length} invoice${invoicesToDelete.length - deletedIds.length > 1 ? 's' : ''} failed to delete`)
         }
       }
     } catch (error) {
       console.error('Error during batch delete:', error)
+      
+      // Clear progress notifications on error
+      if (progressTimeout) {
+        clearTimeout(progressTimeout)
+      }
+      if (progressToastId) {
+        toast.dismiss(progressToastId)
+      }
+      
       toast.error('Failed to delete invoices. Please try again.')
     }
   }
@@ -825,28 +874,28 @@ export default function InvoicesPage() {
     const configs = {
       active: {
         label: "Active",
-        variant: "outline-solid" as const,
+        variant: "outline" as const,
         iconClassName: "text-green-500",
       },
       completed: {
         label: "Completed",
-        variant: "outline-solid" as const,
+        variant: "outline" as const,
         iconClassName: "text-blue-500",
       },
       on_hold: {
         label: "On Hold",
-        variant: "outline-solid" as const,
+        variant: "outline" as const,
         iconClassName: "text-yellow-500",
       },
       cancelled: {
         label: "Cancelled",
-        variant: "outline-solid" as const,
+        variant: "outline" as const,
         iconClassName: "text-gray-400",
       },
     }
     return configs[status as keyof typeof configs] || {
       label: status.replace('_', ' ').toUpperCase(),
-      variant: "outline-solid" as const,
+      variant: "outline" as const,
       iconClassName: "text-gray-400",
     }
   }
@@ -929,6 +978,40 @@ export default function InvoicesPage() {
     window.location.href = `/dashboard/projects?search=${encodeURIComponent(projectName)}`
   }
 
+  const handleExport = () => {
+    // Create CSV content
+    const headers = ['Invoice Number', 'Amount', 'Tax Amount', 'Total Amount', 'Currency', 'Status', 'Issue Date', 'Due Date', 'Client Name', 'Client Company', 'Project Name', 'Notes', 'Created At']
+    const csvContent = [
+      headers.join(','),
+      ...invoices.map(invoice => [
+        invoice.invoice_number,
+        invoice.amount,
+        invoice.tax_amount,
+        invoice.total_amount,
+        invoice.currency,
+        invoice.status,
+        invoice.issue_date,
+        invoice.due_date,
+        invoice.clients?.name || '',
+        invoice.clients?.company || '',
+        invoice.projects?.name || '',
+        invoice.notes || '',
+        invoice.created_at || ''
+      ].map(field => `"${field}"`).join(','))
+    ].join('\n')
+
+    // Download CSV
+    const blob = new Blob([csvContent], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `invoices-export-${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    
+    toast.success(`Exported ${invoices.length} invoices to CSV`)
+  }
+
   const columnActions = {
     onViewDetails: handleViewDetails,
     onEditInvoice: handleEditInvoice,
@@ -971,6 +1054,7 @@ export default function InvoicesPage() {
     <>
       <PageHeader
         title="Invoices"
+        action={<PageActionsMenu entityType="invoices" onExport={handleExport} />}
       />
       <PageContent>
         {error && (
@@ -1002,7 +1086,7 @@ export default function InvoicesPage() {
 
       {/* Invoice Details Modal */}
       <Dialog open={viewDetailsOpen} onOpenChange={setViewDetailsOpen}>
-        <DialogContent className="max-w-2xl p-0 gap-0">
+        <DialogContent className="max-w-2xl p-0 gap-0" onOpenAutoFocus={(e) => e.preventDefault()}>
           <DialogHeader className="sr-only">
             <DialogTitle>Invoice Details</DialogTitle>
             <DialogDescription>
@@ -1196,8 +1280,8 @@ export default function InvoicesPage() {
                           <div>
                             <p className="text-sm text-gray-500 mb-1">Project</p>
                             <Button
-                              variant="link"
-                              className="p-0 h-auto text-sm font-medium text-gray-900 hover:text-blue-600 hover:underline"
+                              variant="ghost"
+                              className="p-0 h-auto text-sm font-medium text-gray-900"
                               onClick={() => handleProjectClick(selectedInvoice.projects!.name)}
                             >
                               {selectedInvoice.projects.name}
@@ -1284,7 +1368,7 @@ export default function InvoicesPage() {
 
       {/* Send Invoice Modal */}
       <Dialog open={sendInvoiceOpen} onOpenChange={setSendInvoiceOpen}>
-        <DialogContent>
+        <DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2">
               <Mail className="h-5 w-5" />
@@ -1366,7 +1450,7 @@ export default function InvoicesPage() {
 
       {/* Client Details Modal */}
       <Dialog open={clientDetailsOpen} onOpenChange={setClientDetailsOpen}>
-        <DialogContent className="max-w-2xl p-0 gap-0">
+        <DialogContent className="max-w-2xl p-0 gap-0" onOpenAutoFocus={(e) => e.preventDefault()}>
           <DialogHeader className="sr-only">
             <DialogTitle>Client Details</DialogTitle>
             <DialogDescription>
@@ -1391,12 +1475,11 @@ export default function InvoicesPage() {
                       </div>
                       <div className="text-right">
                         {selectedClient.avatar_url && (
-                          <Avatar className="h-12 w-12">
-                            <AvatarImage src={selectedClient.avatar_url} alt={selectedClient.name} />
-                            <AvatarFallback>
-                              {selectedClient.name?.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
+                          <ClientAvatar 
+                            name={selectedClient.name} 
+                            avatarUrl={selectedClient.avatar_url}
+                            size="lg"
+                          />
                         )}
                       </div>
                     </div>
@@ -1471,8 +1554,8 @@ export default function InvoicesPage() {
                           {selectedClient.projects.map((project: any) => (
                             <div key={project.id} className="flex items-center justify-between p-3 border rounded">
                               <Button
-                                variant="link"
-                                className="p-0 h-auto text-sm font-medium text-gray-900 hover:text-blue-600 hover:underline"
+                                variant="ghost"
+                                className="p-0 h-auto text-sm font-medium text-gray-900"
                                 onClick={() => handleProjectClick(project.name)}
                               >
                                 {project.name}

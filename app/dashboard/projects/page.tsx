@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Eye, Clock, Search, Check, ChevronsUpDown } from "lucide-react"
+import { Clock, Search, Check, ChevronsUpDown } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -40,9 +40,10 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 
 import { toast } from "sonner"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { ClientAvatar } from "@/components/ui/client-avatar"
 
 import { PageHeader, PageContent, PageTitle } from "@/components/page-header"
+import { PageActionsMenu } from "@/components/page-actions-menu"
 import { DataTable } from "@/components/projects/data-table"
 import { createColumns, type Project } from "@/components/projects/columns"
 import { formatCurrency } from "@/lib/currency"
@@ -177,9 +178,9 @@ interface NewProject {
 }
 
 export default function ProjectsPage() {
-  const [projects, setProjects] = React.useState<Project[]>(mockProjects)
+  const [projects, setProjects] = React.useState<Project[]>([])
+  const [projectsLoading, setProjectsLoading] = React.useState(true)
   const [selectedProject, setSelectedProject] = React.useState<Project | null>(null)
-  const [isViewDialogOpen, setIsViewDialogOpen] = React.useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false)
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false)
@@ -203,9 +204,9 @@ export default function ProjectsPage() {
     description: "",
   })
 
-
-  // Fetch clients on component mount
+  // Fetch projects and clients on component mount
   React.useEffect(() => {
+    fetchProjects()
     fetchClients()
   }, [])
 
@@ -217,6 +218,89 @@ export default function ProjectsPage() {
       }
     }
   }, [undoData])
+
+  // Fetch projects from database and sessionStorage
+  const fetchProjects = async () => {
+    try {
+      setProjectsLoading(true)
+      let allProjects: Project[] = []
+      
+      if (isSupabaseConfigured()) {
+        // Load from database
+        const { data, error } = await supabase
+          .from('projects')
+          .select(`
+            *,
+            clients (
+              name,
+              company
+            )
+          `)
+          .order('created_at', { ascending: false })
+
+        if (error) {
+          console.error('Error fetching projects:', error)
+          throw error
+        }
+
+        // Transform the data to match our Project interface
+        const dbProjects = (data || []).map(project => ({
+          id: project.id,
+          name: project.name,
+          status: project.status,
+          start_date: project.start_date,
+          end_date: project.end_date,
+          budget: project.budget,
+          expenses: project.expenses,
+          received: project.payment_received, // Map payment_received to received
+          pending: project.payment_pending, // Map payment_pending to pending
+          created_at: project.created_at,
+          clients: project.clients ? {
+            name: project.clients.name,
+            company: project.clients.company
+          } : undefined
+        }))
+
+        allProjects = [...dbProjects]
+        console.log('Fetched projects from database:', dbProjects)
+      } else {
+        // Use mock data when database is not configured
+        allProjects = [...mockProjects]
+        console.log('Using mock projects data')
+      }
+
+      // Also load any imported projects from sessionStorage (demo mode)
+      const demoProjects = JSON.parse(sessionStorage.getItem('demo-projects') || '[]')
+      if (demoProjects.length > 0) {
+        // Map demo projects to match Project interface
+        const mappedDemoProjects = demoProjects.map((project: any) => ({
+          id: project.id,
+          name: project.name,
+          status: project.status,
+          start_date: project.start_date,
+          end_date: project.end_date,
+          budget: project.budget,
+          expenses: project.expenses,
+          received: project.payment_received || project.received, // Map payment_received to received
+          pending: project.payment_pending || project.pending, // Map payment_pending to pending
+          created_at: project.created_at,
+          clients: project.clients
+        }))
+        
+        allProjects = [...allProjects, ...mappedDemoProjects]
+        console.log('Added demo projects from sessionStorage:', mappedDemoProjects)
+      }
+
+      setProjects(allProjects)
+    } catch (error) {
+      console.error('Error fetching projects:', error)
+      // Fallback to mock data on error
+      setProjects(mockProjects)
+      toast.error('Failed to fetch projects. Using demo data.')
+    } finally {
+      setProjectsLoading(false)
+    }
+  }
 
   // Fetch clients from Supabase
   const fetchClients = async () => {
@@ -313,11 +397,6 @@ export default function ProjectsPage() {
     }
   }, [toast])
 
-  const handleViewDetails = (project: Project) => {
-    setSelectedProject(project)
-    setIsViewDialogOpen(true)
-  }
-
   const handleEditProject = (project: Project) => {
     setSelectedProject(project)
     // Find the client for this project
@@ -400,9 +479,72 @@ export default function ProjectsPage() {
   }
 
   const confirmBatchDelete = async (projectsToDelete: Project[], onUndo: (items: Project[]) => void) => {
+    if (projectsToDelete.length === 0) return
+
+    // Show progress toast for operations with 3+ items or after 1 second delay
+    const showProgress = projectsToDelete.length >= 3
+    let progressToastId: string | number | undefined
+    let progressTimeout: NodeJS.Timeout | undefined
+
     try {
-      // In a real app, you would delete from the database here
+      // Set up progress notification for longer operations
+      if (showProgress) {
+        progressToastId = toast.loading(`Deleting ${projectsToDelete.length} project${projectsToDelete.length > 1 ? 's' : ''}...`, {
+          description: "Please wait while we process your request."
+        })
+      } else {
+        // For smaller operations, show progress toast after 1 second delay
+        progressTimeout = setTimeout(() => {
+          progressToastId = toast.loading(`Deleting ${projectsToDelete.length} project${projectsToDelete.length > 1 ? 's' : ''}...`, {
+            description: "Please wait while we process your request."
+          })
+        }, 1000)
+      }
+
       const deletedIds = projectsToDelete.map(project => project.id)
+      
+      // Process deletion with database operations
+      for (let i = 0; i < projectsToDelete.length; i++) {
+        const project = projectsToDelete[i]
+        
+        // Update progress for larger operations
+        if (progressToastId) {
+          const progress = Math.round(((i + 1) / projectsToDelete.length) * 100)
+          toast.loading(`Deleting projects... ${i + 1}/${projectsToDelete.length} (${progress}%)`, {
+            id: progressToastId,
+            description: `Processing "${project.name}"`
+          })
+        }
+        
+        // Delete from database if configured
+        if (isSupabaseConfigured()) {
+          const { error } = await supabase
+            .from('projects')
+            .delete()
+            .eq('id', project.id)
+            
+          if (error) {
+            console.error(`Error deleting project ${project.id}:`, error)
+            throw new Error(`Failed to delete "${project.name}": ${error.message}`)
+          }
+        }
+        
+        // Also remove from demo storage if it exists
+        const demoProjects = JSON.parse(sessionStorage.getItem('demo-projects') || '[]')
+        const updatedDemoProjects = demoProjects.filter((p: any) => p.id !== project.id)
+        sessionStorage.setItem('demo-projects', JSON.stringify(updatedDemoProjects))
+        
+        // Small delay for progress visualization
+        await new Promise(resolve => setTimeout(resolve, 50))
+      }
+
+      // Clear progress notifications
+      if (progressTimeout) {
+        clearTimeout(progressTimeout)
+      }
+      if (progressToastId) {
+        toast.dismiss(progressToastId)
+      }
       
       // Remove from local state
       setProjects(prev => prev.filter(project => !deletedIds.includes(project.id)))
@@ -420,7 +562,7 @@ export default function ProjectsPage() {
       setUndoData({ items: projectsToDelete, timeout })
       
       // Show toast with undo action
-      toast(`${deletedIds.length} project${deletedIds.length > 1 ? 's' : ''} deleted successfully`, {
+      toast.success(`${deletedIds.length} project${deletedIds.length > 1 ? 's' : ''} deleted successfully`, {
         action: {
           label: "Undo",
           onClick: () => handleUndo(projectsToDelete),
@@ -428,7 +570,16 @@ export default function ProjectsPage() {
       })
     } catch (error) {
       console.error('Error during batch delete:', error)
-      toast.error("Failed to delete projects. Please try again.")
+      
+      // Clear progress notifications on error
+      if (progressTimeout) {
+        clearTimeout(progressTimeout)
+      }
+      if (progressToastId) {
+        toast.dismiss(progressToastId)
+      }
+      
+      toast.error(`Failed to delete projects: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 
@@ -521,8 +672,39 @@ export default function ProjectsPage() {
     }
   }
 
+  const handleExport = () => {
+    // Create CSV content
+    const headers = ['Name', 'Status', 'Start Date', 'End Date', 'Budget', 'Expenses', 'Received', 'Pending', 'Client Name', 'Client Company', 'Created At']
+    const csvContent = [
+      headers.join(','),
+      ...projects.map(project => [
+        project.name,
+        project.status,
+        project.start_date || '',
+        project.end_date || '',
+        project.budget || '',
+        project.expenses || '',
+        project.received || '',
+        project.pending || '',
+        project.clients?.name || '',
+        project.clients?.company || '',
+        project.created_at || ''
+      ].map(field => `"${field}"`).join(','))
+    ].join('\n')
+
+    // Download CSV
+    const blob = new Blob([csvContent], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `projects-export-${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    
+    toast.success(`Exported ${projects.length} projects to CSV`)
+  }
+
   const columns = createColumns({
-    onViewDetails: handleViewDetails,
     onEditProject: handleEditProject,
     onCreateInvoice: handleCreateInvoice,
     onDeleteProject: handleDeleteProject,
@@ -536,335 +718,99 @@ export default function ProjectsPage() {
   const totalBudget = projects.reduce((sum, p) => sum + (p.budget || 0), 0)
   const totalExpenses = projects.reduce((sum, p) => sum + (p.expenses || 0), 0)
   const totalReceived = projects.reduce((sum, p) => sum + (p.received || 0), 0)
-  const totalPending = projects.reduce((sum, p) => sum + (p.pending || 0), 0)
+  // Auto-calculate total pending from budget - received for each project
+  const totalPending = projects.reduce((sum, p) => {
+    const budget = p.budget || 0
+    const received = p.received || 0
+    const pending = Math.max(0, budget - received)
+    return sum + pending
+  }, 0)
 
   return (
     <>
       <PageHeader
         title="Projects"
+        action={<PageActionsMenu entityType="projects" onExport={handleExport} />}
       />
       <PageContent>
 
 
         {/* Summary Cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
-            <div className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <h3 className="tracking-tight text-sm font-medium">Total Projects</h3>
-            </div>
-            <div className="text-2xl font-normal">{totalProjects}</div>
-            <p className="text-xs text-muted-foreground">All projects in system</p>
+        {projectsLoading ? (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
+                <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+                <div className="h-8 w-16 bg-gray-200 rounded animate-pulse mb-2"></div>
+                <div className="h-3 w-32 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+            ))}
           </div>
-          <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
-            <div className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <h3 className="tracking-tight text-sm font-medium">Total Budget</h3>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
+              <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <h3 className="tracking-tight text-sm font-medium">Total Projects</h3>
+              </div>
+              <div className="text-2xl font-normal">{totalProjects}</div>
+              <p className="text-xs text-muted-foreground">All projects in system</p>
             </div>
-            <div className="text-2xl font-normal">{formatCurrency(totalBudget)}</div>
-            <p className="text-xs text-muted-foreground">Combined project value</p>
-          </div>
-          <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
-            <div className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <h3 className="tracking-tight text-sm font-medium">Total Received</h3>
+            <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
+              <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <h3 className="tracking-tight text-sm font-medium">Total Budget</h3>
+              </div>
+              <div className="text-2xl font-normal">{formatCurrency(totalBudget)}</div>
+              <p className="text-xs text-muted-foreground">Combined project value</p>
             </div>
-            <div className="text-2xl font-normal text-green-600">{formatCurrency(totalReceived)}</div>
-            <p className="text-xs text-muted-foreground">Payments received</p>
-          </div>
-          <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
-            <div className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <h3 className="tracking-tight text-sm font-medium">Total Pending</h3>
+            <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
+              <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <h3 className="tracking-tight text-sm font-medium">Total Received</h3>
+              </div>
+              <div className="text-2xl font-normal text-green-600">{formatCurrency(totalReceived)}</div>
+              <p className="text-xs text-muted-foreground">Payments received</p>
             </div>
-            <div className="text-2xl font-normal text-yellow-600">{formatCurrency(totalPending)}</div>
-            <p className="text-xs text-muted-foreground">Outstanding payments</p>
+            <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
+              <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <h3 className="tracking-tight text-sm font-medium">Total Pending</h3>
+              </div>
+              <div className="text-2xl font-normal text-yellow-600">{formatCurrency(totalPending)}</div>
+              <p className="text-xs text-muted-foreground">Outstanding payments</p>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Projects Table */}
-        <DataTable 
-          columns={columns} 
-          data={projects} 
-          onAddProject={handleAddProject} 
-          onBatchDelete={handleBatchDelete}
-          contextActions={{
-            onViewDetails: handleViewDetails,
-            onEditProject: handleEditProject,
-            onCreateInvoice: handleCreateInvoice,
-            onDeleteProject: handleDeleteProject,
-            onStatusChange: handleStatusChange,
-          }}
-        />
-      </PageContent>
-
-      {/* View Project Dialog */}
-      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{selectedProject?.name}</DialogTitle>
-            <DialogDescription>Project details and financial information</DialogDescription>
-          </DialogHeader>
-          {selectedProject && (
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium">Status</Label>
-                  <div className="mt-1">
-                    <Badge variant="outline" className="text-zinc-700 font-medium">
-                      {selectedProject.status === "completed" ? (
-                        <>
-                          <Eye className="fill-green-500 dark:fill-green-400 mr-1 h-3 w-3" />
-                          Done
-                        </>
-                      ) : selectedProject.status === "active" ? (
-                        <>
-                          <Clock className="mr-1 h-3 w-3" />
-                          In Progress
-                        </>
-                      ) : (
-                        selectedProject.status
-                      )}
-                    </Badge>
-                  </div>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">Client</Label>
-                  <p className="mt-1 text-sm">{selectedProject.clients?.name || "No client assigned"}</p>
-                </div>
+        {projectsLoading ? (
+          <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="h-6 w-32 bg-gray-200 rounded animate-pulse"></div>
+                <div className="h-9 w-24 bg-gray-200 rounded animate-pulse"></div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium">Budget</Label>
-                  <p className="mt-1 text-sm font-medium">{formatCurrency(selectedProject.budget || 0)}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">Expenses</Label>
-                  <p className="mt-1 text-sm font-medium text-red-600">{formatCurrency(selectedProject.expenses || 0)}</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium">Received</Label>
-                  <p className="mt-1 text-sm font-medium text-green-600">
-                    {formatCurrency(selectedProject.received || 0)}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">Pending</Label>
-                  <p className="mt-1 text-sm font-medium text-yellow-600">
-                    {formatCurrency(selectedProject.pending || 0)}
-                  </p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium">Start Date</Label>
-                  <p className="mt-1 text-sm">
-                    {selectedProject.start_date ? new Date(selectedProject.start_date).toLocaleDateString() : "—"}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">End Date</Label>
-                  <p className="mt-1 text-sm">
-                    {selectedProject.end_date ? new Date(selectedProject.end_date).toLocaleDateString() : "—"}
-                  </p>
-                </div>
+              <div className="space-y-2">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="h-12 w-full bg-gray-200 rounded animate-pulse"></div>
+                ))}
               </div>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Project Dialog */}
-      <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
-        setIsAddDialogOpen(open)
-        if (!open) {
-          setSelectedProject(null)
-          setSelectedClient(null)
-        }
-      }}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Add New Project</DialogTitle>
-            <DialogDescription>Create a new project and assign it to a client</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="project-name">Project Name *</Label>
-                <Input
-                  id="project-name"
-                  value={newProject.name}
-                  onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
-                  placeholder="Enter project name"
-                />
-              </div>
-              <div>
-                <Label htmlFor="project-client">Client</Label>
-                <Popover open={clientDropdownOpen} onOpenChange={setClientDropdownOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      role="combobox"
-                      aria-expanded={clientDropdownOpen}
-                      className="w-full justify-between"
-                      disabled={clientsLoading}
-                    >
-                      {selectedClient ? (
-                        <div className="flex items-center space-x-2">
-                          <Avatar className="h-6 w-6">
-                            <AvatarImage src={selectedClient.avatar_url || "/placeholder-user.jpg"} alt={selectedClient.name} />
-                            <AvatarFallback className="text-xs">
-                              {selectedClient.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span>{selectedClient.name} - {selectedClient.company}</span>
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">
-                          {clientsLoading ? "Loading clients..." : "Select a client"}
-                        </span>
-                      )}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-full p-0" style={{ maxHeight: '300px' }}>
-                    <Command>
-                      <CommandInput placeholder="Search clients..." />
-                      <CommandList style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                        <CommandEmpty>No client found.</CommandEmpty>
-                        <CommandGroup>
-                          {clients.map((client) => (
-                            <CommandItem
-                              key={client.id}
-                              value={`${client.name} ${client.company || ""} ${client.email || ""}`}
-                              onSelect={() => {
-                                setSelectedClient(client)
-                                setNewProject({ ...newProject, client_id: client.id })
-                                setClientDropdownOpen(false)
-                              }}
-                            >
-                              <div className="flex items-center space-x-2 flex-1">
-                                <Avatar className="h-8 w-8">
-                            <AvatarImage src={client.avatar_url || "/placeholder-user.jpg"} alt={client.name} />
-                            <AvatarFallback className="text-xs">
-                              {client.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                                <div className="flex-1">
-                                  <div className="font-medium">{client.name}</div>
-                                  <div className="text-sm text-muted-foreground">
-                                    {client.company && <span>{client.company}</span>}
-                                    {client.email && <span> • {client.email}</span>}
-                        </div>
-                                </div>
-                              </div>
-                              <Check
-                                className={cn(
-                                  "ml-auto h-4 w-4",
-                                  selectedClient?.id === client.id ? "opacity-100" : "opacity-0"
-                                )}
-                              />
-                            </CommandItem>
-                    ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="project-status">Status</Label>
-                <Select value={newProject.status} onValueChange={(value) => setNewProject({ ...newProject, status: value })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {statusOptions.map((status) => (
-                      <SelectItem key={status.value} value={status.value}>
-                        {status.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="project-budget">Budget</Label>
-                <Input
-                  id="project-budget"
-                  type="number"
-                  value={newProject.budget}
-                  onChange={(e) => setNewProject({ ...newProject, budget: e.target.value })}
-                  placeholder="0"
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="project-expenses">Expenses</Label>
-                <Input
-                  id="project-expenses"
-                  type="number"
-                  value={newProject.expenses}
-                  onChange={(e) => setNewProject({ ...newProject, expenses: e.target.value })}
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <Label htmlFor="project-received">Received Amount</Label>
-                <Input
-                  id="project-received"
-                  type="number"
-                  value={newProject.received}
-                  onChange={(e) => setNewProject({ ...newProject, received: e.target.value })}
-                  placeholder="0"
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Start Date</Label>
-                <DatePicker
-                  date={newProject.start_date}
-                  onSelect={(date) => setNewProject({ ...newProject, start_date: date })}
-                  placeholder="Pick start date"
-                />
-              </div>
-              <div>
-                <Label>End Date</Label>
-                <DatePicker
-                  date={newProject.end_date}
-                  onSelect={(date) => setNewProject({ ...newProject, end_date: date })}
-                  placeholder="Pick end date"
-                />
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="project-description">Description</Label>
-              <Textarea
-                id="project-description"
-                value={newProject.description}
-                onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
-                placeholder="Project description or notes"
-                rows={3}
-              />
-            </div>
-
           </div>
-          <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => {
-              setIsAddDialogOpen(false)
-              setSelectedProject(null)
-              setSelectedClient(null)
-            }}>
-              Cancel
-            </Button>
-            <Button size="sm" onClick={handleSaveProject} disabled={!newProject.name}>
-              Create Project
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        ) : (
+          <DataTable 
+            columns={columns} 
+            data={projects} 
+            onAddProject={handleAddProject} 
+            onBatchDelete={handleBatchDelete}
+            contextActions={{
+              onEditProject: handleEditProject,
+              onCreateInvoice: handleCreateInvoice,
+              onDeleteProject: handleDeleteProject,
+              onStatusChange: handleStatusChange,
+            }}
+          />
+        )}
+      </PageContent>
 
       {/* Edit Project Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
@@ -874,7 +820,7 @@ export default function ProjectsPage() {
           setSelectedClient(null)
         }
       }}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl" onOpenAutoFocus={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>Edit Project</DialogTitle>
             <DialogDescription>Update project information and settings</DialogDescription>
@@ -904,12 +850,11 @@ export default function ProjectsPage() {
                     >
                       {selectedClient ? (
                         <div className="flex items-center space-x-2">
-                          <Avatar className="h-6 w-6">
-                            <AvatarImage src={selectedClient.avatar_url || "/placeholder-user.jpg"} alt={selectedClient.name} />
-                            <AvatarFallback className="text-xs">
-                              {selectedClient.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
+                          <ClientAvatar 
+                            name={selectedClient.name} 
+                            avatarUrl={selectedClient.avatar_url}
+                            size="sm"
+                          />
                           <span>{selectedClient.name} - {selectedClient.company}</span>
                         </div>
                       ) : (
@@ -937,12 +882,11 @@ export default function ProjectsPage() {
                               }}
                             >
                               <div className="flex items-center space-x-2 flex-1">
-                                <Avatar className="h-8 w-8">
-                            <AvatarImage src={client.avatar_url || "/placeholder-user.jpg"} alt={client.name} />
-                            <AvatarFallback className="text-xs">
-                              {client.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
+                                <ClientAvatar 
+                                  name={client.name} 
+                                  avatarUrl={client.avatar_url}
+                                  size="md"
+                                />
                                 <div className="flex-1">
                                   <div className="font-medium">{client.name}</div>
                                   <div className="text-sm text-muted-foreground">
@@ -1015,6 +959,20 @@ export default function ProjectsPage() {
                 />
               </div>
             </div>
+            {/* Auto-calculated pending amount display */}
+            {(newProject.budget || newProject.received) && (
+              <div className="bg-muted/50 p-3 rounded-lg border">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Pending Amount (Auto-calculated):</span>
+                  <span className="font-medium">
+                    {formatCurrency(Math.max(0, (parseFloat(newProject.budget) || 0) - (parseFloat(newProject.received) || 0)))}
+                  </span>
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {formatCurrency(parseFloat(newProject.budget) || 0)} (Budget) - {formatCurrency(parseFloat(newProject.received) || 0)} (Received)
+                </div>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Start Date</Label>

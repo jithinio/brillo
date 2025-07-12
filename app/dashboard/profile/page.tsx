@@ -362,7 +362,7 @@ export default function ProfilePage() {
                 <div className="flex flex-col items-center space-y-4">
                   <div className="relative">
                     <Avatar className="w-24 h-24">
-                      <AvatarImage src={profile.avatar_url || "/placeholder.svg"} alt={profile.full_name || "User"} />
+                      <AvatarImage src={profile.avatar_url || "/placeholder-user.jpg"} alt={profile.full_name || "User"} />
                       <AvatarFallback className="text-lg">
                         {getInitials(profile.full_name || profile.first_name || "U")}
                       </AvatarFallback>

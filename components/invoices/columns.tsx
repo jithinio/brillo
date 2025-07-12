@@ -75,31 +75,31 @@ const statusConfig = {
   draft: {
     label: "Draft",
     icon: Clock,
-    variant: "outline-solid" as const,
+    variant: "outline" as const,
     iconClassName: "text-gray-500",
   },
   sent: {
     label: "Sent",
     icon: Send,
-    variant: "outline-solid" as const,
+    variant: "outline" as const,
     iconClassName: "text-blue-500",
   },
   paid: {
     label: "Paid",
     icon: CheckCircle,
-    variant: "outline-solid" as const,
+    variant: "outline" as const,
     iconClassName: "text-green-500",
   },
   overdue: {
     label: "Overdue",
     icon: XCircle,
-    variant: "outline-solid" as const,
+    variant: "outline" as const,
     iconClassName: "text-red-500",
   },
   cancelled: {
     label: "Cancelled",
     icon: XCircle,
-    variant: "outline-solid" as const,
+    variant: "outline" as const,
     iconClassName: "text-gray-400",
   },
 }
@@ -152,7 +152,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
             className="h-auto p-0 font-medium"
           >
             Invoice #
-            <ArrowUpDown className="ml-2 h-4 w-4" />
+            <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
           </Button>
         )
       },
@@ -163,8 +163,8 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
             <div className="flex items-center space-x-2">
               <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
               <Button
-                variant="link"
-                className="p-0 h-auto font-medium text-sm hover:underline"
+                variant="ghost"
+                className="p-0 h-auto font-medium text-sm"
                 onClick={() => actions.onViewDetails(invoice)}
                 title={invoice.invoice_number}
               >
@@ -187,7 +187,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
             className="h-auto p-0 font-medium"
           >
             Client
-            <ArrowUpDown className="ml-2 h-4 w-4" />
+            <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
           </Button>
         )
       },
@@ -197,8 +197,8 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
           <div className="flex items-center space-x-2 min-w-[120px] max-w-[150px]">
             <User className="h-4 w-4 text-muted-foreground shrink-0" />
             <Button
-              variant="link"
-              className="p-0 h-auto font-medium text-sm hover:underline"
+              variant="ghost"
+              className="p-0 h-auto font-medium text-sm"
               onClick={() => actions.onClientClick(client)}
               title={client.name}
             >
@@ -220,8 +220,8 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
         return project ? (
           <div className="min-w-[120px] max-w-[150px]">
             <Button
-              variant="link"
-              className="p-0 h-auto font-medium text-sm hover:underline truncate"
+              variant="ghost"
+              className="p-0 h-auto font-medium text-sm truncate"
               onClick={() => {
                 if (actions.onProjectClick) {
                   actions.onProjectClick(project.name)
@@ -244,7 +244,18 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
     },
     {
       accessorKey: "status",
-      header: "Status",
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+            className="h-auto p-0 font-medium"
+          >
+            Status
+            <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
+          </Button>
+        )
+      },
       cell: ({ row }) => {
         const status = row.getValue("status") as string
         const config = statusConfig[status as keyof typeof statusConfig]
@@ -279,8 +290,8 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
             className="h-auto p-0 font-medium"
           >
-            Total Amount
-            <ArrowUpDown className="ml-2 h-4 w-4" />
+            Amount
+            <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
           </Button>
         )
       },
@@ -346,7 +357,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
             className="h-auto p-0 font-medium"
           >
             Due Date
-            <ArrowUpDown className="ml-2 h-4 w-4" />
+            <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
           </Button>
         )
       },
@@ -393,7 +404,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
             className="h-auto p-0 font-medium"
           >
             Created
-            <ArrowUpDown className="ml-2 h-4 w-4" />
+            <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
           </Button>
         )
       },

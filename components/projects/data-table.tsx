@@ -13,7 +13,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { ChevronDown, Search, Settings2, Eye, Edit, FileText, Trash2, CheckCircle, Clock, Pause, XCircle, Plus } from "lucide-react"
+import { ChevronDown, Search, Settings2, Edit, FileText, Trash2, CheckCircle, Clock, Pause, XCircle, Plus } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -57,7 +57,6 @@ interface DataTableProps<TData, TValue> {
   onAddProject?: () => void
   onBatchDelete?: (items: TData[], onUndo: (items: TData[]) => void) => void
   contextActions?: {
-    onViewDetails: (item: TData) => void
     onEditProject: (item: TData) => void
     onCreateInvoice: (item: TData) => void
     onDeleteProject: (item: TData) => void
@@ -314,12 +313,6 @@ export function DataTable<TData, TValue>({ columns, data, onAddProject, onBatchD
                   </ContextMenuTrigger>
                   {contextActions && (
                     <ContextMenuContent className="w-48">
-                      <ContextMenuItem 
-                        onClick={() => contextActions.onViewDetails(row.original)}
-                      >
-                        <Eye className="mr-1.5 h-4 w-4" />
-                        View Details
-                      </ContextMenuItem>
                       <ContextMenuItem 
                         onClick={() => contextActions.onEditProject(row.original)}
                       >

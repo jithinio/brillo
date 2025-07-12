@@ -9,19 +9,20 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Switch } from "@/components/ui/switch"
 import { DatePicker } from "@/components/ui/date-picker"
-import { Plus, Trash2, Send, Save, UserPlus, Building, Mail, Phone, MapPin, Receipt, Download, CheckCircle, CalendarDays, Plus as PlusIcon, RefreshCw, Loader2, Check, Users, Calendar, DollarSign, FileText, AlertTriangle } from "lucide-react"
+import { Plus, Trash2, Send, Save, UserPlus, Building, Mail, Phone, MapPin, Receipt, Download, CheckCircle, CalendarDays, Plus as PlusIcon, RefreshCw, Loader2, Check, Users, Calendar, DollarSign, FileText, AlertTriangle, X, ChevronDown, ChevronsUpDown, User, Edit3, Copy, XCircle, Clock } from "lucide-react"
 import { toast } from "sonner"
 import { formatCurrency, CURRENCIES, getDefaultCurrency } from "@/lib/currency"
-import { PageHeader, PageContent } from "@/components/page-header"
+import { PageHeader, PageContent, PageTitle } from "@/components/page-header"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { useSettings } from "@/components/settings-provider"
 import type { Client } from "@/components/clients/columns"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useRouter } from "next/navigation"
+import { ClientAvatar } from "@/components/ui/client-avatar"
 
 
 interface InvoiceItem {
@@ -1358,12 +1359,11 @@ export default function GenerateInvoicePage() {
                       >
                         {selectedClient ? (
                           <div className="flex items-center space-x-2 text-left w-full">
-                            <Avatar className="h-5 w-5">
-                              <AvatarImage src={selectedClient.avatar_url || "/placeholder-user.jpg"} alt={selectedClient.name} />
-                              <AvatarFallback className="text-xs">
-                                {selectedClient.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
+                            <ClientAvatar 
+                              name={selectedClient.name} 
+                              avatarUrl={selectedClient.avatar_url}
+                              size="sm"
+                            />
                             <div className="flex items-center space-x-2 min-w-0">
                               <span className="font-medium truncate">{selectedClient.name}</span>
                               {selectedClient.company && (
@@ -1398,12 +1398,11 @@ export default function GenerateInvoicePage() {
                                 onSelect={() => handleClientSelect(client.id)}
                                 className="flex items-center space-x-3 p-3"
                               >
-                                <Avatar className="h-8 w-8">
-                                  <AvatarImage src={client.avatar_url || "/placeholder-user.jpg"} alt={client.name} />
-                                  <AvatarFallback className="text-xs">
-                                    {client.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                                  </AvatarFallback>
-                                </Avatar>
+                                <ClientAvatar 
+                                  name={client.name} 
+                                  avatarUrl={client.avatar_url}
+                                  size="md"
+                                />
                                 <div className="flex-1 min-w-0">
                                   <div className="font-medium">{client.name}</div>
                                   {client.company && (

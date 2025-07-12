@@ -27,6 +27,11 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import { Badge } from "@/components/ui/badge"
 import { formatCurrency } from "@/lib/currency"
 
@@ -51,31 +56,30 @@ const statusConfig = {
   active: {
     label: "In Progress",
     icon: Clock,
-    variant: "outline-solid" as const,
+    variant: "outline" as const,
     iconClassName: "text-blue-500",
   },
   completed: {
     label: "Done",
     icon: CheckCircle,
-    variant: "outline-solid" as const,
+    variant: "outline" as const,
     iconClassName: "text-green-500",
   },
   on_hold: {
     label: "On Hold",
     icon: Pause,
-    variant: "outline-solid" as const,
+    variant: "outline" as const,
     iconClassName: "text-yellow-500",
   },
   cancelled: {
     label: "Cancelled",
     icon: XCircle,
-    variant: "outline-solid" as const,
+    variant: "outline" as const,
     iconClassName: "text-gray-400",
   },
 }
 
 interface ColumnActions {
-  onViewDetails: (project: Project) => void
   onEditProject: (project: Project) => void
   onCreateInvoice: (project: Project) => void
   onDeleteProject: (project: Project) => void
@@ -118,7 +122,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
             className="h-auto p-0 font-medium"
           >
             Project Name
-            <ArrowUpDown className="ml-2 h-4 w-4" />
+            <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
           </Button>
         )
       },
@@ -127,9 +131,9 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
         return (
           <div className="min-w-[200px] max-w-[250px]">
             <div 
-              className="truncate font-medium cursor-pointer hover:text-blue-600 hover:underline transition-colors" 
+              className="truncate font-medium cursor-pointer transition-colors" 
               title={project.name}
-              onClick={() => actions.onViewDetails(project)}
+              onClick={() => actions.onEditProject(project)}
             >
               {project.name}
             </div>
@@ -149,7 +153,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
             className="h-auto p-0 font-medium"
           >
             Client
-            <ArrowUpDown className="ml-2 h-4 w-4" />
+            <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
           </Button>
         )
       },
@@ -171,8 +175,20 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
     },
     {
       accessorKey: "status",
-      header: "Status",
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+            className="h-auto p-0 font-medium"
+          >
+            Status
+            <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
+          </Button>
+        )
+      },
       cell: ({ row }) => {
+        const project = row.original
         const status = row.getValue("status") as string
         const config = statusConfig[status as keyof typeof statusConfig]
 
@@ -184,10 +200,58 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
 
         return (
           <div className="min-w-[120px]">
-            <Badge variant={config.variant} className="text-zinc-700 font-medium">
-              <Icon className={`mr-1.5 h-3 w-3 ${config.iconClassName}`} />
-              {config.label}
-            </Badge>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Badge variant={config.variant} className="cursor-pointer hover:bg-slate-100 transition-colors font-normal text-sm focus:outline-none focus-visible:outline-none">
+                  <Icon className={`mr-1.5 h-3 w-3 ${config.iconClassName}`} />
+                  {config.label}
+                </Badge>
+              </PopoverTrigger>
+              <PopoverContent className="w-44 p-1" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
+                <div className="grid gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`justify-start h-8 focus:outline-none focus-visible:outline-none ${project.status === 'active' ? 'bg-accent' : ''}`}
+                    onClick={() => actions.onStatusChange(project, 'active')}
+                    disabled={project.status === 'active'}
+                  >
+                    <Clock className="mr-2 h-3 w-3 text-blue-500" />
+                    In Progress
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`justify-start h-8 focus:outline-none focus-visible:outline-none ${project.status === 'completed' ? 'bg-accent' : ''}`}
+                    onClick={() => actions.onStatusChange(project, 'completed')}
+                    disabled={project.status === 'completed'}
+                  >
+                    <CheckCircle className="mr-2 h-3 w-3 text-green-500" />
+                    Completed
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`justify-start h-8 focus:outline-none focus-visible:outline-none ${project.status === 'on_hold' ? 'bg-accent' : ''}`}
+                    onClick={() => actions.onStatusChange(project, 'on_hold')}
+                    disabled={project.status === 'on_hold'}
+                  >
+                    <Pause className="mr-2 h-3 w-3 text-yellow-500" />
+                    On Hold
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`justify-start h-8 focus:outline-none focus-visible:outline-none ${project.status === 'cancelled' ? 'bg-accent' : ''}`}
+                    onClick={() => actions.onStatusChange(project, 'cancelled')}
+                    disabled={project.status === 'cancelled'}
+                  >
+                    <XCircle className="mr-2 h-3 w-3 text-gray-400" />
+                    Cancelled
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
         )
       },
@@ -204,7 +268,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
             className="h-auto p-0 font-medium"
           >
             Budget
-            <ArrowUpDown className="ml-2 h-4 w-4" />
+            <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
           </Button>
         )
       },
@@ -233,7 +297,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
             className="h-auto p-0 font-medium"
           >
             Expenses
-            <ArrowUpDown className="ml-2 h-4 w-4" />
+            <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
           </Button>
         )
       },
@@ -262,7 +326,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
             className="h-auto p-0 font-medium"
           >
             Received
-            <ArrowUpDown className="ml-2 h-4 w-4" />
+            <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
           </Button>
         )
       },
@@ -291,19 +355,20 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
             className="h-auto p-0 font-medium"
           >
             Pending
-            <ArrowUpDown className="ml-2 h-4 w-4" />
+            <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
           </Button>
         )
       },
       cell: ({ row }) => {
-        const pending = row.getValue("pending") as number
+        const project = row.original
+        // Auto-calculate pending amount: budget - received = pending
+        const budget = project.budget || 0
+        const received = project.received || 0
+        const pending = Math.max(0, budget - received) // Ensure it's not negative
+        
         return (
           <div className="min-w-[100px] max-w-[120px]">
-            {pending ? (
-              <span className="truncate font-normal">{formatCurrency(pending)}</span>
-            ) : (
-              <span className="text-muted-foreground">{formatCurrency(0)}</span>
-            )}
+            <span className="truncate font-normal">{formatCurrency(pending)}</span>
           </div>
         )
       },
@@ -320,7 +385,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
             className="h-auto p-0 font-medium"
           >
             Due Date
-            <ArrowUpDown className="ml-2 h-4 w-4" />
+            <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
           </Button>
         )
       },
@@ -365,7 +430,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
             className="h-auto p-0 font-medium"
           >
             Created
-            <ArrowUpDown className="ml-2 h-4 w-4" />
+            <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
           </Button>
         )
       },
@@ -401,10 +466,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={() => actions.onViewDetails(project)} className="whitespace-nowrap">
-                  <Eye className="mr-2 h-4 w-4" />
-                  View Details
-                </DropdownMenuItem>
+                
                 <DropdownMenuItem onClick={() => actions.onEditProject(project)} className="whitespace-nowrap">
                   <Edit className="mr-2 h-4 w-4" />
                   Edit Project

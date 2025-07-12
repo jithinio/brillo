@@ -55,7 +55,6 @@ interface DataTableProps<TData, TValue> {
   onAddClient?: () => void
   onBatchDelete?: (items: TData[], onUndo: (items: TData[]) => void) => void
   contextActions?: {
-    onViewDetails: (item: TData) => void
     onEditClient: (item: TData) => void
     onCreateInvoice: (item: TData) => void
     onNewProject: (item: TData) => void
@@ -313,12 +312,6 @@ export function DataTable<TData, TValue>({
                   </ContextMenuTrigger>
                   {contextActions && (
                     <ContextMenuContent className="w-48">
-                      <ContextMenuItem 
-                        onClick={() => contextActions.onViewDetails(row.original)}
-                      >
-                                                  <Eye className="mr-1.5 h-4 w-4" />
-                          View Details
-                      </ContextMenuItem>
                       <ContextMenuItem 
                         onClick={() => contextActions.onEditClient(row.original)}
                       >

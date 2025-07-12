@@ -28,9 +28,10 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { PageHeader, PageContent, PageTitle } from "@/components/page-header"
+import { PageActionsMenu } from "@/components/page-actions-menu"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { toast } from "sonner"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { ClientAvatar } from "@/components/ui/client-avatar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Upload, Loader2, AlertTriangle } from "lucide-react"
 import { DataTable } from "@/components/clients/data-table"
@@ -123,22 +124,22 @@ const mockClients: Client[] = [
 const statusConfig = {
   active: {
     label: "Active",
-    variant: "outline-solid" as const,
+    variant: "outline" as const,
     iconClassName: "text-green-500",
   },
   completed: {
     label: "Completed",
-    variant: "outline-solid" as const,
+    variant: "outline" as const,
     iconClassName: "text-blue-500",
   },
   on_hold: {
     label: "On Hold",
-    variant: "outline-solid" as const,
+    variant: "outline" as const,
     iconClassName: "text-yellow-500",
   },
   cancelled: {
     label: "Cancelled",
-    variant: "outline-solid" as const,
+    variant: "outline" as const,
     iconClassName: "text-gray-400",
   },
 }
@@ -147,11 +148,10 @@ export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null)
-  const [showViewDialog, setShowViewDialog] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null)
   const [editingClient, setEditingClient] = useState<Partial<Client>>({})
   const [undoData, setUndoData] = useState<{ items: Client[], timeout: NodeJS.Timeout } | null>(null)
 
@@ -211,11 +211,6 @@ export default function ClientsPage() {
     } finally {
       setLoading(false)
     }
-  }
-
-  const handleViewDetails = (client: Client) => {
-    setSelectedClient(client)
-    setShowViewDialog(true)
   }
 
   const handleEditClient = (client: Client) => {
@@ -296,10 +291,32 @@ export default function ClientsPage() {
   }
 
   const confirmBatchDelete = async (clientsToDelete: Client[], onUndo: (items: Client[]) => void) => {
+    if (clientsToDelete.length === 0) return
+
+    // Show progress toast for operations with 3+ items or after 1 second delay
+    const showProgress = clientsToDelete.length >= 3
+    let progressToastId: string | number | undefined
+    let progressTimeout: NodeJS.Timeout | undefined
+
     try {
+      // Set up progress notification for longer operations
+      if (showProgress) {
+        progressToastId = toast.loading(`Deleting ${clientsToDelete.length} client${clientsToDelete.length > 1 ? 's' : ''}...`, {
+          description: "Please wait while we process your request."
+        })
+      } else {
+        // For smaller operations, show progress toast after 1 second delay
+        progressTimeout = setTimeout(() => {
+          progressToastId = toast.loading(`Deleting ${clientsToDelete.length} client${clientsToDelete.length > 1 ? 's' : ''}...`, {
+            description: "Please wait while we process your request."
+          })
+        }, 1000)
+      }
+
       const deletedIds: string[] = []
       
-      for (const client of clientsToDelete) {
+      for (let i = 0; i < clientsToDelete.length; i++) {
+        const client = clientsToDelete[i]
         try {
           if (isSupabaseConfigured()) {
             const { error } = await supabase.from("clients").delete().eq("id", client.id)
@@ -307,9 +324,26 @@ export default function ClientsPage() {
           }
           
           deletedIds.push(client.id)
+
+          // Update progress for larger operations
+          if (progressToastId) {
+            const progress = Math.round(((i + 1) / clientsToDelete.length) * 100)
+            toast.loading(`Deleting clients... ${i + 1}/${clientsToDelete.length} (${progress}%)`, {
+              id: progressToastId,
+              description: `Processing "${client.name}"`
+            })
+          }
         } catch (error) {
           console.error(`Error deleting client ${client.name}:`, error)
         }
+      }
+
+      // Clear progress notifications
+      if (progressTimeout) {
+        clearTimeout(progressTimeout)
+      }
+      if (progressToastId) {
+        toast.dismiss(progressToastId)
       }
       
       // Get the successfully deleted clients
@@ -332,7 +366,7 @@ export default function ClientsPage() {
         setUndoData({ items: deletedClients, timeout })
         
         // Show toast with undo action
-        toast(`${deletedIds.length} client${deletedIds.length > 1 ? 's' : ''} deleted successfully`, {
+        toast.success(`${deletedIds.length} client${deletedIds.length > 1 ? 's' : ''} deleted successfully`, {
           action: {
             label: "Undo",
             onClick: () => handleUndo(deletedClients),
@@ -346,6 +380,15 @@ export default function ClientsPage() {
       }
     } catch (error) {
       console.error('Error during batch delete:', error)
+      
+      // Clear progress notifications on error
+      if (progressTimeout) {
+        clearTimeout(progressTimeout)
+      }
+      if (progressToastId) {
+        toast.dismiss(progressToastId)
+      }
+      
       toast.error("Failed to delete clients. Please try again.")
     }
   }
@@ -499,10 +542,39 @@ export default function ClientsPage() {
     }
   }
 
+  const handleExport = () => {
+    // Create CSV content
+    const headers = ['Name', 'Email', 'Phone', 'Company', 'Address', 'City', 'State', 'ZIP Code', 'Country', 'Notes']
+    const csvContent = [
+      headers.join(','),
+      ...clients.map(client => [
+        client.name,
+        client.email || '',
+        client.phone || '',
+        client.company || '',
+        client.address || '',
+        client.city || '',
+        client.state || '',
+        client.zip_code || '',
+        client.country || '',
+        client.notes || ''
+      ].map(field => `"${field}"`).join(','))
+    ].join('\n')
+
+    // Download CSV
+    const blob = new Blob([csvContent], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `clients-export-${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    
+    toast.success(`Exported ${clients.length} clients to CSV`)
+  }
 
 
   const columns = createColumns({
-    onViewDetails: handleViewDetails,
     onEditClient: handleEditClient,
     onCreateInvoice: handleCreateInvoice,
     onNewProject: handleNewProject,
@@ -537,6 +609,7 @@ export default function ClientsPage() {
     <>
       <PageHeader
         title="Clients"
+        action={<PageActionsMenu entityType="clients" onExport={handleExport} />}
       />
       <PageContent>
         {error && (
@@ -554,7 +627,6 @@ export default function ClientsPage() {
           onAddClient={handleAddClient} 
           onBatchDelete={handleBatchDelete}
           contextActions={{
-            onViewDetails: handleViewDetails,
             onEditClient: handleEditClient,
             onCreateInvoice: handleCreateInvoice,
             onNewProject: handleNewProject,
@@ -563,91 +635,9 @@ export default function ClientsPage() {
         />
       </PageContent>
 
-      {/* View Details Dialog */}
-      <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Client Details</DialogTitle>
-            <DialogDescription>Complete information for {selectedClient?.name}</DialogDescription>
-          </DialogHeader>
-          {selectedClient && (
-            <div className="grid gap-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium">Name</Label>
-                  <p className="text-sm text-muted-foreground">{selectedClient.name}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">Company</Label>
-                  <p className="text-sm text-muted-foreground">{selectedClient.company || "N/A"}</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium">Email</Label>
-                  <p className="text-sm text-muted-foreground">{selectedClient.email || "N/A"}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">Phone</Label>
-                  <p className="text-sm text-muted-foreground">{selectedClient.phone || "N/A"}</p>
-                </div>
-              </div>
-              <div>
-                <Label className="text-sm font-medium">Address</Label>
-                <p className="text-sm text-muted-foreground">
-                  {selectedClient.address && (
-                    <>
-                      {selectedClient.address}
-                      <br />
-                      {selectedClient.city}, {selectedClient.state} {selectedClient.zip_code}
-                      <br />
-                      {selectedClient.country}
-                    </>
-                  )}
-                  {!selectedClient.address && "N/A"}
-                </p>
-              </div>
-              {selectedClient.notes && (
-                <div>
-                  <Label className="text-sm font-medium">Notes</Label>
-                  <p className="text-sm text-muted-foreground">{selectedClient.notes}</p>
-                </div>
-              )}
-              {selectedClient.projects && selectedClient.projects.length > 0 && (
-                <div>
-                  <Label className="text-sm font-medium">Projects</Label>
-                  <div className="space-y-2 mt-2">
-                    {selectedClient.projects.map((project) => (
-                      <div key={project.id} className="flex items-center justify-between p-2 border rounded">
-                        <span 
-                          className="text-sm cursor-pointer hover:text-blue-600 hover:underline transition-colors font-medium"
-                          onClick={() => {
-                            // Navigate to projects page and highlight this project
-                            window.location.href = `/dashboard/projects#${project.id}`
-                          }}
-                        >
-                          {project.name}
-                        </span>
-                        <Badge
-                          variant={statusConfig[project.status as keyof typeof statusConfig]?.variant || "outline-solid"}
-                          className="text-xs text-zinc-700 font-medium"
-                        >
-                          <div className={`w-2 h-2 rounded-full mr-1.5 ${statusConfig[project.status as keyof typeof statusConfig]?.iconClassName?.replace('text-', 'bg-') || 'bg-gray-400'}`}></div>
-                          {statusConfig[project.status as keyof typeof statusConfig]?.label || project.status}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
       {/* Edit Client Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl" onOpenAutoFocus={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>Edit Client</DialogTitle>
             <DialogDescription>Update client information</DialogDescription>
@@ -655,12 +645,11 @@ export default function ClientsPage() {
           <div className="grid gap-4">
             {/* Avatar Upload */}
             <div className="flex items-center space-x-4">
-              <Avatar className="h-16 w-16">
-                <AvatarImage src={editingClient.avatar_url || "/placeholder-user.jpg"} alt="Client avatar" />
-                <AvatarFallback className="text-lg">
-                  {editingClient.name ? editingClient.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'CL'}
-                </AvatarFallback>
-              </Avatar>
+              <ClientAvatar 
+                name={editingClient.name || ""} 
+                avatarUrl={editingClient.avatar_url}
+                size="xl"
+              />
               <div className="flex-1">
                 <Label htmlFor="edit-avatar-upload" className="cursor-pointer">
                   <Button variant="outline" size="sm" asChild>
@@ -793,7 +782,7 @@ export default function ClientsPage() {
 
       {/* Add Client Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl" onOpenAutoFocus={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>Add New Client</DialogTitle>
             <DialogDescription>Create a new client record</DialogDescription>
@@ -801,12 +790,11 @@ export default function ClientsPage() {
           <div className="grid gap-4">
             {/* Avatar Upload */}
             <div className="flex items-center space-x-4">
-              <Avatar className="h-16 w-16">
-                <AvatarImage src={editingClient.avatar_url || "/placeholder-user.jpg"} alt="Client avatar" />
-                <AvatarFallback className="text-lg">
-                  {editingClient.name ? editingClient.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'CL'}
-                </AvatarFallback>
-              </Avatar>
+              <ClientAvatar 
+                name={editingClient.name || ""} 
+                avatarUrl={editingClient.avatar_url}
+                size="xl"
+              />
               <div className="flex-1">
                 <Label htmlFor="avatar-upload" className="cursor-pointer">
                   <Button variant="outline" size="sm" asChild>

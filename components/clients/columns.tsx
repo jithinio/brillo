@@ -4,7 +4,6 @@ import type { ColumnDef } from "@tanstack/react-table"
 import {
   ArrowUpDown,
   MoreHorizontal,
-  Eye,
   Edit,
   FileText,
   FolderPlus,
@@ -13,6 +12,7 @@ import {
   Phone,
   Building,
   MapPin,
+  Copy,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -25,7 +25,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { ClientAvatar } from "@/components/ui/client-avatar"
+import { toast } from "sonner"
 
 export type Client = {
   id: string
@@ -51,28 +52,27 @@ export type Client = {
 const statusConfig = {
   active: {
     label: "Active",
-    variant: "outline-solid" as const,
+    variant: "outline" as const,
     iconClassName: "text-green-500",
   },
   completed: {
     label: "Completed",
-    variant: "outline-solid" as const,
+    variant: "outline" as const,
     iconClassName: "text-blue-500",
   },
   on_hold: {
     label: "On Hold",
-    variant: "outline-solid" as const,
+    variant: "outline" as const,
     iconClassName: "text-yellow-500",
   },
   cancelled: {
     label: "Cancelled",
-    variant: "outline-solid" as const,
+    variant: "outline" as const,
     iconClassName: "text-gray-400",
   },
 }
 
 interface ColumnActions {
-  onViewDetails: (client: Client) => void
   onEditClient: (client: Client) => void
   onCreateInvoice: (client: Client) => void
   onNewProject: (client: Client) => void
@@ -116,25 +116,27 @@ export function createColumns(actions: ColumnActions): ColumnDef<Client>[] {
             className="h-auto p-0 font-medium"
           >
             Name
-            <ArrowUpDown className="ml-2 h-4 w-4" />
+            <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
           </Button>
         )
       },
       cell: ({ row }) => {
         const client = row.original
         const name = row.getValue("name") as string
-        const initials = name.split(' ').map(n => n[0]).join('').toUpperCase()
         
         return (
-          <div className="flex items-center space-x-3 min-w-[180px]">
-            <Avatar className="h-8 w-8">
-              <AvatarImage src={client.avatar_url || "/placeholder-user.jpg"} alt={name} />
-              <AvatarFallback className="text-xs">{initials}</AvatarFallback>
-            </Avatar>
+          <div 
+            className="flex items-center space-x-3 min-w-[180px] cursor-pointer" 
+            onClick={() => actions.onEditClient(client)}
+          >
+            <ClientAvatar 
+              name={name} 
+              avatarUrl={client.avatar_url}
+              size="md"
+            />
             <span 
-              className="font-medium truncate cursor-pointer hover:text-blue-600 hover:underline transition-colors" 
+              className="font-medium truncate transition-colors" 
               title={name}
-              onClick={() => actions.onViewDetails(client)}
             >
               {name}
             </span>
@@ -153,7 +155,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Client>[] {
             className="h-auto p-0 font-medium"
           >
             Company
-            <ArrowUpDown className="ml-2 h-4 w-4" />
+            <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
           </Button>
         )
       },
@@ -183,18 +185,36 @@ export function createColumns(actions: ColumnActions): ColumnDef<Client>[] {
             className="h-auto p-0 font-medium"
           >
             Email
-            <ArrowUpDown className="ml-2 h-4 w-4" />
+            <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
           </Button>
         )
       },
       cell: ({ row }) => {
         const email = row.getValue("email") as string
+        
+        const handleCopyEmail = async () => {
+          try {
+            await navigator.clipboard.writeText(email)
+            toast.success("Email copied to clipboard")
+          } catch (err) {
+            toast.error("Failed to copy email")
+          }
+        }
+        
         return email ? (
-          <div className="flex items-center space-x-2 min-w-[220px]">
+          <div className="flex items-center space-x-2 min-w-[220px] group">
             <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
             <span className="truncate lowercase" title={email}>
               {email}
             </span>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity ml-auto"
+              onClick={handleCopyEmail}
+            >
+              <Copy className="h-3 w-3" />
+            </Button>
           </div>
         ) : (
           <span className="text-muted-foreground min-w-[220px] block">—</span>
@@ -258,14 +278,14 @@ export function createColumns(actions: ColumnActions): ColumnDef<Client>[] {
             <div className="space-y-1 min-w-[180px]">
               <div className="flex items-center space-x-2">
                 <Badge
-                  variant={statusConfig[project.status as keyof typeof statusConfig]?.variant || "outline-solid"}
+                  variant={statusConfig[project.status as keyof typeof statusConfig]?.variant || "outline"}
                   className="text-xs shrink-0 text-zinc-700 font-medium"
                 >
                   <div className={`w-2 h-2 rounded-full mr-1.5 ${statusConfig[project.status as keyof typeof statusConfig]?.iconClassName?.replace('text-', 'bg-') || 'bg-gray-400'}`}></div>
                   {statusConfig[project.status as keyof typeof statusConfig]?.label || project.status}
                 </Badge>
                 <span 
-                  className="text-sm truncate cursor-pointer hover:text-blue-600 hover:underline transition-colors font-medium" 
+                  className="text-sm truncate cursor-pointer font-medium" 
                   title={project.name}
                   onClick={() => {
                     if (actions.onProjectClick) {
@@ -300,7 +320,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Client>[] {
             className="h-auto p-0 font-medium"
           >
             Client Since
-            <ArrowUpDown className="ml-2 h-4 w-4" />
+            <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
           </Button>
         )
       },
@@ -337,10 +357,6 @@ export function createColumns(actions: ColumnActions): ColumnDef<Client>[] {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-40">
                 <DropdownMenuLabel className="whitespace-nowrap">Actions</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => actions.onViewDetails(client)} className="whitespace-nowrap">
-                  <Eye className="mr-2 h-4 w-4" />
-                  View Details
-                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => actions.onEditClient(client)} className="whitespace-nowrap">
                   <Edit className="mr-2 h-4 w-4" />
                   Edit Client

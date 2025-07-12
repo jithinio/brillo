@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import "tw-animate-css";
 
 @source '../*.{js,ts,jsx,tsx,mdx}';
 
@@ -54,263 +55,12 @@
   --shadow-lg: var(--shadow-lg);
   --shadow-xl: var(--shadow-xl);
   --shadow-2xl: var(--shadow-2xl);
-
-  /* Animation definitions */
-  --animate-accordion-down: accordion-down 0.2s ease-out;
-  --animate-accordion-up: accordion-up 0.2s ease-out;
-  --animate-in: in 0.2s ease-out;
-  --animate-out: out 0.2s ease-out;
-  --animate-fade-in: fade-in 0.2s ease-out;
-  --animate-fade-out: fade-out 0.2s ease-out;
-  --animate-zoom-in-95: zoom-in-95 0.2s ease-out;
-  --animate-zoom-out-95: zoom-out-95 0.2s ease-out;
-  --animate-slide-in-from-top-2: slide-in-from-top-2 0.2s ease-out;
-  --animate-slide-in-from-bottom-2: slide-in-from-bottom-2 0.2s ease-out;
-  --animate-slide-in-from-left-2: slide-in-from-left-2 0.2s ease-out;
-  --animate-slide-in-from-right-2: slide-in-from-right-2 0.2s ease-out;
-  --animate-slide-out-to-top-2: slide-out-to-top-2 0.2s ease-out;
-  --animate-slide-out-to-bottom-2: slide-out-to-bottom-2 0.2s ease-out;
-  --animate-slide-out-to-left-2: slide-out-to-left-2 0.2s ease-out;
-  --animate-slide-out-to-right-2: slide-out-to-right-2 0.2s ease-out;
-}
-
-/* Animation keyframes */
-@keyframes accordion-down {
-  from {
-    height: 0;
-  }
-  to {
-    height: var(--radix-accordion-content-height);
-  }
-}
-
-@keyframes accordion-up {
-  from {
-    height: var(--radix-accordion-content-height);
-  }
-  to {
-    height: 0;
-  }
-}
-
-@keyframes in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes out {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
-  }
-}
-
-@keyframes fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes fade-out {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
-  }
-}
-
-@keyframes zoom-in-95 {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes zoom-out-95 {
-  from {
-    opacity: 1;
-    transform: scale(1);
-  }
-  to {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-}
-
-@keyframes slide-in-from-top-2 {
-  from {
-    opacity: 0;
-    transform: translateY(-2px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes slide-in-from-bottom-2 {
-  from {
-    opacity: 0;
-    transform: translateY(2px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes slide-in-from-left-2 {
-  from {
-    opacity: 0;
-    transform: translateX(-2px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes slide-in-from-right-2 {
-  from {
-    opacity: 0;
-    transform: translateX(2px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes slide-out-to-top-2 {
-  from {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  to {
-    opacity: 0;
-    transform: translateY(-2px);
-  }
-}
-
-@keyframes slide-out-to-bottom-2 {
-  from {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  to {
-    opacity: 0;
-    transform: translateY(2px);
-  }
-}
-
-@keyframes slide-out-to-left-2 {
-  from {
-    opacity: 1;
-    transform: translateX(0);
-  }
-  to {
-    opacity: 0;
-    transform: translateX(-2px);
-  }
-}
-
-@keyframes slide-out-to-right-2 {
-  from {
-    opacity: 1;
-    transform: translateX(0);
-  }
-  to {
-    opacity: 0;
-    transform: translateX(2px);
-  }
-}
-
-/* Simple animation utilities */
-@utility animate-accordion-down {
-  animation: accordion-down 0.2s ease-out;
-}
-
-@utility animate-accordion-up {
-  animation: accordion-up 0.2s ease-out;
-}
-
-@utility animate-in {
-  animation: in 0.2s ease-out;
-}
-
-@utility animate-out {
-  animation: out 0.2s ease-out;
-}
-
-@utility fade-in-0 {
-  animation: fade-in 0.2s ease-out;
-}
-
-@utility fade-out-0 {
-  animation: fade-out 0.2s ease-out;
-}
-
-@utility zoom-in-95 {
-  animation: zoom-in-95 0.2s ease-out;
-}
-
-@utility zoom-out-95 {
-  animation: zoom-out-95 0.2s ease-out;
-}
-
-@utility slide-in-from-top-2 {
-  animation: slide-in-from-top-2 0.2s ease-out;
-}
-
-@utility slide-in-from-bottom-2 {
-  animation: slide-in-from-bottom-2 0.2s ease-out;
-}
-
-@utility slide-in-from-left-2 {
-  animation: slide-in-from-left-2 0.2s ease-out;
-}
-
-@utility slide-in-from-right-2 {
-  animation: slide-in-from-right-2 0.2s ease-out;
-}
-
-@utility slide-out-to-top-2 {
-  animation: slide-out-to-top-2 0.2s ease-out;
-}
-
-@utility slide-out-to-bottom-2 {
-  animation: slide-out-to-bottom-2 0.2s ease-out;
-}
-
-@utility slide-out-to-left-2 {
-  animation: slide-out-to-left-2 0.2s ease-out;
-}
-
-@utility slide-out-to-right-2 {
-  animation: slide-out-to-right-2 0.2s ease-out;
 }
 
 /*
   The default border color has changed to `currentcolor` in Tailwind CSS v4,
   so we've added these compatibility styles to make sure everything still
   looks the same as it did with Tailwind CSS v3.
-
-  If we ever want to remove these styles, we need to add an explicit border
-  color utility to any element that depends on these defaults.
 */
 @layer base {
   *,
@@ -322,22 +72,6 @@
   }
 }
 
-@utility step {
-  counter-increment: step;
-
-  &:before {
-    @apply absolute w-9 h-9 bg-muted rounded-full font-mono font-medium text-sm text-center text-muted-foreground flex items-center justify-center;
-    @apply ml-[-50px] mt-[-4px];
-    content: counter(step);
-  }
-}
-
-@utility font-mono {
-  font-family:
-    var(--font-geist-mono), ui-monospace, SFMono-Regular, 'SF Mono', Consolas,
-    'Liberation Mono', Menlo, monospace;
-}
-
 :root {
   --background: oklch(1.00 0 0);
   --foreground: oklch(0.14 0.00 285.86);
@@ -345,7 +79,7 @@
   --card-foreground: oklch(0.14 0.00 285.86);
   --popover: oklch(1.00 0 0);
   --popover-foreground: oklch(0.14 0.00 285.86);
-  --primary: oklch(0.21 0.01 285.93);
+  --primary: oklch(0.556 0.2453 261.33);
   --primary-foreground: oklch(0.99 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.21 0.01 285.93);
@@ -396,8 +130,8 @@
   --card-foreground: oklch(0.99 0 0);
   --popover: oklch(0.21 0.01 285.93);
   --popover-foreground: oklch(0.99 0 0);
-  --primary: oklch(0.92 0.00 286.61);
-  --primary-foreground: oklch(0.21 0.01 285.93);
+  --primary: oklch(0.556 0.2453 261.33);
+  --primary-foreground: oklch(0.99 0 0);
   --secondary: oklch(0.27 0.01 286.10);
   --secondary-foreground: oklch(0.99 0 0);
   --muted: oklch(0.27 0.01 286.10);
@@ -450,11 +184,11 @@
   .dark main {
     background-color: var(--sidebar) !important;
   }
-  
+
   .dark .group\/sidebar-wrapper {
     background-color: var(--background) !important;
   }
-  
+
   .dark [data-sidebar="sidebar"] {
     background-color: var(--background) !important;
   }
@@ -490,3 +224,4 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
