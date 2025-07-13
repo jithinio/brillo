@@ -19,19 +19,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
 
 import { DatePicker } from "@/components/ui/date-picker"
 import { Label } from "@/components/ui/label"
@@ -50,6 +37,20 @@ import { formatCurrency } from "@/lib/currency"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { cn } from "@/lib/utils"
 
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+
 // Mock data for projects with new fields
 const mockProjects: Project[] = [
   {
@@ -66,6 +67,7 @@ const mockProjects: Project[] = [
     clients: {
       name: "John Smith",
       company: "Acme Corporation",
+      avatar_url: null,
     },
   },
   {
@@ -82,6 +84,7 @@ const mockProjects: Project[] = [
     clients: {
       name: "Sarah Johnson",
       company: "TechStart Inc.",
+      avatar_url: null,
     },
   },
   {
@@ -98,6 +101,7 @@ const mockProjects: Project[] = [
     clients: {
       name: "Michael Brown",
       company: "Global Solutions LLC",
+      avatar_url: null,
     },
   },
   {
@@ -114,6 +118,7 @@ const mockProjects: Project[] = [
     clients: {
       name: "Emily Davis",
       company: "Creative Studio",
+      avatar_url: null,
     },
   },
   {
@@ -130,6 +135,7 @@ const mockProjects: Project[] = [
     clients: {
       name: "David Wilson",
       company: "Retail Plus",
+      avatar_url: null,
     },
   },
 ]
@@ -159,7 +165,7 @@ const mockClients: Client[] = [
 ]
 
 const statusOptions = [
-  { value: "active", label: "In Progress" },
+  { value: "active", label: "Active" },
   { value: "on_hold", label: "On Hold" },
   { value: "completed", label: "Completed" },
   { value: "cancelled", label: "Cancelled" },
@@ -191,6 +197,29 @@ export default function ProjectsPage() {
   const [clientsLoading, setClientsLoading] = React.useState(true)
   const [clientDropdownOpen, setClientDropdownOpen] = React.useState(false)
   const [selectedClient, setSelectedClient] = React.useState<Client | null>(null)
+  const [clientSearchQuery, setClientSearchQuery] = React.useState("")
+  const [displayedClientsCount, setDisplayedClientsCount] = React.useState(10)
+
+  // Filter and limit clients based on search query
+  const filteredClients = clients.filter(client =>
+    client.name.toLowerCase().includes(clientSearchQuery.toLowerCase()) ||
+    (client.company && client.company.toLowerCase().includes(clientSearchQuery.toLowerCase())) ||
+    (client.email && client.email.toLowerCase().includes(clientSearchQuery.toLowerCase()))
+  )
+
+  const displayedClients = filteredClients.slice(0, displayedClientsCount)
+
+  const handleClientSelect = (clientId: string) => {
+    const client = clients.find(c => c.id === clientId)
+    setSelectedClient(client || null)
+    setNewProject({ ...newProject, client_id: clientId })
+    setClientDropdownOpen(false)
+    setClientSearchQuery("")
+  }
+
+  const loadMoreClients = () => {
+    setDisplayedClientsCount(prev => Math.min(prev + 10, filteredClients.length))
+  }
 
   const [newProject, setNewProject] = React.useState<NewProject>({
     name: "",
@@ -210,6 +239,11 @@ export default function ProjectsPage() {
     fetchClients()
   }, [])
 
+  // Reset displayed count when search query changes
+  React.useEffect(() => {
+    setDisplayedClientsCount(10)
+  }, [clientSearchQuery])
+
   // Cleanup undo timeout on unmount
   React.useEffect(() => {
     return () => {
@@ -218,6 +252,18 @@ export default function ProjectsPage() {
       }
     }
   }, [undoData])
+
+  // Listen for command menu events
+  React.useEffect(() => {
+    const handleCommandMenuAddProject = () => {
+      handleAddProject()
+    }
+
+    window.addEventListener('trigger-add-project', handleCommandMenuAddProject)
+    return () => {
+      window.removeEventListener('trigger-add-project', handleCommandMenuAddProject)
+    }
+  }, [])
 
   // Fetch projects from database and sessionStorage
   const fetchProjects = async () => {
@@ -233,7 +279,8 @@ export default function ProjectsPage() {
             *,
             clients (
               name,
-              company
+              company,
+              avatar_url
             )
           `)
           .order('created_at', { ascending: false })
@@ -257,7 +304,8 @@ export default function ProjectsPage() {
           created_at: project.created_at,
           clients: project.clients ? {
             name: project.clients.name,
-            company: project.clients.company
+            company: project.clients.company,
+            avatar_url: project.clients.avatar_url
           } : undefined
         }))
 
@@ -399,6 +447,8 @@ export default function ProjectsPage() {
 
   const handleEditProject = (project: Project) => {
     setSelectedProject(project)
+    setClientSearchQuery("") // Clear search query
+    setDisplayedClientsCount(10) // Reset displayed count
     // Find the client for this project
     const projectClient = project.clients ? clients.find(c => c.name === project.clients!.name) : null
     setSelectedClient(projectClient || null)
@@ -586,6 +636,8 @@ export default function ProjectsPage() {
   const handleAddProject = () => {
     setSelectedProject(null) // Clear any selected project
     setSelectedClient(null) // Clear any selected client
+    setClientSearchQuery("") // Clear search query
+    setDisplayedClientsCount(10) // Reset displayed count
     setNewProject({
       name: "",
       client_id: "",
@@ -628,6 +680,7 @@ export default function ProjectsPage() {
         clients: clientForProject ? {
           name: clientForProject.name,
           company: clientForProject.company,
+          avatar_url: clientForProject.avatar_url,
         } : undefined,
       }
 
@@ -650,6 +703,7 @@ export default function ProjectsPage() {
         clients: clientForProject ? {
           name: clientForProject.name,
           company: clientForProject.company,
+          avatar_url: clientForProject.avatar_url,
         } : undefined,
       }
 
@@ -752,31 +806,27 @@ export default function ProjectsPage() {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
               <div className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <h3 className="tracking-tight text-sm font-medium">Total Projects</h3>
+                <h3 className="tracking-tight text-sm font-normal text-muted-foreground">Total Projects</h3>
               </div>
               <div className="text-2xl font-normal">{totalProjects}</div>
-              <p className="text-xs text-muted-foreground">All projects in system</p>
             </div>
             <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
               <div className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <h3 className="tracking-tight text-sm font-medium">Total Budget</h3>
+                <h3 className="tracking-tight text-sm font-normal text-muted-foreground">Total Budget</h3>
               </div>
               <div className="text-2xl font-normal">{formatCurrency(totalBudget)}</div>
-              <p className="text-xs text-muted-foreground">Combined project value</p>
             </div>
             <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
               <div className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <h3 className="tracking-tight text-sm font-medium">Total Received</h3>
+                <h3 className="tracking-tight text-sm font-normal text-muted-foreground">Total Received</h3>
               </div>
               <div className="text-2xl font-normal text-green-600">{formatCurrency(totalReceived)}</div>
-              <p className="text-xs text-muted-foreground">Payments received</p>
             </div>
             <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
               <div className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <h3 className="tracking-tight text-sm font-medium">Total Pending</h3>
+                <h3 className="tracking-tight text-sm font-normal text-muted-foreground">Total Pending</h3>
               </div>
               <div className="text-2xl font-normal text-yellow-600">{formatCurrency(totalPending)}</div>
-              <p className="text-xs text-muted-foreground">Outstanding payments</p>
             </div>
           </div>
         )}
@@ -818,6 +868,8 @@ export default function ProjectsPage() {
         if (!open) {
           setSelectedProject(null)
           setSelectedClient(null)
+          setClientSearchQuery("")
+          setDisplayedClientsCount(10)
         }
       }}>
         <DialogContent className="max-w-2xl" onOpenAutoFocus={(e) => e.preventDefault()}>
@@ -838,73 +890,83 @@ export default function ProjectsPage() {
               </div>
               <div>
                 <Label htmlFor="edit-project-client">Client</Label>
-                <Popover open={clientDropdownOpen} onOpenChange={setClientDropdownOpen}>
+                <Popover modal={true} open={clientDropdownOpen} onOpenChange={setClientDropdownOpen}>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
-                      size="sm"
                       role="combobox"
                       aria-expanded={clientDropdownOpen}
-                      className="w-full justify-between"
+                      className="w-full justify-between h-9 px-3 py-1 text-base bg-transparent shadow-sm hover:bg-transparent hover:border-ring focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] md:text-sm text-left"
                       disabled={clientsLoading}
                     >
                       {selectedClient ? (
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-2 min-w-0 flex-1 mr-2">
                           <ClientAvatar 
                             name={selectedClient.name} 
                             avatarUrl={selectedClient.avatar_url}
-                            size="sm"
+                            size="xs"
                           />
-                          <span>{selectedClient.name} - {selectedClient.company}</span>
+                          <span className="truncate">{selectedClient.name} - {selectedClient.company}</span>
                         </div>
                       ) : (
-                        <span className="text-muted-foreground">
-                          {clientsLoading ? "Loading clients..." : "Select a client"}
+                        <span className="text-muted-foreground flex-1 mr-2">
+                          {clientsLoading ? "Loading..." : "Select client"}
                         </span>
                       )}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-full p-0" style={{ maxHeight: '300px' }}>
-                    <Command>
-                      <CommandInput placeholder="Search clients..." />
-                      <CommandList style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                        <CommandEmpty>No client found.</CommandEmpty>
-                        <CommandGroup>
-                          {clients.map((client) => (
-                            <CommandItem
-                              key={client.id}
-                              value={`${client.name} ${client.company || ""} ${client.email || ""}`}
-                              onSelect={() => {
-                                setSelectedClient(client)
-                                setNewProject({ ...newProject, client_id: client.id })
-                                setClientDropdownOpen(false)
-                              }}
-                            >
-                              <div className="flex items-center space-x-2 flex-1">
+                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                    <Command shouldFilter={false}>
+                      <CommandInput 
+                        placeholder="Search clients..." 
+                        value={clientSearchQuery}
+                        onValueChange={setClientSearchQuery}
+                      />
+                      <div className="max-h-60 overflow-y-auto">
+                        <CommandList>
+                          <CommandEmpty>No clients found.</CommandEmpty>
+                          <CommandGroup>
+                            {displayedClients.map((client) => (
+                              <CommandItem
+                                key={client.id}
+                                value={`${client.name} ${client.company || ''}`}
+                                onSelect={() => handleClientSelect(client.id)}
+                                className="flex items-center space-x-3 p-3"
+                              >
                                 <ClientAvatar 
                                   name={client.name} 
                                   avatarUrl={client.avatar_url}
-                                  size="md"
+                                  size="lg"
                                 />
-                                <div className="flex-1">
+                                <div className="flex-1 min-w-0">
                                   <div className="font-medium">{client.name}</div>
-                                  <div className="text-sm text-muted-foreground">
-                                    {client.company && <span>{client.company}</span>}
-                                    {client.email && <span> • {client.email}</span>}
-                        </div>
+                                  {client.company && (
+                                    <div className="text-sm text-muted-foreground">{client.company}</div>
+                                  )}
+                                  {client.email && (
+                                    <div className="text-xs text-muted-foreground">{client.email}</div>
+                                  )}
                                 </div>
-                              </div>
-                              <Check
-                                className={cn(
-                                  "ml-auto h-4 w-4",
-                                  selectedClient?.id === client.id ? "opacity-100" : "opacity-0"
-                                )}
-                              />
-                            </CommandItem>
-                    ))}
-                        </CommandGroup>
-                      </CommandList>
+                                <Check
+                                  className={cn(
+                                    "ml-auto h-4 w-4",
+                                    selectedClient?.id === client.id ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                              </CommandItem>
+                            ))}
+                            {displayedClients.length < filteredClients.length && (
+                              <CommandItem
+                                onSelect={loadMoreClients}
+                                className="text-center text-sm text-muted-foreground p-2 cursor-pointer hover:bg-accent"
+                              >
+                                Load more clients... ({filteredClients.length - displayedClients.length} remaining)
+                              </CommandItem>
+                            )}
+                          </CommandGroup>
+                        </CommandList>
+                      </div>
                     </Command>
                   </PopoverContent>
                 </Popover>
@@ -915,14 +977,33 @@ export default function ProjectsPage() {
                 <Label htmlFor="edit-project-status">Status</Label>
                 <Select value={newProject.status} onValueChange={(value) => setNewProject({ ...newProject, status: value })}>
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
-                    {statusOptions.map((status) => (
-                      <SelectItem key={status.value} value={status.value}>
-                        {status.label}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="active">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-green-500 rounded-full" />
+                        <span>Active</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="on_hold">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-yellow-500 rounded-full" />
+                        <span>On Hold</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="completed">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                        <span>Completed</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="cancelled">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-red-500 rounded-full" />
+                        <span>Cancelled</span>
+                      </div>
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1012,6 +1093,240 @@ export default function ProjectsPage() {
              </Button>
             <Button size="sm" onClick={handleSaveProject} disabled={!newProject.name}>
               Update Project
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Project Dialog */}
+      <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
+        setIsAddDialogOpen(open)
+        if (!open) {
+          setSelectedProject(null)
+          setSelectedClient(null)
+          setClientSearchQuery("")
+          setDisplayedClientsCount(10)
+        }
+      }}>
+        <DialogContent className="max-w-2xl" onOpenAutoFocus={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle>Add New Project</DialogTitle>
+            <DialogDescription>Create a new project with client information and settings</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="add-project-name">Project Name *</Label>
+                <Input
+                  id="add-project-name"
+                  value={newProject.name}
+                  onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
+                  placeholder="Enter project name"
+                />
+              </div>
+              <div>
+                <Label htmlFor="add-project-client">Client</Label>
+                <Popover modal={true} open={clientDropdownOpen} onOpenChange={setClientDropdownOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={clientDropdownOpen}
+                      className="w-full justify-between h-9 px-3 py-1 text-base bg-transparent shadow-sm hover:bg-transparent hover:border-ring focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] md:text-sm text-left"
+                      disabled={clientsLoading}
+                    >
+                      {selectedClient ? (
+                        <div className="flex items-center space-x-2 min-w-0 flex-1 mr-2">
+                          <ClientAvatar 
+                            name={selectedClient.name} 
+                            avatarUrl={selectedClient.avatar_url}
+                            size="xs"
+                          />
+                          <span className="truncate">{selectedClient.name} - {selectedClient.company}</span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground flex-1 mr-2">
+                          {clientsLoading ? "Loading..." : "Select client"}
+                        </span>
+                      )}
+                      <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                    <Command shouldFilter={false}>
+                      <CommandInput 
+                        placeholder="Search clients..." 
+                        value={clientSearchQuery}
+                        onValueChange={setClientSearchQuery}
+                      />
+                      <div className="max-h-60 overflow-y-auto">
+                        <CommandList>
+                          <CommandEmpty>No clients found.</CommandEmpty>
+                          <CommandGroup>
+                            {displayedClients.map((client) => (
+                              <CommandItem
+                                key={client.id}
+                                value={`${client.name} ${client.company || ''}`}
+                                onSelect={() => handleClientSelect(client.id)}
+                                className="flex items-center space-x-3 p-3"
+                              >
+                                <ClientAvatar 
+                                  name={client.name} 
+                                  avatarUrl={client.avatar_url}
+                                  size="lg"
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-medium">{client.name}</div>
+                                  {client.company && (
+                                    <div className="text-sm text-muted-foreground">{client.company}</div>
+                                  )}
+                                  {client.email && (
+                                    <div className="text-xs text-muted-foreground">{client.email}</div>
+                                  )}
+                                </div>
+                                <Check
+                                  className={cn(
+                                    "ml-auto h-4 w-4",
+                                    selectedClient?.id === client.id ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                              </CommandItem>
+                            ))}
+                            {displayedClients.length < filteredClients.length && (
+                              <CommandItem
+                                onSelect={loadMoreClients}
+                                className="text-center text-sm text-muted-foreground p-2 cursor-pointer hover:bg-accent"
+                              >
+                                Load more clients... ({filteredClients.length - displayedClients.length} remaining)
+                              </CommandItem>
+                            )}
+                          </CommandGroup>
+                        </CommandList>
+                      </div>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="add-project-status">Status</Label>
+                <Select value={newProject.status} onValueChange={(value) => setNewProject({ ...newProject, status: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-green-500 rounded-full" />
+                        <span>Active</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="on_hold">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-yellow-500 rounded-full" />
+                        <span>On Hold</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="completed">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                        <span>Completed</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="cancelled">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-red-500 rounded-full" />
+                        <span>Cancelled</span>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="add-project-budget">Budget</Label>
+                <Input
+                  id="add-project-budget"
+                  type="number"
+                  value={newProject.budget}
+                  onChange={(e) => setNewProject({ ...newProject, budget: e.target.value })}
+                  placeholder="0"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="add-project-expenses">Expenses</Label>
+                <Input
+                  id="add-project-expenses"
+                  type="number"
+                  value={newProject.expenses}
+                  onChange={(e) => setNewProject({ ...newProject, expenses: e.target.value })}
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <Label htmlFor="add-project-received">Received</Label>
+                <Input
+                  id="add-project-received"
+                  type="number"
+                  value={newProject.received}
+                  onChange={(e) => setNewProject({ ...newProject, received: e.target.value })}
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <Label htmlFor="add-project-pending">Pending (Auto-calculated)</Label>
+                <Input
+                  id="add-project-pending"
+                  type="number"
+                  value={(() => {
+                    const budget = newProject.budget ? parseFloat(newProject.budget) : 0
+                    const received = newProject.received ? parseFloat(newProject.received) : 0
+                    return budget - received
+                  })()}
+                  disabled
+                  className="bg-muted"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="add-project-start-date">Start Date</Label>
+                <DatePicker
+                  date={newProject.start_date}
+                  onSelect={(date) => setNewProject({ ...newProject, start_date: date })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="add-project-end-date">End Date</Label>
+                <DatePicker
+                  date={newProject.end_date}
+                  onSelect={(date) => setNewProject({ ...newProject, end_date: date })}
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="add-project-description">Description</Label>
+              <Textarea
+                id="add-project-description"
+                value={newProject.description}
+                onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
+                placeholder="Project description or notes"
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => {
+              setIsAddDialogOpen(false)
+              setSelectedProject(null)
+              setSelectedClient(null)
+            }}>
+              Cancel
+            </Button>
+            <Button size="sm" onClick={handleSaveProject} disabled={!newProject.name}>
+              Add Project
             </Button>
           </DialogFooter>
         </DialogContent>

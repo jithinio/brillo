@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { useAuth } from "@/components/auth-provider"
+import { CommandMenu } from "@/components/command-menu"
 
 export default function DashboardLayout({
   children,
@@ -34,6 +35,7 @@ export default function DashboardLayout({
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>{children}</SidebarInset>
+      <CommandMenu />
     </SidebarProvider>
   )
 }

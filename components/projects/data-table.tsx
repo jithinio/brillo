@@ -331,13 +331,13 @@ export function DataTable<TData, TValue>({ columns, data, onAddProject, onBatchD
                           <ContextMenuItem 
                             onClick={() => contextActions.onStatusChange(row.original, 'active')}
                           >
-                            <Clock className="mr-1.5 h-4 w-4 text-blue-600" />
-                            In Progress
+                            <Clock className="mr-1.5 h-4 w-4 text-green-600" />
+                            Active
                           </ContextMenuItem>
                           <ContextMenuItem 
                             onClick={() => contextActions.onStatusChange(row.original, 'completed')}
                           >
-                            <CheckCircle className="mr-1.5 h-4 w-4 text-green-600" />
+                            <CheckCircle className="mr-1.5 h-4 w-4 text-blue-600" />
                             Completed
                           </ContextMenuItem>
                           <ContextMenuItem 
@@ -349,7 +349,7 @@ export function DataTable<TData, TValue>({ columns, data, onAddProject, onBatchD
                           <ContextMenuItem 
                             onClick={() => contextActions.onStatusChange(row.original, 'cancelled')}
                           >
-                            <XCircle className="mr-1.5 h-4 w-4 text-gray-600" />
+                            <XCircle className="mr-1.5 h-4 w-4 text-red-600" />
                             Cancelled
                           </ContextMenuItem>
                         </ContextMenuSubContent>

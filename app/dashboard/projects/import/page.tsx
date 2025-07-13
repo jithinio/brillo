@@ -773,7 +773,9 @@ export default function ProjectImportPage() {
             const isNumeric = /^\d+$/.test(sampleValue.toString())
             
             if (isNumeric && !canBeMapped) {
-              warnings.push(`"${mapping.csvField}" mapped to Status contains numbers (${sampleValue}). Status should be text like "active", "completed", "in progress".`)
+              warnings.push(`"${mapping.csvField}" mapped to Status contains numbers (${sampleValue}). Status should be text like "active", "completed", "active".`)
+            } else if (!canBeMapped && sampleValue && sampleValue !== 'N/A') {
+              warnings.push(`Status values detected. Expected format: Should be text like "active", "completed", "active".`)
             }
           } else if (mapping.dbField === 'start_date' || mapping.dbField === 'end_date') {
             const parsedDate = parseFlexibleDate(sampleValue.toString())
@@ -1340,10 +1342,10 @@ export default function ProjectImportPage() {
                           
                           if (isNumeric && !canBeMapped) {
                             hasWarning = true
-                            warningMessage = 'Status appears to be numeric. Expected text like "active", "in progress", "completed"'
+                            warningMessage = 'Status appears to be numeric. Expected text like "active", "active", "completed"'
                           } else if (!canBeMapped && sampleValue && sampleValue !== 'N/A') {
                             hasWarning = true
-                            warningMessage = `Status "${sampleValue}" will be used as-is. Common statuses: active, in progress, completed`
+                            warningMessage = `Status "${sampleValue}" will be used as-is. Common statuses: active, active, completed`
                           }
                         } else if (mapping.dbField === 'start_date' || mapping.dbField === 'end_date') {
                           const parsedDate = parseFlexibleDate(sampleValue.toString())

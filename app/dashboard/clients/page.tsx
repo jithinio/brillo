@@ -170,6 +170,18 @@ export default function ClientsPage() {
     }
   }, [undoData])
 
+  // Listen for command menu events
+  useEffect(() => {
+    const handleCommandMenuAddClient = () => {
+      handleAddClient()
+    }
+
+    window.addEventListener('trigger-add-client', handleCommandMenuAddClient)
+    return () => {
+      window.removeEventListener('trigger-add-client', handleCommandMenuAddClient)
+    }
+  }, [])
+
   async function fetchClients() {
     try {
       setError(null)

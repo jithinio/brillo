@@ -109,7 +109,7 @@
   --font-serif: "Geist", "Geist Fallback", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
   --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
-  --radius: 0.85rem;
+  --radius: 0.72rem;
   
   --shadow-2xs: 0 1px 1px 0px oklch(0.00 0 0 / 0.03);
   --shadow-xs: 0 1px 1px 0px oklch(0.00 0 0 / 0.03);
@@ -120,7 +120,7 @@
   --shadow-xl: 0 1px 1px 0px oklch(0.00 0 0 / 0.05), 0 8px 10px -1px oklch(0.00 0 0 / 0.05);
   --shadow-2xl: 0 1px 1px 0px oklch(0.00 0 0 / 0.13);
   
-  --spacing: 0.28rem;
+  --spacing: 0.24rem;
 }
 
 .dark {

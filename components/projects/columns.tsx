@@ -12,7 +12,6 @@ import {
   Edit,
   FileText,
   Trash2,
-  User,
   Calendar,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -34,6 +33,7 @@ import {
 } from "@/components/ui/popover"
 import { Badge } from "@/components/ui/badge"
 import { formatCurrency } from "@/lib/currency"
+import { ClientAvatar } from "@/components/ui/client-avatar"
 
 export type Project = {
   id: string
@@ -49,18 +49,19 @@ export type Project = {
   clients?: {
     name: string
     company?: string
+    avatar_url?: string | null
   }
 }
 
 const statusConfig = {
   active: {
-    label: "In Progress",
+    label: "Active",
     icon: Clock,
     variant: "outline" as const,
     iconClassName: "text-blue-500",
   },
   completed: {
-    label: "Done",
+    label: "Completed",
     icon: CheckCircle,
     variant: "outline" as const,
     iconClassName: "text-green-500",
@@ -161,7 +162,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
         const client = row.original.clients
         return client ? (
           <div className="flex items-center space-x-2 min-w-[150px] max-w-[180px]">
-            <User className="h-4 w-4 text-muted-foreground shrink-0" />
+            <ClientAvatar name={client.name} avatarUrl={client.avatar_url} size="sm" />
             <div className="truncate font-normal" title={client.name}>
               {client.name}
             </div>
@@ -216,8 +217,8 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
                     onClick={() => actions.onStatusChange(project, 'active')}
                     disabled={project.status === 'active'}
                   >
-                    <Clock className="mr-2 h-3 w-3 text-blue-500" />
-                    In Progress
+                    <Clock className="mr-2 h-3 w-3 text-green-500" />
+                    Active
                   </Button>
                   <Button
                     variant="ghost"
@@ -226,7 +227,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
                     onClick={() => actions.onStatusChange(project, 'completed')}
                     disabled={project.status === 'completed'}
                   >
-                    <CheckCircle className="mr-2 h-3 w-3 text-green-500" />
+                    <CheckCircle className="mr-2 h-3 w-3 text-blue-500" />
                     Completed
                   </Button>
                   <Button
@@ -246,7 +247,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
                     onClick={() => actions.onStatusChange(project, 'cancelled')}
                     disabled={project.status === 'cancelled'}
                   >
-                    <XCircle className="mr-2 h-3 w-3 text-gray-400" />
+                    <XCircle className="mr-2 h-3 w-3 text-red-500" />
                     Cancelled
                   </Button>
                 </div>
@@ -393,9 +394,6 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
         const endDate = row.getValue("end_date") as string
         if (endDate) {
           const date = new Date(endDate)
-          const today = new Date()
-          const diffTime = date.getTime() - today.getTime()
-          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
 
           return (
             <div className="min-w-[120px] max-w-[140px]">
@@ -403,15 +401,6 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
                 <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
                 <span className="text-sm truncate">{date.toLocaleDateString()}</span>
               </div>
-              {row.original.status !== "completed" && (
-                <div
-                  className={`text-xs truncate ${
-                    diffDays < 0 ? "text-red-600" : diffDays <= 7 ? "text-yellow-600" : "text-muted-foreground"
-                  }`}
-                >
-                  {diffDays < 0 ? `${Math.abs(diffDays)} days overdue` : `${diffDays} days left`}
-                </div>
-              )}
             </div>
           )
         }
@@ -484,14 +473,14 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
                       onClick={() => actions.onStatusChange(project, 'active')}
                       disabled={project.status === 'active'}
                     >
-                      <Clock className="mr-2 h-4 w-4 text-blue-600" />
-                      In Progress
+                      <Clock className="mr-2 h-4 w-4 text-green-600" />
+                      Active
                     </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={() => actions.onStatusChange(project, 'completed')}
                       disabled={project.status === 'completed'}
                     >
-                      <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
+                      <CheckCircle className="mr-2 h-4 w-4 text-blue-600" />
                       Completed
                     </DropdownMenuItem>
                     <DropdownMenuItem 
@@ -505,7 +494,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
                       onClick={() => actions.onStatusChange(project, 'cancelled')}
                       disabled={project.status === 'cancelled'}
                     >
-                      <XCircle className="mr-2 h-4 w-4 text-gray-600" />
+                      <XCircle className="mr-2 h-4 w-4 text-red-600" />
                       Cancelled
                     </DropdownMenuItem>
                   </DropdownMenuSubContent>

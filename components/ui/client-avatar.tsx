@@ -7,11 +7,12 @@ import { cn } from "@/lib/utils"
 interface ClientAvatarProps {
   name: string
   avatarUrl?: string | null
-  size?: "sm" | "md" | "lg" | "xl"
+  size?: "xs" | "sm" | "md" | "lg" | "xl"
   className?: string
 }
 
 const sizeMap = {
+  xs: "h-5 w-5",
   sm: "h-6 w-6",
   md: "h-8 w-8", 
   lg: "h-12 w-12",
@@ -19,6 +20,7 @@ const sizeMap = {
 }
 
 const textSizeMap = {
+  xs: "text-[8px]",
   sm: "text-[10px]",
   md: "text-xs",
   lg: "text-sm",

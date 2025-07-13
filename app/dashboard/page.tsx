@@ -109,12 +109,12 @@ const MetricCard = ({
   onPeriodChange: (value: string) => void
   formatCurrency: (amount: number) => string
 }) => (
-  <Card className="relative overflow-hidden rounded-3xl border-0 shadow-none">
+  <Card className="relative overflow-hidden border-0 shadow-none">
     <CardHeader className="p-8 pb-3">
       <div className="flex items-center justify-between">
         <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
         <Select value={period} onValueChange={onPeriodChange}>
-          <SelectTrigger className="w-auto h-7 text-xs">
+          <SelectTrigger className="w-32 h-9">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -256,7 +256,7 @@ const RevenueChart = ({
   const dynamicTrend = calculateDynamicTrend()
 
   return (
-  <Card className="rounded-3xl border-0 shadow-none">
+  <Card className="border-0 shadow-none">
     <CardHeader className="p-8 pb-3">
       <div className="flex items-center justify-between">
         <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -351,7 +351,7 @@ const YearlyBarChart = ({
   onTypeChange: (value: 'revenue' | 'expenses') => void
   formatCurrency: (amount: number) => string
 }) => (
-  <Card className="rounded-3xl border-0 shadow-none">
+  <Card className="border-0 shadow-none">
     <CardHeader className="p-8 pb-3">
       <div className="flex items-center justify-between">
         <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -461,7 +461,7 @@ export default function DashboardPage() {
   }, [])
 
   return (
-    <div className="p-12">
+    <div className="flex flex-1 flex-col gap-4 px-8 pb-4 pt-8 max-w-full overflow-hidden">
       {/* Dynamic Greeting */}
       <div className="mb-8">
         <h1 className="text-3xl font-normal text-foreground mb-2">
