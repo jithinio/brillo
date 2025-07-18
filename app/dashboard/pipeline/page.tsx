@@ -10,6 +10,7 @@ import type { PipelineProject, PipelineStage } from "@/lib/types/pipeline"
 export default function PipelinePage() {
   const [projects, setProjects] = useState<PipelineProject[]>([])
   const [stages, setStages] = useState<PipelineStage[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     loadPipelineData()
@@ -17,6 +18,7 @@ export default function PipelinePage() {
 
   const loadPipelineData = async () => {
     try {
+      setLoading(true)
       const [projectsData, stagesData] = await Promise.all([
         fetchPipelineProjects(),
         fetchPipelineStages()
@@ -26,6 +28,8 @@ export default function PipelinePage() {
       setStages(stagesData)
     } catch (error) {
       console.error('Error loading pipeline data:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -93,6 +97,7 @@ export default function PipelinePage() {
             projects={projects}
             stages={stages}
             onProjectUpdate={handleProjectUpdate}
+            loading={loading}
           />
         </div>
       </div>

@@ -24,6 +24,7 @@ interface PipelineBoardProps {
   projects: PipelineProject[]
   stages: PipelineStage[]
   onProjectUpdate: () => void
+  loading?: boolean
 }
 
 // Closed Column Component
@@ -154,7 +155,7 @@ const triggerConfetti = () => {
   }, 1000)
 }
 
-export function PipelineBoard({ projects, stages, onProjectUpdate }: PipelineBoardProps) {
+export function PipelineBoard({ projects, stages, onProjectUpdate, loading = false }: PipelineBoardProps) {
   const [activeProject, setActiveProject] = useState<PipelineProject | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [optimisticProjects, setOptimisticProjects] = useState<PipelineProject[]>(projects)
@@ -269,16 +270,38 @@ export function PipelineBoard({ projects, stages, onProjectUpdate }: PipelineBoa
         collisionDetection={closestCenter}
       >
         <div className="flex gap-6 h-full max-h-full overflow-x-auto overflow-y-hidden">
-          {columns.map((column) => (
-            <PipelineColumn
-              key={column.id}
-              column={column}
-              onProjectUpdate={onProjectUpdate}
-              isDragging={isDragging}
-            />
-          ))}
+          {/* Render stage columns with loading state */}
+          {loading || columns.length === 0 ? (
+            // Show loading placeholders to prevent layout shift
+            Array.from({ length: 3 }, (_, index) => (
+              <div key={`loading-${index}`} className="flex-1 min-w-80 h-full">
+                <div className="h-full bg-card border-2 border-border rounded-lg flex flex-col">
+                  {/* Header - simple and clean */}
+                  <div className="p-6 pb-3 border-b border-border">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 bg-gray-200 rounded-full"></div>
+                      <div className="h-4 bg-gray-200 rounded w-16"></div>
+                    </div>
+                  </div>
+                  {/* Content - simple loading state */}
+                  <div className="flex-1 p-6 pt-3 flex items-center justify-center">
+                    <div className="text-muted-foreground text-sm">Loading...</div>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            columns.map((column) => (
+              <PipelineColumn
+                key={column.id}
+                column={column}
+                onProjectUpdate={onProjectUpdate}
+                isDragging={isDragging}
+              />
+            ))
+          )}
           
-          {/* Closed Column */}
+          {/* Closed Column - always at the end */}
           <ClosedColumn isDragging={isDragging} />
         </div>
 
