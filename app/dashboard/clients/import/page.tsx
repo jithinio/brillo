@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { PageHeader, PageContent } from "@/components/page-header"
+import { validateCSVFile } from "@/lib/input-validation"
 import { toast } from "sonner"
 
 interface CsvData {
@@ -34,14 +35,14 @@ const CLIENT_FIELDS = [
   { key: 'address', label: 'Address', required: false },
   { key: 'city', label: 'City', required: false },
   { key: 'state', label: 'State', required: false },
-  { key: 'zip_code', label: 'ZIP Code', required: false },
+  { key: 'zip_code', label: 'Zip Code', required: false },
   { key: 'country', label: 'Country', required: false },
   { key: 'notes', label: 'Notes', required: false },
 ]
 
 const SAMPLE_CSV = `name,email,phone,company,address,city,state,zip_code,country,notes
-John Smith,john@example.com,+1234567890,Acme Corp,123 Main St,New York,NY,10001,USA,Important client
-Jane Doe,jane@company.com,+1987654321,Tech Solutions,456 Oak Ave,San Francisco,CA,94105,USA,Regular client`
+John Smith,john@example.com,+1 (555) 123-4567,Acme Corp,123 Main St,New York,NY,10001,United States,Long-term client
+Jane Doe,jane@example.com,+1 (555) 987-6543,Tech Inc,456 Oak Ave,San Francisco,CA,94105,United States,Startup client`
 
 export default function ClientImportPage() {
   const router = useRouter()
@@ -58,8 +59,10 @@ export default function ClientImportPage() {
     const file = event.target.files?.[0]
     if (!file) return
 
-    if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
-      toast.error('Please upload a CSV file')
+    // Validate file using security validation
+    const fileValidation = validateCSVFile(file)
+    if (!fileValidation.isValid) {
+      toast.error(fileValidation.error || 'Invalid file')
       return
     }
 
@@ -72,9 +75,21 @@ export default function ClientImportPage() {
   }
 
   const parseCsv = (csvText: string) => {
+    // Validate CSV content length
+    if (csvText.length > 10 * 1024 * 1024) { // 10MB limit
+      toast.error('CSV file is too large. Maximum size is 10MB.')
+      return
+    }
+
     const lines = csvText.trim().split('\n')
     if (lines.length < 2) {
       toast.error('CSV file must contain at least a header row and one data row')
+      return
+    }
+
+    // Limit number of rows for security
+    if (lines.length > 10000) {
+      toast.error('CSV file contains too many rows. Maximum is 10,000 rows.')
       return
     }
 
@@ -211,234 +226,224 @@ export default function ClientImportPage() {
   }
 
   return (
-    <>
-      <PageHeader
-        title="Import Clients"
+    <div className="container mx-auto py-6">
+      <PageHeader 
+        title="Import Clients" 
+        description="Upload a CSV file to import multiple clients at once"
         action={
-          <Button variant="outline" onClick={handleBack} className="gap-2">
-            <ArrowLeft className="h-4 w-4" />
+          <Button variant="outline" size="sm" onClick={handleBack}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Clients
           </Button>
         }
       />
-      
+
       <PageContent>
-        <div className="max-w-4xl mx-auto space-y-6">
-          {/* Progress Steps */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className={`flex items-center gap-2 ${step === 'upload' ? 'text-blue-600' : step === 'mapping' || step === 'importing' || step === 'complete' ? 'text-green-600' : 'text-gray-400'}`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step === 'upload' ? 'bg-blue-100 border-2 border-blue-600' : step === 'mapping' || step === 'importing' || step === 'complete' ? 'bg-green-100 border-2 border-green-600' : 'bg-gray-100 border-2 border-gray-300'}`}>
-                  {step === 'mapping' || step === 'importing' || step === 'complete' ? <CheckCircle className="h-4 w-4" /> : '1'}
-                </div>
-                <span className="font-medium">Upload</span>
+        {/* Progress indicator */}
+        <div className="mb-6">
+          <div className="flex items-center gap-4">
+            <div className={`flex items-center gap-2 ${step === 'upload' ? 'text-primary' : 'text-muted-foreground'}`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                step === 'upload' ? 'bg-primary text-primary-foreground' : 'bg-muted'
+              }`}>
+                1
               </div>
-              
-              <div className={`w-8 h-0.5 ${step === 'mapping' || step === 'importing' || step === 'complete' ? 'bg-green-600' : 'bg-gray-300'}`} />
-              
-              <div className={`flex items-center gap-2 ${step === 'mapping' ? 'text-blue-600' : step === 'importing' || step === 'complete' ? 'text-green-600' : 'text-gray-400'}`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step === 'mapping' ? 'bg-blue-100 border-2 border-blue-600' : step === 'importing' || step === 'complete' ? 'bg-green-100 border-2 border-green-600' : 'bg-gray-100 border-2 border-gray-300'}`}>
-                  {step === 'importing' || step === 'complete' ? <CheckCircle className="h-4 w-4" /> : '2'}
-                </div>
-                <span className="font-medium">Map Fields</span>
+              <span>Upload</span>
+            </div>
+            <div className="flex-1 h-px bg-border" />
+            <div className={`flex items-center gap-2 ${step === 'mapping' ? 'text-primary' : 'text-muted-foreground'}`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                step === 'mapping' ? 'bg-primary text-primary-foreground' : 'bg-muted'
+              }`}>
+                2
               </div>
-              
-              <div className={`w-8 h-0.5 ${step === 'importing' || step === 'complete' ? 'bg-green-600' : 'bg-gray-300'}`} />
-              
-              <div className={`flex items-center gap-2 ${step === 'importing' ? 'text-blue-600' : step === 'complete' ? 'text-green-600' : 'text-gray-400'}`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step === 'importing' ? 'bg-blue-100 border-2 border-blue-600' : step === 'complete' ? 'bg-green-100 border-2 border-green-600' : 'bg-gray-100 border-2 border-gray-300'}`}>
-                  {step === 'complete' ? <CheckCircle className="h-4 w-4" /> : step === 'importing' ? <Loader2 className="h-4 w-4 animate-spin" /> : '3'}
-                </div>
-                <span className="font-medium">Import</span>
+              <span>Map Fields</span>
+            </div>
+            <div className="flex-1 h-px bg-border" />
+            <div className={`flex items-center gap-2 ${step === 'importing' ? 'text-primary' : 'text-muted-foreground'}`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                step === 'importing' ? 'bg-primary text-primary-foreground' : 'bg-muted'
+              }`}>
+                3
               </div>
+              <span>Import</span>
+            </div>
+            <div className="flex-1 h-px bg-border" />
+            <div className={`flex items-center gap-2 ${step === 'complete' ? 'text-primary' : 'text-muted-foreground'}`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                step === 'complete' ? 'bg-primary text-primary-foreground' : 'bg-muted'
+              }`}>
+                4
+              </div>
+              <span>Complete</span>
             </div>
           </div>
+        </div>
 
-          {/* Upload Step */}
-          {step === 'upload' && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Upload CSV File</CardTitle>
-                <CardDescription>
-                  Upload a CSV file containing your client data. The first row should contain column headers.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                  <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                  <div className="space-y-2">
-                    <p className="text-sm text-gray-600">
-                      Click to select a CSV file or drag and drop
-                    </p>
-                    <Input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".csv"
-                      onChange={handleFileUpload}
-                      className="w-full"
-                    />
-                  </div>
+        {/* Upload Step */}
+        {step === 'upload' && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Upload CSV File</CardTitle>
+              <CardDescription>
+                Upload a CSV file containing your client data. The first row should contain column headers.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-600">
+                    Click to select a CSV file or drag and drop
+                  </p>
+                  <Input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".csv"
+                    onChange={handleFileUpload}
+                    className="w-full"
+                  />
                 </div>
-                
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm text-gray-600">Need a sample file?</span>
-                  </div>
-                  <Button variant="outline" size="sm" onClick={downloadSample}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Download Sample
-                  </Button>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-gray-400" />
+                  <span className="text-sm text-gray-600">Need a sample file?</span>
                 </div>
-              </CardContent>
-            </Card>
-          )}
+                <Button variant="outline" size="sm" onClick={downloadSample}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Download Sample
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-          {/* Mapping Step */}
-          {step === 'mapping' && csvData && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Map Fields</CardTitle>
-                <CardDescription>
-                  Map your CSV columns to the corresponding client fields. Required fields are marked with an asterisk.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-4">
-                  {fieldMappings.map((mapping, index) => (
-                    <div key={index} className="flex items-center gap-4 p-4 border rounded-lg">
-                      <div className="flex-1">
-                        <Label className="text-sm font-medium">{mapping.csvField}</Label>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Sample: {csvData.rows[0]?.[csvData.headers.indexOf(mapping.csvField)] || 'N/A'}
-                        </p>
-                      </div>
-                      <div className="flex-1">
-                        <Select
-                          value={mapping.dbField}
-                          onValueChange={(value) => handleFieldMapping(mapping.csvField, value)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select field" />
-                          </SelectTrigger>
-                                                      <SelectContent>
-                              <SelectItem value="none">Don't import</SelectItem>
-                              {CLIENT_FIELDS.map(field => (
-                                <SelectItem key={field.key} value={field.key}>
-                                  {field.label} {field.required && '*'}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="w-20">
-                        {mapping.mapped ? (
-                          <Badge variant="outline" className="text-green-600 border-green-600">
-                            Mapped
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-gray-400">
-                            Unmapped
-                          </Badge>
-                        )}
+        {/* Mapping Step */}
+        {step === 'mapping' && csvData && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Map CSV Fields</CardTitle>
+              <CardDescription>
+                Match your CSV columns to the appropriate client fields. Required fields are marked with an asterisk (*).
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4">
+                {fieldMappings.map((mapping, index) => (
+                  <div key={index} className="flex items-center gap-4">
+                    <div className="flex-1">
+                      <Label className="text-sm font-medium">CSV Column: {mapping.csvField}</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Sample: "{csvData.rows[0]?.[csvData.headers.indexOf(mapping.csvField)] || 'N/A'}"
+                      </p>
+                    </div>
+                    <div className="flex-1">
+                      <Select
+                        value={mapping.dbField || 'none'}
+                        onValueChange={(value) => handleFieldMapping(mapping.csvField, value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select field" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Don't import</SelectItem>
+                          {CLIENT_FIELDS.map(field => (
+                            <SelectItem key={field.key} value={field.key}>
+                              {field.label} {field.required && '*'}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setStep('upload')}>
+                  Back
+                </Button>
+                <Button onClick={handleImport}>
+                  Start Import
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Importing Step */}
+        {step === 'importing' && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Importing Clients</CardTitle>
+              <CardDescription>
+                Please wait while we import your client data...
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Progress value={progress} className="w-full" />
+              <p className="text-sm text-muted-foreground text-center">
+                {progress}% complete
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Complete Step */}
+        {step === 'complete' && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Import Complete</CardTitle>
+              <CardDescription>
+                Your client import has been processed.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-3 gap-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">{importResults.success}</div>
+                  <div className="text-sm text-muted-foreground">Successfully imported</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-red-600">{importResults.errors}</div>
+                  <div className="text-sm text-muted-foreground">Errors</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold">{importResults.total}</div>
+                  <div className="text-sm text-muted-foreground">Total records</div>
+                </div>
+              </div>
+
+              {errors.length > 0 && (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    <div className="space-y-2">
+                      <p className="font-medium">Import Errors:</p>
+                      <div className="max-h-40 overflow-y-auto space-y-1">
+                        {errors.map((error, index) => (
+                          <p key={index} className="text-sm text-red-600">{error}</p>
+                        ))}
                       </div>
                     </div>
-                  ))}
-                </div>
-                
-                <Separator />
-                
-                <div className="flex justify-between">
-                  <Button variant="outline" onClick={handleStartOver}>
-                    Start Over
-                  </Button>
-                  <Button onClick={handleImport}>
-                    Import {csvData.rows.length} Clients
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                  </AlertDescription>
+                </Alert>
+              )}
 
-          {/* Importing Step */}
-          {step === 'importing' && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Importing Clients</CardTitle>
-                <CardDescription>
-                  Please wait while we import your clients...
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Progress</span>
-                    <span>{progress}%</span>
-                  </div>
-                  <Progress value={progress} className="w-full" />
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Complete Step */}
-          {step === 'complete' && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                  Import Complete
-                </CardTitle>
-                <CardDescription>
-                  Your client import has been completed.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="text-center p-4 bg-green-50 rounded-lg">
-                    <div className="text-2xl font-bold text-green-600">{importResults.success}</div>
-                    <div className="text-sm text-green-600">Successful</div>
-                  </div>
-                  <div className="text-center p-4 bg-red-50 rounded-lg">
-                    <div className="text-2xl font-bold text-red-600">{importResults.errors}</div>
-                    <div className="text-sm text-red-600">Errors</div>
-                  </div>
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <div className="text-2xl font-bold text-gray-600">{importResults.total}</div>
-                    <div className="text-sm text-gray-600">Total</div>
-                  </div>
-                </div>
-
-                {errors.length > 0 && (
-                  <Alert>
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      <div className="space-y-1">
-                        <p className="font-medium">Import Errors:</p>
-                        {errors.slice(0, 5).map((error, index) => (
-                          <p key={index} className="text-sm">{error}</p>
-                        ))}
-                        {errors.length > 5 && (
-                          <p className="text-sm text-gray-500">+ {errors.length - 5} more errors</p>
-                        )}
-                      </div>
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                <div className="flex justify-between">
-                  <Button variant="outline" onClick={handleStartOver}>
-                    Import More
-                  </Button>
-                  <Button onClick={handleBack}>
-                    View Clients
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setStep('upload')}>
+                  Import Another File
+                </Button>
+                <Button onClick={handleBack}>
+                  Back to Clients
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </PageContent>
-    </>
+    </div>
   )
 } 

@@ -2,10 +2,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { renderInvoiceHTML } from '@/lib/invoice-renderer'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
+import { withRateLimit, rateLimitConfigs } from '@/lib/rate-limiter'
+import { validateEmail, validateName, sanitizeText } from '@/lib/input-validation'
 import InvoiceEmail from '@/emails/invoice-email'
 
 export async function POST(request: NextRequest) {
   try {
+    // Apply rate limiting
+    const rateLimitResponse = await withRateLimit(request, rateLimitConfigs.api)
+    if (rateLimitResponse) {
+      return rateLimitResponse
+    }
+
     const body = await request.json()
     const { 
       invoiceId, 
@@ -25,11 +33,61 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Use Resend API key from environment or fallback to the provided key
-    const resendApiKey = process.env.RESEND_API_KEY || 're_3oERaPpq_MrfL6NjUBc31exrg1VbzzPzk'
+    // Validate and sanitize inputs
+    const emailValidation = validateEmail(clientEmail)
+    if (!emailValidation.isValid) {
+      return NextResponse.json(
+        { error: emailValidation.error },
+        { status: 400 }
+      )
+    }
+
+    if (clientName) {
+      const nameValidation = validateName(clientName, 'Client name')
+      if (!nameValidation.isValid) {
+        return NextResponse.json(
+          { error: nameValidation.error },
+          { status: 400 }
+        )
+      }
+    }
+
+    if (customMessage) {
+      const messageValidation = sanitizeText(customMessage, 1000)
+      if (!messageValidation.isValid) {
+        return NextResponse.json(
+          { error: messageValidation.error },
+          { status: 400 }
+        )
+      }
+    }
+
+    if (senderName) {
+      const senderNameValidation = validateName(senderName, 'Sender name')
+      if (!senderNameValidation.isValid) {
+        return NextResponse.json(
+          { error: senderNameValidation.error },
+          { status: 400 }
+        )
+      }
+    }
+
+    if (senderEmail) {
+      const senderEmailValidation = validateEmail(senderEmail)
+      if (!senderEmailValidation.isValid) {
+        return NextResponse.json(
+          { error: senderEmailValidation.error },
+          { status: 400 }
+        )
+      }
+    }
+
+    // Require Resend API key from environment variables for security
+    const resendApiKey = process.env.RESEND_API_KEY
     
     // Validate Resend API key
     if (!resendApiKey) {
+      console.error('RESEND_API_KEY environment variable is not set')
       return NextResponse.json(
         { error: 'Email service not configured' },
         { status: 500 }
