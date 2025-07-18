@@ -81,8 +81,8 @@ export function CommandMenu() {
       const results: any[] = []
 
       if (isSupabaseConfigured()) {
-        console.log('Supabase is configured, searching database...')
-        // Search clients
+        console.log('Supabase is configured, searching user-specific database...')
+        // Search clients - automatically filtered by RLS policies
         const { data: clients } = await supabase
           .from('clients')
           .select('id, name, company, email')
@@ -99,7 +99,7 @@ export function CommandMenu() {
           })))
         }
 
-        // Search projects
+        // Search projects - automatically filtered by RLS policies
         const { data: projects } = await supabase
           .from('projects')
           .select(`
@@ -119,7 +119,7 @@ export function CommandMenu() {
           })))
         }
 
-        // Search invoices
+        // Search invoices - automatically filtered by RLS policies
         const { data: invoices } = await supabase
           .from('invoices')
           .select(`

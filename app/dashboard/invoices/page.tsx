@@ -23,209 +23,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ClientAvatar } from "@/components/ui/client-avatar"
 import { useSettings } from "@/components/settings-provider"
 
-// Mock data fallback
-const mockInvoices: Invoice[] = [
-  {
-    id: "1",
-    invoice_number: "INV-2024-001",
-    amount: 2500,
-    tax_amount: 250,
-    total_amount: 2750,
-    currency: "USD",
-    status: "paid",
-    issue_date: "2024-01-15",
-    due_date: "2024-02-15",
-    notes: "Thank you for your business!",
-    created_at: "2024-01-15T00:00:00Z",
-    clients: {
-      name: "John Smith",
-      company: "Acme Corporation"
-    },
-    projects: {
-      name: "Website Redesign"
-    },
-  },
-  {
-    id: "2",
-    invoice_number: "INV-2024-002",
-    amount: 1500,
-    tax_amount: 150,
-    total_amount: 1650,
-    currency: "EUR",
-    status: "paid",
-    issue_date: "2024-01-20",
-    due_date: "2024-02-20",
-    notes: "Monthly retainer",
-    created_at: "2024-01-20T00:00:00Z",
-    clients: {
-      name: "Jane Smith",
-      company: "Tech Solutions Inc",
-    },
-    projects: {
-      name: "Tech Solutions App",
-    },
-    items: [
-      {
-        id: "2",
-        description: "Monthly Development Retainer",
-        quantity: 1,
-        rate: 1500,
-        amount: 1500
-      }
-    ]
-  },
-  {
-    id: "3",
-    invoice_number: "INV-2024-003",
-    amount: 2500,
-    tax_amount: 250,
-    total_amount: 2750,
-    currency: "GBP",
-    status: "overdue",
-    issue_date: "2024-01-05",
-    due_date: "2024-01-05",
-    notes: "Logo design and branding",
-    created_at: "2024-01-05T00:00:00Z",
-    clients: {
-      name: "Mike Johnson",
-      company: "Creative Studios",
-    },
-    projects: {
-      name: "Brand Identity",
-    },
-    items: [
-      {
-        id: "3",
-        description: "Logo Design & Brand Identity",
-        quantity: 1,
-        rate: 2500,
-        amount: 2500
-      }
-    ]
-  },
-  {
-    id: "4",
-    invoice_number: "INV-2024-004",
-    amount: 2800,
-    tax_amount: 280,
-    total_amount: 3080,
-    currency: "USD",
-    status: "draft",
-    issue_date: "2024-02-01",
-    due_date: "2024-03-01",
-    notes: "Mobile app development",
-    created_at: "2024-02-01T00:00:00Z",
-    clients: {
-      name: "Sarah Williams",
-      company: "Mobile Innovations",
-    },
-    projects: {
-      name: "Mobile Banking App",
-    },
-    items: [
-      {
-        id: "4",
-        description: "Mobile App Development",
-        quantity: 1,
-        rate: 2800,
-        amount: 2800
-      }
-    ]
-  },
-  {
-    id: "5",
-    invoice_number: "INV-2024-005",
-    amount: 180000,
-    tax_amount: 18000,
-    total_amount: 198000,
-    currency: "JPY",
-    status: "sent",
-    issue_date: "2024-02-10",
-    due_date: "2024-03-10",
-    notes: "Website localization for Japanese market",
-    created_at: "2024-02-10T00:00:00Z",
-    clients: {
-      name: "Hiroshi Tanaka",
-      company: "Tokyo Digital",
-    },
-    projects: {
-      name: "Website Localization",
-    },
-    items: [
-      {
-        id: "5",
-        description: "Website Localization for Japanese Market",
-        quantity: 1,
-        rate: 180000,
-        amount: 180000
-      }
-    ]
-  },
-]
+// Mock data removed - invoices will be loaded from database
 
-// Mock clients data with full details
-const mockClients = [
-  {
-    id: "1",
-    name: "John Smith",
-    email: "john.smith@acmecorp.com",
-    phone: "+1 (555) 123-4567",
-    company: "Acme Corporation",
-    address: "123 Business Ave",
-    city: "New York",
-    state: "NY",
-    zip_code: "10001",
-    country: "United States"
-  },
-  {
-    id: "2",
-    name: "Sarah Johnson",
-    email: "sarah@techstart.io",
-    phone: "+1 (555) 234-5678",
-    company: "TechStart Inc.",
-    address: "456 Innovation Dr",
-    city: "San Francisco",
-    state: "CA",
-    zip_code: "94105",
-    country: "United States"
-  },
-  {
-    id: "3",
-    name: "Michael Brown",
-    email: "mbrown@globalsolutions.com",
-    phone: "+1 (555) 345-6789",
-    company: "Global Solutions LLC",
-    address: "789 Enterprise Blvd",
-    city: "Chicago",
-    state: "IL",
-    zip_code: "60601",
-    country: "United States"
-  },
-  {
-    id: "4",
-    name: "Emily Davis",
-    email: "emily.davis@creativestudio.com",
-    phone: "+1 (555) 456-7890",
-    company: "Creative Studio",
-    address: "321 Design St",
-    city: "Los Angeles",
-    state: "CA",
-    zip_code: "90210",
-    country: "United States"
-  },
-  {
-    id: "5",
-    name: "David Wilson",
-    email: "david@retailplus.com",
-    phone: "+1 (555) 567-8901",
-    company: "Retail Plus",
-    address: "654 Commerce Way",
-    city: "Miami",
-    state: "FL",
-    zip_code: "33101",
-    country: "United States"
-  }
-]
+// Mock data removed - clients will be loaded from database
 
 export default function InvoicesPage() {
   const router = useRouter()
@@ -289,7 +89,7 @@ export default function InvoicesPage() {
   async function fetchInvoices() {
     try {
       if (isSupabaseConfigured()) {
-        // Fetch from Supabase with invoice items
+        // Fetch from Supabase with invoice items - automatically filtered by RLS policies
         const { data: invoicesData, error: invoicesError } = await supabase
           .from('invoices')
           .select(`
@@ -328,24 +128,24 @@ export default function InvoicesPage() {
           items: invoice._items || []
         }))
         
-        const allInvoices = [...processedGeneratedInvoices, ...mockInvoices].sort((a, b) => 
+        const allInvoices = [...processedGeneratedInvoices].sort((a, b) => 
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         )
         setInvoices(allInvoices)
       }
     } catch (error) {
       console.error("Error fetching invoices:", error)
-      // Use mock data as fallback, including generated invoices
+      // Use only generated invoices as fallback
       const generatedInvoices = JSON.parse(sessionStorage.getItem('demo-invoices') || '[]')
       const processedGeneratedInvoices = generatedInvoices.map((invoice: any) => ({
         ...invoice,
         items: invoice._items || []
       }))
-      const allInvoices = [...processedGeneratedInvoices, ...mockInvoices].sort((a, b) => 
+      const allInvoices = [...processedGeneratedInvoices].sort((a, b) => 
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       )
       setInvoices(allInvoices)
-      setError("Using demo data - connection error")
+      setError("Connection error")
     } finally {
       setLoading(false)
     }
@@ -453,11 +253,8 @@ export default function InvoicesPage() {
       // Fetch full client details if we have a client ID
       let fullClientData = null
       if (invoice.clients) {
-        // For demo mode, try to find client in mock data
-        const mockClient = mockClients.find(c => c.name === invoice.clients?.name || c.company === invoice.clients?.company)
-        if (mockClient) {
-          fullClientData = mockClient
-        }
+        // Use the client data from the invoice directly
+        fullClientData = invoice.clients
       }
       
       // Create enhanced invoice with full client data

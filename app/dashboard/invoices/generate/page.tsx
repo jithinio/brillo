@@ -32,89 +32,7 @@ interface InvoiceItem {
   rate: number
 }
 
-// Mock clients data (same as in clients page)
-const mockClients: Client[] = [
-  {
-    id: "1",
-    name: "John Smith",
-    email: "john.smith@acmecorp.com",
-    phone: "+1 (555) 123-4567",
-    company: "Acme Corporation",
-    address: "123 Business Ave",
-    city: "New York",
-    state: "NY",
-    zip_code: "10001",
-    country: "United States",
-    notes: "Long-term client, prefers email communication",
-    avatar_url: undefined,
-    created_at: "2024-01-01T00:00:00Z",
-    projects: [{ id: "1", name: "Website Redesign", status: "active" }],
-  },
-  {
-    id: "2",
-    name: "Sarah Johnson",
-    email: "sarah@techstart.io",
-    phone: "+1 (555) 234-5678",
-    company: "TechStart Inc.",
-    address: "456 Innovation Dr",
-    city: "San Francisco",
-    state: "CA",
-    zip_code: "94105",
-    country: "United States",
-    notes: "Startup client, fast-paced projects",
-    avatar_url: undefined,
-    created_at: "2024-01-15T00:00:00Z",
-    projects: [{ id: "2", name: "Mobile App Development", status: "active" }],
-  },
-  {
-    id: "3",
-    name: "Michael Brown",
-    email: "mbrown@globalsolutions.com",
-    phone: "+1 (555) 345-6789",
-    company: "Global Solutions LLC",
-    address: "789 Enterprise Blvd",
-    city: "Chicago",
-    state: "IL",
-    zip_code: "60601",
-    country: "United States",
-    notes: "Enterprise client, requires detailed reporting",
-    avatar_url: undefined,
-    created_at: "2024-01-10T00:00:00Z",
-    projects: [{ id: "3", name: "Brand Identity Package", status: "completed" }],
-  },
-  {
-    id: "4",
-    name: "Emily Davis",
-    email: "emily.davis@creativestudio.com",
-    phone: "+1 (555) 456-7890",
-    company: "Creative Studio",
-    address: "321 Design St",
-    city: "Los Angeles",
-    state: "CA",
-    zip_code: "90210",
-    country: "United States",
-    notes: "Creative agency, values innovative solutions",
-    avatar_url: undefined,
-    created_at: "2024-01-20T00:00:00Z",
-    projects: [{ id: "4", name: "E-commerce Platform", status: "active" }],
-  },
-  {
-    id: "5",
-    name: "David Wilson",
-    email: "david@retailplus.com",
-    phone: "+1 (555) 567-8901",
-    company: "Retail Plus",
-    address: "654 Commerce Way",
-    city: "Miami",
-    state: "FL",
-    zip_code: "33101",
-    country: "United States",
-    notes: "Retail client, seasonal projects",
-    avatar_url: undefined,
-    created_at: "2024-02-01T00:00:00Z",
-    projects: [{ id: "5", name: "Marketing Automation", status: "on_hold" }],
-  },
-]
+// Mock data removed - clients will be loaded from database
 
 export default function GenerateInvoicePage() {
   const router = useRouter()
@@ -450,6 +368,7 @@ export default function GenerateInvoicePage() {
       setClientsLoading(true)
       
       if (isSupabaseConfigured()) {
+        // Data is automatically filtered by RLS policies for the current user
         const { data, error } = await supabase
           .from('clients')
           .select(`
@@ -464,16 +383,16 @@ export default function GenerateInvoicePage() {
         
         if (error) {
           console.error('Error fetching clients:', error)
-          setClients(mockClients)
+          setClients([])
         } else {
           setClients(data || [])
         }
       } else {
-        setClients(mockClients)
+        setClients([])
       }
     } catch (error) {
       console.error('Error fetching clients:', error)
-      setClients(mockClients)
+      setClients([])
     } finally {
       setClientsLoading(false)
     }
@@ -484,6 +403,7 @@ export default function GenerateInvoicePage() {
       setProjectsLoading(true)
       
       if (isSupabaseConfigured()) {
+        // Data is automatically filtered by RLS policies for the current user
         const { data, error } = await supabase
           .from('projects')
           .select('*')
@@ -497,14 +417,8 @@ export default function GenerateInvoicePage() {
           setProjects(data || [])
         }
       } else {
-        // Mock projects for demo mode
-        const mockProjectsForClient = [
-          { id: '1', name: 'Website Redesign', status: 'active' },
-          { id: '2', name: 'Mobile App Development', status: 'active' },
-          { id: '3', name: 'E-commerce Platform', status: 'completed' },
-        ].filter(() => Math.random() > 0.5) // Randomly show some projects
-        
-        setProjects(mockProjectsForClient)
+        // No projects available when database is not configured
+        setProjects([])
       }
     } catch (error) {
       console.error('Error fetching projects:', error)

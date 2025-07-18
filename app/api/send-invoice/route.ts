@@ -43,6 +43,7 @@ export async function POST(request: NextRequest) {
     let invoiceData = null
     
     if (isSupabaseConfigured()) {
+      // Invoice data is automatically filtered by RLS policies for the current user
       const { data, error } = await supabase
         .from('invoices')
         .select(`

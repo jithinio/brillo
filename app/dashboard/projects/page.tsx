@@ -51,94 +51,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 
-// Mock data for projects with new fields
-const mockProjects: Project[] = [
-  {
-    id: "1",
-    name: "Website Redesign Project",
-    status: "active",
-    start_date: "2024-01-15",
-    end_date: "2024-03-15",
-    budget: 15000,
-    expenses: 2500,
-    received: 7500,
-    pending: 5000,
-    created_at: "2024-01-10T10:00:00Z",
-    clients: {
-      name: "John Smith",
-      company: "Acme Corporation",
-      avatar_url: null,
-    },
-  },
-  {
-    id: "2",
-    name: "Mobile App Development",
-    status: "completed",
-    start_date: "2023-10-01",
-    end_date: "2024-01-31",
-    budget: 45000,
-    expenses: 8500,
-    received: 45000,
-    pending: 0,
-    created_at: "2023-09-25T14:30:00Z",
-    clients: {
-      name: "Sarah Johnson",
-      company: "TechStart Inc.",
-      avatar_url: null,
-    },
-  },
-  {
-    id: "3",
-    name: "E-commerce Platform Build",
-    status: "on_hold",
-    start_date: "2024-02-01",
-    end_date: "2024-06-30",
-    budget: 32000,
-    expenses: 1200,
-    received: 10000,
-    pending: 21800,
-    created_at: "2024-01-28T09:15:00Z",
-    clients: {
-      name: "Michael Brown",
-      company: "Global Solutions LLC",
-      avatar_url: null,
-    },
-  },
-  {
-    id: "4",
-    name: "Data Analytics Dashboard",
-    status: "active",
-    start_date: "2024-03-01",
-    end_date: "2024-05-15",
-    budget: 28000,
-    expenses: 3200,
-    received: 14000,
-    pending: 10800,
-    created_at: "2024-02-25T16:45:00Z",
-    clients: {
-      name: "Emily Davis",
-      company: "Creative Studio",
-      avatar_url: null,
-    },
-  },
-  {
-    id: "5",
-    name: "Legacy System Migration",
-    status: "cancelled",
-    start_date: "2024-01-01",
-    end_date: "2024-04-30",
-    budget: 55000,
-    expenses: 0,
-    received: 0,
-    pending: 0,
-    created_at: "2023-12-20T11:20:00Z",
-    clients: {
-      name: "David Wilson",
-      company: "Retail Plus",
-      avatar_url: null,
-    },
-  },
-]
+// Remove mock data - projects will be loaded from database
 
 // Client interface
 interface Client {
@@ -154,15 +67,6 @@ interface Client {
   country?: string
   avatar_url?: string
 }
-
-// Mock clients data for project creation (fallback when database is not available)
-const mockClients: Client[] = [
-  { id: "1", name: "John Smith", company: "Acme Corporation", email: "john@acme.com", phone: "+1 (555) 123-4567", address: "123 Main St", city: "New York", state: "NY", zip_code: "10001", country: "United States", avatar_url: undefined },
-  { id: "2", name: "Sarah Johnson", company: "TechStart Inc.", email: "sarah@techstart.com", phone: "+1 (555) 234-5678", address: "456 Tech Ave", city: "San Francisco", state: "CA", zip_code: "94107", country: "United States", avatar_url: undefined },
-  { id: "3", name: "Michael Brown", company: "Global Solutions LLC", email: "michael@globalsolutions.com", phone: "+1 (555) 345-6789", address: "789 Business Blvd", city: "Chicago", state: "IL", zip_code: "60601", country: "United States", avatar_url: undefined },
-  { id: "4", name: "Emily Davis", company: "Creative Studio", email: "emily@creativestudio.com", phone: "+1 (555) 456-7890", address: "321 Creative Dr", city: "Los Angeles", state: "CA", zip_code: "90210", country: "United States", avatar_url: undefined },
-  { id: "5", name: "David Wilson", company: "Retail Plus", email: "david@retailplus.com", phone: "+1 (555) 567-8901", address: "654 Retail Rd", city: "Miami", state: "FL", zip_code: "33101", country: "United States", avatar_url: undefined },
-]
 
 const statusOptions = [
   { value: "active", label: "Active" },
@@ -193,7 +97,7 @@ export default function ProjectsPage() {
   const [undoData, setUndoData] = React.useState<{ items: Project[], timeout: NodeJS.Timeout } | null>(null)
 
   // Client state management
-  const [clients, setClients] = React.useState<Client[]>(mockClients)
+  const [clients, setClients] = React.useState<Client[]>([])
   const [clientsLoading, setClientsLoading] = React.useState(true)
   const [clientDropdownOpen, setClientDropdownOpen] = React.useState(false)
   const [selectedClient, setSelectedClient] = React.useState<Client | null>(null)
@@ -272,7 +176,7 @@ export default function ProjectsPage() {
       let allProjects: Project[] = []
       
       if (isSupabaseConfigured()) {
-        // Load from database
+        // Load from database - automatically filtered by RLS policies
         const { data, error } = await supabase
           .from('projects')
           .select(`
@@ -313,37 +217,37 @@ export default function ProjectsPage() {
         console.log('Fetched projects from database:', dbProjects)
       } else {
         // Use mock data when database is not configured
-        allProjects = [...mockProjects]
-        console.log('Using mock projects data')
+        // allProjects = [...mockProjects] // Removed mockProjects
+        // console.log('Using mock projects data') // Removed mockProjects
       }
 
       // Also load any imported projects from sessionStorage (demo mode)
-      const demoProjects = JSON.parse(sessionStorage.getItem('demo-projects') || '[]')
-      if (demoProjects.length > 0) {
-        // Map demo projects to match Project interface
-        const mappedDemoProjects = demoProjects.map((project: any) => ({
-          id: project.id,
-          name: project.name,
-          status: project.status,
-          start_date: project.start_date,
-          end_date: project.end_date,
-          budget: project.budget,
-          expenses: project.expenses,
-          received: project.payment_received || project.received, // Map payment_received to received
-          pending: project.payment_pending || project.pending, // Map payment_pending to pending
-          created_at: project.created_at,
-          clients: project.clients
-        }))
-        
-        allProjects = [...allProjects, ...mappedDemoProjects]
-        console.log('Added demo projects from sessionStorage:', mappedDemoProjects)
-      }
+      // const demoProjects = JSON.parse(sessionStorage.getItem('demo-projects') || '[]') // Removed demoProjects
+      // if (demoProjects.length > 0) { // Removed demoProjects
+      //   // Map demo projects to match Project interface // Removed demoProjects
+      //   const mappedDemoProjects = demoProjects.map((project: any) => ({ // Removed demoProjects
+      //     id: project.id, // Removed demoProjects
+      //     name: project.name, // Removed demoProjects
+      //     status: project.status, // Removed demoProjects
+      //     start_date: project.start_date, // Removed demoProjects
+      //     end_date: project.end_date, // Removed demoProjects
+      //     budget: project.budget, // Removed demoProjects
+      //     expenses: project.expenses, // Removed demoProjects
+      //     received: project.payment_received || project.received, // Map payment_received to received // Removed demoProjects
+      //     pending: project.payment_pending || project.pending, // Map payment_pending to pending // Removed demoProjects
+      //     created_at: project.created_at, // Removed demoProjects
+      //     clients: project.clients // Removed demoProjects
+      //   })) // Removed demoProjects
+          
+      //   allProjects = [...allProjects, ...mappedDemoProjects] // Removed demoProjects
+      //   console.log('Added demo projects from sessionStorage:', mappedDemoProjects) // Removed demoProjects
+      // } // Removed demoProjects
 
       setProjects(allProjects)
     } catch (error) {
       console.error('Error fetching projects:', error)
       // Fallback to mock data on error
-      setProjects(mockProjects)
+      // setProjects(mockProjects) // Removed mockProjects
       toast.error('Failed to fetch projects. Using demo data.')
     } finally {
       setProjectsLoading(false)
@@ -356,6 +260,7 @@ export default function ProjectsPage() {
       setClientsLoading(true)
       
       if (isSupabaseConfigured()) {
+        // Data is automatically filtered by RLS policies
         const { data, error } = await supabase
           .from('clients')
           .select('*')
@@ -367,16 +272,16 @@ export default function ProjectsPage() {
         }
 
         setClients(data || [])
-        console.log('Fetched clients from Supabase:', data)
+        console.log('Fetched user-specific clients from Supabase:', data)
       } else {
-        // Use mock data when Supabase is not configured
-        console.log('Using mock clients data')
-        setClients(mockClients)
+        // No clients when Supabase is not configured
+        console.log('Supabase not configured')
+        setClients([])
       }
     } catch (error) {
       console.error('Error fetching clients:', error)
       // Fallback to mock data on error
-      setClients(mockClients)
+      // setClients(mockClients) // Removed mockClients
       toast.error('Failed to fetch clients. Using demo data.')
     } finally {
       setClientsLoading(false)
@@ -499,15 +404,33 @@ export default function ProjectsPage() {
     setIsDeleteDialogOpen(true)
   }
 
-  const handleStatusChange = (project: Project, newStatus: string) => {
-    // Update the project status in the local state
-    setProjects(projects.map(p => 
-      p.id === project.id ? { ...p, status: newStatus } : p
-    ))
-    
-    // Show success toast
-    const statusLabel = statusOptions.find(option => option.value === newStatus)?.label || newStatus
-    toast.success(`Project "${project.name}" status changed to ${statusLabel}`)
+  const handleStatusChange = async (project: Project, newStatus: string) => {
+    try {
+      if (isSupabaseConfigured()) {
+        // Update status in database
+        const { error } = await supabase
+          .from('projects')
+          .update({ status: newStatus })
+          .eq('id', project.id)
+
+        if (error) {
+          console.error('Error updating project status:', error)
+          throw new Error(error.message)
+        }
+      }
+
+      // Update the project status in the local state
+      setProjects(projects.map(p => 
+        p.id === project.id ? { ...p, status: newStatus } : p
+      ))
+      
+      // Show success toast
+      const statusLabel = statusOptions.find(option => option.value === newStatus)?.label || newStatus
+      toast.success(`Project "${project.name}" status changed to ${statusLabel}`)
+    } catch (error) {
+      console.error('Error updating project status:', error)
+      toast.error(`Failed to update project status: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
   }
 
   const handleBatchDelete = (projects: Project[], onUndo: (items: Project[]) => void) => {
@@ -580,9 +503,9 @@ export default function ProjectsPage() {
         }
         
         // Also remove from demo storage if it exists
-        const demoProjects = JSON.parse(sessionStorage.getItem('demo-projects') || '[]')
-        const updatedDemoProjects = demoProjects.filter((p: any) => p.id !== project.id)
-        sessionStorage.setItem('demo-projects', JSON.stringify(updatedDemoProjects))
+        // const demoProjects = JSON.parse(sessionStorage.getItem('demo-projects') || '[]') // Removed demoProjects
+        // const updatedDemoProjects = demoProjects.filter((p: any) => p.id !== project.id) // Removed demoProjects
+        // sessionStorage.setItem('demo-projects', JSON.stringify(updatedDemoProjects)) // Removed demoProjects
         
         // Small delay for progress visualization
         await new Promise(resolve => setTimeout(resolve, 50))
@@ -652,7 +575,7 @@ export default function ProjectsPage() {
     setIsAddDialogOpen(true)
   }
 
-  const handleSaveProject = () => {
+  const handleSaveProject = async () => {
     if (!newProject.name) {
       toast.error("Project name is required")
       return
@@ -665,64 +588,192 @@ export default function ProjectsPage() {
     const received = newProject.received ? parseFloat(newProject.received) : 0
     const pending = Math.max(0, budget - received)
 
-    if (selectedProject) {
-      // Editing existing project
-      const updatedProject: Project = {
-        ...selectedProject,
-        name: newProject.name,
-        status: newProject.status,
-        start_date: newProject.start_date ? newProject.start_date.toISOString() : undefined,
-        end_date: newProject.end_date ? newProject.end_date.toISOString() : undefined,
-        budget: budget || undefined,
-        expenses: expenses,
-        received: received,
-        pending: pending,
-        clients: clientForProject ? {
-          name: clientForProject.name,
-          company: clientForProject.company,
-          avatar_url: clientForProject.avatar_url,
-        } : undefined,
+    try {
+      if (selectedProject) {
+        // Editing existing project
+        if (isSupabaseConfigured()) {
+          // Update in database
+          const { data, error } = await supabase
+            .from('projects')
+            .update({
+              name: newProject.name,
+              status: newProject.status,
+              start_date: newProject.start_date ? newProject.start_date.toISOString().split('T')[0] : null,
+              end_date: newProject.end_date ? newProject.end_date.toISOString().split('T')[0] : null,
+              budget: budget || null,
+              expenses: expenses,
+              payment_received: received,
+              payment_pending: pending,
+              description: newProject.description || null,
+              client_id: newProject.client_id || null,
+            })
+            .eq('id', selectedProject.id)
+            .select()
+
+          if (error) {
+            console.error('Error updating project:', error)
+            throw new Error(error.message)
+          }
+
+          if (!data || data.length === 0) {
+            throw new Error('No data returned from update')
+          }
+
+          // Update local state with database data
+          const updatedProject: Project = {
+            ...selectedProject,
+            name: data[0].name,
+            status: data[0].status,
+            start_date: data[0].start_date,
+            end_date: data[0].end_date,
+            budget: data[0].budget,
+            expenses: data[0].expenses,
+            received: data[0].payment_received,
+            pending: data[0].payment_pending,
+            clients: clientForProject ? {
+              name: clientForProject.name,
+              company: clientForProject.company,
+              avatar_url: clientForProject.avatar_url,
+            } : undefined,
+          }
+
+          setProjects(projects.map(p => p.id === selectedProject.id ? updatedProject : p))
+          setIsEditDialogOpen(false)
+          toast.success(`Project "${updatedProject.name}" has been updated successfully`)
+        } else {
+          // Fallback to local state only
+          const updatedProject: Project = {
+            ...selectedProject,
+            name: newProject.name,
+            status: newProject.status,
+            start_date: newProject.start_date ? newProject.start_date.toISOString() : undefined,
+            end_date: newProject.end_date ? newProject.end_date.toISOString() : undefined,
+            budget: budget || undefined,
+            expenses: expenses,
+            received: received,
+            pending: pending,
+            clients: clientForProject ? {
+              name: clientForProject.name,
+              company: clientForProject.company,
+              avatar_url: clientForProject.avatar_url,
+            } : undefined,
+          }
+
+          setProjects(projects.map(p => p.id === selectedProject.id ? updatedProject : p))
+          setIsEditDialogOpen(false)
+          toast.success(`Project "${updatedProject.name}" has been updated successfully`)
+        }
+      } else {
+        // Adding new project
+        if (isSupabaseConfigured()) {
+          // Insert into database
+          const { data, error } = await supabase
+            .from('projects')
+            .insert([{
+              name: newProject.name,
+              status: newProject.status,
+              start_date: newProject.start_date ? newProject.start_date.toISOString().split('T')[0] : null,
+              end_date: newProject.end_date ? newProject.end_date.toISOString().split('T')[0] : null,
+              budget: budget || null,
+              expenses: expenses,
+              payment_received: received,
+              payment_pending: pending,
+              description: newProject.description || null,
+              client_id: newProject.client_id || null,
+            }])
+            .select()
+
+          if (error) {
+            console.error('Error creating project:', error)
+            throw new Error(error.message)
+          }
+
+          if (!data || data.length === 0) {
+            throw new Error('No data returned from insert')
+          }
+
+          // Add to local state with database data
+          const newProjectData: Project = {
+            id: data[0].id,
+            name: data[0].name,
+            status: data[0].status,
+            start_date: data[0].start_date,
+            end_date: data[0].end_date,
+            budget: data[0].budget,
+            expenses: data[0].expenses,
+            received: data[0].payment_received,
+            pending: data[0].payment_pending,
+            created_at: data[0].created_at,
+            clients: clientForProject ? {
+              name: clientForProject.name,
+              company: clientForProject.company,
+              avatar_url: clientForProject.avatar_url,
+            } : undefined,
+          }
+
+          setProjects([newProjectData, ...projects])
+          setIsAddDialogOpen(false)
+          toast.success(`Project "${newProjectData.name}" has been created successfully`)
+        } else {
+          // Fallback to local state only
+          const project: Project = {
+            id: Date.now().toString(),
+            name: newProject.name,
+            status: newProject.status,
+            start_date: newProject.start_date ? newProject.start_date.toISOString() : undefined,
+            end_date: newProject.end_date ? newProject.end_date.toISOString() : undefined,
+            budget: budget || undefined,
+            expenses: expenses,
+            received: received,
+            pending: pending,
+            created_at: new Date().toISOString(),
+            clients: clientForProject ? {
+              name: clientForProject.name,
+              company: clientForProject.company,
+              avatar_url: clientForProject.avatar_url,
+            } : undefined,
+          }
+
+          setProjects([project, ...projects])
+          setIsAddDialogOpen(false)
+          toast.success(`Project "${project.name}" has been created successfully`)
+        }
       }
 
-      setProjects(projects.map(p => p.id === selectedProject.id ? updatedProject : p))
-      setIsEditDialogOpen(false)
-      toast.success(`Project "${updatedProject.name}" has been updated successfully`)
-    } else {
-      // Adding new project
-      const project: Project = {
-        id: Date.now().toString(),
-        name: newProject.name,
-        status: newProject.status,
-        start_date: newProject.start_date ? newProject.start_date.toISOString() : undefined,
-        end_date: newProject.end_date ? newProject.end_date.toISOString() : undefined,
-        budget: budget || undefined,
-        expenses: expenses,
-        received: received,
-        pending: pending,
-        created_at: new Date().toISOString(),
-        clients: clientForProject ? {
-          name: clientForProject.name,
-          company: clientForProject.company,
-          avatar_url: clientForProject.avatar_url,
-        } : undefined,
-      }
-
-      setProjects([...projects, project])
-      setIsAddDialogOpen(false)
-      toast.success(`Project "${project.name}" has been created successfully`)
+      // Reset form
+      setSelectedProject(null)
+      setSelectedClient(null)
+    } catch (error) {
+      console.error('Error saving project:', error)
+      toast.error(`Failed to save project: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
-
-    // Reset form
-    setSelectedProject(null)
-    setSelectedClient(null)
   }
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (selectedProject) {
-      setProjects(projects.filter((p) => p.id !== selectedProject.id))
-      toast.success(`Project "${selectedProject.name}" deleted successfully`)
-      setIsDeleteDialogOpen(false)
-      setSelectedProject(null)
+      try {
+        if (isSupabaseConfigured()) {
+          // Delete from database
+          const { error } = await supabase
+            .from('projects')
+            .delete()
+            .eq('id', selectedProject.id)
+
+          if (error) {
+            console.error('Error deleting project:', error)
+            throw new Error(error.message)
+          }
+        }
+
+        // Remove from local state
+        setProjects(projects.filter((p) => p.id !== selectedProject.id))
+        toast.success(`Project "${selectedProject.name}" deleted successfully`)
+        setIsDeleteDialogOpen(false)
+        setSelectedProject(null)
+      } catch (error) {
+        console.error('Error deleting project:', error)
+        toast.error(`Failed to delete project: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      }
     }
   }
 
