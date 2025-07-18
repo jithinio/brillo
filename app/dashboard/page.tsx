@@ -9,56 +9,528 @@ import type { ChartConfig } from "@/components/ui/chart"
 import { Line, LineChart, Bar, BarChart, XAxis, YAxis, LabelList } from "recharts"
 import { TrendingUp, TrendingDown, Calendar, DollarSign, CalendarIcon } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { format } from "date-fns"
-
+import { format, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear, subMonths, subQuarters, subYears } from "date-fns"
 
 import { formatCurrency } from "@/lib/currency"
 import { useSettings } from "@/components/settings-provider"
+import { supabase } from "@/lib/supabase"
 
-// Sample data - replace with real data from your API
-const mrrData = {
-  current: 28420,
-  previous: 24350,
-  trend: 'up' as const,
-  percentage: 16.7
+// Types for project data
+interface Project {
+  id: string
+  name: string
+  budget?: number
+  revenue?: number
+  expenses?: number
+  payment_received?: number
+  payment_pending?: number
+  start_date?: string
+  due_date?: string
+  created_at: string
+  status: string
 }
 
-const arrData = {
-  current: 341040,
-  previous: 292200,
-  trend: 'up' as const,
-  percentage: 16.7
+// Data fetching and calculation functions
+const fetchProjects = async (): Promise<Project[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('projects')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('Error fetching projects:', error)
+      return []
+    }
+
+    return data || []
+  } catch (error) {
+    console.error('Error fetching projects:', error)
+    return []
+  }
 }
 
-const revenueData = {
-  current: 95000,
-  previous: 84000,
-  trend: 'up' as const,
-  percentage: 13.1
+const calculateMRR = (projects: Project[], period: string): { current: number; previous: number; trend: 'up' | 'down'; percentage: number } => {
+  const now = new Date()
+  let currentStart: Date
+  let currentEnd: Date
+  let previousStart: Date
+  let previousEnd: Date
+
+  switch (period) {
+    case 'current-month':
+      currentStart = startOfMonth(now)
+      currentEnd = endOfMonth(now)
+      previousStart = startOfMonth(subMonths(now, 1))
+      previousEnd = endOfMonth(subMonths(now, 1))
+      break
+    case 'last-month':
+      currentStart = startOfMonth(subMonths(now, 1))
+      currentEnd = endOfMonth(subMonths(now, 1))
+      previousStart = startOfMonth(subMonths(now, 2))
+      previousEnd = endOfMonth(subMonths(now, 2))
+      break
+    case '3-months':
+      currentStart = startOfMonth(subMonths(now, 2))
+      currentEnd = endOfMonth(now)
+      previousStart = startOfMonth(subMonths(now, 5))
+      previousEnd = endOfMonth(subMonths(now, 3))
+      break
+    default:
+      currentStart = startOfMonth(now)
+      currentEnd = endOfMonth(now)
+      previousStart = startOfMonth(subMonths(now, 1))
+      previousEnd = endOfMonth(subMonths(now, 1))
+  }
+
+  const currentProjects = projects.filter(project => {
+    const projectDate = new Date(project.start_date || project.created_at)
+    return projectDate >= currentStart && projectDate <= currentEnd && project.status !== 'pipeline'
+  })
+
+  const previousProjects = projects.filter(project => {
+    const projectDate = new Date(project.start_date || project.created_at)
+    return projectDate >= previousStart && projectDate <= previousEnd && project.status !== 'pipeline'
+  })
+
+  const current = currentProjects.reduce((sum, project) => {
+    let amount = 0
+    
+    // For on hold and canceled projects, use received amount as budget
+    if (project.status === 'on hold' || project.status === 'canceled') {
+      amount = project.payment_received || 0
+    } else {
+      // Use budget as primary, revenue as fallback, then 0
+      amount = project.budget || project.revenue || 0
+    }
+    
+    return sum + amount
+  }, 0)
+  
+  const previous = previousProjects.reduce((sum, project) => {
+    let amount = 0
+    
+    // For on hold and canceled projects, use received amount as budget
+    if (project.status === 'on hold' || project.status === 'canceled') {
+      amount = project.payment_received || 0
+    } else {
+      // Use budget as primary, revenue as fallback, then 0
+      amount = project.budget || project.revenue || 0
+    }
+    
+    return sum + amount
+  }, 0)
+
+  const percentage = previous > 0 ? ((current - previous) / previous) * 100 : 0
+  const trend = current >= previous ? 'up' : 'down'
+
+  return {
+    current,
+    previous,
+    trend,
+    percentage: Math.abs(percentage)
+  }
 }
 
-const revenueLineData = [
-  { month: 'Jan', revenue: 4000, expenses: 2400 },
-  { month: 'Feb', revenue: 3000, expenses: 1398 },
-  { month: 'Mar', revenue: 2000, expenses: 9800 },
-  { month: 'Apr', revenue: 2780, expenses: 3908 },
-  { month: 'May', revenue: 1890, expenses: 4800 },
-  { month: 'Jun', revenue: 2390, expenses: 3800 },
-  { month: 'Jul', revenue: 3490, expenses: 4300 },
-  { month: 'Aug', revenue: 4000, expenses: 2400 },
-  { month: 'Sep', revenue: 3000, expenses: 1398 },
-  { month: 'Oct', revenue: 2000, expenses: 9800 },
-  { month: 'Nov', revenue: 2780, expenses: 3908 },
-  { month: 'Dec', revenue: 1890, expenses: 4800 },
-]
+const calculateQRR = (projects: Project[], period: string): { current: number; previous: number; trend: 'up' | 'down'; percentage: number } => {
+  const now = new Date()
+  let currentStart: Date
+  let currentEnd: Date
+  let previousStart: Date
+  let previousEnd: Date
 
-const yearlyData = [
-  { year: '2020', revenue: 45000, expenses: 32000 },
-  { year: '2021', revenue: 52000, expenses: 38000 },
-  { year: '2022', revenue: 68000, expenses: 45000 },
-  { year: '2023', revenue: 84000, expenses: 52000 },
-  { year: '2024', revenue: 95000, expenses: 58000 },
-]
+  switch (period) {
+    case 'current-quarter':
+      currentStart = startOfQuarter(now)
+      currentEnd = endOfQuarter(now)
+      previousStart = startOfQuarter(subQuarters(now, 1))
+      previousEnd = endOfQuarter(subQuarters(now, 1))
+      break
+    case 'last-quarter':
+      currentStart = startOfQuarter(subQuarters(now, 1))
+      currentEnd = endOfQuarter(subQuarters(now, 1))
+      previousStart = startOfQuarter(subQuarters(now, 2))
+      previousEnd = endOfQuarter(subQuarters(now, 2))
+      break
+    case '3-quarters':
+      currentStart = startOfQuarter(subQuarters(now, 2))
+      currentEnd = endOfQuarter(now)
+      previousStart = startOfQuarter(subQuarters(now, 5))
+      previousEnd = endOfQuarter(subQuarters(now, 3))
+      break
+    default:
+      currentStart = startOfQuarter(now)
+      currentEnd = endOfQuarter(now)
+      previousStart = startOfQuarter(subQuarters(now, 1))
+      previousEnd = endOfQuarter(subQuarters(now, 1))
+  }
+
+  const currentProjects = projects.filter(project => {
+    const projectDate = new Date(project.start_date || project.created_at)
+    return projectDate >= currentStart && projectDate <= currentEnd && project.status !== 'pipeline'
+  })
+
+  const previousProjects = projects.filter(project => {
+    const projectDate = new Date(project.start_date || project.created_at)
+    return projectDate >= previousStart && projectDate <= previousEnd && project.status !== 'pipeline'
+  })
+
+  const current = currentProjects.reduce((sum, project) => {
+    let amount = 0
+    
+    // For on hold and canceled projects, use received amount as budget
+    if (project.status === 'on hold' || project.status === 'canceled') {
+      amount = project.payment_received || 0
+    } else {
+      // Use budget as primary, revenue as fallback, then 0
+      amount = project.budget || project.revenue || 0
+    }
+    
+    return sum + amount
+  }, 0)
+  
+  const previous = previousProjects.reduce((sum, project) => {
+    let amount = 0
+    
+    // For on hold and canceled projects, use received amount as budget
+    if (project.status === 'on hold' || project.status === 'canceled') {
+      amount = project.payment_received || 0
+    } else {
+      // Use budget as primary, revenue as fallback, then 0
+      amount = project.budget || project.revenue || 0
+    }
+    
+    return sum + amount
+  }, 0)
+
+  const percentage = previous > 0 ? ((current - previous) / previous) * 100 : 0
+  const trend = current >= previous ? 'up' : 'down'
+
+  return {
+    current,
+    previous,
+    trend,
+    percentage: Math.abs(percentage)
+  }
+}
+
+const calculateARR = (projects: Project[], period: string): { current: number; previous: number; trend: 'up' | 'down'; percentage: number } => {
+  const now = new Date()
+  let currentStart: Date
+  let currentEnd: Date
+  let previousStart: Date
+  let previousEnd: Date
+
+  switch (period) {
+    case 'current-year':
+      currentStart = startOfYear(now)
+      currentEnd = endOfYear(now)
+      previousStart = startOfYear(subYears(now, 1))
+      previousEnd = endOfYear(subYears(now, 1))
+      break
+    case 'last-year':
+      currentStart = startOfYear(subYears(now, 1))
+      currentEnd = endOfYear(subYears(now, 1))
+      previousStart = startOfYear(subYears(now, 2))
+      previousEnd = endOfYear(subYears(now, 2))
+      break
+    case '3-years':
+      currentStart = startOfYear(subYears(now, 2))
+      currentEnd = endOfYear(now)
+      previousStart = startOfYear(subYears(now, 5))
+      previousEnd = endOfYear(subYears(now, 3))
+      break
+    default:
+      currentStart = startOfYear(now)
+      currentEnd = endOfYear(now)
+      previousStart = startOfYear(subYears(now, 1))
+      previousEnd = endOfYear(subYears(now, 1))
+  }
+
+  const currentProjects = projects.filter(project => {
+    const projectDate = new Date(project.start_date || project.created_at)
+    return projectDate >= currentStart && projectDate <= currentEnd && project.status !== 'pipeline'
+  })
+
+  const previousProjects = projects.filter(project => {
+    const projectDate = new Date(project.start_date || project.created_at)
+    return projectDate >= previousStart && projectDate <= previousEnd && project.status !== 'pipeline'
+  })
+
+  const current = currentProjects.reduce((sum, project) => {
+    let amount = 0
+    
+    // For on hold and canceled projects, use received amount as budget
+    if (project.status === 'on hold' || project.status === 'canceled') {
+      amount = project.payment_received || 0
+    } else {
+      // Use budget as primary, revenue as fallback, then 0
+      amount = project.budget || project.revenue || 0
+    }
+    
+    return sum + amount
+  }, 0)
+  
+  const previous = previousProjects.reduce((sum, project) => {
+    let amount = 0
+    
+    // For on hold and canceled projects, use received amount as budget
+    if (project.status === 'on hold' || project.status === 'canceled') {
+      amount = project.payment_received || 0
+    } else {
+      // Use budget as primary, revenue as fallback, then 0
+      amount = project.budget || project.revenue || 0
+    }
+    
+    return sum + amount
+  }, 0)
+
+  const percentage = previous > 0 ? ((current - previous) / previous) * 100 : 0
+  const trend = current >= previous ? 'up' : 'down'
+
+  return {
+    current,
+    previous,
+    trend,
+    percentage: Math.abs(percentage)
+  }
+}
+
+const calculateRevenueData = (projects: Project[], period: string): { current: number; previous: number; trend: 'up' | 'down'; percentage: number } => {
+  const now = new Date()
+  let currentStart: Date
+  let currentEnd: Date
+  let previousStart: Date
+  let previousEnd: Date
+
+  switch (period) {
+    case 'this-year':
+      currentStart = startOfYear(now)
+      currentEnd = now
+      previousStart = startOfYear(subYears(now, 1))
+      previousEnd = subYears(now, 1)
+      break
+    case 'monthly':
+      currentStart = startOfMonth(now)
+      currentEnd = endOfMonth(now)
+      previousStart = startOfMonth(subMonths(now, 1))
+      previousEnd = endOfMonth(subMonths(now, 1))
+      break
+    case 'quarterly':
+      currentStart = startOfQuarter(now)
+      currentEnd = endOfQuarter(now)
+      previousStart = startOfQuarter(subQuarters(now, 1))
+      previousEnd = endOfQuarter(subQuarters(now, 1))
+      break
+    case 'last-year':
+      currentStart = startOfYear(subYears(now, 1))
+      currentEnd = endOfYear(subYears(now, 1))
+      previousStart = startOfYear(subYears(now, 2))
+      previousEnd = endOfYear(subYears(now, 2))
+      break
+    default:
+      currentStart = startOfYear(now)
+      currentEnd = now
+      previousStart = startOfYear(subYears(now, 1))
+      previousEnd = subYears(now, 1)
+  }
+
+  const currentProjects = projects.filter(project => {
+    const projectDate = new Date(project.start_date || project.created_at)
+    return projectDate >= currentStart && projectDate <= currentEnd && project.status !== 'pipeline'
+  })
+
+  const previousProjects = projects.filter(project => {
+    const projectDate = new Date(project.start_date || project.created_at)
+    return projectDate >= previousStart && projectDate <= previousEnd && project.status !== 'pipeline'
+  })
+
+  const current = currentProjects.reduce((sum, project) => {
+    let amount = 0
+    
+    // For on hold and canceled projects, use received amount as budget
+    if (project.status === 'on hold' || project.status === 'canceled') {
+      amount = project.payment_received || 0
+    } else {
+      // Use budget as primary, revenue as fallback, then 0
+      amount = project.budget || project.revenue || 0
+    }
+    
+    return sum + amount
+  }, 0)
+  
+  const previous = previousProjects.reduce((sum, project) => {
+    let amount = 0
+    
+    // For on hold and canceled projects, use received amount as budget
+    if (project.status === 'on hold' || project.status === 'canceled') {
+      amount = project.payment_received || 0
+    } else {
+      // Use budget as primary, revenue as fallback, then 0
+      amount = project.budget || project.revenue || 0
+    }
+    
+    return sum + amount
+  }, 0)
+
+  const percentage = previous > 0 ? ((current - previous) / previous) * 100 : 0
+  const trend = current >= previous ? 'up' : 'down'
+
+  return {
+    current,
+    previous,
+    trend,
+    percentage: Math.abs(percentage)
+  }
+}
+
+const calculateExpensesData = (projects: Project[], period: string): { current: number; previous: number; trend: 'up' | 'down'; percentage: number } => {
+  const now = new Date()
+  let currentStart: Date
+  let currentEnd: Date
+  let previousStart: Date
+  let previousEnd: Date
+
+  switch (period) {
+    case 'this-year':
+      currentStart = startOfYear(now)
+      currentEnd = now
+      previousStart = startOfYear(subYears(now, 1))
+      previousEnd = subYears(now, 1)
+      break
+    case 'monthly':
+      currentStart = startOfMonth(now)
+      currentEnd = endOfMonth(now)
+      previousStart = startOfMonth(subMonths(now, 1))
+      previousEnd = endOfMonth(subMonths(now, 1))
+      break
+    case 'quarterly':
+      currentStart = startOfQuarter(now)
+      currentEnd = endOfQuarter(now)
+      previousStart = startOfQuarter(subQuarters(now, 1))
+      previousEnd = endOfQuarter(subQuarters(now, 1))
+      break
+    case 'last-year':
+      currentStart = startOfYear(subYears(now, 1))
+      currentEnd = endOfYear(subYears(now, 1))
+      previousStart = startOfYear(subYears(now, 2))
+      previousEnd = endOfYear(subYears(now, 2))
+      break
+    default:
+      currentStart = startOfYear(now)
+      currentEnd = now
+      previousStart = startOfYear(subYears(now, 1))
+      previousEnd = subYears(now, 1)
+  }
+
+  const currentProjects = projects.filter(project => {
+    const projectDate = new Date(project.start_date || project.created_at)
+    return projectDate >= currentStart && projectDate <= currentEnd && project.status !== 'pipeline'
+  })
+
+  const previousProjects = projects.filter(project => {
+    const projectDate = new Date(project.start_date || project.created_at)
+    return projectDate >= previousStart && projectDate <= previousEnd && project.status !== 'pipeline'
+  })
+
+  const current = currentProjects.reduce((sum, project) => {
+    // Use expenses field, fallback to 0
+    const amount = project.expenses || 0
+    return sum + amount
+  }, 0)
+  const previous = previousProjects.reduce((sum, project) => {
+    // Use expenses field, fallback to 0
+    const amount = project.expenses || 0
+    return sum + amount
+  }, 0)
+
+  const percentage = previous > 0 ? ((current - previous) / previous) * 100 : 0
+  const trend = current >= previous ? 'up' : 'down'
+
+  return {
+    current,
+    previous,
+    trend,
+    percentage: Math.abs(percentage)
+  }
+}
+
+const generateRevenueLineData = (projects: Project[]): Array<{ month: string; revenue: number; expenses: number }> => {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  const currentYear = new Date().getFullYear()
+  
+  return months.map((month, index) => {
+    const monthStart = new Date(currentYear, index, 1)
+    const monthEnd = new Date(currentYear, index + 1, 0)
+    
+    const monthProjects = projects.filter(project => {
+      const projectDate = new Date(project.start_date || project.created_at)
+      return projectDate >= monthStart && projectDate <= monthEnd && project.status !== 'pipeline'
+    })
+    
+    const revenue = monthProjects.reduce((sum, project) => {
+      let amount = 0
+      
+      // For on hold and canceled projects, use received amount as budget
+      if (project.status === 'on hold' || project.status === 'canceled') {
+        amount = project.payment_received || 0
+      } else {
+        // Use budget as primary, revenue as fallback, then 0
+        amount = project.budget || project.revenue || 0
+      }
+      
+      return sum + amount
+    }, 0)
+    
+    const expenses = monthProjects.reduce((sum, project) => {
+      // Use expenses field, fallback to 0
+      const amount = project.expenses || 0
+      return sum + amount
+    }, 0)
+    
+    return { month, revenue, expenses }
+  })
+}
+
+const generateYearlyData = (projects: Project[]): Array<{ year: string; revenue: number; expenses: number }> => {
+  const currentYear = new Date().getFullYear()
+  const years = []
+  
+  for (let i = 4; i >= 0; i--) {
+    const year = currentYear - i
+    const yearStart = new Date(year, 0, 1)
+    const yearEnd = new Date(year, 11, 31)
+    
+    const yearProjects = projects.filter(project => {
+      const projectDate = new Date(project.start_date || project.created_at)
+      return projectDate >= yearStart && projectDate <= yearEnd && project.status !== 'pipeline'
+    })
+    
+    const revenue = yearProjects.reduce((sum, project) => {
+      let amount = 0
+      
+      // For on hold and canceled projects, use received amount as budget
+      if (project.status === 'on hold' || project.status === 'canceled') {
+        amount = project.payment_received || 0
+      } else {
+        // Use budget as primary, revenue as fallback, then 0
+        amount = project.budget || project.revenue || 0
+      }
+      
+      return sum + amount
+    }, 0)
+    
+    const expenses = yearProjects.reduce((sum, project) => {
+      // Use expenses field, fallback to 0
+      const amount = project.expenses || 0
+      return sum + amount
+    }, 0)
+    
+    years.push({ year: year.toString(), revenue, expenses })
+  }
+  
+  return years
+}
 
 // Chart configurations
 const miniChartConfig: ChartConfig = {
@@ -114,7 +586,7 @@ const MetricCard = ({
       <div className="flex items-center justify-between">
         <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
         <Select value={period} onValueChange={onPeriodChange}>
-          <SelectTrigger className="w-32 h-9">
+          <SelectTrigger className="h-8 text-xs min-w-0 w-auto">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -123,6 +595,12 @@ const MetricCard = ({
                 <SelectItem value="current-month">This Month</SelectItem>
                 <SelectItem value="last-month">Last Month</SelectItem>
                 <SelectItem value="3-months">Last 3 Months</SelectItem>
+              </>
+            ) : title === 'QRR' ? (
+              <>
+                <SelectItem value="current-quarter">This Quarter</SelectItem>
+                <SelectItem value="last-quarter">Last Quarter</SelectItem>
+                <SelectItem value="3-quarters">Last 3 Quarters</SelectItem>
               </>
             ) : (
               <>
@@ -136,7 +614,6 @@ const MetricCard = ({
       </div>
     </CardHeader>
     <CardContent className="px-8 pt-0 pb-8">
-      <div className="space-y-4">
         <div className="space-y-1">
           <div className="text-3xl font-normal text-foreground">
             {formatCurrency(current)}
@@ -149,26 +626,10 @@ const MetricCard = ({
                 <TrendingDown className="h-3 w-3 text-red-600" />
               )}
               <span className={`text-xs font-normal ${trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
-                {percentage}%
+              {percentage.toFixed(2)}%
               </span>
             </div>
             <span className="text-xs text-muted-foreground">vs previous period</span>
-          </div>
-        </div>
-        
-        {/* Mini chart */}
-        <div className="h-12 w-full" style={{ marginTop: '48px' }}>
-          <ChartContainer config={miniChartConfig} className="h-full w-full">
-            <LineChart data={revenueLineData.slice(-6)} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
-              <Line 
-                type="monotone" 
-                dataKey="revenue" 
-                stroke={trend === 'up' ? 'var(--chart-1)' : 'var(--chart-2)'} 
-                strokeWidth={2}
-                dot={false}
-              />
-            </LineChart>
-          </ChartContainer>
         </div>
       </div>
     </CardContent>
@@ -184,7 +645,8 @@ const RevenueChart = ({
   percentage,
   onTypeChange, 
   onPeriodChange,
-  formatCurrency 
+  formatCurrency,
+  projects
 }: {
   type: 'revenue' | 'expenses'
   period: string
@@ -195,6 +657,7 @@ const RevenueChart = ({
   onTypeChange: (value: 'revenue' | 'expenses') => void
   onPeriodChange: (value: string) => void
   formatCurrency: (amount: number) => string
+  projects: Project[]
 }) => {
   // Filter data based on selected period
   const getFilteredData = () => {
@@ -205,11 +668,12 @@ const RevenueChart = ({
     switch (period) {
       case 'this-year':
         // Show current year data up to current month only
-        const currentMonth = currentDate.getMonth() // 0-based (0 = January, 6 = July)
-        return revenueLineData.slice(0, currentMonth + 1)
+        const currentMonthData = generateRevenueLineData(projects)
+        return currentMonthData.slice(0, currentMonth + 1)
       case 'monthly':
         // Show detailed monthly breakdown (full year)
-        return revenueLineData
+        const monthlyData = generateRevenueLineData(projects)
+        return monthlyData
       case 'quarterly':
         // Show quarterly data (group by quarters)
         const quarterlyData = [
@@ -221,14 +685,15 @@ const RevenueChart = ({
         return quarterlyData
       case 'last-year':
         // Show last year's monthly data (simulated)
-        return revenueLineData.map(item => ({
+        const lastYearData = generateRevenueLineData(projects)
+        return lastYearData.map(item => ({
           ...item,
           revenue: item.revenue * 0.85,
           expenses: item.expenses * 0.9
         }))
 
       default:
-        return revenueLineData
+        return generateRevenueLineData(projects)
     }
   }
 
@@ -247,7 +712,7 @@ const RevenueChart = ({
     const dynamicAmount = calculateDynamicAmount()
     const trendPercentage = ((dynamicAmount - previous) / previous) * 100
     return {
-      percentage: Math.abs(trendPercentage).toFixed(1),
+      percentage: Math.abs(trendPercentage).toFixed(2),
       trend: trendPercentage >= 0 ? 'up' as const : 'down' as const
     }
   }
@@ -267,7 +732,7 @@ const RevenueChart = ({
         </CardTitle>
         <div className="flex items-center gap-2">
           <Select value={type} onValueChange={onTypeChange}>
-            <SelectTrigger className="w-32 h-9">
+            <SelectTrigger className="h-8 text-xs min-w-0 w-auto">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -276,7 +741,7 @@ const RevenueChart = ({
             </SelectContent>
           </Select>
                     <Select value={period} onValueChange={onPeriodChange}>
-            <SelectTrigger className="w-32 h-9">
+            <SelectTrigger className="h-8 text-xs min-w-0 w-auto">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -318,12 +783,28 @@ const RevenueChart = ({
                 dataKey="month" 
                 axisLine={false}
                 tickLine={false}
-                tick={{ fontSize: 12, fill: '#64748b' }}
-                className="dark:[&_.recharts-cartesian-axis-tick_text]:fill-slate-300"
+                tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }}
+                className="[&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground"
               />
               <ChartTooltip 
-                content={<ChartTooltipContent />}
-                formatter={(value: any) => [formatCurrency(value), type]}
+                content={({ active, payload }) => {
+                  if (active && payload && payload.length) {
+                    return (
+                      <div className="rounded-lg border bg-background p-2 shadow-sm">
+                        <div className="grid grid-cols-2 gap-2">
+                          {payload.map((item: any, index: number) => (
+                            <div key={index} className="flex items-center gap-2">
+                              <div className="flex h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
+                              <span className="text-sm font-medium">{item.dataKey === 'revenue' ? 'Revenue' : 'Expenses'}</span>
+                              <span className="text-sm text-muted-foreground">{formatCurrency(item.value)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  }
+                  return null
+                }}
               />
               <Line 
                 type="monotone" 
@@ -345,12 +826,18 @@ const RevenueChart = ({
 const YearlyBarChart = ({ 
   type, 
   onTypeChange,
-  formatCurrency 
+  formatCurrency,
+  projects
 }: {
   type: 'revenue' | 'expenses'
   onTypeChange: (value: 'revenue' | 'expenses') => void
   formatCurrency: (amount: number) => string
-}) => (
+  projects: Project[]
+}) => {
+  // This will be passed from parent component
+  const yearlyData = generateYearlyData(projects)
+  
+  return (
   <Card className="border-0 shadow-none">
     <CardHeader className="p-8 pb-3">
       <div className="flex items-center justify-between">
@@ -358,7 +845,7 @@ const YearlyBarChart = ({
           Yearly {type === 'revenue' ? 'Revenue' : 'Expenses'}
         </CardTitle>
         <Select value={type} onValueChange={onTypeChange}>
-          <SelectTrigger className="w-32 h-9">
+          <SelectTrigger className="h-8 text-xs min-w-0 w-auto">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -375,18 +862,20 @@ const YearlyBarChart = ({
           <div className="text-3xl font-normal text-foreground">
             {(() => {
               // Calculate yearly growth percentage
+              if (yearlyData.length < 2) return '0%'
               const currentYear = yearlyData[yearlyData.length - 1][type]
               const previousYear = yearlyData[yearlyData.length - 2][type]
-              const growthPercentage = ((currentYear - previousYear) / previousYear) * 100
-              return `${growthPercentage.toFixed(1)}%`
+              const growthPercentage = previousYear > 0 ? ((currentYear - previousYear) / previousYear) * 100 : 0
+              return `${growthPercentage.toFixed(2)}%`
             })()}
           </div>
           <div className="flex items-center gap-3" style={{ marginTop: '12px' }}>
             <div className="flex items-center gap-1">
               {(() => {
+                if (yearlyData.length < 2) return null
                 const currentYear = yearlyData[yearlyData.length - 1][type]
                 const previousYear = yearlyData[yearlyData.length - 2][type]
-                const growthPercentage = ((currentYear - previousYear) / previousYear) * 100
+                const growthPercentage = previousYear > 0 ? ((currentYear - previousYear) / previousYear) * 100 : 0
                 const trend = growthPercentage >= 0 ? 'up' : 'down'
                 return (
                   <>
@@ -396,7 +885,7 @@ const YearlyBarChart = ({
                       <TrendingDown className="h-3 w-3 text-red-600" />
                     )}
                     <span className={`text-xs font-normal ${trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
-                      {Math.abs(growthPercentage).toFixed(1)}%
+                      {Math.abs(growthPercentage).toFixed(2)}%
                     </span>
                   </>
                 )
@@ -439,16 +928,37 @@ const YearlyBarChart = ({
             </CardContent>
           </Card>
 )
+}
 
 export default function DashboardPage() {
   const { settings, formatCurrency: settingsFormatCurrency } = useSettings()
   const [mrrPeriod, setMrrPeriod] = useState("current-month")
+  const [qrrPeriod, setQrrPeriod] = useState("current-quarter")
   const [arrPeriod, setArrPeriod] = useState("current-year")
   const [revenueType, setRevenueType] = useState<'revenue' | 'expenses'>('revenue')
   const [revenuePeriod, setRevenuePeriod] = useState("this-year")
   const [yearlyType, setYearlyType] = useState<'revenue' | 'expenses'>('revenue')
   const [greeting, setGreeting] = useState("")
   const [userName] = useState("Jithin") // Replace with actual user name from context/auth
+  const [projects, setProjects] = useState<Project[]>([])
+  const [loading, setLoading] = useState(true)
+
+  // Fetch projects on component mount
+  useEffect(() => {
+    const loadProjects = async () => {
+      setLoading(true)
+      try {
+        const projectData = await fetchProjects()
+        setProjects(projectData)
+      } catch (error) {
+        console.error('Error loading projects:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadProjects()
+  }, [])
 
   useEffect(() => {
     const getGreeting = () => {
@@ -459,6 +969,18 @@ export default function DashboardPage() {
     }
     setGreeting(getGreeting())
   }, [])
+
+  // Calculate metrics from real project data
+  const mrrData = calculateMRR(projects, mrrPeriod)
+  const qrrData = calculateQRR(projects, qrrPeriod)
+  const arrData = calculateARR(projects, arrPeriod)
+  const revenueData = revenueType === 'revenue' 
+    ? calculateRevenueData(projects, revenuePeriod)
+    : calculateExpensesData(projects, revenuePeriod)
+
+  // Generate chart data from real project data
+  const revenueLineData = generateRevenueLineData(projects)
+  const yearlyData = generateYearlyData(projects)
 
   return (
     <div className="flex flex-1 flex-col gap-4 px-8 pb-4 pt-8 max-w-full overflow-hidden">
@@ -472,8 +994,8 @@ export default function DashboardPage() {
 
       {/* Summary Section */}
       <div className="mb-8">
-        {/* MRR and ARR Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        {/* MRR, QRR, and ARR Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <MetricCard
             title="MRR"
             current={mrrData.current}
@@ -482,6 +1004,16 @@ export default function DashboardPage() {
             percentage={mrrData.percentage}
             period={mrrPeriod}
             onPeriodChange={setMrrPeriod}
+            formatCurrency={settingsFormatCurrency}
+          />
+          <MetricCard
+            title="QRR"
+            current={qrrData.current}
+            previous={qrrData.previous}
+            trend={qrrData.trend}
+            percentage={qrrData.percentage}
+            period={qrrPeriod}
+            onPeriodChange={setQrrPeriod}
             formatCurrency={settingsFormatCurrency}
           />
           <MetricCard
@@ -508,6 +1040,7 @@ export default function DashboardPage() {
             onTypeChange={setRevenueType}
             onPeriodChange={setRevenuePeriod}
             formatCurrency={settingsFormatCurrency}
+            projects={projects}
           />
         </div>
 
@@ -517,6 +1050,7 @@ export default function DashboardPage() {
             type={yearlyType}
             onTypeChange={setYearlyType}
             formatCurrency={settingsFormatCurrency}
+            projects={projects}
           />
         </div>
       </div>

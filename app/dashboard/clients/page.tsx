@@ -14,6 +14,8 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { PhoneInput } from "@/components/ui/phone-input"
+import { CountrySelect } from "@/components/ui/country-select"
 
 import {
   AlertDialog,
@@ -199,6 +201,33 @@ export default function ClientsPage() {
   const handleDeleteClient = (client: Client) => {
     setSelectedClient(client)
     setShowDeleteDialog(true)
+  }
+
+  const handleDateChange = async (client: Client, field: 'created_at', date: Date | undefined) => {
+    try {
+      if (isSupabaseConfigured()) {
+        const { error } = await supabase
+          .from('clients')
+          .update({ [field]: date ? date.toISOString().split('T')[0] : null })
+          .eq('id', client.id)
+
+        if (error) {
+          console.error('Error updating client date:', error)
+          throw new Error(error.message)
+        }
+      }
+
+      // Update local state
+      setClients(clients.map(c => 
+        c.id === client.id ? { ...c, [field]: date ? date.toISOString().split('T')[0] : new Date().toISOString().split('T')[0] } : c
+      ))
+
+      const fieldLabel = field === 'created_at' ? 'client since date' : field
+      toast.success(`Client "${client.name}" ${fieldLabel} updated`)
+    } catch (error) {
+      console.error('Error updating client date:', error)
+      toast.error(`Failed to update client date: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
   }
 
   const handleBatchDelete = (clients: Client[], onUndo: (items: Client[]) => void) => {
@@ -508,6 +537,7 @@ export default function ClientsPage() {
     onCreateInvoice: handleCreateInvoice,
     onNewProject: handleNewProject,
     onDeleteClient: handleDeleteClient,
+    onDateChange: handleDateChange,
   })
 
   if (loading) {
@@ -639,10 +669,11 @@ export default function ClientsPage() {
               </div>
               <div>
                 <Label htmlFor="phone">Phone</Label>
-                <Input
+                <PhoneInput
                   id="phone"
                   value={editingClient.phone || ""}
-                  onChange={(e) => setEditingClient({ ...editingClient, phone: e.target.value })}
+                  onChange={(value) => setEditingClient({ ...editingClient, phone: value })}
+                  placeholder="Enter phone number"
                 />
               </div>
             </div>
@@ -682,10 +713,10 @@ export default function ClientsPage() {
             </div>
             <div>
               <Label htmlFor="country">Country</Label>
-              <Input
-                id="country"
+              <CountrySelect
                 value={editingClient.country || ""}
-                onChange={(e) => setEditingClient({ ...editingClient, country: e.target.value })}
+                onValueChange={(value) => setEditingClient({ ...editingClient, country: value })}
+                placeholder="Select country"
               />
             </div>
             <div>
@@ -711,7 +742,7 @@ export default function ClientsPage() {
 
       {/* Add Client Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="max-w-2xl" onOpenAutoFocus={(e) => e.preventDefault()}>
+        <DialogContent className="max-w-2xl add-client-dialog" onOpenAutoFocus={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>Add New Client</DialogTitle>
             <DialogDescription>Create a new client record</DialogDescription>
@@ -784,10 +815,11 @@ export default function ClientsPage() {
               </div>
               <div>
                 <Label htmlFor="new-phone">Phone</Label>
-                <Input
+                <PhoneInput
                   id="new-phone"
                   value={editingClient.phone || ""}
-                  onChange={(e) => setEditingClient({ ...editingClient, phone: e.target.value })}
+                  onChange={(value) => setEditingClient({ ...editingClient, phone: value })}
+                  placeholder="Enter phone number"
                 />
               </div>
             </div>
@@ -827,10 +859,10 @@ export default function ClientsPage() {
             </div>
             <div>
               <Label htmlFor="new-country">Country</Label>
-              <Input
-                id="new-country"
+              <CountrySelect
                 value={editingClient.country || ""}
-                onChange={(e) => setEditingClient({ ...editingClient, country: e.target.value })}
+                onValueChange={(value) => setEditingClient({ ...editingClient, country: value })}
+                placeholder="Select country"
               />
             </div>
             <div>

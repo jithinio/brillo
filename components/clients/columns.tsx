@@ -27,6 +27,8 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { ClientAvatar } from "@/components/ui/client-avatar"
 import { toast } from "sonner"
+import { useSettings } from "@/components/settings-provider"
+import { DatePickerTable } from "@/components/ui/date-picker-table"
 
 export type Client = {
   id: string
@@ -78,9 +80,12 @@ interface ColumnActions {
   onNewProject: (client: Client) => void
   onDeleteClient: (client: Client) => void
   onProjectClick?: (projectId: string) => void
+  onDateChange: (client: Client, field: 'created_at', date: Date | undefined) => void
 }
 
 export function createColumns(actions: ColumnActions): ColumnDef<Client>[] {
+  const { formatDate } = useSettings()
+  
   return [
     {
       id: "select",
@@ -325,10 +330,17 @@ export function createColumns(actions: ColumnActions): ColumnDef<Client>[] {
         )
       },
       cell: ({ row }) => {
-        const date = new Date(row.getValue("created_at"))
+        const client = row.original
+        const createdDate = row.getValue("created_at") as string
+        const date = createdDate ? new Date(createdDate) : undefined
+
         return (
-          <div className="text-sm text-muted-foreground whitespace-nowrap min-w-[100px]">
-            {date.toLocaleDateString()}
+          <div className="min-w-[120px] max-w-[140px]">
+            <DatePickerTable
+              date={date}
+              onSelect={(newDate) => actions.onDateChange(client, 'created_at', newDate)}
+              placeholder="Set client since"
+            />
           </div>
         )
       },

@@ -80,7 +80,7 @@ interface NewProject {
   client_id: string
   status: string
   start_date: Date | undefined
-  end_date: Date | undefined
+  due_date: Date | undefined
   budget: string
   expenses: string
   received: string
@@ -130,7 +130,7 @@ export default function ProjectsPage() {
     client_id: "",
     status: "active",
     start_date: undefined,
-    end_date: undefined,
+    due_date: undefined,
     budget: "",
     expenses: "",
     received: "",
@@ -200,7 +200,7 @@ export default function ProjectsPage() {
           name: project.name,
           status: project.status,
           start_date: project.start_date,
-          end_date: project.end_date,
+          due_date: project.due_date,
           budget: project.budget,
           expenses: project.expenses,
           received: project.payment_received, // Map payment_received to received
@@ -364,7 +364,7 @@ export default function ProjectsPage() {
       client_id: projectClient?.id || "",
       status: project.status,
       start_date: project.start_date ? new Date(project.start_date) : undefined,
-      end_date: project.end_date ? new Date(project.end_date) : undefined,
+      due_date: project.due_date ? new Date(project.due_date) : undefined,
       budget: project.budget?.toString() || "",
       expenses: project.expenses?.toString() || "",
       received: project.received?.toString() || "",
@@ -430,6 +430,33 @@ export default function ProjectsPage() {
     } catch (error) {
       console.error('Error updating project status:', error)
       toast.error(`Failed to update project status: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }
+
+  const handleDateChange = async (project: Project, field: 'start_date' | 'due_date', date: Date | undefined) => {
+    try {
+      if (isSupabaseConfigured()) {
+        const { error } = await supabase
+          .from('projects')
+          .update({ [field]: date ? date.toISOString().split('T')[0] : null })
+          .eq('id', project.id)
+
+        if (error) {
+          console.error('Error updating project date:', error)
+          throw new Error(error.message)
+        }
+      }
+
+      // Update local state
+      setProjects(projects.map(p => 
+        p.id === project.id ? { ...p, [field]: date ? date.toISOString().split('T')[0] : undefined } : p
+      ))
+
+      const fieldLabel = field === 'start_date' ? 'start date' : 'due date'
+      toast.success(`Project "${project.name}" ${fieldLabel} updated`)
+    } catch (error) {
+      console.error('Error updating project date:', error)
+      toast.error(`Failed to update project date: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 
@@ -566,7 +593,7 @@ export default function ProjectsPage() {
       client_id: "",
       status: "active",
       start_date: undefined,
-      end_date: undefined,
+      due_date: undefined,
       budget: "",
       expenses: "",
       received: "",
@@ -599,7 +626,7 @@ export default function ProjectsPage() {
               name: newProject.name,
               status: newProject.status,
               start_date: newProject.start_date ? newProject.start_date.toISOString().split('T')[0] : null,
-              end_date: newProject.end_date ? newProject.end_date.toISOString().split('T')[0] : null,
+              due_date: newProject.due_date ? newProject.due_date.toISOString().split('T')[0] : null,
               budget: budget || null,
               expenses: expenses,
               payment_received: received,
@@ -625,7 +652,7 @@ export default function ProjectsPage() {
             name: data[0].name,
             status: data[0].status,
             start_date: data[0].start_date,
-            end_date: data[0].end_date,
+            due_date: data[0].due_date,
             budget: data[0].budget,
             expenses: data[0].expenses,
             received: data[0].payment_received,
@@ -647,7 +674,7 @@ export default function ProjectsPage() {
             name: newProject.name,
             status: newProject.status,
             start_date: newProject.start_date ? newProject.start_date.toISOString() : undefined,
-            end_date: newProject.end_date ? newProject.end_date.toISOString() : undefined,
+            due_date: newProject.due_date ? newProject.due_date.toISOString() : undefined,
             budget: budget || undefined,
             expenses: expenses,
             received: received,
@@ -673,7 +700,7 @@ export default function ProjectsPage() {
               name: newProject.name,
               status: newProject.status,
               start_date: newProject.start_date ? newProject.start_date.toISOString().split('T')[0] : null,
-              end_date: newProject.end_date ? newProject.end_date.toISOString().split('T')[0] : null,
+              due_date: newProject.due_date ? newProject.due_date.toISOString().split('T')[0] : null,
               budget: budget || null,
               expenses: expenses,
               payment_received: received,
@@ -698,7 +725,7 @@ export default function ProjectsPage() {
             name: data[0].name,
             status: data[0].status,
             start_date: data[0].start_date,
-            end_date: data[0].end_date,
+            due_date: data[0].due_date,
             budget: data[0].budget,
             expenses: data[0].expenses,
             received: data[0].payment_received,
@@ -721,7 +748,7 @@ export default function ProjectsPage() {
             name: newProject.name,
             status: newProject.status,
             start_date: newProject.start_date ? newProject.start_date.toISOString() : undefined,
-            end_date: newProject.end_date ? newProject.end_date.toISOString() : undefined,
+            due_date: newProject.due_date ? newProject.due_date.toISOString() : undefined,
             budget: budget || undefined,
             expenses: expenses,
             received: received,
@@ -786,7 +813,7 @@ export default function ProjectsPage() {
         project.name,
         project.status,
         project.start_date || '',
-        project.end_date || '',
+        project.due_date || '',
         project.budget || '',
         project.expenses || '',
         project.received || '',
@@ -814,12 +841,16 @@ export default function ProjectsPage() {
     onCreateInvoice: handleCreateInvoice,
     onDeleteProject: handleDeleteProject,
     onStatusChange: handleStatusChange,
+    onDateChange: handleDateChange,
   })
 
   // Summary calculations
   const totalProjects = projects.length
   const activeProjects = projects.filter((p) => p.status === "active").length
+  const pipelineProjects = projects.filter((p) => p.status === "pipeline").length
   const completedProjects = projects.filter((p) => p.status === "completed").length
+  const onHoldProjects = projects.filter((p) => p.status === "on_hold").length
+  const cancelledProjects = projects.filter((p) => p.status === "cancelled").length
   const totalBudget = projects.reduce((sum, p) => sum + (p.budget || 0), 0)
   const totalExpenses = projects.reduce((sum, p) => sum + (p.expenses || 0), 0)
   const totalReceived = projects.reduce((sum, p) => sum + (p.received || 0), 0)
@@ -860,24 +891,36 @@ export default function ProjectsPage() {
                 <h3 className="tracking-tight text-sm font-normal text-muted-foreground">Total Projects</h3>
               </div>
               <div className="text-2xl font-normal">{totalProjects}</div>
+              <div className="text-xs text-muted-foreground mt-1">
+                {activeProjects} Active • {pipelineProjects} Pipeline • {completedProjects} Completed
+              </div>
             </div>
             <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
               <div className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <h3 className="tracking-tight text-sm font-normal text-muted-foreground">Total Budget</h3>
+                <h3 className="tracking-tight text-sm font-normal text-muted-foreground">Active Projects</h3>
               </div>
-              <div className="text-2xl font-normal">{formatCurrency(totalBudget)}</div>
+              <div className="text-2xl font-normal text-blue-600">{activeProjects}</div>
+              <div className="text-xs text-muted-foreground mt-1">
+                {pipelineProjects} in Pipeline • {onHoldProjects} On Hold
+              </div>
             </div>
             <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
               <div className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <h3 className="tracking-tight text-sm font-normal text-muted-foreground">Total Received</h3>
               </div>
               <div className="text-2xl font-normal text-green-600">{formatCurrency(totalReceived)}</div>
+              <div className="text-xs text-muted-foreground mt-1">
+                {formatCurrency(totalBudget)} Total Budget
+              </div>
             </div>
             <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
               <div className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <h3 className="tracking-tight text-sm font-normal text-muted-foreground">Total Pending</h3>
               </div>
               <div className="text-2xl font-normal text-yellow-600">{formatCurrency(totalPending)}</div>
+              <div className="text-xs text-muted-foreground mt-1">
+                {cancelledProjects} Cancelled Projects
+              </div>
             </div>
           </div>
         )}
@@ -1037,6 +1080,12 @@ export default function ProjectsPage() {
                         <span>Active</span>
                       </div>
                     </SelectItem>
+                    <SelectItem value="pipeline">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-purple-500 rounded-full" />
+                        <span>Pipeline</span>
+                      </div>
+                    </SelectItem>
                     <SelectItem value="on_hold">
                       <div className="flex items-center gap-2">
                         <div className="w-2 h-2 bg-yellow-500 rounded-full" />
@@ -1115,11 +1164,11 @@ export default function ProjectsPage() {
                 />
               </div>
               <div>
-                <Label>End Date</Label>
+                <Label>Due Date</Label>
                 <DatePicker
-                  date={newProject.end_date}
-                  onSelect={(date) => setNewProject({ ...newProject, end_date: date })}
-                  placeholder="Pick end date"
+                  date={newProject.due_date}
+                  onSelect={(date) => setNewProject({ ...newProject, due_date: date })}
+                  placeholder="Pick due date"
                 />
               </div>
             </div>
@@ -1273,6 +1322,12 @@ export default function ProjectsPage() {
                         <span>Active</span>
                       </div>
                     </SelectItem>
+                    <SelectItem value="pipeline">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-purple-500 rounded-full" />
+                        <span>Pipeline</span>
+                      </div>
+                    </SelectItem>
                     <SelectItem value="on_hold">
                       <div className="flex items-center gap-2">
                         <div className="w-2 h-2 bg-yellow-500 rounded-full" />
@@ -1350,10 +1405,10 @@ export default function ProjectsPage() {
                 />
               </div>
               <div>
-                <Label htmlFor="add-project-end-date">End Date</Label>
+                <Label htmlFor="add-project-due-date">Due Date</Label>
                 <DatePicker
-                  date={newProject.end_date}
-                  onSelect={(date) => setNewProject({ ...newProject, end_date: date })}
+                  date={newProject.due_date}
+                  onSelect={(date) => setNewProject({ ...newProject, due_date: date })}
                 />
               </div>
             </div>

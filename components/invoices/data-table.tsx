@@ -54,6 +54,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { useTablePreferences } from "@/hooks/use-table-preferences"
 
 
 interface DataTableProps<TData, TValue> {
@@ -86,14 +87,25 @@ export function DataTable<TData, TValue>({
   const [batchDeleteOpen, setBatchDeleteOpen] = React.useState(false)
   const [itemsToDelete, setItemsToDelete] = React.useState<TData[]>([])
 
-  // Load column visibility from localStorage on mount
+  // Use table preferences hook for account-level persistence
+  const { getTablePreference, updateTablePreference, isLoading: preferencesLoading } = useTablePreferences()
+  const TABLE_NAME = "invoices-table"
+
+  // Memoize the preference functions to prevent infinite loops
+  const getTablePreferenceMemo = React.useCallback(getTablePreference, [getTablePreference])
+  const updateTablePreferenceMemo = React.useCallback(updateTablePreference, [updateTablePreference])
+
+  // Track if preferences have been loaded to prevent saving during initial load
+  const [preferencesLoaded, setPreferencesLoaded] = React.useState(false)
+
+  // Load column visibility from table preferences on mount
   React.useEffect(() => {
-    const savedVisibility = localStorage.getItem("invoices-table-column-visibility")
-    if (savedVisibility) {
-      try {
-        setColumnVisibility(JSON.parse(savedVisibility))
-      } catch (error) {
-        // If parsing fails, use defaults
+    if (!preferencesLoading && !preferencesLoaded) {
+      const savedVisibility = getTablePreferenceMemo(TABLE_NAME, "column_visibility", {})
+      if (Object.keys(savedVisibility).length > 0) {
+        setColumnVisibility(savedVisibility)
+      } else {
+        // Set responsive defaults for first-time users
         const defaults = {
           amount: window.innerWidth > 768,
           due_date: window.innerWidth > 1024,
@@ -101,23 +113,33 @@ export function DataTable<TData, TValue>({
         }
         setColumnVisibility(defaults)
       }
-    } else {
-      // Set responsive defaults for first-time users
-      const defaults = {
-        amount: window.innerWidth > 768,
-        due_date: window.innerWidth > 1024,
-        created_at: window.innerWidth > 1200,
-      }
-      setColumnVisibility(defaults)
+      setPreferencesLoaded(true)
     }
-  }, [])
+  }, [preferencesLoading, preferencesLoaded, getTablePreferenceMemo])
 
-  // Save column visibility to localStorage when it changes
+  // Save column visibility to table preferences when it changes
   React.useEffect(() => {
-    if (Object.keys(columnVisibility).length > 0) {
-      localStorage.setItem("invoices-table-column-visibility", JSON.stringify(columnVisibility))
+    if (!preferencesLoading && preferencesLoaded && Object.keys(columnVisibility).length > 0) {
+      updateTablePreferenceMemo(TABLE_NAME, "column_visibility", columnVisibility)
     }
-  }, [columnVisibility])
+  }, [columnVisibility, preferencesLoading, preferencesLoaded, updateTablePreferenceMemo])
+
+  // Load sorting preferences
+  React.useEffect(() => {
+    if (!preferencesLoading && !preferencesLoaded) {
+      const savedSorting = getTablePreferenceMemo(TABLE_NAME, "sorting", [])
+      if (savedSorting.length > 0) {
+        setSorting(savedSorting)
+      }
+    }
+  }, [preferencesLoading, preferencesLoaded, getTablePreferenceMemo])
+
+  // Save sorting preferences when they change
+  React.useEffect(() => {
+    if (!preferencesLoading && preferencesLoaded && sorting.length > 0) {
+      updateTablePreferenceMemo(TABLE_NAME, "sorting", sorting)
+    }
+  }, [sorting, preferencesLoading, preferencesLoaded, updateTablePreferenceMemo])
 
   const table = useReactTable({
     data,

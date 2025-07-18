@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { useAuth } from "@/components/auth-provider"
 import { useToast } from "@/hooks/use-toast"
@@ -8,6 +8,8 @@ import { useToast } from "@/hooks/use-toast"
 interface TablePreferences {
   [tableName: string]: {
     column_visibility?: Record<string, boolean>
+    sorting?: any[]
+    pagination?: { pageIndex: number; pageSize: number }
     [key: string]: any
   }
 }
@@ -17,6 +19,10 @@ export function useTablePreferences() {
   const [preferences, setPreferences] = useState<TablePreferences>({})
   const [isLoading, setIsLoading] = useState(true)
   const { toast } = useToast()
+  
+  // Use ref to track current preferences to prevent function recreation
+  const preferencesRef = useRef<TablePreferences>({})
+  preferencesRef.current = preferences
 
   // Load preferences from database
   const loadPreferences = useCallback(async () => {
@@ -37,15 +43,46 @@ export function useTablePreferences() {
       return
     }
 
-    // For real users, always use localStorage fallback to avoid 400 errors
-    // until the database migration is properly completed
     try {
-      const localPrefs = localStorage.getItem('table-preferences')
-      setPreferences(localPrefs ? JSON.parse(localPrefs) : {})
-    } catch (e) {
-      setPreferences({})
+      // Load from database
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('table_preferences')
+        .eq('id', user.id)
+        .single()
+
+      if (error) {
+        console.error('Error loading table preferences:', error)
+        // Fallback to localStorage
+        try {
+          const localPrefs = localStorage.getItem('table-preferences')
+          setPreferences(localPrefs ? JSON.parse(localPrefs) : {})
+        } catch (e) {
+          setPreferences({})
+        }
+      } else {
+        const dbPreferences = data?.table_preferences || {}
+        setPreferences(dbPreferences)
+        
+        // Also update localStorage as backup
+        try {
+          localStorage.setItem('table-preferences', JSON.stringify(dbPreferences))
+        } catch (e) {
+          // localStorage failed, continue with database preferences
+        }
+      }
+    } catch (error) {
+      console.error('Unexpected error loading table preferences:', error)
+      // Fallback to localStorage
+      try {
+        const localPrefs = localStorage.getItem('table-preferences')
+        setPreferences(localPrefs ? JSON.parse(localPrefs) : {})
+      } catch (e) {
+        setPreferences({})
+      }
+    } finally {
+      setIsLoading(false)
     }
-    setIsLoading(false)
   }, [user])
 
   // Save preferences to database
@@ -54,15 +91,44 @@ export function useTablePreferences() {
       return
     }
 
-    // Always use localStorage to avoid database errors until migration is complete
+    // Always update localStorage as backup
     try {
       localStorage.setItem('table-preferences', JSON.stringify(newPreferences))
-      setPreferences(newPreferences)
     } catch (e) {
-      // Even localStorage failed, just continue
-      setPreferences(newPreferences)
+      console.warn('Failed to save to localStorage:', e)
     }
-  }, [user])
+
+    setPreferences(newPreferences)
+
+    // If using mock user or Supabase not configured, skip database save
+    if (!isSupabaseConfigured() || user.id === 'mock-user-id') {
+      return
+    }
+
+    try {
+      // Save to database
+      const { error } = await supabase
+        .from('profiles')
+        .update({ table_preferences: newPreferences })
+        .eq('id', user.id)
+
+      if (error) {
+        console.error('Error saving table preferences:', error)
+        toast({
+          title: "Warning",
+          description: "Table preferences saved locally but failed to sync to server.",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error('Unexpected error saving table preferences:', error)
+      toast({
+        title: "Warning",
+        description: "Table preferences saved locally but failed to sync to server.",
+        variant: "destructive",
+      })
+    }
+  }, [user, toast])
 
   // Update specific table preferences
   const updateTablePreference = useCallback(async (
@@ -71,15 +137,15 @@ export function useTablePreferences() {
     value: any
   ) => {
     const newPreferences = {
-      ...preferences,
+      ...preferencesRef.current,
       [tableName]: {
-        ...preferences[tableName],
+        ...preferencesRef.current[tableName],
         [key]: value
       }
     }
     
     await savePreferences(newPreferences)
-  }, [preferences, savePreferences])
+  }, [savePreferences])
 
   // Get preferences for a specific table
   const getTablePreference = useCallback((

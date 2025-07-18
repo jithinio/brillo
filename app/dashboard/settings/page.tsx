@@ -11,12 +11,14 @@ import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
+import { PhoneInput } from "@/components/ui/phone-input"
 import { Save, Bell, Shield, CreditCard, Upload, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { PageHeader, PageContent, PageTitle } from "@/components/page-header"
 import { setDefaultCurrency, getDefaultCurrency } from "@/lib/currency"
 import { useSettings } from "@/components/settings-provider"
 import { uploadCompanyLogo } from "@/lib/company-settings"
+import { DATE_FORMAT_OPTIONS, type DateFormat } from "@/lib/date-format"
 
 export default function SettingsPage() {
   const [notifications, setNotifications] = useState({
@@ -33,6 +35,7 @@ export default function SettingsPage() {
   const [generalSettings, setGeneralSettings] = useState({
     defaultCurrency: "USD",
     invoicePrefix: "INV",
+    dateFormat: "MM/DD/YYYY" as DateFormat,
   })
 
   // Company information state
@@ -81,6 +84,7 @@ export default function SettingsPage() {
         ...prev,
         defaultCurrency: parsed.defaultCurrency || settings.defaultCurrency || prev.defaultCurrency,
         invoicePrefix: parsed.invoicePrefix || settings.invoicePrefix || prev.invoicePrefix,
+        dateFormat: parsed.dateFormat || settings.dateFormat || prev.dateFormat,
       }))
     } else {
       // Use settings provider values (from database) as fallback
@@ -88,6 +92,7 @@ export default function SettingsPage() {
         ...prev,
         defaultCurrency: settings.defaultCurrency || prev.defaultCurrency,
         invoicePrefix: settings.invoicePrefix || prev.invoicePrefix,
+        dateFormat: settings.dateFormat || prev.dateFormat,
       }))
     }
     
@@ -168,6 +173,7 @@ export default function SettingsPage() {
       // Update ALL settings in the global provider (which syncs to database)
       updateSetting('defaultCurrency', generalSettings.defaultCurrency)
       updateSetting('invoicePrefix', generalSettings.invoicePrefix)
+      updateSetting('dateFormat', generalSettings.dateFormat)
       
       // Update company information
       updateSetting('companyName', companyInfo.companyName)
@@ -179,6 +185,13 @@ export default function SettingsPage() {
       updateSetting('companyLogo', companyLogo)
       
       // Update tax information
+      console.log('Saving tax settings:', {
+        taxRate: parseFloat(taxInfo.defaultTaxRate),
+        taxName: taxInfo.taxName,
+        includeTaxInPrices: taxInfo.includeTaxInPrices,
+        autoCalculateTax: taxInfo.autoCalculateTax
+      })
+      
       updateSetting('taxRate', parseFloat(taxInfo.defaultTaxRate))
       updateSetting('taxName', taxInfo.taxName)
       updateSetting('includeTaxInPrices', taxInfo.includeTaxInPrices)
@@ -350,6 +363,25 @@ export default function SettingsPage() {
                     This prefix will be used for all invoice numbers (e.g., {generalSettings.invoicePrefix || 'INV'}-2024-001).
                   </p>
                 </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="dateFormat">Date Format</Label>
+                  <Select value={generalSettings.dateFormat} onValueChange={(value) => setGeneralSettings({...generalSettings, dateFormat: value as DateFormat})}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DATE_FORMAT_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label} - {option.example}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Select how dates should be displayed in the application.
+                  </p>
+                </div>
               </CardContent>
             </Card>
 
@@ -438,10 +470,11 @@ export default function SettingsPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="companyPhone">Phone</Label>
-                      <Input 
+                      <PhoneInput 
                         id="companyPhone" 
                         value={companyInfo.companyPhone} 
-                        onChange={(e) => setCompanyInfo({...companyInfo, companyPhone: e.target.value})}
+                        onChange={(value) => setCompanyInfo({...companyInfo, companyPhone: value})}
+                        placeholder="Enter company phone"
                       />
                     </div>
                     <div className="space-y-2">

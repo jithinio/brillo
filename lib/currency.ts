@@ -49,7 +49,10 @@ export function formatCurrency(amount: number, currencyCode?: string): string {
   const currency = currencyCode || getDefaultCurrency()
   const config = CURRENCIES[currency] || CURRENCIES.USD
 
-  const formattedAmount = amount.toFixed(config.decimals)
+  // Add thousand separators
+  const parts = amount.toFixed(config.decimals).split('.')
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+  const formattedAmount = parts.join('.')
 
   if (config.position === "before") {
     return `${config.symbol}${formattedAmount}`

@@ -16,6 +16,7 @@ export interface CompanySettings {
   include_tax_in_prices: boolean
   auto_calculate_tax: boolean
   invoice_prefix: string
+  date_format?: string
   invoice_template?: any // JSON object for invoice template settings
   created_at?: string
   updated_at?: string
@@ -64,6 +65,8 @@ export async function getCompanySettings(): Promise<CompanySettings | null> {
 
 export async function upsertCompanySettings(settings: Partial<CompanySettings>): Promise<CompanySettings | null> {
   try {
+    console.log('upsertCompanySettings called with:', settings)
+    
     if (!isSupabaseConfigured()) {
       console.log('Supabase not configured, cannot save settings')
       return null
@@ -99,6 +102,9 @@ export async function upsertCompanySettings(settings: Partial<CompanySettings>):
 
     let result
     if (existingSettings) {
+      console.log('Updating existing settings for user:', user.id)
+      console.log('Settings data to update:', settingsData)
+      
       // Update all existing settings for this user (handles duplicates)
       result = await supabase
         .from('company_settings')
@@ -115,6 +121,9 @@ export async function upsertCompanySettings(settings: Partial<CompanySettings>):
         return sortedData[0]
       }
     } else {
+      console.log('Inserting new settings for user:', user.id)
+      console.log('Settings data to insert:', { ...settingsData, created_at: new Date().toISOString() })
+      
       // Insert new settings
       result = await supabase
         .from('company_settings')
@@ -132,8 +141,11 @@ export async function upsertCompanySettings(settings: Partial<CompanySettings>):
 
     if (result.error) {
       console.error('Error upserting company settings:', result.error)
+      console.error('Error details:', result.error)
       return null
     }
+    
+    console.log('Database operation successful:', result.data)
 
     return null
   } catch (err) {

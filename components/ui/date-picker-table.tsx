@@ -13,34 +13,32 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 
-interface DatePickerProps {
+interface DatePickerTableProps {
   date?: Date
   onSelect?: (date: Date | undefined) => void
   placeholder?: string
   disabled?: boolean
-  size?: "default" | "sm"
 }
 
-export function DatePicker({ 
+export function DatePickerTable({ 
   date, 
   onSelect, 
   placeholder = "Pick a date", 
-  disabled,
-  size = "default"
-}: DatePickerProps) {
+  disabled
+}: DatePickerTableProps) {
   return (
     <Popover>
       <PopoverTrigger asChild>
         <Button
-          variant="outline"
-          size={size}
+          variant="ghost"
+          size="sm"
           className={cn(
-            "flex justify-start text-left font-normal w-full min-w-0",
+            "flex justify-start text-left font-normal w-full min-w-0 h-8 px-2",
             !date && "text-muted-foreground"
           )}
           disabled={disabled}
         >
-          <CalendarIcon className="mr-2 h-4 w-4" />
+          <CalendarIcon className="mr-2 h-3 w-3" />
           {date ? format(date, "MMM d, yyyy") : <span>{placeholder}</span>}
         </Button>
       </PopoverTrigger>

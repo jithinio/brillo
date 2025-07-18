@@ -16,6 +16,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { PageHeader, PageContent } from "@/components/page-header"
 import { toast } from "sonner"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
+import { parseFormattedDate, type DateFormat } from "@/lib/date-format"
+import { useSettings } from "@/components/settings-provider"
 
 interface CsvData {
   headers: string[]
@@ -44,7 +46,7 @@ const PROJECT_FIELDS = [
   { key: 'name', label: 'Project Name', required: true },
   { key: 'status', label: 'Status', required: false },
   { key: 'start_date', label: 'Start Date', required: false },
-  { key: 'end_date', label: 'End Date', required: false },
+  { key: 'due_date', label: 'Due Date', required: false },
   { key: 'budget', label: 'Budget', required: false },
   { key: 'description', label: 'Description', required: false },
   
@@ -64,6 +66,8 @@ const PROJECT_FIELDS = [
   { key: 'actual_hours', label: 'Actual Hours', required: false },
   { key: 'progress', label: 'Progress %', required: false },
   { key: 'notes', label: 'Notes', required: false },
+  
+  // Note: created_at is automatically set to current timestamp and should not be mapped from CSV
 ]
 
 // Status mapping - map various status names to standardized statuses
@@ -88,6 +92,28 @@ const STATUS_MAPPING: { [key: string]: string } = {
   'live': 'active',
   'underway': 'active',
   'proceeding': 'active',
+  
+  // Pipeline variants - Map to 'pipeline' (database value)
+  'pipeline': 'pipeline',
+  'lead': 'pipeline',
+  'prospect': 'pipeline',
+  'opportunity': 'pipeline',
+  'potential': 'pipeline',
+  'quoted': 'pipeline',
+  'proposal': 'pipeline',
+  'negotiation': 'pipeline',
+  'discussion': 'pipeline',
+  'review': 'pipeline',
+  'pending approval': 'pipeline',
+  'awaiting decision': 'pipeline',
+  'in discussion': 'pipeline',
+  'under review': 'pipeline',
+  'being evaluated': 'pipeline',
+  'consideration': 'pipeline',
+  'evaluation': 'pipeline',
+  'assessment': 'pipeline',
+  'analysis': 'pipeline',
+  'feasibility': 'pipeline',
   
   // Completed variants
   'completed': 'completed',
@@ -139,24 +165,24 @@ const STATUS_MAPPING: { [key: string]: string } = {
   'failed': 'cancelled',
   'unsuccessful': 'cancelled',
   
-  // Planning variants - these will be mapped to 'active' since there's no planning status in the DB
-  'planning': 'active',
-  'planned': 'active',
-  'not started': 'active',
-  'not_started': 'active',
-  'notstarted': 'active',
-  'scheduled': 'active',
-  'upcoming': 'active',
-  'backlog': 'active',
-  'draft': 'active',
-  'proposal': 'active',
-  'new': 'active',
-  'created': 'active',
-  'initiated': 'active',
+  // Planning variants - these will be mapped to 'pipeline' since they're in the sales pipeline
+  'planning': 'pipeline',
+  'planned': 'pipeline',
+  'not started': 'pipeline',
+  'not_started': 'pipeline',
+  'notstarted': 'pipeline',
+  'scheduled': 'pipeline',
+  'upcoming': 'pipeline',
+  'backlog': 'pipeline',
+  'draft': 'pipeline',
+  'new': 'pipeline',
+  'created': 'pipeline',
+  'initiated': 'pipeline',
 }
 
 const STANDARD_STATUSES = [
   { value: 'active', label: 'Active / In Progress' },
+  { value: 'pipeline', label: 'Pipeline' },
   { value: 'completed', label: 'Completed' },
   { value: 'on_hold', label: 'On Hold' },
   { value: 'cancelled', label: 'Cancelled' },
@@ -224,250 +250,9 @@ const CLIENT_FIELDS = [
   { key: 'client_country', label: 'Client Country', required: false },
 ]
 
-// Helper function to parse various date formats
-const parseFlexibleDate = (dateString: string): string | null => {
-  if (!dateString || dateString === 'null' || dateString === 'N/A') {
-    return null
-  }
-
-  const cleanDate = dateString.trim()
-  
-  // Try different date parsing approaches
-  const attempts = [
-    // ISO format (YYYY-MM-DD)
-    () => {
-      const isoMatch = cleanDate.match(/^\d{4}-\d{2}-\d{2}$/)
-      if (isoMatch) {
-        const date = new Date(cleanDate)
-        return isNaN(date.getTime()) ? null : date.toISOString().split('T')[0]
-      }
-      return null
-    },
-    
-    // MM/DD/YYYY or DD/MM/YYYY
-    () => {
-      const slashMatch = cleanDate.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
-      if (slashMatch) {
-        const [, part1, part2, year] = slashMatch
-        const month1 = parseInt(part1, 10)
-        const day1 = parseInt(part2, 10)
-        const month2 = parseInt(part2, 10)
-        const day2 = parseInt(part1, 10)
-        
-        // Try MM/DD/YYYY first (US format)
-        if (month1 >= 1 && month1 <= 12 && day1 >= 1 && day1 <= 31) {
-          const date = new Date(parseInt(year), month1 - 1, day1)
-          if (!isNaN(date.getTime())) {
-            return date.toISOString().split('T')[0]
-          }
-        }
-        
-        // Try DD/MM/YYYY (international format)
-        if (month2 >= 1 && month2 <= 12 && day2 >= 1 && day2 <= 31) {
-          const date = new Date(parseInt(year), month2 - 1, day2)
-          if (!isNaN(date.getTime())) {
-            return date.toISOString().split('T')[0]
-          }
-        }
-      }
-      return null
-    },
-    
-    // Month DD, YYYY (e.g., "June 12, 2024")
-    () => {
-      const monthNames = [
-        'january', 'february', 'march', 'april', 'may', 'june',
-        'july', 'august', 'september', 'october', 'november', 'december'
-      ]
-      const monthAbbr = [
-        'jan', 'feb', 'mar', 'apr', 'may', 'jun',
-        'jul', 'aug', 'sep', 'oct', 'nov', 'dec'
-      ]
-      
-      const lowerDate = cleanDate.toLowerCase()
-      
-      // Try different patterns for month names
-      const patterns = [
-        /([a-z]+)\s+(\d{1,2}),?\s+(\d{4})/,  // "June 25, 2025" or "June 25 2025"
-        /([a-z]+)\s+(\d{1,2})\s*,\s*(\d{4})/, // "June 25, 2025" with flexible spacing
-        /(\d{1,2})\s+([a-z]+)\s+(\d{4})/,     // "25 June 2025"
-      ]
-      
-      for (const pattern of patterns) {
-        const monthMatch = lowerDate.match(pattern)
-        if (monthMatch) {
-          let monthStr, dayStr, yearStr
-          
-          if (pattern.source.includes('([a-z]+)\\s+(\\d{1,2})')) {
-            // Month first format: "June 25, 2025"
-            [, monthStr, dayStr, yearStr] = monthMatch
-          } else {
-            // Day first format: "25 June 2025"
-            [, dayStr, monthStr, yearStr] = monthMatch
-          }
-          
-          const monthIndex = monthNames.indexOf(monthStr) !== -1 
-            ? monthNames.indexOf(monthStr)
-            : monthAbbr.indexOf(monthStr)
-          
-          if (monthIndex !== -1) {
-            const date = new Date(parseInt(yearStr), monthIndex, parseInt(dayStr))
-            if (!isNaN(date.getTime())) {
-              return date.toISOString().split('T')[0]
-            }
-          }
-        }
-      }
-      return null
-    },
-    
-    // DD-MM-YYYY or MM-DD-YYYY
-    () => {
-      const dashMatch = cleanDate.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/)
-      if (dashMatch) {
-        const [, part1, part2, year] = dashMatch
-        const month1 = parseInt(part1, 10)
-        const day1 = parseInt(part2, 10)
-        const month2 = parseInt(part2, 10)
-        const day2 = parseInt(part1, 10)
-        
-        // Try MM-DD-YYYY first
-        if (month1 >= 1 && month1 <= 12 && day1 >= 1 && day1 <= 31) {
-          const date = new Date(parseInt(year), month1 - 1, day1)
-          if (!isNaN(date.getTime())) {
-            return date.toISOString().split('T')[0]
-          }
-        }
-        
-        // Try DD-MM-YYYY
-        if (month2 >= 1 && month2 <= 12 && day2 >= 1 && day2 <= 31) {
-          const date = new Date(parseInt(year), month2 - 1, day2)
-          if (!isNaN(date.getTime())) {
-            return date.toISOString().split('T')[0]
-          }
-        }
-      }
-      return null
-    },
-    
-    // Last resort - try native Date parsing
-    () => {
-      const date = new Date(cleanDate)
-      return isNaN(date.getTime()) ? null : date.toISOString().split('T')[0]
-    }
-  ]
-
-  // Try each parsing method
-  for (const attempt of attempts) {
-    const result = attempt()
-    if (result) {
-      console.log(`✅ Successfully parsed "${dateString}" as "${result}"`)
-      return result
-    }
-  }
-
-  console.warn(`❌ Could not parse date: "${dateString}"`)
-  return null
-}
-
-// Helper function to normalize status values
-const normalizeStatus = (statusValue: string): string => {
-  if (!statusValue) return 'active'
-  
-  const normalizedInput = statusValue.toLowerCase().trim()
-  const mappedStatus = STATUS_MAPPING[normalizedInput]
-  
-  if (mappedStatus) {
-    console.log(`✅ Status "${statusValue}" mapped to "${mappedStatus}"`)
-    return mappedStatus
-  }
-  
-  // If no mapping found, return original value cleaned up
-  const cleanStatus = normalizedInput.replace(/\s+/g, '_')
-  console.log(`⚠️ Status "${statusValue}" not recognized, using "${cleanStatus}"`)
-  return cleanStatus
-}
-
-// Helper function to normalize payment status values
-const normalizePaymentStatus = (statusValue: string): string => {
-  if (!statusValue) return 'pending'
-  
-  const normalizedInput = statusValue.toLowerCase().trim()
-  const mappedStatus = PAYMENT_STATUS_MAPPING[normalizedInput]
-  
-  if (mappedStatus) {
-    console.log(`✅ Payment status "${statusValue}" mapped to "${mappedStatus}"`)
-    return mappedStatus
-  }
-  
-  // If no mapping found, return original value cleaned up
-  const cleanStatus = normalizedInput.replace(/\s+/g, '_')
-  console.log(`⚠️ Payment status "${statusValue}" not recognized, using "${cleanStatus}"`)
-  return cleanStatus
-}
-
-// Helper function to normalize currency values
-const normalizeCurrency = (currencyValue: string): string => {
-  if (!currencyValue) return 'USD'
-  
-  const normalizedInput = currencyValue.toUpperCase().trim()
-  
-  // Remove common currency symbols and normalize
-  const currencyMap: { [key: string]: string } = {
-    '$': 'USD',
-    'USD': 'USD',
-    'DOLLAR': 'USD',
-    'DOLLARS': 'USD',
-    'US': 'USD',
-    'USDOLLAR': 'USD',
-    '€': 'EUR',
-    'EUR': 'EUR',
-    'EURO': 'EUR',
-    'EUROS': 'EUR',
-    '£': 'GBP',
-    'GBP': 'GBP',
-    'POUND': 'GBP',
-    'POUNDS': 'GBP',
-    'STERLING': 'GBP',
-    '¥': 'JPY',
-    'JPY': 'JPY',
-    'YEN': 'JPY',
-    'JAPANESE': 'JPY',
-    'CAD': 'CAD',
-    'CANADIAN': 'CAD',
-    'AUD': 'AUD',
-    'AUSTRALIAN': 'AUD',
-    'CHF': 'CHF',
-    'SWISS': 'CHF',
-    'CNY': 'CNY',
-    'CHINESE': 'CNY',
-    'YUAN': 'CNY',
-    'INR': 'INR',
-    'INDIAN': 'INR',
-    'RUPEE': 'INR',
-    'RUPEES': 'INR',
-  }
-  
-  const mappedCurrency = currencyMap[normalizedInput]
-  
-  if (mappedCurrency) {
-    console.log(`✅ Currency "${currencyValue}" mapped to "${mappedCurrency}"`)
-    return mappedCurrency
-  }
-  
-  // If no mapping found, return USD as default
-  console.log(`⚠️ Currency "${currencyValue}" not recognized, using "USD"`)
-  return 'USD'
-}
-
-const SAMPLE_CSV = `name,status,start_date,end_date,budget,expenses,revenue,currency,payment_status,invoice_amount,payment_received,payment_pending,client_name,client_company,client_email,client_phone,description
-Website Redesign,active,2024-01-15,2024-03-15,15000,2500,12000,USD,partial,12000,7500,4500,John Smith,Acme Corp,john@acme.com,+1234567890,Complete website redesign with modern UI/UX
-Mobile App Development,completed,2023-10-01,2024-01-31,45000,8500,45000,USD,paid,45000,45000,0,Sarah Johnson,Tech Solutions,sarah@tech.com,+1987654321,Native mobile app for iOS and Android
-E-commerce Platform,on_hold,2024-02-01,2024-06-30,32000,1200,25000,EUR,pending,25000,10000,15000,Mike Brown,Global LLC,mike@global.com,+1555666777,Custom e-commerce solution with payment integration
-Marketing Campaign,active,2024-03-01,2024-05-31,8000,1500,7500,GBP,overdue,7500,4000,3500,Emily Davis,Creative Agency,emily@creative.com,+1444555666,Digital marketing campaign for product launch`
-
 export default function ProjectImportPage() {
   const router = useRouter()
+  const { settings } = useSettings()
   const fileInputRef = useRef<HTMLInputElement>(null)
   
   const [step, setStep] = useState<'upload' | 'mapping' | 'client-confirm' | 'importing' | 'complete'>('upload')
@@ -486,6 +271,266 @@ export default function ProjectImportPage() {
     clients: { success: 0, errors: 0, total: 0 }
   })
   const [errors, setErrors] = useState<string[]>([])
+
+  // Helper function to parse various date formats
+  const parseFlexibleDate = (dateString: string): string | null => {
+    if (!dateString || dateString === 'null' || dateString === 'N/A') {
+      return null
+    }
+
+    const cleanDate = dateString.trim()
+    
+    // Try parsing with user's preferred format first
+    const userFormat = settings.dateFormat as DateFormat
+    const parsedWithUserFormat = parseFormattedDate(cleanDate, userFormat)
+    if (parsedWithUserFormat) {
+      const year = parsedWithUserFormat.getFullYear()
+      const month = (parsedWithUserFormat.getMonth() + 1).toString().padStart(2, '0')
+      const day = parsedWithUserFormat.getDate().toString().padStart(2, '0')
+      console.log(`✅ Parsed "${dateString}" using user format "${userFormat}" as "${year}-${month}-${day}"`)
+      return `${year}-${month}-${day}`
+    }
+    
+    // Try different date parsing approaches as fallback
+    const attempts = [
+      // ISO format (YYYY-MM-DD)
+      () => {
+        const isoMatch = cleanDate.match(/^\d{4}-\d{2}-\d{2}$/)
+        if (isoMatch) {
+          const [year, month, day] = cleanDate.split('-').map(Number)
+          // Validate the date
+          const date = new Date(year, month - 1, day)
+          if (date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day) {
+            return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`
+          }
+        }
+        return null
+      },
+      
+      // MM/DD/YYYY or DD/MM/YYYY
+      () => {
+        const slashMatch = cleanDate.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+        if (slashMatch) {
+          const [, part1, part2, year] = slashMatch
+          const month1 = parseInt(part1, 10)
+          const day1 = parseInt(part2, 10)
+          const month2 = parseInt(part2, 10)
+          const day2 = parseInt(part1, 10)
+          
+          // Try MM/DD/YYYY first (US format)
+          if (month1 >= 1 && month1 <= 12 && day1 >= 1 && day1 <= 31) {
+            const date = new Date(parseInt(year), month1 - 1, day1)
+            if (date.getFullYear() === parseInt(year) && date.getMonth() === month1 - 1 && date.getDate() === day1) {
+              return `${year}-${month1.toString().padStart(2, '0')}-${day1.toString().padStart(2, '0')}`
+            }
+          }
+          
+          // Try DD/MM/YYYY (international format)
+          if (month2 >= 1 && month2 <= 12 && day2 >= 1 && day2 <= 31) {
+            const date = new Date(parseInt(year), month2 - 1, day2)
+            if (date.getFullYear() === parseInt(year) && date.getMonth() === month2 - 1 && date.getDate() === day2) {
+              return `${year}-${month2.toString().padStart(2, '0')}-${day2.toString().padStart(2, '0')}`
+            }
+          }
+        }
+        return null
+      },
+      
+      // Month DD, YYYY (e.g., "June 12, 2024")
+      () => {
+        const monthNames = [
+          'january', 'february', 'march', 'april', 'may', 'june',
+          'july', 'august', 'september', 'october', 'november', 'december'
+        ]
+        const monthAbbr = [
+          'jan', 'feb', 'mar', 'apr', 'may', 'jun',
+          'jul', 'aug', 'sep', 'oct', 'nov', 'dec'
+        ]
+        
+        const lowerDate = cleanDate.toLowerCase()
+        
+        // Try different patterns for month names
+        const patterns = [
+          /([a-z]+)\s+(\d{1,2}),?\s+(\d{4})/,  // "June 25, 2025" or "June 25 2025"
+          /([a-z]+)\s+(\d{1,2})\s*,\s*(\d{4})/, // "June 25, 2025" with flexible spacing
+          /(\d{1,2})\s+([a-z]+)\s+(\d{4})/,     // "25 June 2025"
+        ]
+        
+        for (const pattern of patterns) {
+          const monthMatch = lowerDate.match(pattern)
+          if (monthMatch) {
+            let monthStr, dayStr, yearStr
+            
+            if (pattern.source.includes('([a-z]+)\\s+(\\d{1,2})')) {
+              // Month first format: "June 25, 2025"
+              [, monthStr, dayStr, yearStr] = monthMatch
+            } else {
+              // Day first format: "25 June 2025"
+              [, dayStr, monthStr, yearStr] = monthMatch
+            }
+            
+            const monthIndex = monthNames.indexOf(monthStr) !== -1 
+              ? monthNames.indexOf(monthStr)
+              : monthAbbr.indexOf(monthStr)
+            
+            if (monthIndex !== -1) {
+              const day = parseInt(dayStr)
+              const year = parseInt(yearStr)
+              const date = new Date(year, monthIndex, day)
+              if (date.getFullYear() === year && date.getMonth() === monthIndex && date.getDate() === day) {
+                return `${year}-${(monthIndex + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`
+              }
+            }
+          }
+        }
+        return null
+      },
+      
+      // DD-MM-YYYY or MM-DD-YYYY
+      () => {
+        const dashMatch = cleanDate.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/)
+        if (dashMatch) {
+          const [, part1, part2, year] = dashMatch
+          const month1 = parseInt(part1, 10)
+          const day1 = parseInt(part2, 10)
+          const month2 = parseInt(part2, 10)
+          const day2 = parseInt(part1, 10)
+          
+          // Try MM-DD-YYYY first
+          if (month1 >= 1 && month1 <= 12 && day1 >= 1 && day1 <= 31) {
+            const date = new Date(parseInt(year), month1 - 1, day1)
+            if (date.getFullYear() === parseInt(year) && date.getMonth() === month1 - 1 && date.getDate() === day1) {
+              return `${year}-${month1.toString().padStart(2, '0')}-${day1.toString().padStart(2, '0')}`
+            }
+          }
+          
+          // Try DD-MM-YYYY
+          if (month2 >= 1 && month2 <= 12 && day2 >= 1 && day2 <= 31) {
+            const date = new Date(parseInt(year), month2 - 1, day2)
+            if (date.getFullYear() === parseInt(year) && date.getMonth() === month2 - 1 && date.getDate() === day2) {
+              return `${year}-${month2.toString().padStart(2, '0')}-${day2.toString().padStart(2, '0')}`
+            }
+          }
+        }
+        return null
+      },
+      
+      // Last resort - try native Date parsing but validate the result
+      () => {
+        const date = new Date(cleanDate)
+        if (!isNaN(date.getTime())) {
+          // Extract the date parts to avoid timezone issues
+          const year = date.getFullYear()
+          const month = date.getMonth() + 1
+          const day = date.getDate()
+          return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`
+        }
+        return null
+      }
+    ]
+
+    // Try each parsing method
+    for (const attempt of attempts) {
+      const result = attempt()
+      if (result) {
+        console.log(`✅ Successfully parsed "${dateString}" as "${result}"`)
+        return result
+      }
+    }
+
+    console.warn(`❌ Could not parse date: "${dateString}"`)
+    return null
+  }
+
+  // Helper function to normalize status values
+  const normalizeStatus = (statusValue: string): string => {
+    if (!statusValue) return 'active'
+    
+    const normalizedInput = statusValue.toLowerCase().trim()
+    const mappedStatus = STATUS_MAPPING[normalizedInput]
+    
+    if (mappedStatus) {
+      console.log(`✅ Status "${statusValue}" mapped to "${mappedStatus}"`)
+      return mappedStatus
+    }
+    
+    // If no mapping found, return original value cleaned up
+    const cleanStatus = normalizedInput.replace(/\s+/g, '_')
+    console.log(`⚠️ Status "${statusValue}" not recognized, using "${cleanStatus}"`)
+    return cleanStatus
+  }
+
+  // Helper function to normalize payment status values
+  const normalizePaymentStatus = (statusValue: string): string => {
+    if (!statusValue) return 'pending'
+    
+    const normalizedInput = statusValue.toLowerCase().trim()
+    const mappedStatus = PAYMENT_STATUS_MAPPING[normalizedInput]
+    
+    if (mappedStatus) {
+      console.log(`✅ Payment status "${statusValue}" mapped to "${mappedStatus}"`)
+      return mappedStatus
+    }
+    
+    // If no mapping found, return original value cleaned up
+    const cleanStatus = normalizedInput.replace(/\s+/g, '_')
+    console.log(`⚠️ Payment status "${statusValue}" not recognized, using "${cleanStatus}"`)
+    return cleanStatus
+  }
+
+  // Helper function to normalize currency values
+  const normalizeCurrency = (currencyValue: string): string => {
+    if (!currencyValue) return 'USD'
+    
+    const normalizedInput = currencyValue.toUpperCase().trim()
+    
+    // Remove common currency symbols and normalize
+    const currencyMap: { [key: string]: string } = {
+      '$': 'USD',
+      'USD': 'USD',
+      'DOLLAR': 'USD',
+      'DOLLARS': 'USD',
+      'US': 'USD',
+      'USDOLLAR': 'USD',
+      '€': 'EUR',
+      'EUR': 'EUR',
+      'EURO': 'EUR',
+      'EUROS': 'EUR',
+      '£': 'GBP',
+      'GBP': 'GBP',
+      'POUND': 'GBP',
+      'POUNDS': 'GBP',
+      'STERLING': 'GBP',
+      '¥': 'JPY',
+      'JPY': 'JPY',
+      'YEN': 'JPY',
+      'JAPANESE': 'JPY',
+      'CAD': 'CAD',
+      'CANADIAN': 'CAD',
+      'AUD': 'AUD',
+      'AUSTRALIAN': 'AUD',
+      'CHF': 'CHF',
+      'SWISS': 'CHF',
+      'CNY': 'CNY',
+      'CHINESE': 'CNY',
+      'YUAN': 'CNY',
+      'INR': 'INR',
+      'INDIAN': 'INR',
+      'RUPEE': 'INR',
+      'RUPEES': 'INR',
+    }
+    
+    const mappedCurrency = currencyMap[normalizedInput]
+    
+    if (mappedCurrency) {
+      console.log(`✅ Currency "${currencyValue}" mapped to "${mappedCurrency}"`)
+      return mappedCurrency
+    }
+    
+    // If no mapping found, return USD as default
+    console.log(`⚠️ Currency "${currencyValue}" not recognized, using "USD"`)
+    return 'USD'
+  }
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -594,7 +639,7 @@ export default function ProjectImportPage() {
             (normalizedHeader === 'projectstatus' && field.key === 'status') ||
             (normalizedHeader === 'status' && field.key === 'status') ||
             (normalizedHeader === 'startdate' && field.key === 'start_date') ||
-            (normalizedHeader === 'enddate' && field.key === 'end_date') ||
+            (normalizedHeader === 'enddate' && field.key === 'due_date') ||
             (normalizedHeader === 'budget' && field.key === 'budget') ||
             (normalizedHeader === 'amount' && field.key === 'budget') ||
             (normalizedHeader === 'cost' && field.key === 'budget') ||
@@ -767,7 +812,9 @@ export default function ProjectImportPage() {
           const sampleValue = csvData.rows[0]?.[csvIndex] || ''
           
           // Check for potentially incorrect mappings
-          if (mapping.dbField === 'status') {
+          if (mapping.dbField === 'created_at') {
+            warnings.push(`"${mapping.csvField}" should not be mapped to "Created At". This field is automatically set to the current timestamp. Consider mapping to "Start Date" or "Due Date" instead.`)
+          } else if (mapping.dbField === 'status') {
             const normalizedValue = sampleValue.toString().toLowerCase().trim()
             const canBeMapped = STATUS_MAPPING[normalizedValue] !== undefined
             const isNumeric = /^\d+$/.test(sampleValue.toString())
@@ -777,7 +824,7 @@ export default function ProjectImportPage() {
             } else if (!canBeMapped && sampleValue && sampleValue !== 'N/A') {
               warnings.push(`Status values detected. Expected format: Should be text like "active", "completed", "active".`)
             }
-          } else if (mapping.dbField === 'start_date' || mapping.dbField === 'end_date') {
+          } else if (mapping.dbField === 'start_date' || mapping.dbField === 'due_date') {
             const parsedDate = parseFlexibleDate(sampleValue.toString())
             if (!parsedDate && sampleValue && sampleValue !== 'N/A') {
               warnings.push(`"${mapping.csvField}" mapped to Date contains unrecognized format (${sampleValue}). Supported formats: YYYY-MM-DD, MM/DD/YYYY, "June 12, 2024".`)
@@ -796,6 +843,13 @@ export default function ProjectImportPage() {
     if (warnings.length > 0) {
       console.warn('Field mapping warnings:', warnings)
       warnings.forEach(warning => console.warn('⚠️ ' + warning))
+      
+      // Show warning toast for created_at mapping
+      const createdAtWarning = warnings.find(w => w.includes('Created At'))
+      if (createdAtWarning) {
+        toast.error('Date fields should be mapped to "Start Date" or "Due Date", not "Created At"')
+        return false
+      }
     }
     
     return true
@@ -1008,6 +1062,12 @@ export default function ProjectImportPage() {
             
             console.log(`Mapping "${mapping.csvField}" (${mapping.dbField}) = "${value}"`)
             
+            // Prevent mapping to created_at - it should always be current timestamp
+            if (mapping.dbField === 'created_at') {
+              console.warn(`⚠️ Skipping mapping to created_at - this field is automatically set to current timestamp`)
+              return
+            }
+            
             // Handle special field types
             if (mapping.dbField === 'budget' || mapping.dbField === 'hourly_rate' || 
                 mapping.dbField === 'expenses' || mapping.dbField === 'revenue' || 
@@ -1039,7 +1099,7 @@ export default function ProjectImportPage() {
               } else {
                 value = 0
               }
-            } else if (mapping.dbField === 'start_date' || mapping.dbField === 'end_date') {
+            } else if (mapping.dbField === 'start_date' || mapping.dbField === 'due_date') {
               // Use flexible date parsing
               value = parseFlexibleDate(value as string)
             } else if (mapping.dbField === 'status') {
@@ -1083,7 +1143,7 @@ export default function ProjectImportPage() {
             name: projectData.name,
             status: projectData.status || 'active',
             start_date: projectData.start_date,
-            end_date: projectData.end_date,
+            due_date: projectData.due_date,
             budget: budget,
             description: projectData.description || null,
             client_id: clientId || null,
@@ -1126,7 +1186,7 @@ export default function ProjectImportPage() {
             name: projectData.name,
             status: projectData.status || 'active',
             start_date: projectData.start_date,
-            end_date: projectData.end_date,
+            due_date: projectData.due_date,
             budget: budget,
             description: projectData.description || null,
             
@@ -1189,6 +1249,14 @@ export default function ProjectImportPage() {
   }
 
   const downloadSample = () => {
+    const SAMPLE_CSV = `name,status,start_date,due_date,budget,expenses,revenue,currency,payment_status,invoice_amount,payment_received,payment_pending,client_name,client_company,client_email,client_phone,description
+Website Redesign,active,2024-01-15,2024-03-15,15000,2500,12000,USD,partial,12000,7500,4500,John Smith,Acme Corp,john@acme.com,+1234567890,Complete website redesign with modern UI/UX
+Mobile App Development,completed,2023-10-01,2024-01-31,45000,8500,45000,USD,paid,45000,45000,0,Sarah Johnson,Tech Solutions,sarah@tech.com,+1987654321,Native mobile app for iOS and Android
+E-commerce Platform,pipeline,2024-02-01,2024-06-30,32000,1200,25000,EUR,pending,25000,10000,15000,Mike Brown,Global LLC,mike@global.com,+1555666777,Custom e-commerce solution with payment integration
+Marketing Campaign,active,2024-03-01,2024-05-31,8000,1500,7500,GBP,overdue,7500,4000,3500,Emily Davis,Creative Agency,emily@creative.com,+1444555666,Digital marketing campaign for product launch
+CRM Implementation,pipeline,2024-04-01,2024-07-31,25000,0,0,USD,pending,0,0,0,Alex Wilson,Enterprise Inc,alex@enterprise.com,+1333444555,Customer relationship management system implementation
+Data Analytics Platform,on_hold,2024-02-15,2024-05-15,18000,3000,15000,USD,partial,15000,8000,7000,David Chen,Data Corp,david@data.com,+1222333444,Advanced analytics and reporting platform`
+    
     const blob = new Blob([SAMPLE_CSV], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -1312,16 +1380,10 @@ export default function ProjectImportPage() {
                 <CardHeader>
                   <CardTitle>Map Project Fields</CardTitle>
                   <CardDescription>
-                    Map your CSV columns to the corresponding project fields. Required fields are marked with an asterisk.
+                    Map your CSV columns to the appropriate project fields. Required fields are marked with an asterisk (*).
                     <br />
                     <span className="text-sm text-blue-600 mt-2 block">
-                      💡 Auto-mapping is conservative to avoid errors. Most fields will default to "Don't import" - please review and manually map as needed.
-                    </span>
-                    <br />
-                    <span className="text-sm text-gray-600 mt-2 block">
-                      <strong>Status examples:</strong> Active, In Progress, Completed, On Hold, Cancelled, Planning, Doing, Working, Done, Finished, Paused, etc.
-                      <br />
-                      <strong>Date formats:</strong> 2024-12-25, 12/25/2024, 25/12/2024, December 25, 2024, Dec 25, 2024
+                      💡 Date fields from your CSV should be mapped to "Start Date" or "Due Date". The "Created At" field is automatically set to the current timestamp.
                     </span>
                   </CardDescription>
                 </CardHeader>
@@ -1347,7 +1409,7 @@ export default function ProjectImportPage() {
                             hasWarning = true
                             warningMessage = `Status "${sampleValue}" will be used as-is. Common statuses: active, active, completed`
                           }
-                        } else if (mapping.dbField === 'start_date' || mapping.dbField === 'end_date') {
+                        } else if (mapping.dbField === 'start_date' || mapping.dbField === 'due_date') {
                           const parsedDate = parseFlexibleDate(sampleValue.toString())
                           if (!parsedDate && sampleValue && sampleValue !== 'N/A') {
                             hasWarning = true
@@ -1669,4 +1731,4 @@ export default function ProjectImportPage() {
       </PageContent>
     </>
   )
-} 
+}

@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import { formatCurrency, formatCurrencyWithConversion, getDefaultCurrency } from "@/lib/currency"
+import { useSettings } from "@/components/settings-provider"
 
 export type Invoice = {
   id: string
@@ -117,6 +118,8 @@ interface ColumnActions {
 }
 
 export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
+  const { formatDate } = useSettings()
+  
   return [
     {
       id: "select",
@@ -337,7 +340,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
             <div className="min-w-[100px] max-w-[120px]">
               <div className="flex items-center space-x-2">
                 <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
-                <span className="text-sm truncate">{date.toLocaleDateString()}</span>
+                <span className="text-sm truncate">{formatDate(date)}</span>
               </div>
             </div>
           )
@@ -375,7 +378,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
             <div className="min-w-[120px] max-w-[140px]">
               <div className="flex items-center space-x-2">
                 <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
-                <span className="text-sm truncate">{date.toLocaleDateString()}</span>
+                <span className="text-sm truncate">{formatDate(date)}</span>
               </div>
               {status !== "paid" && status !== "cancelled" && (
                 <div
@@ -412,7 +415,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
         const date = new Date(row.getValue("created_at"))
         return (
           <div className="text-sm text-muted-foreground whitespace-nowrap min-w-[100px] max-w-[120px] truncate">
-            {date.toLocaleDateString()}
+            {formatDate(date)}
           </div>
         )
       },

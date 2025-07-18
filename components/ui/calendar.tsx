@@ -27,15 +27,15 @@ export const Calendar = ({
       classNames={{
         [UI.Months]: "flex flex-row space-y-0 relative",
         [UI.Month]: "space-y-4",
-        [UI.MonthCaption]: "flex justify-center items-center h-7 pt-1 relative",
+        [UI.MonthCaption]: "flex justify-center items-center h-9 pt-1 relative",
         [UI.CaptionLabel]: "text-sm font-medium",
         [UI.PreviousMonthButton]: cn(
           buttonVariants({ variant: "outline-solid" }),
-          "absolute left-1 top-0 h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 z-10",
+          "absolute left-1 top-1 h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 z-10",
         ),
         [UI.NextMonthButton]: cn(
           buttonVariants({ variant: "outline-solid" }),
-          "absolute right-1 top-0 h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 z-10",
+          "absolute right-1 top-1 h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 z-10",
         ),
         [UI.MonthGrid]: "w-full border-collapse space-y-1",
         [UI.Weekdays]: "flex",
@@ -63,17 +63,23 @@ export const Calendar = ({
       components={{
         Chevron: ({ ...props }) => <Chevron {...props} />,
         Dropdown: ({ options, value, onChange, ...props }) => {
-          // Format options to use short form for months
-          const formattedOptions = options?.map((option) => {
-            // Check if this is a month option (typically 0-11 for months)
-            if (option.value >= 0 && option.value <= 11 && option.label.length > 3) {
-              // Convert full month name to short form
-              const monthShort = new Date(2024, option.value, 1).toLocaleDateString('en-US', { month: 'short' })
-              return { ...option, label: monthShort }
+          // Determine if this is a month or year dropdown based on the first option
+          const isMonthDropdown = options && options.length > 0 && options[0]?.value >= 0 && options[0]?.value <= 11
+          const isYearDropdown = options && options.length > 0 && options[0]?.value >= 2020 && options[0]?.value <= 2030
+          
+          // Format month names to short form
+          const formatOptions = (options: any[]) => {
+            if (isMonthDropdown) {
+              return options.map(option => ({
+                ...option,
+                label: new Date(2024, option.value, 1).toLocaleDateString('en-US', { month: 'short' })
+              }))
             }
-            return option
-          })
-
+            return options
+          }
+          
+          const formattedOptions = formatOptions(options || [])
+          
           return (
             <select
               value={value?.toString()}
@@ -84,14 +90,15 @@ export const Calendar = ({
                 onChange?.(event)
               }}
               className={cn(
-                "flex h-7 w-auto min-w-0 items-center justify-center rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 focus:border-ring focus:ring-ring/50 focus:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive appearance-none cursor-pointer [&>span]:line-clamp-1"
+                "flex h-10 items-center justify-center rounded-md border border-input bg-transparent px-2 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 focus:border-ring focus:ring-ring/50 focus:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive appearance-none cursor-pointer [&>span]:line-clamp-1",
+                isMonthDropdown ? "w-16" : "w-20" // Month dropdown narrower (short names), year dropdown wider
               )}
               style={{
                 backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5'/%3e%3c/svg%3e")`,
                 backgroundPosition: 'right 0.5rem center',
                 backgroundRepeat: 'no-repeat',
                 backgroundSize: '1rem 1rem',
-                paddingRight: '2rem'
+                paddingRight: '1.5rem'
               }}
             >
               {formattedOptions?.map((option) => (
@@ -103,7 +110,7 @@ export const Calendar = ({
           )
         },
         DropdownNav: ({ children, className, ...props }) => (
-          <div className={cn("flex items-center justify-center gap-1", className)} {...props}>
+          <div className={cn("flex items-center justify-center gap-2 w-full px-8", className)} {...props}>
             {children}
           </div>
         ),

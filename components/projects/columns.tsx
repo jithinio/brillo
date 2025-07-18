@@ -13,6 +13,7 @@ import {
   FileText,
   Trash2,
   Calendar,
+  GitBranch,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -34,13 +35,15 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { formatCurrency } from "@/lib/currency"
 import { ClientAvatar } from "@/components/ui/client-avatar"
+import { useSettings } from "@/components/settings-provider"
+import { DatePickerTable } from "@/components/ui/date-picker-table"
 
 export type Project = {
   id: string
   name: string
   status: string
   start_date?: string
-  end_date?: string
+  due_date?: string
   budget?: number
   expenses?: number
   received?: number
@@ -78,6 +81,12 @@ const statusConfig = {
     variant: "outline" as const,
     iconClassName: "text-gray-400",
   },
+  pipeline: {
+    label: "Pipeline",
+    icon: GitBranch,
+    variant: "outline" as const,
+    iconClassName: "text-purple-500",
+  },
 }
 
 interface ColumnActions {
@@ -85,9 +94,12 @@ interface ColumnActions {
   onCreateInvoice: (project: Project) => void
   onDeleteProject: (project: Project) => void
   onStatusChange: (project: Project, newStatus: string) => void
+  onDateChange: (project: Project, field: 'start_date' | 'due_date', date: Date | undefined) => void
 }
 
 export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
+  const { formatDate } = useSettings()
+  
   return [
     {
       id: "select",
@@ -250,6 +262,16 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
                     <XCircle className="mr-2 h-3 w-3 text-red-500" />
                     Cancelled
                   </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`justify-start h-8 focus:outline-none focus-visible:outline-none ${project.status === 'pipeline' ? 'bg-accent' : ''}`}
+                    onClick={() => actions.onStatusChange(project, 'pipeline')}
+                    disabled={project.status === 'pipeline'}
+                  >
+                    <GitBranch className="mr-2 h-3 w-3 text-purple-500" />
+                    Pipeline
+                  </Button>
                 </div>
               </PopoverContent>
             </Popover>
@@ -257,6 +279,38 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
         )
       },
       size: 120,
+      enableHiding: true,
+    },
+    {
+      accessorKey: "start_date",
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+            className="h-auto p-0 font-medium"
+          >
+            Start Date
+            <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
+          </Button>
+        )
+      },
+      cell: ({ row }) => {
+        const project = row.original
+        const startDate = row.getValue("start_date") as string
+        const date = startDate ? new Date(startDate) : undefined
+
+        return (
+          <div className="min-w-[120px] max-w-[140px]">
+            <DatePickerTable
+              date={date}
+              onSelect={(newDate) => actions.onDateChange(project, 'start_date', newDate)}
+              placeholder="Set start date"
+            />
+          </div>
+        )
+      },
+      size: 140,
       enableHiding: true,
     },
     {
@@ -377,7 +431,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
       enableHiding: true,
     },
     {
-      accessorKey: "end_date",
+      accessorKey: "due_date",
       header: ({ column }) => {
         return (
           <Button
@@ -391,47 +445,21 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
         )
       },
       cell: ({ row }) => {
-        const endDate = row.getValue("end_date") as string
-        if (endDate) {
-          const date = new Date(endDate)
+        const project = row.original
+        const dueDate = row.getValue("due_date") as string
+        const date = dueDate ? new Date(dueDate) : undefined
 
           return (
             <div className="min-w-[120px] max-w-[140px]">
-              <div className="flex items-center space-x-2">
-                <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
-                <span className="text-sm truncate">{date.toLocaleDateString()}</span>
-              </div>
+            <DatePickerTable
+              date={date}
+              onSelect={(newDate) => actions.onDateChange(project, 'due_date', newDate)}
+              placeholder="Set due date"
+            />
             </div>
           )
-        }
-        return <span className="text-muted-foreground min-w-[120px] block">—</span>
       },
       size: 140,
-      enableHiding: true,
-    },
-    {
-      accessorKey: "created_at",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="h-auto p-0 font-medium"
-          >
-            Created
-            <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
-          </Button>
-        )
-      },
-      cell: ({ row }) => {
-        const date = new Date(row.getValue("created_at"))
-        return (
-          <div className="text-sm text-muted-foreground whitespace-nowrap min-w-[100px] max-w-[120px] truncate">
-            {date.toLocaleDateString()}
-          </div>
-        )
-      },
-      size: 120,
       enableHiding: true,
     },
     {
@@ -496,6 +524,13 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
                     >
                       <XCircle className="mr-2 h-4 w-4 text-red-600" />
                       Cancelled
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => actions.onStatusChange(project, 'pipeline')}
+                      disabled={project.status === 'pipeline'}
+                    >
+                      <GitBranch className="mr-2 h-4 w-4 text-purple-600" />
+                      Pipeline
                     </DropdownMenuItem>
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>

@@ -109,7 +109,7 @@
   --font-serif: "Geist", "Geist Fallback", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
   --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
-  --radius: 0.72rem;
+  --radius: 0.56rem;
   
   --shadow-2xs: 0 1px 1px 0px oklch(0.00 0 0 / 0.03);
   --shadow-xs: 0 1px 1px 0px oklch(0.00 0 0 / 0.03);
@@ -224,4 +224,24 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Fix for dropdown scrolling in Command components */
+[data-radix-popper-content-wrapper] [cmdk-list] {
+  max-height: 240px !important;
+  overflow-y: auto !important;
+}
+
+/* Ensure CommandList scrolls properly */
+[cmdk-list] {
+  max-height: 240px !important;
+  overflow-y: auto !important;
+}
+
+/* Fix for PopoverContent scroll */
+[data-radix-popper-content-wrapper] .max-h-60 {
+  max-height: 240px !important;
+  overflow-y: auto !important;
+}
+
+
 

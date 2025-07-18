@@ -4,6 +4,7 @@ import type React from "react"
 import { createContext, useContext, useEffect, useState } from "react"
 import { formatCurrency as formatCurrencyUtil, setDefaultCurrency, getDefaultCurrency } from "@/lib/currency"
 import { getCompanySettings, upsertCompanySettings, type CompanySettings } from "@/lib/company-settings"
+import { getDateFormat, setDateFormat, formatDateWithUserPreference, type DateFormat } from "@/lib/date-format"
 
 // Feature flag: Set to false if database integration is causing issues
 // Re-enabled after fixing duplicate records issue
@@ -23,6 +24,7 @@ interface AppSettings {
   includeTaxInPrices: boolean
   autoCalculateTax: boolean
   invoicePrefix: string
+  dateFormat: DateFormat
   invoiceTemplate?: any
 }
 
@@ -30,6 +32,7 @@ interface SettingsContextType {
   settings: AppSettings
   updateSetting: (key: keyof AppSettings, value: any) => void
   formatCurrency: (amount: number) => string
+  formatDate: (date: string | Date | null | undefined) => string
   isLoading: boolean
 }
 
@@ -47,12 +50,14 @@ const defaultSettings: AppSettings = {
   includeTaxInPrices: false,
   autoCalculateTax: true,
   invoicePrefix: "INV",
+  dateFormat: "MM/DD/YYYY",
 }
 
 const SettingsContext = createContext<SettingsContextType>({
   settings: defaultSettings,
   updateSetting: () => {},
   formatCurrency: (amount: number) => `$${amount.toFixed(2)}`,
+  formatDate: (date: string | Date | null | undefined) => "",
   isLoading: false,
 })
 
@@ -113,6 +118,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             autoCalculateTax: dbSettings.auto_calculate_tax || prev.autoCalculateTax,
             invoicePrefix: dbSettings.invoice_prefix || prev.invoicePrefix,
             invoiceTemplate: dbSettings.invoice_template || prev.invoiceTemplate,
+            dateFormat: (dbSettings.date_format as DateFormat) || prev.dateFormat, // Load date format from database
           }))
           
           console.log('🔍 Database settings loaded:', {
@@ -156,6 +162,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                   autoCalculateTax: dbSettings.auto_calculate_tax || prev.autoCalculateTax,
                   invoicePrefix: dbSettings.invoice_prefix || prev.invoicePrefix,
                   invoiceTemplate: parsedLocalTemplate, // Use localStorage template
+                  dateFormat: (dbSettings.date_format as DateFormat) || prev.dateFormat, // Sync date format
                 }))
                 
                 // Sync localStorage template to database in background
@@ -205,6 +212,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     // Sync currency changes with global currency system
     if (key === 'defaultCurrency') {
       setDefaultCurrency(value)
+    }
+
+    // Sync date format changes with global date formatting system
+    if (key === 'dateFormat') {
+      setDateFormat(value)
     }
     
     // If database is disabled, only use localStorage
@@ -260,10 +272,15 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         case 'invoiceTemplate':
           dbSettingsUpdate.invoice_template = value
           break
+        case 'dateFormat':
+          dbSettingsUpdate.date_format = value
+          break
       }
       
       if (Object.keys(dbSettingsUpdate).length > 0) {
-        await upsertCompanySettings(dbSettingsUpdate)
+        console.log('Updating database with settings:', dbSettingsUpdate)
+        const result = await upsertCompanySettings(dbSettingsUpdate)
+        console.log('Database update result:', result)
       }
     } catch (error) {
       console.error('Failed to save setting to database:', error)
@@ -276,8 +293,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     return formatCurrencyUtil(amount, settings.defaultCurrency)
   }
 
+  const formatDate = (date: string | Date | null | undefined): string => {
+    return formatDateWithUserPreference(date, settings.dateFormat)
+  }
+
   return (
-    <SettingsContext.Provider value={{ settings, updateSetting, formatCurrency, isLoading }}>{children}</SettingsContext.Provider>
+    <SettingsContext.Provider value={{ settings, updateSetting, formatCurrency, formatDate, isLoading }}>{children}</SettingsContext.Provider>
   )
 }
 

@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS projects (
     client_id UUID REFERENCES clients(id) ON DELETE CASCADE,
     status VARCHAR(50) DEFAULT 'active' CHECK (status IN ('active', 'completed', 'on_hold', 'cancelled')),
     start_date DATE,
-    end_date DATE,
+    due_date DATE,
     budget DECIMAL(10,2),
     hourly_rate DECIMAL(8,2),
     estimated_hours INTEGER,
