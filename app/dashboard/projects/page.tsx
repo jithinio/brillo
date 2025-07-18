@@ -70,6 +70,7 @@ interface Client {
 
 const statusOptions = [
   { value: "active", label: "Active" },
+  { value: "pipeline", label: "Pipeline" },
   { value: "on_hold", label: "On Hold" },
   { value: "completed", label: "Completed" },
   { value: "cancelled", label: "Cancelled" },
@@ -407,10 +408,26 @@ export default function ProjectsPage() {
   const handleStatusChange = async (project: Project, newStatus: string) => {
     try {
       if (isSupabaseConfigured()) {
+        // Prepare update data
+        const updateData: any = { status: newStatus }
+        
+        // If changing to pipeline, set default pipeline fields
+        if (newStatus === 'pipeline') {
+          updateData.pipeline_stage = 'Lead'  // Use capitalized 'Lead' to match database
+          updateData.deal_probability = 10
+          updateData.pipeline_notes = null
+        }
+        // If changing from pipeline to other status, clear pipeline fields
+        else if (project.status === 'pipeline') {
+          updateData.pipeline_stage = null
+          updateData.deal_probability = null
+          updateData.pipeline_notes = null
+        }
+
         // Update status in database
         const { error } = await supabase
           .from('projects')
-          .update({ status: newStatus })
+          .update(updateData)
           .eq('id', project.id)
 
         if (error) {
@@ -424,9 +441,15 @@ export default function ProjectsPage() {
         p.id === project.id ? { ...p, status: newStatus } : p
       ))
       
-      // Show success toast
+      // Show success toast with additional info for pipeline conversion
       const statusLabel = statusOptions.find(option => option.value === newStatus)?.label || newStatus
-      toast.success(`Project "${project.name}" status changed to ${statusLabel}`)
+      if (newStatus === 'pipeline') {
+        toast.success(`Project "${project.name}" moved to Pipeline`, {
+          description: "Project will appear in the Pipeline page with default Lead stage"
+        })
+      } else {
+        toast.success(`Project "${project.name}" status changed to ${statusLabel}`)
+      }
     } catch (error) {
       console.error('Error updating project status:', error)
       toast.error(`Failed to update project status: ${error instanceof Error ? error.message : 'Unknown error'}`)

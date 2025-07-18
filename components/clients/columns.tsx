@@ -13,6 +13,9 @@ import {
   Building,
   MapPin,
   Copy,
+  CheckCircle,
+  Clock,
+  GitBranch,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -24,6 +27,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import { Badge } from "@/components/ui/badge"
 import { ClientAvatar } from "@/components/ui/client-avatar"
 import { toast } from "sonner"
@@ -43,6 +51,7 @@ export type Client = {
   country?: string | null
   notes?: string | null
   avatar_url?: string | null
+  status?: string
   created_at: string
   projects?: Array<{
     id: string
@@ -74,11 +83,33 @@ const statusConfig = {
   },
 }
 
+const clientStatusConfig = {
+  active: {
+    label: "Active",
+    icon: CheckCircle,
+    variant: "outline" as const,
+    iconClassName: "text-green-500",
+  },
+  pipeline: {
+    label: "Pipeline",
+    icon: GitBranch,
+    variant: "outline" as const,
+    iconClassName: "text-purple-500",
+  },
+  closed: {
+    label: "Closed",
+    icon: Clock,
+    variant: "outline" as const,
+    iconClassName: "text-gray-400",
+  },
+}
+
 interface ColumnActions {
   onEditClient: (client: Client) => void
   onCreateInvoice: (client: Client) => void
   onNewProject: (client: Client) => void
   onDeleteClient: (client: Client) => void
+  onStatusChange: (client: Client, newStatus: string) => void
   onProjectClick?: (projectId: string) => void
   onDateChange: (client: Client, field: 'created_at', date: Date | undefined) => void
 }
@@ -245,6 +276,81 @@ export function createColumns(actions: ColumnActions): ColumnDef<Client>[] {
         )
       },
       size: 160,
+      enableHiding: true,
+    },
+    {
+      accessorKey: "status",
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+            className="h-auto p-0 font-medium"
+          >
+            Status
+            <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
+          </Button>
+        )
+      },
+      cell: ({ row }) => {
+        const client = row.original
+        const status = (row.getValue("status") as string) || 'active'
+        const config = clientStatusConfig[status as keyof typeof clientStatusConfig]
+
+        if (!config) {
+          return <span className="text-muted-foreground">Unknown</span>
+        }
+
+        const Icon = config.icon
+
+        return (
+          <div className="min-w-[120px]">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Badge variant={config.variant} className="cursor-pointer hover:bg-slate-100 transition-colors font-normal text-sm focus:outline-none focus-visible:outline-none">
+                  <Icon className={`mr-1.5 h-3 w-3 ${config.iconClassName}`} />
+                  {config.label}
+                </Badge>
+              </PopoverTrigger>
+              <PopoverContent className="w-44 p-1" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
+                <div className="grid gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`justify-start h-8 focus:outline-none focus-visible:outline-none ${client.status === 'active' ? 'bg-accent' : ''}`}
+                    onClick={() => actions.onStatusChange(client, 'active')}
+                    disabled={client.status === 'active'}
+                  >
+                    <CheckCircle className="mr-2 h-3 w-3 text-green-500" />
+                    Active
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`justify-start h-8 focus:outline-none focus-visible:outline-none ${client.status === 'pipeline' ? 'bg-accent' : ''}`}
+                    onClick={() => actions.onStatusChange(client, 'pipeline')}
+                    disabled={client.status === 'pipeline'}
+                  >
+                    <GitBranch className="mr-2 h-3 w-3 text-purple-500" />
+                    Pipeline
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`justify-start h-8 focus:outline-none focus-visible:outline-none ${client.status === 'closed' ? 'bg-accent' : ''}`}
+                    onClick={() => actions.onStatusChange(client, 'closed')}
+                    disabled={client.status === 'closed'}
+                  >
+                    <Clock className="mr-2 h-3 w-3 text-gray-400" />
+                    Closed
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+        )
+      },
+      size: 120,
       enableHiding: true,
     },
     {

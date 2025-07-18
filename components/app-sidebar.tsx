@@ -1,7 +1,7 @@
 "use client"
 
 import type * as React from "react"
-import { Bot, Gauge, GalleryVerticalEnd, PieChart, ReceiptText, Settings2 } from "lucide-react"
+import { Bot, Gauge, GalleryVerticalEnd, PieChart, ReceiptText, Settings2, TrendingUp } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
 import { NavSecondary } from "@/components/nav-secondary"
@@ -28,6 +28,11 @@ const data = {
       title: "Clients",
       url: "/dashboard/clients",
       icon: Bot,
+    },
+    {
+      title: "Pipeline",
+      url: "/dashboard/pipeline",
+      icon: TrendingUp,
     },
     {
       title: "Projects",

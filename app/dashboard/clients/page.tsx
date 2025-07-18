@@ -230,6 +230,32 @@ export default function ClientsPage() {
     }
   }
 
+  const handleStatusChange = async (client: Client, newStatus: string) => {
+    try {
+      if (isSupabaseConfigured()) {
+        const { error } = await supabase
+          .from('clients')
+          .update({ status: newStatus })
+          .eq('id', client.id)
+
+        if (error) {
+          console.error('Error updating client status:', error)
+          throw new Error(error.message)
+        }
+      }
+
+      // Update local state
+      setClients(clients.map(c => 
+        c.id === client.id ? { ...c, status: newStatus } : c
+      ))
+
+      toast.success(`Client "${client.name}" status updated to ${newStatus}`)
+    } catch (error) {
+      console.error('Error updating client status:', error)
+      toast.error(`Failed to update client status: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }
+
   const handleBatchDelete = (clients: Client[], onUndo: (items: Client[]) => void) => {
     if (clients.length === 0) return
     confirmBatchDelete(clients, onUndo)
@@ -537,6 +563,7 @@ export default function ClientsPage() {
     onCreateInvoice: handleCreateInvoice,
     onNewProject: handleNewProject,
     onDeleteClient: handleDeleteClient,
+    onStatusChange: handleStatusChange,
     onDateChange: handleDateChange,
   })
 

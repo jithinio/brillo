@@ -6,12 +6,13 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import type { ChartConfig } from "@/components/ui/chart"
-import { Line, LineChart, Bar, BarChart, XAxis, YAxis, LabelList } from "recharts"
+import { Line, LineChart, Bar, BarChart, XAxis, YAxis, LabelList, ReferenceLine } from "recharts"
 import { TrendingUp, TrendingDown, Calendar, DollarSign, CalendarIcon } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { format, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear, subMonths, subQuarters, subYears } from "date-fns"
 
-import { formatCurrency } from "@/lib/currency"
+import { formatCurrency, getCurrencySymbol } from "@/lib/currency"
+import { formatLargeNumber } from "@/lib/utils"
 import { useSettings } from "@/components/settings-provider"
 import { supabase } from "@/lib/supabase"
 
@@ -493,11 +494,26 @@ const generateRevenueLineData = (projects: Project[]): Array<{ month: string; re
 }
 
 const generateYearlyData = (projects: Project[]): Array<{ year: string; revenue: number; expenses: number }> => {
-  const currentYear = new Date().getFullYear()
-  const years = []
+  // Get all unique years from project data
+  const yearSet = new Set<number>()
   
-  for (let i = 4; i >= 0; i--) {
-    const year = currentYear - i
+  projects.forEach(project => {
+    const projectDate = new Date(project.start_date || project.created_at)
+    yearSet.add(projectDate.getFullYear())
+  })
+  
+  // Convert to array and sort
+  const years = Array.from(yearSet).sort()
+  
+  // If no projects or only current year, show at least current year and previous year
+  if (years.length === 0) {
+    const currentYear = new Date().getFullYear()
+    years.push(currentYear - 1, currentYear)
+  } else if (years.length === 1) {
+    years.unshift(years[0] - 1) // Add previous year
+  }
+  
+  return years.map(year => {
     const yearStart = new Date(year, 0, 1)
     const yearEnd = new Date(year, 11, 31)
     
@@ -526,10 +542,8 @@ const generateYearlyData = (projects: Project[]): Array<{ year: string; revenue:
       return sum + amount
     }, 0)
     
-    years.push({ year: year.toString(), revenue, expenses })
-  }
-  
-  return years
+    return { year: year.toString(), revenue, expenses }
+  })
 }
 
 // Chart configurations
@@ -616,7 +630,7 @@ const MetricCard = ({
     <CardContent className="px-8 pt-0 pb-8">
         <div className="space-y-1">
           <div className="text-3xl font-normal text-foreground">
-            {formatCurrency(current)}
+            {formatLargeNumber(current, getCurrencySymbol())}
           </div>
           <div className="flex items-center gap-3" style={{ marginTop: '12px' }}>
             <div className="flex items-center gap-1">
@@ -758,7 +772,7 @@ const RevenueChart = ({
       <div className="space-y-4">
         <div className="space-y-1">
           <div className="text-3xl font-normal text-foreground">
-            {formatCurrency(dynamicAmount)}
+            {formatLargeNumber(dynamicAmount, getCurrencySymbol())}
           </div>
           <div className="flex items-center gap-3" style={{ marginTop: '12px' }}>
             <div className="flex items-center gap-1">
@@ -786,17 +800,23 @@ const RevenueChart = ({
                 tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }}
                 className="[&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground"
               />
+              <ReferenceLine 
+                x={0} 
+                stroke="var(--border)" 
+                strokeDasharray="3 3" 
+                strokeWidth={1}
+              />
               <ChartTooltip 
                 content={({ active, payload }) => {
                   if (active && payload && payload.length) {
                     return (
-                      <div className="rounded-lg border bg-background p-2 shadow-sm">
-                        <div className="grid grid-cols-2 gap-2">
+                      <div className="rounded-lg border bg-background p-2 shadow-sm min-w-0">
+                        <div className="flex flex-col gap-2">
                           {payload.map((item: any, index: number) => (
-                            <div key={index} className="flex items-center gap-2">
-                              <div className="flex h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
-                              <span className="text-sm font-medium">{item.dataKey === 'revenue' ? 'Revenue' : 'Expenses'}</span>
-                              <span className="text-sm text-muted-foreground">{formatCurrency(item.value)}</span>
+                            <div key={index} className="flex items-center gap-2 min-w-0">
+                              <div className="flex h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+                              <span className="text-sm font-medium truncate">{item.dataKey === 'revenue' ? 'Revenue' : 'Expenses'}</span>
+                              <span className="text-sm text-muted-foreground whitespace-nowrap">{formatLargeNumber(item.value, getCurrencySymbol())}</span>
                             </div>
                           ))}
                         </div>
@@ -906,6 +926,7 @@ const YearlyBarChart = ({
               tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }}
               className="[&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground"
             />
+            <YAxis hide={true} />
             <Bar 
               dataKey={type} 
               fill={type === 'revenue' ? 'var(--chart-1)' : 'var(--chart-2)'}
@@ -918,7 +939,7 @@ const YearlyBarChart = ({
                 style={{ fontSize: '14px', fontWeight: '600' }}
                 fill="var(--foreground)"
                 className="fill-foreground"
-                formatter={(value: any) => `${formatCurrency(value / 1000)}k`}
+                formatter={(value: any) => formatLargeNumber(value, getCurrencySymbol())}
               />
             </Bar>
           </BarChart>
