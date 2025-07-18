@@ -899,11 +899,11 @@ export default function ProjectsPage() {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {[...Array(4)].map((_, i) => (
               <div key={i} className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
-                <div className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
+                <div className="space-y-3">
+                  <div className="h-4 w-20 bg-muted/60 rounded-sm"></div>
+                  <div className="h-8 w-12 bg-muted/80 rounded-sm"></div>
+                  <div className="h-3 w-28 bg-muted/40 rounded-sm"></div>
                 </div>
-                <div className="h-8 w-16 bg-gray-200 rounded animate-pulse mb-2"></div>
-                <div className="h-3 w-32 bg-gray-200 rounded animate-pulse"></div>
               </div>
             ))}
           </div>
@@ -949,34 +949,19 @@ export default function ProjectsPage() {
         )}
 
         {/* Projects Table */}
-        {projectsLoading ? (
-          <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="h-6 w-32 bg-gray-200 rounded animate-pulse"></div>
-                <div className="h-9 w-24 bg-gray-200 rounded animate-pulse"></div>
-              </div>
-              <div className="space-y-2">
-                {[...Array(5)].map((_, i) => (
-                  <div key={i} className="h-12 w-full bg-gray-200 rounded animate-pulse"></div>
-                ))}
-              </div>
-            </div>
-          </div>
-        ) : (
-          <DataTable 
-            columns={columns} 
-            data={projects} 
-            onAddProject={handleAddProject} 
-            onBatchDelete={handleBatchDelete}
-            contextActions={{
-              onEditProject: handleEditProject,
-              onCreateInvoice: handleCreateInvoice,
-              onDeleteProject: handleDeleteProject,
-              onStatusChange: handleStatusChange,
-            }}
-          />
-        )}
+        <DataTable 
+          columns={columns} 
+          data={projects} 
+          loading={projectsLoading}
+          onAddProject={handleAddProject} 
+          onBatchDelete={handleBatchDelete}
+          contextActions={{
+            onEditProject: handleEditProject,
+            onCreateInvoice: handleCreateInvoice,
+            onDeleteProject: handleDeleteProject,
+            onStatusChange: handleStatusChange,
+          }}
+        />
       </PageContent>
 
       {/* Edit Project Dialog */}

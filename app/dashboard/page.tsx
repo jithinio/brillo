@@ -15,6 +15,7 @@ import { formatCurrency, getCurrencySymbol } from "@/lib/currency"
 import { formatLargeNumber } from "@/lib/utils"
 import { useSettings } from "@/components/settings-provider"
 import { supabase } from "@/lib/supabase"
+import { AnimatedMetricCard } from "@/components/ui/animated-number"
 
 // Types for project data
 interface Project {
@@ -29,6 +30,13 @@ interface Project {
   due_date?: string
   created_at: string
   status: string
+  client_id?: string
+  clients?: {
+    id: string
+    name: string
+    company: string
+    avatar_url: string
+  }
 }
 
 // Data fetching and calculation functions
@@ -36,7 +44,26 @@ const fetchProjects = async (): Promise<Project[]> => {
   try {
     const { data, error } = await supabase
       .from('projects')
-      .select('*')
+      .select(`
+        id,
+        name,
+        budget,
+        revenue,
+        expenses,
+        payment_received,
+        payment_pending,
+        start_date,
+        due_date,
+        created_at,
+        status,
+        client_id,
+        clients (
+          id,
+          name,
+          company,
+          avatar_url
+        )
+      `)
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -44,7 +71,29 @@ const fetchProjects = async (): Promise<Project[]> => {
       return []
     }
 
-    return data || []
+    // Transform the data to ensure all required fields are present
+    const transformedData = (data || []).map(project => ({
+      id: project.id,
+      name: project.name,
+      budget: project.budget || 0,
+      revenue: project.revenue || 0,
+      expenses: project.expenses || 0,
+      payment_received: project.payment_received || 0,
+      payment_pending: project.payment_pending || 0,
+      start_date: project.start_date,
+      due_date: project.due_date,
+      created_at: project.created_at,
+      status: project.status,
+      client_id: project.client_id,
+      clients: Array.isArray(project.clients) && project.clients.length > 0 ? {
+        id: project.clients[0].id,
+        name: project.clients[0].name,
+        company: project.clients[0].company,
+        avatar_url: project.clients[0].avatar_url
+      } : undefined
+    }))
+
+    return transformedData
   } catch (error) {
     console.error('Error fetching projects:', error)
     return []
@@ -964,16 +1013,23 @@ export default function DashboardPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Fetch projects on component mount
+  // Fetch projects on component mount with optimized loading
   useEffect(() => {
     const loadProjects = async () => {
       setLoading(true)
       try {
+        // Use a more efficient loading approach
         const projectData = await fetchProjects()
+        
+        // Set projects immediately to avoid delay
         setProjects(projectData)
+        
+        // Small delay to ensure smooth transition
+        setTimeout(() => {
+          setLoading(false)
+        }, 100)
       } catch (error) {
         console.error('Error loading projects:', error)
-      } finally {
         setLoading(false)
       }
     }
@@ -1010,69 +1066,119 @@ export default function DashboardPage() {
         <h1 className="text-3xl font-normal text-foreground mb-2">
           {greeting}, {userName}! 👋
         </h1>
-        <p className="text-muted-foreground">Here's what's happening with your business today.</p>
+        <p className="text-muted-foreground">
+          Here's what's happening with your business today.
+        </p>
       </div>
 
       {/* Summary Section */}
       <div className="mb-8">
         {/* MRR, QRR, and ARR Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <MetricCard
-            title="MRR"
-            current={mrrData.current}
-            previous={mrrData.previous}
-            trend={mrrData.trend}
-            percentage={mrrData.percentage}
-            period={mrrPeriod}
-            onPeriodChange={setMrrPeriod}
-            formatCurrency={settingsFormatCurrency}
-          />
-          <MetricCard
-            title="QRR"
-            current={qrrData.current}
-            previous={qrrData.previous}
-            trend={qrrData.trend}
-            percentage={qrrData.percentage}
-            period={qrrPeriod}
-            onPeriodChange={setQrrPeriod}
-            formatCurrency={settingsFormatCurrency}
-          />
-          <MetricCard
-            title="ARR"
-            current={arrData.current}
-            previous={arrData.previous}
-            trend={arrData.trend}
-            percentage={arrData.percentage}
-            period={arrPeriod}
-            onPeriodChange={setArrPeriod}
-            formatCurrency={settingsFormatCurrency}
-          />
+          {loading ? (
+            <>
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="relative overflow-hidden border-0 shadow-none bg-card rounded-lg border">
+                  <div className="p-8 pb-3">
+                    <div className="flex items-center justify-between">
+                      <div className="h-4 w-16 bg-muted/60 rounded-sm"></div>
+                      <div className="h-8 w-24 bg-muted/40 rounded-md"></div>
+                    </div>
+                  </div>
+                  <div className="px-8 pb-8">
+                    <div className="h-8 w-20 bg-muted/80 rounded-sm mb-2"></div>
+                    <div className="h-4 w-32 bg-muted/40 rounded-sm"></div>
+                  </div>
+                </div>
+              ))}
+            </>
+          ) : (
+            <>
+              <AnimatedMetricCard
+                title="MRR"
+                current={mrrData.current}
+                previous={mrrData.previous}
+                trend={mrrData.trend}
+                percentage={mrrData.percentage}
+                period={mrrPeriod}
+                onPeriodChange={setMrrPeriod}
+                formatCurrency={settingsFormatCurrency}
+                index={0}
+              />
+              <AnimatedMetricCard
+                title="QRR"
+                current={qrrData.current}
+                previous={qrrData.previous}
+                trend={qrrData.trend}
+                percentage={qrrData.percentage}
+                period={qrrPeriod}
+                onPeriodChange={setQrrPeriod}
+                formatCurrency={settingsFormatCurrency}
+                index={1}
+              />
+              <AnimatedMetricCard
+                title="ARR"
+                current={arrData.current}
+                previous={arrData.previous}
+                trend={arrData.trend}
+                percentage={arrData.percentage}
+                period={arrPeriod}
+                onPeriodChange={setArrPeriod}
+                formatCurrency={settingsFormatCurrency}
+                index={2}
+              />
+            </>
+          )}
         </div>
 
         {/* Revenue Line Chart */}
-        <div className="mb-8">
-          <RevenueChart
-            type={revenueType}
-            period={revenuePeriod}
-            current={revenueData.current}
-            previous={revenueData.previous}
-            trend={revenueData.trend}
-            percentage={revenueData.percentage}
-            onTypeChange={setRevenueType}
-            onPeriodChange={setRevenuePeriod}
-            formatCurrency={settingsFormatCurrency}
-            projects={projects}
-          />
-        </div>
-
-        {/* Yearly Bar Chart */}
-        <div>
-          <YearlyBarChart
-            type={yearlyType}
-            onTypeChange={setYearlyType}
-            formatCurrency={settingsFormatCurrency}
-            projects={projects}
-          />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {loading ? (
+            <>
+              <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="h-6 w-32 bg-muted/60 rounded-sm"></div>
+                    <div className="flex items-center space-x-2">
+                      <div className="h-8 w-20 bg-muted/40 rounded-md"></div>
+                      <div className="h-8 w-24 bg-muted/40 rounded-md"></div>
+                    </div>
+                  </div>
+                  <div className="h-64 bg-muted/20 rounded-md"></div>
+                </div>
+              </div>
+              <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="h-6 w-32 bg-muted/60 rounded-sm"></div>
+                    <div className="h-8 w-20 bg-muted/40 rounded-md"></div>
+                  </div>
+                  <div className="h-64 bg-muted/20 rounded-md"></div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <RevenueChart
+                type={revenueType}
+                period={revenuePeriod}
+                current={revenueData.current}
+                previous={revenueData.previous}
+                trend={revenueData.trend}
+                percentage={revenueData.percentage}
+                onTypeChange={setRevenueType}
+                onPeriodChange={setRevenuePeriod}
+                formatCurrency={settingsFormatCurrency}
+                projects={projects}
+              />
+              <YearlyBarChart
+                type={yearlyType}
+                onTypeChange={setYearlyType}
+                formatCurrency={settingsFormatCurrency}
+                projects={projects}
+              />
+            </>
+          )}
         </div>
       </div>
     </div>
