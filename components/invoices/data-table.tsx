@@ -13,7 +13,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { ChevronDown, Plus, Search, Eye, Edit, Send, Download, Trash2, CheckCircle, Clock, XCircle, Settings2 } from "lucide-react"
+import { ChevronDown, Plus, Search, Eye, Edit, Send, Download, Trash2, CheckCircle, Clock, XCircle, Settings2, FileText } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -71,6 +71,7 @@ interface DataTableProps<TData, TValue> {
     onStatusChange: (item: TData, status: string) => void
     downloadingPDF?: string | null
   }
+  filterComponent?: React.ReactNode
 }
 
 export function DataTable<TData, TValue>({
@@ -79,6 +80,7 @@ export function DataTable<TData, TValue>({
   onCreateInvoice,
   onBatchDelete,
   contextActions,
+  filterComponent,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
@@ -246,6 +248,7 @@ export function DataTable<TData, TValue>({
                 })}
             </DropdownMenuContent>
           </DropdownMenu>
+          {filterComponent}
         </div>
         <div className="flex items-center gap-2">
           {selectedCount > 0 && (
@@ -257,11 +260,11 @@ export function DataTable<TData, TValue>({
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
           )}
-        {onCreateInvoice && (
-          <Button onClick={onCreateInvoice} size="icon" className="rounded-full" title="Create Invoice">
-            <Plus className="h-3.5 w-3.5" />
-          </Button>
-        )}
+          {onCreateInvoice && (
+            <Button onClick={onCreateInvoice} size="icon" className="rounded-full" title="Create Invoice">
+              <Plus className="h-3.5 w-3.5" />
+            </Button>
+          )}
         </div>
       </div>
       <div className="overflow-hidden border" style={{ borderRadius: 'var(--radius-md)' }}>
@@ -313,30 +316,27 @@ export function DataTable<TData, TValue>({
                 table.getRowModel().rows.map((row) => (
                   <ContextMenu key={row.id}>
                     <ContextMenuTrigger asChild>
-                  <TableRow
-                    data-state={row.getIsSelected() && "selected"}
+                      <TableRow
+                        data-state={row.getIsSelected() && "selected"}
                         className="cursor-default"
-                  >
-                    {row.getVisibleCells().map((cell) => {
-                      const isActionsColumn = cell.column.id === "actions"
-                      return (
-                        <TableCell 
-                          key={cell.id} 
-                          style={{ width: cell.column.getSize() }} 
-                          className={`whitespace-nowrap ${
-                            isActionsColumn 
-                              ? "sticky right-0 bg-background shadow-[-4px_0_4px_-2px_rgba(0,0,0,0.1)]" 
-                              : ""
-                          }`}
-                        >
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext()
-                          )}
-                        </TableCell>
-                      )
-                    })}
-                  </TableRow>
+                      >
+                        {row.getVisibleCells().map((cell) => {
+                          const isActionsColumn = cell.column.id === "actions"
+                          return (
+                            <TableCell 
+                              key={cell.id} 
+                              style={{ width: cell.column.getSize() }} 
+                              className={`whitespace-nowrap ${
+                                isActionsColumn 
+                                  ? "sticky right-0 bg-background shadow-[-4px_0_4px_-2px_rgba(0,0,0,0.1)]" 
+                                  : ""
+                              }`}
+                            >
+                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            </TableCell>
+                          )
+                        })}
+                      </TableRow>
                     </ContextMenuTrigger>
                     {contextActions && (
                       <ContextMenuContent className="w-48">
@@ -353,6 +353,19 @@ export function DataTable<TData, TValue>({
                           Edit Invoice
                         </ContextMenuItem>
                         <ContextMenuSeparator />
+                        <ContextMenuItem 
+                          onClick={() => contextActions.onSendInvoice(row.original)}
+                        >
+                          <Send className="mr-1.5 h-4 w-4" />
+                          Send Invoice
+                        </ContextMenuItem>
+                        <ContextMenuItem 
+                          onClick={() => contextActions.onViewInvoice(row.original)}
+                        >
+                          <FileText className="mr-1.5 h-4 w-4" />
+                          View PDF
+                        </ContextMenuItem>
+                        <ContextMenuSeparator />
                         
                         {/* Status Change Submenu */}
                         <ContextMenuSub>
@@ -364,7 +377,7 @@ export function DataTable<TData, TValue>({
                             <ContextMenuItem 
                               onClick={() => contextActions.onStatusChange(row.original, 'draft')}
                             >
-                              <Clock className="mr-1.5 h-4 w-4 text-gray-600" />
+                              <FileText className="mr-1.5 h-4 w-4 text-gray-600" />
                               Draft
                             </ContextMenuItem>
                             <ContextMenuItem 
@@ -382,35 +395,16 @@ export function DataTable<TData, TValue>({
                             <ContextMenuItem 
                               onClick={() => contextActions.onStatusChange(row.original, 'overdue')}
                             >
-                              <XCircle className="mr-1.5 h-4 w-4 text-red-600" />
+                              <Clock className="mr-1.5 h-4 w-4 text-red-600" />
                               Overdue
-                            </ContextMenuItem>
-                            <ContextMenuItem 
-                              onClick={() => contextActions.onStatusChange(row.original, 'cancelled')}
-                            >
-                              <XCircle className="mr-1.5 h-4 w-4 text-gray-600" />
-                              Cancelled
                             </ContextMenuItem>
                           </ContextMenuSubContent>
                         </ContextMenuSub>
                         
                         <ContextMenuSeparator />
                         <ContextMenuItem 
-                          onClick={() => contextActions.onSendInvoice(row.original)}
-                        >
-                          <Send className="mr-1.5 h-4 w-4" />
-                          Send Invoice
-                        </ContextMenuItem>
-                        <ContextMenuItem 
-                          onClick={() => contextActions.onViewInvoice(row.original)}
-                        >
-                          <Eye className="mr-1.5 h-4 w-4" />
-                          View Invoice
-                        </ContextMenuItem>
-                        <ContextMenuSeparator />
-                        <ContextMenuItem 
                           onClick={() => contextActions.onDeleteInvoice(row.original)}
-                          className="text-destructive focus:text-destructive"
+                          className="text-red-600"
                         >
                           <Trash2 className="mr-1.5 h-4 w-4" />
                           Delete Invoice
@@ -421,40 +415,13 @@ export function DataTable<TData, TValue>({
                 ))
               ) : (
                 <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    className="h-24 text-center"
-                  >
+                  <TableCell colSpan={columns.length} className="h-24 text-center">
                     No results.
                   </TableCell>
                 </TableRow>
               )}
             </TableBody>
           </Table>
-        </div>
-      </div>
-      <div className="flex items-center justify-end space-x-2 py-4">
-        <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} of{" "}
-          {table.getFilteredRowModel().rows.length} row(s) selected.
-        </div>
-        <div className="space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-          >
-            Next
-          </Button>
         </div>
       </div>
 
@@ -464,16 +431,12 @@ export function DataTable<TData, TValue>({
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete {itemsToDelete.length} invoice{itemsToDelete.length !== 1 ? 's' : ''}. 
-              This action cannot be undone.
+              This action cannot be undone. This will permanently delete {itemsToDelete.length} selected invoice{itemsToDelete.length > 1 ? 's' : ''}.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setItemsToDelete([])}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmBatchDelete}
-              className="bg-red-600 hover:bg-red-700"
-            >
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmBatchDelete} className="bg-red-600 hover:bg-red-700">
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

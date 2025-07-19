@@ -108,12 +108,12 @@ export function PipelineCard({ project, onProjectUpdate, isDragging }: PipelineC
           <Card
             ref={setNodeRef}
             style={isCardDragging ? undefined : style}
-            className={`group cursor-grab transition-all bg-white border border-gray-200 ${
+            className={`group cursor-grab transition-all bg-transparent border ${
               isCardDragging 
-                ? 'opacity-50 bg-gray-50 border-gray-300 cursor-not-allowed' 
+                ? 'opacity-50 bg-gray-50/50 border-gray-300 cursor-not-allowed' 
                 : isDragging 
-                  ? 'shadow-lg opacity-90' 
-                  : 'hover:shadow-md'
+                  ? 'opacity-90' 
+                  : ''
             }`}
             {...listeners}
             {...attributes}
@@ -210,7 +210,7 @@ export function PipelineCard({ project, onProjectUpdate, isDragging }: PipelineC
 
             {/* Notes */}
             {project.pipeline_notes && (
-              <div className={`text-xs bg-gray-50 p-2 rounded border ${
+              <div className={`text-xs bg-gray-50/50 p-2 rounded border ${
                 isCardDragging ? 'text-gray-500' : 'text-gray-600'
               }`}>
                 {project.pipeline_notes}

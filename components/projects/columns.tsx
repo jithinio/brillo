@@ -14,6 +14,16 @@ import {
   Trash2,
   Calendar,
   GitBranch,
+  User,
+  Activity,
+  DollarSign,
+  Minus,
+  Plus,
+  CalendarDays,
+  Building2,
+  ArrowUp,
+  ArrowDown,
+  ChevronsUpDown,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -97,6 +107,90 @@ interface ColumnActions {
   onDateChange: (project: Project, field: 'start_date' | 'due_date', date: Date | undefined) => void
 }
 
+// Reusable sortable header component with compact design
+function SortableHeader({ 
+  column, 
+  children, 
+  icon: Icon 
+}: { 
+  column: any; 
+  children: React.ReactNode; 
+  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }> 
+}) {
+  const sortDirection = column.getIsSorted()
+  
+  return (
+    <div className="px-2 py-1">
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant="ghost"
+            className="h-auto p-0 font-medium text-sm hover:bg-transparent focus:outline-none flex items-center"
+            style={{ gap: '6px' }}
+          >
+            <Icon 
+              className="flex-shrink-0" 
+              style={{ 
+                width: '12px', 
+                height: '12px',
+                minWidth: '12px',
+                minHeight: '12px'
+              }} 
+            />
+            <span className="text-sm font-medium">{children}</span>
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent 
+          className="w-32 p-1" 
+          align="start" 
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
+          <div className="grid gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="justify-start h-8 focus:outline-none"
+              onClick={(e) => {
+                e.stopPropagation()
+                column.toggleSorting(false)
+              }}
+            >
+              <ArrowUp className="mr-2 h-3 w-3" />
+              Asc
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="justify-start h-8 focus:outline-none"
+              onClick={(e) => {
+                e.stopPropagation()
+                column.toggleSorting(true)
+              }}
+            >
+              <ArrowDown className="mr-2 h-3 w-3" />
+              Desc
+            </Button>
+            {sortDirection && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="justify-start h-8 focus:outline-none"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  column.clearSorting()
+                }}
+              >
+                <ChevronsUpDown className="mr-2 h-3 w-3" />
+                Clear
+              </Button>
+            )}
+          </div>
+        </PopoverContent>
+      </Popover>
+    </div>
+  )
+}
+
 export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
   const { formatDate } = useSettings()
   
@@ -104,47 +198,42 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
     {
       id: "select",
       header: ({ table }) => (
-        <div className="flex items-center justify-center">
+        <div className="flex items-center justify-center px-2 py-1 w-full">
           <Checkbox
             checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
             onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
             aria-label="Select all"
+            className="h-4 w-4"
           />
         </div>
       ),
       cell: ({ row }) => (
-        <div className="flex items-center justify-center">
+        <div className="flex items-center justify-center px-2 py-1 w-full">
           <Checkbox
             checked={row.getIsSelected()}
             onCheckedChange={(value) => row.toggleSelected(!!value)}
             aria-label="Select row"
+            className="h-4 w-4"
           />
         </div>
       ),
       enableSorting: false,
       enableHiding: false,
-      size: 40,
+      size: 50,
     },
     {
       accessorKey: "name",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="h-auto p-0 font-medium"
-          >
-            Project Name
-            <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
-          </Button>
-        )
-      },
+      header: ({ column }) => (
+        <SortableHeader column={column} icon={Building2}>
+          Project Name
+        </SortableHeader>
+      ),
       cell: ({ row }) => {
         const project = row.original
         return (
-          <div className="min-w-[200px] max-w-[250px]">
+          <div className="px-2 py-1 w-full min-w-0">
             <div 
-              className="truncate font-medium cursor-pointer transition-colors" 
+              className="truncate font-medium cursor-pointer transition-colors hover:text-primary text-sm" 
               title={project.name}
               onClick={() => actions.onEditProject(project)}
             >
@@ -153,53 +242,40 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
           </div>
         )
       },
-      size: 250,
       enableHiding: false,
     },
     {
       id: "client",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="h-auto p-0 font-medium"
-          >
-            Client
-            <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
-          </Button>
-        )
-      },
+      accessorFn: (row) => row.clients?.name || "",
+      header: ({ column }) => (
+        <SortableHeader column={column} icon={User}>
+          Client
+        </SortableHeader>
+      ),
       cell: ({ row }) => {
         const client = row.original.clients
         return client ? (
-          <div className="flex items-center space-x-2 min-w-[150px] max-w-[180px]">
-            <ClientAvatar name={client.name} avatarUrl={client.avatar_url} size="sm" />
-            <div className="truncate font-normal" title={client.name}>
+          <div className="flex items-center space-x-2 px-2 py-1 w-full min-w-0">
+            <ClientAvatar name={client.name} avatarUrl={client.avatar_url} size="sm" className="flex-shrink-0" />
+            <div className="truncate font-normal flex-1 min-w-0 text-sm" title={client.name}>
               {client.name}
             </div>
           </div>
         ) : (
-          <span className="text-muted-foreground min-w-[150px] block">No client</span>
+          <div className="px-2 py-1 w-full">
+            <span className="text-muted-foreground text-sm">No client</span>
+          </div>
         )
       },
-      size: 180,
       enableHiding: true,
     },
     {
       accessorKey: "status",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="h-auto p-0 font-medium"
-          >
-            Status
-            <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
-          </Button>
-        )
-      },
+      header: ({ column }) => (
+        <SortableHeader column={column} icon={Activity}>
+          Status
+        </SortableHeader>
+      ),
       cell: ({ row }) => {
         const project = row.original
         const status = row.getValue("status") as string
@@ -212,7 +288,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
         const Icon = config.icon
 
         return (
-          <div className="min-w-[120px]">
+          <div className="px-2 py-1 w-full">
             <Popover>
               <PopoverTrigger asChild>
                 <Badge variant={config.variant} className="cursor-pointer hover:bg-slate-100 transition-colors font-normal text-sm focus:outline-none focus-visible:outline-none">
@@ -278,142 +354,104 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
           </div>
         )
       },
-      size: 120,
       enableHiding: true,
     },
     {
       accessorKey: "start_date",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="h-auto p-0 font-medium"
-          >
-            Start Date
-            <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
-          </Button>
-        )
-      },
+      header: ({ column }) => (
+        <SortableHeader column={column} icon={CalendarDays}>
+          Start Date
+        </SortableHeader>
+      ),
       cell: ({ row }) => {
         const project = row.original
         const startDate = row.getValue("start_date") as string
         const date = startDate ? new Date(startDate) : undefined
 
         return (
-          <div className="min-w-[120px] max-w-[140px]">
-            <DatePickerTable
-              date={date}
-              onSelect={(newDate) => actions.onDateChange(project, 'start_date', newDate)}
-              placeholder="Set start date"
-            />
+          <div className="px-2 py-1 w-full min-w-0">
+            <div className="min-w-0">
+              <DatePickerTable
+                date={date}
+                onSelect={(newDate) => actions.onDateChange(project, 'start_date', newDate)}
+                placeholder="Start date"
+              />
+            </div>
           </div>
         )
       },
-      size: 140,
       enableHiding: true,
     },
     {
       accessorKey: "budget",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="h-auto p-0 font-medium"
-          >
-            Budget
-            <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
-          </Button>
-        )
-      },
+      header: ({ column }) => (
+        <SortableHeader column={column} icon={DollarSign}>
+          Budget
+        </SortableHeader>
+      ),
       cell: ({ row }) => {
         const budget = row.getValue("budget") as number
         return (
-          <div className="min-w-[100px] max-w-[120px]">
+          <div className="px-2 py-1 w-full">
             {budget ? (
-              <span className="truncate font-normal">{formatCurrency(budget)}</span>
+              <span className="truncate font-normal text-sm">{formatCurrency(budget)}</span>
             ) : (
-              <span className="text-muted-foreground">—</span>
+              <span className="text-muted-foreground text-sm">—</span>
             )}
           </div>
         )
       },
-      size: 120,
       enableHiding: true,
     },
     {
       accessorKey: "expenses",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="h-auto p-0 font-medium"
-          >
-            Expenses
-            <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
-          </Button>
-        )
-      },
+      header: ({ column }) => (
+        <SortableHeader column={column} icon={Minus}>
+          Expenses
+        </SortableHeader>
+      ),
       cell: ({ row }) => {
         const expenses = row.getValue("expenses") as number
         return (
-          <div className="min-w-[100px] max-w-[120px]">
+          <div className="px-2 py-1 w-full">
             {expenses ? (
-              <span className="truncate font-normal">{formatCurrency(expenses)}</span>
+              <span className="truncate font-normal text-sm">{formatCurrency(expenses)}</span>
             ) : (
-              <span className="text-muted-foreground">{formatCurrency(0)}</span>
+              <span className="text-muted-foreground text-sm">{formatCurrency(0)}</span>
             )}
           </div>
         )
       },
-      size: 120,
       enableHiding: true,
     },
     {
       accessorKey: "received",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="h-auto p-0 font-medium"
-          >
-            Received
-            <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
-          </Button>
-        )
-      },
+      header: ({ column }) => (
+        <SortableHeader column={column} icon={Plus}>
+          Received
+        </SortableHeader>
+      ),
       cell: ({ row }) => {
         const received = row.getValue("received") as number
         return (
-          <div className="min-w-[100px] max-w-[120px]">
+          <div className="px-2 py-1 w-full">
             {received ? (
-              <span className="truncate font-normal">{formatCurrency(received)}</span>
+              <span className="truncate font-normal text-sm">{formatCurrency(received)}</span>
             ) : (
-              <span className="text-muted-foreground">{formatCurrency(0)}</span>
+              <span className="text-muted-foreground text-sm">{formatCurrency(0)}</span>
             )}
           </div>
         )
       },
-      size: 120,
       enableHiding: true,
     },
     {
       accessorKey: "pending",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="h-auto p-0 font-medium"
-          >
-            Pending
-            <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
-          </Button>
-        )
-      },
+      header: ({ column }) => (
+        <SortableHeader column={column} icon={Clock}>
+          Pending
+        </SortableHeader>
+      ),
       cell: ({ row }) => {
         const project = row.original
         // Auto-calculate pending amount: budget - received = pending
@@ -421,139 +459,39 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
         const received = project.received || 0
         const pending = Math.max(0, budget - received) // Ensure it's not negative
         
-        return (
-          <div className="min-w-[100px] max-w-[120px]">
-            <span className="truncate font-normal">{formatCurrency(pending)}</span>
+                return (
+          <div className="px-2 py-1 w-full">
+            <span className="truncate font-normal text-sm">{formatCurrency(pending)}</span>
           </div>
         )
+        },
+        enableHiding: true,
       },
-      size: 120,
-      enableHiding: true,
-    },
-    {
-      accessorKey: "due_date",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="h-auto p-0 font-medium"
-          >
+      {
+        accessorKey: "due_date",
+        header: ({ column }) => (
+          <SortableHeader column={column} icon={Calendar}>
             Due Date
-            <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
-          </Button>
-        )
-      },
+          </SortableHeader>
+        ),
       cell: ({ row }) => {
         const project = row.original
         const dueDate = row.getValue("due_date") as string
         const date = dueDate ? new Date(dueDate) : undefined
 
-          return (
-            <div className="min-w-[120px] max-w-[140px]">
-            <DatePickerTable
-              date={date}
-              onSelect={(newDate) => actions.onDateChange(project, 'due_date', newDate)}
-              placeholder="Set due date"
-            />
+                    return (
+            <div className="px-2 py-1 w-full min-w-0">
+              <div className="min-w-0">
+                <DatePickerTable
+                  date={date}
+                  onSelect={(newDate) => actions.onDateChange(project, 'due_date', newDate)}
+                  placeholder="Due date"
+                />
+              </div>
             </div>
           )
       },
-      size: 140,
       enableHiding: true,
-    },
-    {
-      id: "actions",
-      header: "",
-      enableHiding: false,
-      cell: ({ row }) => {
-        const project = row.original
-
-        return (
-          <div className="flex justify-center">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 w-8 p-0 border-dashed hover:border-solid"
-                >
-                  <MoreHorizontal className="h-4 w-4" />
-                  <span className="sr-only">Open actions menu</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                
-                <DropdownMenuItem onClick={() => actions.onEditProject(project)} className="whitespace-nowrap">
-                  <Edit className="mr-2 h-4 w-4" />
-                  Edit Project
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                
-                {/* Status Change Submenu */}
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger className="whitespace-nowrap">
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                    Change Status
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent>
-                    <DropdownMenuItem 
-                      onClick={() => actions.onStatusChange(project, 'active')}
-                      disabled={project.status === 'active'}
-                    >
-                      <Clock className="mr-2 h-4 w-4 text-green-600" />
-                      Active
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => actions.onStatusChange(project, 'completed')}
-                      disabled={project.status === 'completed'}
-                    >
-                      <CheckCircle className="mr-2 h-4 w-4 text-blue-600" />
-                      Completed
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => actions.onStatusChange(project, 'on_hold')}
-                      disabled={project.status === 'on_hold'}
-                    >
-                      <Pause className="mr-2 h-4 w-4 text-yellow-600" />
-                      On Hold
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => actions.onStatusChange(project, 'cancelled')}
-                      disabled={project.status === 'cancelled'}
-                    >
-                      <XCircle className="mr-2 h-4 w-4 text-red-600" />
-                      Cancelled
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => actions.onStatusChange(project, 'pipeline')}
-                      disabled={project.status === 'pipeline'}
-                    >
-                      <GitBranch className="mr-2 h-4 w-4 text-purple-600" />
-                      Pipeline
-                    </DropdownMenuItem>
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
-                
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => actions.onCreateInvoice(project)} className="whitespace-nowrap">
-                  <FileText className="mr-2 h-4 w-4" />
-                  Create Invoice
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="text-destructive whitespace-nowrap"
-                  onClick={() => actions.onDeleteProject(project)}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete Project
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        )
-      },
-      size: 36,
     },
   ]
 }

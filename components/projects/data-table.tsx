@@ -63,9 +63,10 @@ interface DataTableProps<TData, TValue> {
     onDeleteProject: (item: TData) => void
     onStatusChange: (item: TData, status: string) => void
   }
+  filterComponent?: React.ReactNode
 }
 
-export function DataTable<TData, TValue>({ columns, data, onAddProject, onBatchDelete, contextActions }: DataTableProps<TData, TValue>) {
+export function DataTable<TData, TValue>({ columns, data, onAddProject, onBatchDelete, contextActions, filterComponent }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
@@ -260,6 +261,7 @@ export function DataTable<TData, TValue>({ columns, data, onAddProject, onBatchD
                 })}
             </DropdownMenuContent>
           </DropdownMenu>
+          {filterComponent}
         </div>
         <div className="flex items-center gap-2">
           {selectedCount > 0 && (
@@ -290,193 +292,132 @@ export function DataTable<TData, TValue>({ columns, data, onAddProject, onBatchD
       <div className="border max-w-full" style={{ borderRadius: 'var(--radius-md)' }}>
         <div className="w-full overflow-x-auto">
           <Table className="min-w-[1200px] table-auto">
-                    <TableHeader className="bg-card">
-            {table.getHeaderGroups().map((headerGroup, groupIndex) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header, headerIndex) => {
-                  const isActionsColumn = header.column.id === "actions"
-                  const isFirstHeader = headerIndex === 0
-                  const isLastHeader = headerIndex === headerGroup.headers.length - 1
-                  
-                  let borderRadius: React.CSSProperties = {}
-                  if (groupIndex === 0) {
-                    if (isFirstHeader) {
-                      borderRadius.borderTopLeftRadius = 'var(--radius-md)'
+            <TableHeader className="bg-card">
+              {table.getHeaderGroups().map((headerGroup, groupIndex) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header, headerIndex) => {
+                    const isActionsColumn = header.column.id === "actions"
+                    const isFirstHeader = headerIndex === 0
+                    const isLastHeader = headerIndex === headerGroup.headers.length - 1
+                    
+                    let borderRadius: React.CSSProperties = {}
+                    if (groupIndex === 0) {
+                      if (isFirstHeader) {
+                        borderRadius.borderTopLeftRadius = 'var(--radius-md)'
+                      }
+                      if (isLastHeader) {
+                        borderRadius.borderTopRightRadius = 'var(--radius-md)'
+                      }
                     }
-                    if (isLastHeader) {
-                      borderRadius.borderTopRightRadius = 'var(--radius-md)'
-                    }
-                  }
-                  
-                  return (
-                    <TableHead 
-                      key={header.id} 
-                      style={{ 
-                        width: header.getSize(),
-                        ...borderRadius
-                      }} 
-                      className={`whitespace-nowrap ${
-                        isActionsColumn ? "sticky right-0 bg-card shadow-[-4px_0_4px_-2px_rgba(0,0,0,0.1)]" : ""
-                      }`}
-                    >
-                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                    </TableHead>
-                  )
-                })}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <ContextMenu key={row.id}>
-                  <ContextMenuTrigger asChild>
-                    <TableRow 
-                      data-state={row.getIsSelected() && "selected"}
-                      className="cursor-default"
-                    >
-                  {row.getVisibleCells().map((cell) => {
-                    const isActionsColumn = cell.column.id === "actions"
+                    
                     return (
-                      <TableCell 
-                        key={cell.id} 
-                        style={{ width: cell.column.getSize() }} 
+                      <TableHead 
+                        key={header.id} 
+                        style={{ 
+                          width: header.getSize(),
+                          ...borderRadius
+                        }} 
                         className={`whitespace-nowrap ${
-                              isActionsColumn ? "sticky right-0 bg-background shadow-[-4px_0_4px_-2px_rgba(0,0,0,0.1)]" : ""
+                          isActionsColumn ? "sticky right-0 bg-card shadow-[-4px_0_4px_-2px_rgba(0,0,0,0.1)]" : ""
                         }`}
                       >
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
+                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                      </TableHead>
                     )
                   })}
                 </TableRow>
-                  </ContextMenuTrigger>
-                  {contextActions && (
-                    <ContextMenuContent className="w-48">
-                      <ContextMenuItem 
-                        onClick={() => contextActions.onEditProject(row.original)}
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row) => (
+                  <ContextMenu key={row.id}>
+                    <ContextMenuTrigger asChild>
+                      <TableRow 
+                        data-state={row.getIsSelected() && "selected"}
+                        className="cursor-default"
                       >
-                        <Edit className="mr-1.5 h-4 w-4" />
-                        Edit Project
-                      </ContextMenuItem>
-                      <ContextMenuSeparator />
-                      
-                      {/* Status Change Submenu */}
-                      <ContextMenuSub>
-                        <ContextMenuSubTrigger>
-                          <CheckCircle className="mr-1.5 h-4 w-4" />
-                          Change Status
-                        </ContextMenuSubTrigger>
-                        <ContextMenuSubContent>
-                          <ContextMenuItem 
-                            onClick={() => contextActions.onStatusChange(row.original, 'active')}
-                          >
-                            <Clock className="mr-1.5 h-4 w-4 text-green-600" />
-                            Active
-                          </ContextMenuItem>
-                          <ContextMenuItem 
-                            onClick={() => contextActions.onStatusChange(row.original, 'completed')}
-                          >
-                            <CheckCircle className="mr-1.5 h-4 w-4 text-blue-600" />
-                            Completed
-                          </ContextMenuItem>
-                          <ContextMenuItem 
-                            onClick={() => contextActions.onStatusChange(row.original, 'on_hold')}
-                          >
-                            <Pause className="mr-1.5 h-4 w-4 text-yellow-600" />
-                            On Hold
-                          </ContextMenuItem>
-                          <ContextMenuItem 
-                            onClick={() => contextActions.onStatusChange(row.original, 'cancelled')}
-                          >
-                            <XCircle className="mr-1.5 h-4 w-4 text-red-600" />
-                            Cancelled
-                          </ContextMenuItem>
-                        </ContextMenuSubContent>
-                      </ContextMenuSub>
-                      
-                      <ContextMenuSeparator />
-                      <ContextMenuItem 
-                        onClick={() => contextActions.onCreateInvoice(row.original)}
-                      >
-                        <FileText className="mr-1.5 h-4 w-4" />
-                        Create Invoice
-                      </ContextMenuItem>
-                      <ContextMenuSeparator />
-                      <ContextMenuItem 
-                        onClick={() => contextActions.onDeleteProject(row.original)}
-                        className="text-destructive focus:text-destructive"
-                      >
-                        <Trash2 className="mr-1.5 h-4 w-4" />
-                        Delete Project
-                      </ContextMenuItem>
-                    </ContextMenuContent>
-                  )}
-                </ContextMenu>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
-                  No results.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
+                        {row.getVisibleCells().map((cell) => {
+                          const isActionsColumn = cell.column.id === "actions"
+                          return (
+                            <TableCell 
+                              key={cell.id} 
+                              style={{ width: cell.column.getSize() }} 
+                              className={`whitespace-nowrap ${
+                                isActionsColumn ? "sticky right-0 bg-background shadow-[-4px_0_4px_-2px_rgba(0,0,0,0.1)]" : ""
+                              }`}
+                            >
+                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            </TableCell>
+                          )
+                        })}
+                      </TableRow>
+                    </ContextMenuTrigger>
+                    {contextActions && (
+                      <ContextMenuContent className="w-48">
+                        <ContextMenuItem 
+                          onClick={() => contextActions.onEditProject(row.original)}
+                        >
+                          <Edit className="mr-1.5 h-4 w-4" />
+                          Edit Project
+                        </ContextMenuItem>
+                        <ContextMenuSeparator />
+                        
+                        {/* Status Change Submenu */}
+                        <ContextMenuSub>
+                          <ContextMenuSubTrigger>
+                            <CheckCircle className="mr-1.5 h-4 w-4" />
+                            Change Status
+                          </ContextMenuSubTrigger>
+                          <ContextMenuSubContent>
+                            <ContextMenuItem 
+                              onClick={() => contextActions.onStatusChange(row.original, 'active')}
+                            >
+                              <Clock className="mr-1.5 h-4 w-4 text-green-600" />
+                              Active
+                            </ContextMenuItem>
+                            <ContextMenuItem 
+                              onClick={() => contextActions.onStatusChange(row.original, 'completed')}
+                            >
+                              <CheckCircle className="mr-1.5 h-4 w-4 text-blue-600" />
+                              Completed
+                            </ContextMenuItem>
+                            <ContextMenuItem 
+                              onClick={() => contextActions.onStatusChange(row.original, 'on_hold')}
+                            >
+                              <Pause className="mr-1.5 h-4 w-4 text-yellow-600" />
+                              On Hold
+                            </ContextMenuItem>
+                            <ContextMenuItem 
+                              onClick={() => contextActions.onStatusChange(row.original, 'cancelled')}
+                            >
+                              <XCircle className="mr-1.5 h-4 w-4 text-red-600" />
+                              Cancelled
+                            </ContextMenuItem>
+                          </ContextMenuSubContent>
+                        </ContextMenuSub>
+                        
+                        <ContextMenuSeparator />
+                        <ContextMenuItem 
+                          onClick={() => contextActions.onDeleteProject(row.original)}
+                          className="text-red-600"
+                        >
+                          <Trash2 className="mr-1.5 h-4 w-4" />
+                          Delete Project
+                        </ContextMenuItem>
+                      </ContextMenuContent>
+                    )}
+                  </ContextMenu>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={columns.length} className="h-24 text-center">
+                    No results.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
           </Table>
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between space-x-2 py-4">
-        <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
-          {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} row(s)
-          selected.
-        </div>
-        <div className="flex items-center space-x-6 lg:space-x-8">
-          <div className="hidden items-center gap-2 lg:flex">
-            <Label htmlFor="rows-per-page" className="text-sm font-medium">
-              Rows per page
-            </Label>
-            <Select
-              value={`${table.getState().pagination.pageSize}`}
-              onValueChange={(value) => {
-                table.setPageSize(Number(value))
-              }}
-            >
-              <SelectTrigger className="w-20" id="rows-per-page">
-                <SelectValue placeholder={table.getState().pagination.pageSize} />
-              </SelectTrigger>
-              <SelectContent side="top">
-                {[10, 20, 30, 40, 50].map((pageSize) => (
-                  <SelectItem key={pageSize} value={`${pageSize}`}>
-                    {pageSize}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-center justify-center text-sm font-medium">
-            Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
-          </div>
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              className="h-8 w-8 bg-background"
-              size="icon"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-            >
-              <span className="sr-only">Go to previous page</span>←
-            </Button>
-            <Button
-              variant="outline"
-              className="h-8 w-8 bg-background"
-              size="icon"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
-              <span className="sr-only">Go to next page</span>→
-            </Button>
-          </div>
         </div>
       </div>
 
@@ -486,16 +427,12 @@ export function DataTable<TData, TValue>({ columns, data, onAddProject, onBatchD
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete {itemsToDelete.length} project{itemsToDelete.length !== 1 ? 's' : ''}. 
-              This action cannot be undone.
+              This action cannot be undone. This will permanently delete {itemsToDelete.length} selected project{itemsToDelete.length > 1 ? 's' : ''}.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setItemsToDelete([])}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmBatchDelete}
-              className="bg-red-600 hover:bg-red-700"
-            >
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmBatchDelete} className="bg-red-600 hover:bg-red-700">
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

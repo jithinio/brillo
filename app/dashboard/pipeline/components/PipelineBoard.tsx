@@ -41,12 +41,12 @@ function ClosedColumn({ isDragging }: { isDragging: boolean }) {
     <div className="w-20 flex-shrink-0 h-full">
       <div 
         ref={setNodeRef}
-        className={`h-full bg-green-50 border-2 border-dashed rounded-lg flex items-center justify-center relative transition-colors ${
-          isOver ? 'border-green-500 bg-green-100' : 'border-green-300'
+        className={`h-full bg-green-50 dark:bg-green-950/20 border border-dashed rounded-lg flex items-center justify-center relative transition-colors ${
+          isOver ? 'border-green-500 dark:border-green-400 bg-green-100 dark:bg-green-900/30' : 'border-green-300 dark:border-green-600'
         }`}
       >
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="transform -rotate-90 text-green-700 font-medium text-xs whitespace-nowrap text-center px-1">
+          <div className="transform -rotate-90 text-green-700 dark:text-green-300 font-medium text-xs whitespace-nowrap text-center px-1">
             {isDragging && isOver ? (
               "DRAG HERE TO MARK AS CLOSED"
             ) : (
@@ -275,7 +275,7 @@ export function PipelineBoard({ projects, stages, onProjectUpdate, loading = fal
             // Show loading placeholders to prevent layout shift
             Array.from({ length: 3 }, (_, index) => (
               <div key={`loading-${index}`} className="flex-1 min-w-80 h-full">
-                <div className="h-full bg-card border-2 border-border rounded-lg flex flex-col">
+                <div className="h-full bg-transparent border border-border rounded-lg flex flex-col">
                   {/* Header - simple and clean */}
                   <div className="p-6 pb-3 border-b border-border">
                     <div className="flex items-center gap-2">

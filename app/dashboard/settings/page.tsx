@@ -330,7 +330,7 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <Label htmlFor="defaultCurrency">Default Currency</Label>
                   <Select value={generalSettings.defaultCurrency} onValueChange={(value) => setGeneralSettings({...generalSettings, defaultCurrency: value})}>
-                    <SelectTrigger>
+                    <SelectTrigger className="text-sm rounded-lg shadow-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -367,7 +367,7 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <Label htmlFor="dateFormat">Date Format</Label>
                   <Select value={generalSettings.dateFormat} onValueChange={(value) => setGeneralSettings({...generalSettings, dateFormat: value as DateFormat})}>
-                    <SelectTrigger>
+                    <SelectTrigger className="text-sm rounded-lg shadow-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>

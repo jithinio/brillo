@@ -595,12 +595,12 @@ const MetricCard = ({
   onPeriodChange: (value: string) => void
   formatCurrency: (amount: number) => string
 }) => (
-  <Card className="relative overflow-hidden border-0 shadow-none">
+  <Card className="relative overflow-hidden border bg-transparent">
     <CardHeader className="p-8 pb-3">
       <div className="flex items-center justify-between">
         <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
         <Select value={period} onValueChange={onPeriodChange}>
-          <SelectTrigger className="h-8 text-xs min-w-0 w-auto">
+          <SelectTrigger className="h-8 text-sm min-w-0 w-auto rounded-lg shadow-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -735,7 +735,7 @@ const RevenueChart = ({
   const dynamicTrend = calculateDynamicTrend()
 
   return (
-  <Card className="border-0 shadow-none">
+  <Card className="border bg-transparent">
     <CardHeader className="p-8 pb-3">
       <div className="flex items-center justify-between">
         <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -746,7 +746,7 @@ const RevenueChart = ({
         </CardTitle>
         <div className="flex items-center gap-2">
           <Select value={type} onValueChange={onTypeChange}>
-            <SelectTrigger className="h-8 text-xs min-w-0 w-auto">
+            <SelectTrigger className="h-8 text-sm min-w-0 w-auto rounded-lg shadow-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -755,7 +755,7 @@ const RevenueChart = ({
             </SelectContent>
           </Select>
                     <Select value={period} onValueChange={onPeriodChange}>
-            <SelectTrigger className="h-8 text-xs min-w-0 w-auto">
+            <SelectTrigger className="h-8 text-sm min-w-0 w-auto rounded-lg shadow-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -858,14 +858,14 @@ const YearlyBarChart = ({
   const yearlyData = generateYearlyData(projects)
   
   return (
-  <Card className="border-0 shadow-none">
+  <Card className="border bg-transparent">
     <CardHeader className="p-8 pb-3">
       <div className="flex items-center justify-between">
         <CardTitle className="text-sm font-medium text-muted-foreground">
           Yearly {type === 'revenue' ? 'Revenue' : 'Expenses'}
         </CardTitle>
         <Select value={type} onValueChange={onTypeChange}>
-          <SelectTrigger className="h-8 text-xs min-w-0 w-auto">
+          <SelectTrigger className="h-8 text-sm min-w-0 w-auto rounded-lg shadow-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

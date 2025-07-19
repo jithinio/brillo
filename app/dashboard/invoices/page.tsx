@@ -942,7 +942,7 @@ export default function InvoicesPage() {
                           value={selectedInvoice.status} 
                           onValueChange={(value) => handleStatusChange(selectedInvoice.id, value)}
                         >
-                          <SelectTrigger className="w-32 h-9 text-sm border-2 hover:border-gray-300 focus:border-blue-500">
+                          <SelectTrigger className="w-32 h-9 text-sm rounded-lg shadow-xs">
                             <SelectValue>
                               <div className="flex items-center">
                                 {(() => {

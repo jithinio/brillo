@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { Suspense } from "react"
 import { Clock, Search, Check, ChevronsUpDown } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -31,11 +32,15 @@ import { ClientAvatar } from "@/components/ui/client-avatar"
 
 import { PageHeader, PageContent, PageTitle } from "@/components/page-header"
 import { PageActionsMenu } from "@/components/page-actions-menu"
-import { DataTable } from "@/components/projects/data-table"
+import { DataTableV2 } from "@/components/projects/data-table-v2"
 import { createColumns, type Project } from "@/components/projects/columns"
+import { ProjectFiltersV2 } from "@/components/projects/project-filters-v2"
 import { formatCurrency } from "@/lib/currency"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
+import { parseFiltersFromSearchParams, getDateRangeFromTimePeriod } from "@/lib/project-filters-v2"
+import { useSearchParams } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { useProjectsCache } from "@/hooks/use-projects-cache"
 
 import {
   Command,
@@ -50,8 +55,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-
-// Remove mock data - projects will be loaded from database
 
 // Client interface
 interface Client {
@@ -88,7 +91,15 @@ interface NewProject {
   description: string
 }
 
-export default function ProjectsPage() {
+function ProjectsContent() {
+  const searchParams = useSearchParams()
+  const filters = React.useMemo(() => parseFiltersFromSearchParams(searchParams), [searchParams])
+  
+  // Debug filters changes
+  React.useEffect(() => {
+    console.log('🔄 Filters changed:', filters)
+  }, [filters])
+  
   const [projects, setProjects] = React.useState<Project[]>([])
   const [projectsLoading, setProjectsLoading] = React.useState(true)
   const [selectedProject, setSelectedProject] = React.useState<Project | null>(null)
@@ -96,6 +107,18 @@ export default function ProjectsPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false)
   const [undoData, setUndoData] = React.useState<{ items: Project[], timeout: NodeJS.Timeout } | null>(null)
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = React.useState(1)
+  const [totalPages, setTotalPages] = React.useState(1)
+  const [totalCount, setTotalCount] = React.useState(0)
+  const pageSize = 10 // Always 10 projects per page
+
+  // Cache management
+  const { getCacheKey, getCachedData, setCachedData, invalidateCache } = useProjectsCache()
+
+  // Table instance for column visibility controls
+  const [tableInstance, setTableInstance] = React.useState<any>(null)
 
   // Client state management
   const [clients, setClients] = React.useState<Client[]>([])
@@ -138,9 +161,126 @@ export default function ProjectsPage() {
     description: "",
   })
 
-  // Fetch projects and clients on component mount
+  // Reset page when filters change
   React.useEffect(() => {
-    fetchProjects()
+    console.log('🔄 Filters changed, resetting to page 1')
+    setCurrentPage(1)
+  }, [filters])
+
+  // Debug when current page changes (with debouncing)
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      console.log('📄 Current page state changed to:', currentPage)
+    }, 100)
+    return () => clearTimeout(timer)
+  }, [currentPage])
+
+  // Check if filters are active for cache management
+  const hasActiveFilters = filters.status.length > 0 || filters.client.length > 0 || 
+                          filters.timePeriod || filters.search
+
+  // Fetch projects with increased debouncing to prevent loops
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      console.log('⏰ Debounced fetch triggered for page:', currentPage)
+      fetchProjects()
+    }, 300) // Increased delay to prevent too many requests
+
+    return () => clearTimeout(timer)
+  }, [filters, currentPage])
+
+  // Fetch summary metrics with debouncing
+  React.useEffect(() => {
+    if (isSupabaseConfigured()) {
+      const timer = setTimeout(() => {
+        console.log('📊 Fetching summary metrics for filters')
+        fetchSummaryMetrics()
+      }, 500) // Even more delay for summary metrics
+
+      return () => clearTimeout(timer)
+    }
+  }, [filters])
+
+  // Add state for summary metrics
+  const [summaryMetrics, setSummaryMetrics] = React.useState({
+    totalProjects: 0,
+    activeProjects: 0,
+    pipelineProjects: 0,
+    completedProjects: 0,
+    onHoldProjects: 0,
+    cancelledProjects: 0,
+    totalBudget: 0,
+    totalExpenses: 0,
+    totalReceived: 0,
+    totalPending: 0
+  })
+
+  // Fetch summary metrics (all filtered data without pagination, excluding search)
+  const fetchSummaryMetrics = React.useCallback(async () => {
+    try {
+      if (isSupabaseConfigured()) {
+        let query = supabase
+          .from('projects')
+          .select('status, budget, expenses, payment_received')
+
+        // Apply filters excluding search (metrics don't need to update for search)
+        if (filters.status.length > 0) {
+          query = query.in('status', filters.status)
+        }
+        if (filters.client.length > 0) {
+          query = query.in('client_id', filters.client)
+        }
+        if (filters.timePeriod) {
+          const { dateFrom, dateTo } = getDateRangeFromTimePeriod(filters.timePeriod)
+          if (dateFrom) {
+            query = query.gte('created_at', dateFrom)
+          }
+          if (dateTo) {
+            query = query.lte('created_at', dateTo)
+          }
+        }
+        // Note: Search filter excluded from metrics calculation
+
+        const { data, error } = await query
+
+        if (error) {
+          console.error('Error fetching summary metrics:', error)
+          return
+        }
+
+        // Calculate metrics from all filtered data
+        const metrics = {
+          totalProjects: data?.length || 0,
+          activeProjects: data?.filter(p => p.status === 'active').length || 0,
+          pipelineProjects: data?.filter(p => p.status === 'pipeline').length || 0,
+          completedProjects: data?.filter(p => p.status === 'completed').length || 0,
+          onHoldProjects: data?.filter(p => p.status === 'on_hold').length || 0,
+          cancelledProjects: data?.filter(p => p.status === 'cancelled').length || 0,
+          totalBudget: data?.reduce((sum, p) => sum + (p.budget || 0), 0) || 0,
+          totalExpenses: data?.reduce((sum, p) => sum + (p.expenses || 0), 0) || 0,
+          totalReceived: data?.reduce((sum, p) => sum + (p.payment_received || 0), 0) || 0,
+          totalPending: data?.reduce((sum, p) => {
+            const budget = p.budget || 0
+            const received = p.payment_received || 0
+            return sum + Math.max(0, budget - received)
+          }, 0) || 0
+        }
+
+        setSummaryMetrics(metrics)
+        console.log('📊 Summary metrics updated:', metrics.totalProjects, 'total projects')
+      }
+    } catch (error) {
+      console.error('Error fetching summary metrics:', error)
+    }
+  }, [filters.status, filters.client, filters.timePeriod, setSummaryMetrics]);
+
+  // Call fetchSummaryMetrics when filters change
+  React.useEffect(() => {
+    fetchSummaryMetrics()
+  }, [fetchSummaryMetrics])
+
+  // Fetch clients only once on mount
+  React.useEffect(() => {
     fetchClients()
   }, [])
 
@@ -170,15 +310,34 @@ export default function ProjectsPage() {
     }
   }, [])
 
-  // Fetch projects from database and sessionStorage
-  const fetchProjects = async () => {
+  // Fetch projects from database
+  const fetchProjects = React.useCallback(async () => {
+    console.log('🚀 Starting fetchProjects with filters:', filters, 'page:', currentPage)
+    
+    // Check cache first
+    const cacheKey = getCacheKey(filters, currentPage, pageSize)
+    console.log('🔑 Cache key for page', currentPage, ':', cacheKey)
+    const cachedData = getCachedData(cacheKey)
+    
+    if (cachedData) {
+      console.log('✅ Using cached data for page', currentPage)
+      setProjects(cachedData.data)
+      setTotalCount(cachedData.count)
+      setTotalPages(Math.ceil(cachedData.count / pageSize))
+      setProjectsLoading(false)
+      return
+    }
+    
+    console.log('🔄 No cache found, fetching from database')
+    
     try {
       setProjectsLoading(true)
       let allProjects: Project[] = []
+      let totalCount = 0
       
       if (isSupabaseConfigured()) {
-        // Load from database - automatically filtered by RLS policies
-        const { data, error } = await supabase
+        // Build query with filters
+        let query = supabase
           .from('projects')
           .select(`
             *,
@@ -187,15 +346,49 @@ export default function ProjectsPage() {
               company,
               avatar_url
             )
-          `)
-          .order('created_at', { ascending: false })
+          `, { count: 'exact' })
+
+        // Apply filters
+        const hasFilters = filters.status.length > 0 || filters.client.length > 0 || filters.timePeriod || filters.search
+        console.log(hasFilters ? '🎯 Applying filters' : '✅ No filters - fetching all projects')
+        
+        if (filters.status.length > 0) {
+          query = query.in('status', filters.status)
+        }
+        if (filters.client.length > 0) {
+          query = query.in('client_id', filters.client)
+        }
+        if (filters.timePeriod) {
+          const { dateFrom, dateTo } = getDateRangeFromTimePeriod(filters.timePeriod)
+          if (dateFrom) {
+            query = query.gte('created_at', dateFrom)
+          }
+          if (dateTo) {
+            query = query.lte('created_at', dateTo)
+          }
+        }
+        if (filters.search) {
+          query = query.or(`name.ilike.%${filters.search}%,description.ilike.%${filters.search}%`)
+        }
+
+        // Add pagination
+        const from = (currentPage - 1) * pageSize
+        const to = from + pageSize - 1
+        query = query.range(from, to)
+        
+        // Always order by created_at desc for consistency
+        query = query.order('created_at', { ascending: false })
+
+        const { data, error, count } = await query
 
         if (error) {
           console.error('Error fetching projects:', error)
           throw error
         }
 
-        // Transform the data to match our Project interface
+        console.log('📊 Query results:', data?.length || 0, 'projects on page', currentPage, 'of', count || 0, 'total')
+
+        // Transform the data
         const dbProjects = (data || []).map(project => ({
           id: project.id,
           name: project.name,
@@ -204,8 +397,8 @@ export default function ProjectsPage() {
           due_date: project.due_date,
           budget: project.budget,
           expenses: project.expenses,
-          received: project.payment_received, // Map payment_received to received
-          pending: project.payment_pending, // Map payment_pending to pending
+          received: project.payment_received,
+          pending: project.payment_pending,
           created_at: project.created_at,
           clients: project.clients ? {
             name: project.clients.name,
@@ -214,46 +407,27 @@ export default function ProjectsPage() {
           } : undefined
         }))
 
-        allProjects = [...dbProjects]
-        console.log('Fetched projects from database:', dbProjects)
-      } else {
-        // Use mock data when database is not configured
-        // allProjects = [...mockProjects] // Removed mockProjects
-        // console.log('Using mock projects data') // Removed mockProjects
+        allProjects = dbProjects
+        const total = count || 0
+        setTotalCount(total)
+        setTotalPages(Math.ceil(total / pageSize))
+        
+        // Cache the results
+        setCachedData(cacheKey, allProjects, total)
+        
+        console.log('✅ Projects fetched:', allProjects.length, 'Total:', total, `Page: ${currentPage}/${Math.ceil(total / pageSize)}`)
       }
-
-      // Also load any imported projects from sessionStorage (demo mode)
-      // const demoProjects = JSON.parse(sessionStorage.getItem('demo-projects') || '[]') // Removed demoProjects
-      // if (demoProjects.length > 0) { // Removed demoProjects
-      //   // Map demo projects to match Project interface // Removed demoProjects
-      //   const mappedDemoProjects = demoProjects.map((project: any) => ({ // Removed demoProjects
-      //     id: project.id, // Removed demoProjects
-      //     name: project.name, // Removed demoProjects
-      //     status: project.status, // Removed demoProjects
-      //     start_date: project.start_date, // Removed demoProjects
-      //     end_date: project.end_date, // Removed demoProjects
-      //     budget: project.budget, // Removed demoProjects
-      //     expenses: project.expenses, // Removed demoProjects
-      //     received: project.payment_received || project.received, // Map payment_received to received // Removed demoProjects
-      //     pending: project.payment_pending || project.pending, // Map payment_pending to pending // Removed demoProjects
-      //     created_at: project.created_at, // Removed demoProjects
-      //     clients: project.clients // Removed demoProjects
-      //   })) // Removed demoProjects
-          
-      //   allProjects = [...allProjects, ...mappedDemoProjects] // Removed demoProjects
-      //   console.log('Added demo projects from sessionStorage:', mappedDemoProjects) // Removed demoProjects
-      // } // Removed demoProjects
-
+      
       setProjects(allProjects)
     } catch (error) {
       console.error('Error fetching projects:', error)
-      // Fallback to mock data on error
-      // setProjects(mockProjects) // Removed mockProjects
-      toast.error('Failed to fetch projects. Using demo data.')
+      toast.error('Failed to fetch projects')
     } finally {
       setProjectsLoading(false)
     }
-  }
+  }, [filters, currentPage, pageSize, getCacheKey, getCachedData, setCachedData]);
+
+  // Removed filters cleared event listener to prevent infinite loops
 
   // Fetch clients from Supabase
   const fetchClients = async () => {
@@ -261,7 +435,6 @@ export default function ProjectsPage() {
       setClientsLoading(true)
       
       if (isSupabaseConfigured()) {
-        // Data is automatically filtered by RLS policies
         const { data, error } = await supabase
           .from('clients')
           .select('*')
@@ -273,17 +446,14 @@ export default function ProjectsPage() {
         }
 
         setClients(data || [])
-        console.log('Fetched user-specific clients from Supabase:', data)
+        console.log('Fetched clients from Supabase:', data)
       } else {
-        // No clients when Supabase is not configured
         console.log('Supabase not configured')
         setClients([])
       }
     } catch (error) {
       console.error('Error fetching clients:', error)
-      // Fallback to mock data on error
-      // setClients(mockClients) // Removed mockClients
-      toast.error('Failed to fetch clients. Using demo data.')
+      toast.error('Failed to fetch clients')
     } finally {
       setClientsLoading(false)
     }
@@ -606,11 +776,8 @@ export default function ProjectsPage() {
     }
   }
 
+  // Handle add project
   const handleAddProject = () => {
-    setSelectedProject(null) // Clear any selected project
-    setSelectedClient(null) // Clear any selected client
-    setClientSearchQuery("") // Clear search query
-    setDisplayedClientsCount(10) // Reset displayed count
     setNewProject({
       name: "",
       client_id: "",
@@ -622,8 +789,11 @@ export default function ProjectsPage() {
       received: "",
       description: "",
     })
+    setSelectedClient(null)
     setIsAddDialogOpen(true)
   }
+
+
 
   const handleSaveProject = async () => {
     if (!newProject.name) {
@@ -711,6 +881,7 @@ export default function ProjectsPage() {
 
           setProjects(projects.map(p => p.id === selectedProject.id ? updatedProject : p))
           setIsEditDialogOpen(false)
+          invalidateCache()
           toast.success(`Project "${updatedProject.name}" has been updated successfully`)
         }
       } else {
@@ -763,6 +934,7 @@ export default function ProjectsPage() {
 
           setProjects([newProjectData, ...projects])
           setIsAddDialogOpen(false)
+          invalidateCache()
           toast.success(`Project "${newProjectData.name}" has been created successfully`)
         } else {
           // Fallback to local state only
@@ -817,6 +989,7 @@ export default function ProjectsPage() {
 
         // Remove from local state
         setProjects(projects.filter((p) => p.id !== selectedProject.id))
+        invalidateCache()
         toast.success(`Project "${selectedProject.name}" deleted successfully`)
         setIsDeleteDialogOpen(false)
         setSelectedProject(null)
@@ -859,116 +1032,102 @@ export default function ProjectsPage() {
     toast.success(`Exported ${projects.length} projects to CSV`)
   }
 
-  const columns = createColumns({
+  // Create columns with actions - memoized to prevent column preferences reset
+  const columns = React.useMemo(() => createColumns({
     onEditProject: handleEditProject,
     onCreateInvoice: handleCreateInvoice,
     onDeleteProject: handleDeleteProject,
     onStatusChange: handleStatusChange,
     onDateChange: handleDateChange,
-  })
+  }), [handleEditProject, handleCreateInvoice, handleDeleteProject, handleStatusChange, handleDateChange])
 
-  // Summary calculations
-  const totalProjects = projects.length
-  const activeProjects = projects.filter((p) => p.status === "active").length
-  const pipelineProjects = projects.filter((p) => p.status === "pipeline").length
-  const completedProjects = projects.filter((p) => p.status === "completed").length
-  const onHoldProjects = projects.filter((p) => p.status === "on_hold").length
-  const cancelledProjects = projects.filter((p) => p.status === "cancelled").length
-  const totalBudget = projects.reduce((sum, p) => sum + (p.budget || 0), 0)
-  const totalExpenses = projects.reduce((sum, p) => sum + (p.expenses || 0), 0)
-  const totalReceived = projects.reduce((sum, p) => sum + (p.received || 0), 0)
-  // Auto-calculate total pending from budget - received for each project
-  const totalPending = projects.reduce((sum, p) => {
-    const budget = p.budget || 0
-    const received = p.received || 0
-    const pending = Math.max(0, budget - received)
-    return sum + pending
-  }, 0)
+  // Use summary metrics instead of calculating from current page
+  const {
+    totalProjects,
+    activeProjects,
+    pipelineProjects,
+    completedProjects,
+    onHoldProjects,
+    cancelledProjects,
+    totalBudget,
+    totalExpenses,
+    totalReceived,
+    totalPending
+  } = summaryMetrics
+
+  // Debug when projects are loaded on current page
+  React.useEffect(() => {
+    if (projects.length > 0) {
+      console.log('📈 Projects loaded on page:', projects.length, 'of', totalCount, 'total')
+    }
+  }, [projects.length, totalCount])
 
   return (
     <>
       <PageHeader
-        title="Projects"
+        title="All Projects"
         action={<PageActionsMenu entityType="projects" onExport={handleExport} />}
       />
       <PageContent>
 
 
         {/* Summary Cards */}
-        {projectsLoading ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
-                <div className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <div className="h-4 w-24 bg-gray-200 rounded animate-pulse"></div>
-                </div>
-                <div className="h-8 w-16 bg-gray-200 rounded animate-pulse mb-2"></div>
-                <div className="h-3 w-32 bg-gray-200 rounded animate-pulse"></div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
-              <div className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <h3 className="tracking-tight text-sm font-normal text-muted-foreground">Total Projects</h3>
-              </div>
-              <div className="text-2xl font-normal">{totalProjects}</div>
-              <div className="text-xs text-muted-foreground mt-1">
-                {activeProjects} Active • {pipelineProjects} Pipeline • {completedProjects} Completed
+        {/* Summary Cards */}
+        {(
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 w-full">
+            <div className="rounded-lg border bg-transparent text-card-foreground p-3 h-16 flex items-center">
+              <div className="flex items-center gap-2 w-full">
+                <h3 className="text-xs font-medium text-muted-foreground leading-none whitespace-nowrap">Total Projects</h3>
+                <div className="text-lg font-semibold ml-auto">{totalProjects}</div>
               </div>
             </div>
-            <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
-              <div className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <h3 className="tracking-tight text-sm font-normal text-muted-foreground">Active Projects</h3>
-              </div>
-              <div className="text-2xl font-normal text-blue-600">{activeProjects}</div>
-              <div className="text-xs text-muted-foreground mt-1">
-                {pipelineProjects} in Pipeline • {onHoldProjects} On Hold
+            <div className="rounded-lg border bg-transparent text-card-foreground p-3 h-16 flex items-center">
+              <div className="flex items-center gap-2 w-full">
+                <h3 className="text-xs font-medium text-muted-foreground leading-none whitespace-nowrap">Active Projects</h3>
+                <div className="text-lg font-semibold text-blue-600 ml-auto">{activeProjects}</div>
               </div>
             </div>
-            <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
-              <div className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <h3 className="tracking-tight text-sm font-normal text-muted-foreground">Total Received</h3>
-              </div>
-              <div className="text-2xl font-normal text-green-600">{formatCurrency(totalReceived)}</div>
-              <div className="text-xs text-muted-foreground mt-1">
-                {formatCurrency(totalBudget)} Total Budget
+            <div className="rounded-lg border bg-transparent text-card-foreground p-3 h-16 flex items-center">
+              <div className="flex items-center gap-2 w-full">
+                <h3 className="text-xs font-medium text-muted-foreground leading-none whitespace-nowrap">Total Received</h3>
+                <div className="text-lg font-semibold text-green-600 ml-auto">{formatCurrency(totalReceived)}</div>
               </div>
             </div>
-            <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
-              <div className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <h3 className="tracking-tight text-sm font-normal text-muted-foreground">Total Pending</h3>
-              </div>
-              <div className="text-2xl font-normal text-yellow-600">{formatCurrency(totalPending)}</div>
-              <div className="text-xs text-muted-foreground mt-1">
-                {cancelledProjects} Cancelled Projects
+            <div className="rounded-lg border bg-transparent text-card-foreground p-3 h-16 flex items-center">
+              <div className="flex items-center gap-2 w-full">
+                <h3 className="text-xs font-medium text-muted-foreground leading-none whitespace-nowrap">Total Pending</h3>
+                <div className="text-lg font-semibold text-yellow-600 ml-auto">{formatCurrency(totalPending)}</div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Projects Table */}
-        {projectsLoading ? (
-          <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="h-6 w-32 bg-gray-200 rounded animate-pulse"></div>
-                <div className="h-9 w-24 bg-gray-200 rounded animate-pulse"></div>
-              </div>
-              <div className="space-y-2">
-                {[...Array(5)].map((_, i) => (
-                  <div key={i} className="h-12 w-full bg-gray-200 rounded animate-pulse"></div>
-                ))}
-              </div>
-            </div>
-          </div>
-        ) : (
-          <DataTable 
+        {/* Filters and Actions */}
+        <ProjectFiltersV2 
+          clients={clients}
+          showStatusFilter={true}
+          className=""
+          onAddProject={handleAddProject}
+          table={tableInstance}
+        />
+
+        {/* Projects Content */}
+        <DataTableV2 
+            key={`projects-table-${projects.length}-${projects.map(p => p.id).join(',').slice(0, 50)}`}
             columns={columns} 
-            data={projects} 
-            onAddProject={handleAddProject} 
+            data={projects}
+            loading={projectsLoading}
+            pageSize={pageSize}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalCount={totalCount}
+            onPageChange={(page) => {
+              console.log('📄 Page change requested:', page)
+              setCurrentPage(page)
+            }}
+            onAddProject={handleAddProject}
             onBatchDelete={handleBatchDelete}
+            onTableReady={setTableInstance}
             contextActions={{
               onEditProject: handleEditProject,
               onCreateInvoice: handleCreateInvoice,
@@ -976,7 +1135,6 @@ export default function ProjectsPage() {
               onStatusChange: handleStatusChange,
             }}
           />
-        )}
       </PageContent>
 
       {/* Edit Project Dialog */}
@@ -1093,7 +1251,7 @@ export default function ProjectsPage() {
               <div>
                 <Label htmlFor="edit-project-status">Status</Label>
                 <Select value={newProject.status} onValueChange={(value) => setNewProject({ ...newProject, status: value })}>
-                  <SelectTrigger>
+                  <SelectTrigger className="text-sm rounded-lg shadow-xs">
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1335,7 +1493,7 @@ export default function ProjectsPage() {
               <div>
                 <Label htmlFor="add-project-status">Status</Label>
                 <Select value={newProject.status} onValueChange={(value) => setNewProject({ ...newProject, status: value })}>
-                  <SelectTrigger>
+                  <SelectTrigger className="text-sm rounded-lg shadow-xs">
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1481,5 +1639,13 @@ export default function ProjectsPage() {
         </DialogContent>
       </Dialog>
     </>
+  )
+}
+
+export default function ProjectsPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ProjectsContent />
+    </Suspense>
   )
 }

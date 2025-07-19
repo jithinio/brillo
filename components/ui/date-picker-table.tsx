@@ -33,13 +33,14 @@ export function DatePickerTable({
           variant="ghost"
           size="sm"
           className={cn(
-            "flex justify-start text-left font-normal w-full min-w-0 h-8 px-2",
+            "flex justify-start text-left font-normal w-full min-w-0 h-6 px-2 max-w-full overflow-hidden text-sm",
             !date && "text-muted-foreground"
           )}
           disabled={disabled}
         >
-          <CalendarIcon className="mr-2 h-3 w-3" />
-          {date ? format(date, "MMM d, yyyy") : <span>{placeholder}</span>}
+          <span className="truncate min-w-0">
+            {date ? format(date, "MMM d, yy") : placeholder}
+          </span>
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">

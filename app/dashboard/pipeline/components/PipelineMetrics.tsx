@@ -52,7 +52,7 @@ export function PipelineMetrics({ metrics }: PipelineMetricsProps) {
       {metricCards.map((metric) => {
         const Icon = metric.icon
         return (
-          <Card key={metric.title} className="border-0 shadow-none">
+          <Card key={metric.title} className="border bg-transparent">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 {metric.title}
@@ -62,7 +62,7 @@ export function PipelineMetrics({ metrics }: PipelineMetricsProps) {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{metric.value}</div>
+              <div className="text-2xl font-normal">{metric.value}</div>
             </CardContent>
           </Card>
         )

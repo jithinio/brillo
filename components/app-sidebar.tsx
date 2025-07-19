@@ -38,6 +38,28 @@ const data = {
       title: "Projects",
       url: "/dashboard/projects",
       icon: GalleryVerticalEnd,
+      items: [
+        {
+          title: "All Projects",
+          url: "/dashboard/projects",
+        },
+        {
+          title: "Active",
+          url: "/dashboard/projects/active",
+        },
+        {
+          title: "Completed",
+          url: "/dashboard/projects/completed",
+        },
+        {
+          title: "On Hold",
+          url: "/dashboard/projects/on-hold",
+        },
+        {
+          title: "Cancelled",
+          url: "/dashboard/projects/cancelled",
+        },
+      ],
     },
     {
       title: "Invoices",

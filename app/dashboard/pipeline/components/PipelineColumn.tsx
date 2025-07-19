@@ -32,7 +32,7 @@ export function PipelineColumn({ column, onProjectUpdate, isDragging }: Pipeline
     <>
       <Card 
         ref={setNodeRef}
-        className={`flex-1 min-w-80 h-full max-h-full flex flex-col border-2 transition-colors ${
+        className={`flex-1 min-w-80 h-full max-h-full flex flex-col border bg-transparent transition-colors ${
           isOver ? 'border-primary bg-primary/5' : 'border-border'
         }`}
       >

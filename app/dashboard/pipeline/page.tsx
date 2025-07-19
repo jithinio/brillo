@@ -58,10 +58,9 @@ export default function PipelinePage() {
       }
       
       body:has([data-pipeline-page]) main {
-        height: calc(100svh - 1rem) !important;
-        max-height: calc(100svh - 1rem) !important;
-        min-height: calc(100svh - 1rem) !important;
-        margin-bottom: 1rem !important;
+        height: 100svh !important;
+        max-height: 100svh !important;
+        min-height: 100svh !important;
         overflow: hidden !important;
         display: flex !important;
         flex-direction: column !important;
