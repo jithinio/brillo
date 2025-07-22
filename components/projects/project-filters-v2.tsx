@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Filter, ChevronDown, Search, Plus, Calendar, Settings, CheckCircle, Users } from "lucide-react"
+import { Filter, ChevronDown, Search, Plus, Calendar, Settings, CheckCircle, Users, X } from "lucide-react"
 import { ColumnViewFilter } from "./column-view-filter"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -79,8 +79,10 @@ export function ProjectFiltersV2({
   const {
     filters,
     loading,
+    isSearching,
     updateFilter,
     debouncedUpdateFilters,
+    updateSearch,
     toggleStatus,
     toggleClient,
     clearFilters,
@@ -112,13 +114,31 @@ export function ProjectFiltersV2({
       <div className="flex flex-wrap items-center" style={{ gap: '0.3rem' }}>
         {/* Search Input */}
         <div className="relative w-[200px]">
-          <Search className="absolute left-3 top-2 h-4 w-4 text-muted-foreground" />
+          {isSearching ? (
+            <div className="absolute left-3 top-2 h-4 w-4 border-2 border-gray-300 border-t-primary rounded-full animate-spin" />
+          ) : (
+            <Search className="absolute left-3 top-2 h-4 w-4 text-muted-foreground" />
+          )}
           <Input
             placeholder="Search projects..."
-            className="h-8 pl-9 text-sm font-normal text-muted-foreground placeholder:text-muted-foreground/60"
+            className={`h-8 pl-9 pr-8 text-sm font-normal transition-colors ${
+              isSearching 
+                ? "border-primary/50 bg-primary/5 text-foreground placeholder:text-muted-foreground/60" 
+                : "text-muted-foreground placeholder:text-muted-foreground/60"
+            }`}
             value={filters.search}
-            onChange={(e) => debouncedUpdateFilters({ search: e.target.value })}
+            onChange={(e) => updateSearch(e.target.value)}
           />
+          {filters.search && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="absolute right-1 top-0.5 h-6 w-6 p-0 hover:bg-gray-100"
+              onClick={() => updateSearch("")}
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          )}
         </div>
 
         {/* Filter Controls */}
@@ -331,7 +351,7 @@ export function ProjectFiltersV2({
           {onAddProject && (
             <Button onClick={onAddProject} className="h-8 text-sm font-normal">
               <Plus className="mr-1 h-3 w-3" />
-              Add Project
+              Add
             </Button>
           )}
         </div>

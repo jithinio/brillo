@@ -1,9 +1,9 @@
 "use client"
 
-import { useCallback, useMemo, useTransition } from 'react'
+import { useCallback, useMemo, useTransition, useState, useRef, useEffect } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { parseFiltersFromSearchParams, filtersToSearchParams, type ProjectFilters } from '@/lib/project-filters-v2'
-import { debounce } from '@/lib/utils'
+import { debounce, fastDebounce } from '@/lib/utils'
 
 export function useProjectFiltersV2() {
   const router = useRouter()
@@ -12,21 +12,59 @@ export function useProjectFiltersV2() {
   const [isPending, startTransition] = useTransition()
 
   // Parse current filters from URL
-  const filters = useMemo(() => parseFiltersFromSearchParams(searchParams), [searchParams])
+  const urlFilters = useMemo(() => parseFiltersFromSearchParams(searchParams), [searchParams])
+  
+  // Local state for immediate UI updates (especially search)
+  const [localSearch, setLocalSearch] = useState(urlFilters.search)
+  const [isSearching, setIsSearching] = useState(false)
+  
+  // Update local search when URL changes
+  useEffect(() => {
+    setLocalSearch(urlFilters.search)
+    setIsSearching(false) // Reset searching state when URL updates
+  }, [urlFilters.search])
+
+  // Combine URL filters with local search for immediate feedback
+  const filters = useMemo(() => ({
+    ...urlFilters,
+    search: localSearch,
+  }), [urlFilters, localSearch])
 
   // Update URL with new filters
   const updateFilters = useCallback((newFilters: Partial<ProjectFilters>) => {
-    const updatedFilters = { ...filters, ...newFilters }
+    const updatedFilters = { ...urlFilters, ...newFilters }
     const newSearchParams = filtersToSearchParams(updatedFilters)
     
     startTransition(() => {
       router.push(`${pathname}?${newSearchParams.toString()}`, { scroll: false })
     })
-  }, [filters, pathname, router])
+  }, [urlFilters, pathname, router])
 
-  // Debounced update for search input
+  // Fast debounced update for search with immediate UI feedback
+  const debouncedSearchUpdate = useMemo(() => {
+    return fastDebounce((searchValue: string) => {
+      updateFilters({ search: searchValue })
+      setIsSearching(false) // Reset searching state after update
+    }, 100) // Ultra-fast debounce for search responsiveness
+  }, [updateFilters])
+
+  // Immediate search update function for instant UI feedback
+  const updateSearch = useCallback((searchValue: string) => {
+    setLocalSearch(searchValue) // Immediate UI update
+    
+    // Only set searching state if there's actual content to search
+    if (searchValue.trim()) {
+      setIsSearching(true)
+    } else {
+      setIsSearching(false)
+    }
+    
+    debouncedSearchUpdate(searchValue) // Debounced URL/API update
+  }, [debouncedSearchUpdate])
+
+  // General debounced update for other filters (can be slower)
   const debouncedUpdateFilters = useMemo(
-    () => debounce(updateFilters, 300),
+    () => debounce(updateFilters, 200), // Slightly faster than before
     [updateFilters]
   )
 
@@ -40,19 +78,19 @@ export function useProjectFiltersV2() {
 
   // Toggle status
   const toggleStatus = useCallback((status: 'active' | 'pipeline' | 'on_hold' | 'completed' | 'cancelled') => {
-    const newStatuses = filters.status.includes(status)
-      ? filters.status.filter(s => s !== status)
-      : [...filters.status, status]
+    const newStatuses = urlFilters.status.includes(status)
+      ? urlFilters.status.filter(s => s !== status)
+      : [...urlFilters.status, status]
     updateFilter('status', newStatuses)
-  }, [filters.status, updateFilter])
+  }, [urlFilters.status, updateFilter])
 
   // Toggle client
   const toggleClient = useCallback((clientId: string) => {
-    const newClients = filters.client.includes(clientId)
-      ? filters.client.filter(c => c !== clientId)
-      : [...filters.client, clientId]
+    const newClients = urlFilters.client.includes(clientId)
+      ? urlFilters.client.filter(c => c !== clientId)
+      : [...urlFilters.client, clientId]
     updateFilter('client', newClients)
-  }, [filters.client, updateFilter])
+  }, [urlFilters.client, updateFilter])
 
   // Clear all filters
   const clearFilters = useCallback(() => {
@@ -78,9 +116,11 @@ export function useProjectFiltersV2() {
   return {
     filters,
     loading: isPending,
+    isSearching, // New search state indicator
     updateFilters,
     debouncedUpdateFilters,
     updateFilter,
+    updateSearch, // New optimized search function
     toggleStatus,
     toggleClient,
     clearFilters,

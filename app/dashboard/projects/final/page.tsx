@@ -598,7 +598,7 @@ function FinalDataTable({
           </div>
 
           {/* Sticky Footer with Calculations */}
-          <div className="sticky bottom-0 bg-white z-10 border-t border-gray-200/80 h-11">
+          <div className="sticky bottom-0 bg-white z-10 border-t border-b border-gray-200/80 h-11">
             <div className="flex h-11">
               {columns.map((column: any, colIndex: number) => (
                 <div
@@ -1767,7 +1767,7 @@ function FinalProjectsContent() {
               Cancel
             </Button>
             <Button size="sm" onClick={handleSaveProject} disabled={!newProject.name}>
-              Add Project
+              Add
             </Button>
           </DialogFooter>
         </DialogContent>
