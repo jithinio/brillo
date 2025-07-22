@@ -16,7 +16,18 @@ interface TablePreferences {
 
 export function useTablePreferences() {
   const { user } = useAuth()
-  const [preferences, setPreferences] = useState<TablePreferences>({})
+  const [preferences, setPreferences] = useState<TablePreferences>(() => {
+    // Load from localStorage synchronously on initialization to prevent layout shift
+    if (typeof window !== 'undefined') {
+      try {
+        const localPrefs = localStorage.getItem('table-preferences')
+        return localPrefs ? JSON.parse(localPrefs) : {}
+      } catch (e) {
+        return {}
+      }
+    }
+    return {}
+  })
   const [isLoading, setIsLoading] = useState(true)
   const { toast } = useToast()
   

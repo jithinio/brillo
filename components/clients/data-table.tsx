@@ -200,6 +200,20 @@ export function DataTable<TData, TValue>({
     }
   }
 
+  // Don't render table until preferences are loaded to prevent layout shift
+  if (preferencesLoading || !preferencesLoaded) {
+    return (
+      <div className="w-full max-w-full space-y-4">
+        <div className="h-96 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+            <p className="text-sm text-muted-foreground">Loading table preferences...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="w-full max-w-full space-y-4">
       <div className="flex items-center justify-between">

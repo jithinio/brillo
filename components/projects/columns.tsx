@@ -45,7 +45,6 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { formatCurrency } from "@/lib/currency"
 import { ClientAvatar } from "@/components/ui/client-avatar"
-import { useSettings } from "@/components/settings-provider"
 import { DatePickerTable } from "@/components/ui/date-picker-table"
 
 export type Project = {
@@ -192,8 +191,6 @@ function SortableHeader({
 }
 
 export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
-  const { formatDate } = useSettings()
-  
   return [
     {
       id: "select",

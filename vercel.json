@@ -1,0 +1,77 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build",
+  "framework": "nextjs",
+  "functions": {
+    "app/api/projects/analytics/route.ts": {
+      "runtime": "edge"
+    }
+  },
+  "headers": [
+    {
+      "source": "/dashboard/projects/server",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, s-maxage=60, stale-while-revalidate=300"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        }
+      ]
+    },
+    {
+      "source": "/api/projects/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, s-maxage=60, stale-while-revalidate=300"
+        },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        }
+      ]
+    },
+    {
+      "source": "/(.*\\.(css|js|jpg|jpeg|png|gif|ico|svg|webp|woff|woff2|ttf|eot))",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/dashboard/projects/performance",
+      "destination": "/dashboard/projects/optimized",
+      "permanent": false
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/analytics/:path*",
+      "destination": "/api/projects/analytics/:path*"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/projects/analytics",
+      "schedule": "0 */6 * * *"
+    }
+  ],
+  "regions": ["sfo1", "iad1", "cdg1"],
+  "cleanUrls": true,
+  "trailingSlash": false
+} 

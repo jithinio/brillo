@@ -78,19 +78,9 @@ export function DataTableV2<TData, TValue>({
   onTableReady,
 }: DataTableV2Props<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>(() => {
-    // Set responsive defaults immediately to prevent layout shift
-    return {
-      status: true,
-      start_date: false,
-      due_date: false,
-      budget: true,
-      expenses: false,
-      pending: false,
-      actions: true,
-    }
-  })
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState({})
+  const [preferencesInitialized, setPreferencesInitialized] = React.useState(false)
 
   const [batchDeleteOpen, setBatchDeleteOpen] = React.useState(false)
   const [itemsToDelete, setItemsToDelete] = React.useState<TData[]>([])
@@ -101,15 +91,30 @@ export function DataTableV2<TData, TValue>({
   const { getTablePreference, updateTablePreference, isLoading: preferencesLoading } = useTablePreferences()
   const TABLE_NAME = "projects-table-v2"
 
-  // Load saved preferences (defaults already set in state to prevent layout shift)
+  // Load preferences synchronously on mount to prevent layout shift
   React.useEffect(() => {
-    if (!preferencesLoading) {
+    if (!preferencesLoading && !preferencesInitialized) {
       const savedVisibility = getTablePreference(TABLE_NAME, "column_visibility", {})
+      
       if (Object.keys(savedVisibility).length > 0) {
+        // Use saved preferences
         setColumnVisibility(savedVisibility)
+      } else {
+        // Set responsive defaults for first-time users
+        const defaults = {
+          status: true,
+          start_date: false,
+          due_date: false,
+          budget: true,
+          expenses: false,
+          pending: false,
+          actions: true,
+        }
+        setColumnVisibility(defaults)
       }
+      setPreferencesInitialized(true)
     }
-  }, [preferencesLoading, getTablePreference, TABLE_NAME])
+  }, [preferencesLoading, preferencesInitialized, getTablePreference, TABLE_NAME])
 
   // Save column visibility changes
   const handleColumnVisibilityChange = React.useCallback((updaterOrValue: any) => {
@@ -117,8 +122,12 @@ export function DataTableV2<TData, TValue>({
       ? updaterOrValue(columnVisibility) 
       : updaterOrValue
     setColumnVisibility(newVisibility)
-    updateTablePreference(TABLE_NAME, "column_visibility", newVisibility)
-  }, [columnVisibility, updateTablePreference, TABLE_NAME])
+    
+    // Only save preferences after they've been initialized to prevent saving during initial load
+    if (preferencesInitialized) {
+      updateTablePreference(TABLE_NAME, "column_visibility", newVisibility)
+    }
+  }, [columnVisibility, updateTablePreference, TABLE_NAME, preferencesInitialized])
 
 
 
@@ -232,7 +241,19 @@ export function DataTableV2<TData, TValue>({
     setRowSelection({})
   }
 
-
+  // Don't render table until preferences are loaded to prevent layout shift
+  if (preferencesLoading || !preferencesInitialized) {
+    return (
+      <div className="space-y-4">
+        <div className="h-96 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+            <p className="text-sm text-muted-foreground">Loading table preferences...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-4">
