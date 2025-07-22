@@ -48,7 +48,7 @@ export function useRealtimeProjects() {
   // Refs for managing subscriptions and cleanup
   const channelRef = useRef<RealtimeChannel | null>(null)
   const reconnectAttempts = useRef(0)
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout>()
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
   
   // Apply optimistic update to project list
   const applyOptimisticUpdate = useCallback((projects: Project[], update: OptimisticUpdate): Project[] => {
@@ -189,11 +189,11 @@ export function useRealtimeProjects() {
         received: project.payment_received,
         pending: project.payment_pending,
         created_at: project.created_at,
-                 clients: project.clients && Array.isArray(project.clients) && project.clients.length > 0 ? {
-           name: project.clients[0].name,
-           company: project.clients[0].company,
-           avatar_url: project.clients[0].avatar_url
-         } : undefined
+        clients: project.clients && Array.isArray(project.clients) && project.clients.length > 0 ? {
+          name: project.clients[0].name,
+          company: project.clients[0].company,
+          avatar_url: project.clients[0].avatar_url
+        } : undefined
       }))
       
       setState(prev => ({
@@ -258,8 +258,8 @@ export function useRealtimeProjects() {
                         expenses: payload.new.expenses,
                         received: payload.new.payment_received,
                         pending: payload.new.payment_pending,
-                                                 created_at: payload.new.created_at,
-                         clients: undefined // Will be populated by refetch if needed
+                        created_at: payload.new.created_at,
+                        clients: undefined // Will be populated by refetch if needed
                       }
                       return {
                         ...prev,
