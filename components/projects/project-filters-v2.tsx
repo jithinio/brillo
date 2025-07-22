@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { Filter, ChevronDown, Search, Plus, Calendar, Settings, CheckCircle, Users } from "lucide-react"
+import { ColumnViewFilter } from "./column-view-filter"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -36,6 +37,16 @@ interface ProjectFiltersV2Props {
   className?: string
   onAddProject?: () => void
   table?: any // React Table instance for column visibility
+  // Column view filter props
+  columns?: Array<{
+    id: string
+    accessorKey?: string
+    header: string | ((props: any) => React.ReactNode)
+    visible: boolean
+    canHide?: boolean
+  }>
+  onColumnReorder?: (activeId: string, overId: string) => void
+  onColumnVisibilityChange?: (columnId: string, visible: boolean) => void
 }
 
 const STATUS_OPTIONS = [
@@ -60,7 +71,10 @@ export function ProjectFiltersV2({
   showStatusFilter = false,
   className,
   onAddProject,
-  table
+  table,
+  columns,
+  onColumnReorder,
+  onColumnVisibilityChange
 }: ProjectFiltersV2Props) {
   const {
     filters,
@@ -109,8 +123,14 @@ export function ProjectFiltersV2({
 
         {/* Filter Controls */}
         <div className="flex items-center" style={{ gap: '0.3rem' }}>
-          {/* Column Visibility Toggle */}
-          {table && (
+          {/* Column View Filter */}
+          {columns && onColumnReorder && onColumnVisibilityChange ? (
+            <ColumnViewFilter
+              columns={columns}
+              onColumnReorder={onColumnReorder}
+              onColumnVisibilityChange={onColumnVisibilityChange}
+            />
+          ) : table && (
             <Popover open={viewOpen} onOpenChange={setViewOpen}>
               <PopoverTrigger asChild>
                 <Button
@@ -138,7 +158,6 @@ export function ProjectFiltersV2({
                               key={column.id}
                               onSelect={() => {
                                 column.toggleVisibility(!isVisible)
-                                // Close and reopen popover to refresh state
                                 setViewOpen(false)
                                 setTimeout(() => setViewOpen(true), 50)
                               }}

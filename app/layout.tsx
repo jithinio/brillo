@@ -1,6 +1,5 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { GeistSans } from "geist/font/sans"
 import { GeistMono } from "geist/font/mono"
 import { 
   Inter, 
@@ -21,6 +20,9 @@ import { ClientProviders } from "@/components/client-providers"
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
+  display: "swap",
+  weight: ["300", "400", "500", "600", "700"],
+  style: ["normal", "italic"],
 })
 
 const roboto = Roboto({
@@ -90,7 +92,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${GeistSans.variable} ${GeistMono.variable} ${inter.variable} ${roboto.variable} ${openSans.variable} ${lato.variable} ${poppins.variable} ${montserrat.variable} ${playfair.variable} ${merriweather.variable} ${sourceCodePro.variable} ${jetbrainsMono.variable} ${inconsolata.variable}`}>
+      <body className={`${inter.className} ${GeistMono.variable} ${inter.variable} ${roboto.variable} ${openSans.variable} ${lato.variable} ${poppins.variable} ${montserrat.variable} ${playfair.variable} ${merriweather.variable} ${sourceCodePro.variable} ${jetbrainsMono.variable} ${inconsolata.variable}`}>
         <ClientProviders>
           {children}
         </ClientProviders>

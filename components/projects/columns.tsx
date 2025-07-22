@@ -288,9 +288,9 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
           <div className="px-2 py-1 w-full">
             <Popover>
               <PopoverTrigger asChild>
-                <Badge variant={config.variant} className="cursor-pointer hover:bg-slate-100 transition-colors font-normal text-sm focus:outline-none focus-visible:outline-none">
-                  <Icon className={`mr-1.5 h-3 w-3 ${config.iconClassName}`} />
-                  {config.label}
+                <Badge variant={config.variant} className="cursor-pointer hover:bg-slate-100 transition-colors font-normal text-sm focus:outline-none focus-visible:outline-none whitespace-nowrap min-w-fit">
+                  <Icon className={`mr-1.5 h-3 w-3 ${config.iconClassName} flex-shrink-0`} />
+                  <span className="whitespace-nowrap">{config.label}</span>
                 </Badge>
               </PopoverTrigger>
               <PopoverContent className="w-44 p-1" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
@@ -298,52 +298,52 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className={`justify-start h-8 focus:outline-none focus-visible:outline-none ${project.status === 'active' ? 'bg-accent' : ''}`}
+                    className={`justify-start h-8 focus:outline-none focus-visible:outline-none whitespace-nowrap ${project.status === 'active' ? 'bg-accent' : ''}`}
                     onClick={() => actions.onStatusChange(project, 'active')}
                     disabled={project.status === 'active'}
                   >
-                    <Clock className="mr-2 h-3 w-3 text-green-500" />
-                    Active
+                    <Clock className="mr-2 h-3 w-3 text-green-500 flex-shrink-0" />
+                    <span className="whitespace-nowrap">Active</span>
                   </Button>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className={`justify-start h-8 focus:outline-none focus-visible:outline-none ${project.status === 'completed' ? 'bg-accent' : ''}`}
+                    className={`justify-start h-8 focus:outline-none focus-visible:outline-none whitespace-nowrap ${project.status === 'completed' ? 'bg-accent' : ''}`}
                     onClick={() => actions.onStatusChange(project, 'completed')}
                     disabled={project.status === 'completed'}
                   >
-                    <CheckCircle className="mr-2 h-3 w-3 text-blue-500" />
-                    Completed
+                    <CheckCircle className="mr-2 h-3 w-3 text-blue-500 flex-shrink-0" />
+                    <span className="whitespace-nowrap">Completed</span>
                   </Button>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className={`justify-start h-8 focus:outline-none focus-visible:outline-none ${project.status === 'on_hold' ? 'bg-accent' : ''}`}
+                    className={`justify-start h-8 focus:outline-none focus-visible:outline-none whitespace-nowrap ${project.status === 'on_hold' ? 'bg-accent' : ''}`}
                     onClick={() => actions.onStatusChange(project, 'on_hold')}
                     disabled={project.status === 'on_hold'}
                   >
-                    <Pause className="mr-2 h-3 w-3 text-yellow-500" />
-                    On Hold
+                    <Pause className="mr-2 h-3 w-3 text-yellow-500 flex-shrink-0" />
+                    <span className="whitespace-nowrap">On Hold</span>
                   </Button>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className={`justify-start h-8 focus:outline-none focus-visible:outline-none ${project.status === 'cancelled' ? 'bg-accent' : ''}`}
+                    className={`justify-start h-8 focus:outline-none focus-visible:outline-none whitespace-nowrap ${project.status === 'cancelled' ? 'bg-accent' : ''}`}
                     onClick={() => actions.onStatusChange(project, 'cancelled')}
                     disabled={project.status === 'cancelled'}
                   >
-                    <XCircle className="mr-2 h-3 w-3 text-red-500" />
-                    Cancelled
+                    <XCircle className="mr-2 h-3 w-3 text-red-500 flex-shrink-0" />
+                    <span className="whitespace-nowrap">Cancelled</span>
                   </Button>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className={`justify-start h-8 focus:outline-none focus-visible:outline-none ${project.status === 'pipeline' ? 'bg-accent' : ''}`}
+                    className={`justify-start h-8 focus:outline-none focus-visible:outline-none whitespace-nowrap ${project.status === 'pipeline' ? 'bg-accent' : ''}`}
                     onClick={() => actions.onStatusChange(project, 'pipeline')}
                     disabled={project.status === 'pipeline'}
                   >
-                    <GitBranch className="mr-2 h-3 w-3 text-purple-500" />
-                    Pipeline
+                    <GitBranch className="mr-2 h-3 w-3 text-purple-500 flex-shrink-0" />
+                    <span className="whitespace-nowrap">Pipeline</span>
                   </Button>
                 </div>
               </PopoverContent>

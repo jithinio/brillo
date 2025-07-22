@@ -111,7 +111,8 @@ const fetchProjects = async (filters: ProjectFilters = {}): Promise<ProjectsResp
         startDate = new Date(0).toISOString()
     }
     
-    query = query.gte('created_at', startDate)
+    // Filter by project start_date, not created_at
+    query = query.gte('start_date', startDate)
   }
 
   // Sorting

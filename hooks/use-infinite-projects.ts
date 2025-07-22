@@ -1,11 +1,12 @@
 "use client"
 
-import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useInfiniteQuery, useMutation, useQueryClient, useQuery } from "@tanstack/react-query"
 import { useCallback, useMemo } from "react"
-import { supabase } from "@/lib/supabase"
+import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { queryKeys, cacheUtils } from "@/components/query-provider"
 import { toast } from "sonner"
 import { useInstantSearch } from "./use-instant-search"
+import { getDateRangeFromTimePeriod } from "@/lib/project-filters-v2"
 
 export interface Project {
   id: string
@@ -74,29 +75,16 @@ const fetchProjectsPage = async (
     query = query.or(`name.ilike.%${filters.search}%,description.ilike.%${filters.search}%`)
   }
 
-  // Time period filtering
+  // Time period filtering - filter by project start_date, not created_at
   if (filters.timePeriod) {
-    const now = new Date()
-    let startDate: string
+    const { dateFrom, dateTo } = getDateRangeFromTimePeriod(filters.timePeriod)
     
-    switch (filters.timePeriod) {
-      case 'today':
-        startDate = new Date(now.setHours(0, 0, 0, 0)).toISOString()
-        break
-      case 'week':
-        startDate = new Date(now.setDate(now.getDate() - 7)).toISOString()
-        break
-      case 'month':
-        startDate = new Date(now.setMonth(now.getMonth() - 1)).toISOString()
-        break
-      case 'quarter':
-        startDate = new Date(now.setMonth(now.getMonth() - 3)).toISOString()
-        break
-      default:
-        startDate = new Date(0).toISOString()
+    if (dateFrom) {
+      query = query.gte('start_date', dateFrom)
     }
-    
-    query = query.gte('created_at', startDate)
+    if (dateTo) {
+      query = query.lte('start_date', dateTo)
+    }
   }
 
   // Cursor-based pagination
@@ -168,6 +156,87 @@ const updateProjectStatus = async ({ id, status }: { id: string; status: string 
   return data
 }
 
+// Fetch database-wide metrics (not affected by pagination or filters)
+async function fetchDatabaseMetrics(): Promise<{
+  totalProjects: number
+  activeProjects: number
+  pipelineProjects: number
+  completedProjects: number
+  onHoldProjects: number
+  cancelledProjects: number
+  totalBudget: number
+  totalExpenses: number
+  totalReceived: number
+  totalPending: number
+}> {
+  if (!isSupabaseConfigured()) {
+    return {
+      totalProjects: 0,
+      activeProjects: 0,
+      pipelineProjects: 0,
+      completedProjects: 0,
+      onHoldProjects: 0,
+      cancelledProjects: 0,
+      totalBudget: 0,
+      totalExpenses: 0,
+      totalReceived: 0,
+      totalPending: 0
+    }
+  }
+
+  try {
+    // Get all projects with minimal data for metrics calculation
+    const { data: projects, error } = await supabase
+      .from('projects')
+      .select('status, budget, expenses, payment_received')
+
+    if (error) throw error
+
+    const totalProjects = projects?.length || 0
+    const activeProjects = projects?.filter(p => p.status === 'active').length || 0
+    const pipelineProjects = projects?.filter(p => p.status === 'pipeline').length || 0
+    const completedProjects = projects?.filter(p => p.status === 'completed').length || 0
+    const onHoldProjects = projects?.filter(p => p.status === 'on_hold').length || 0
+    const cancelledProjects = projects?.filter(p => p.status === 'cancelled').length || 0
+    
+    const totalBudget = projects?.reduce((sum, p) => sum + (p.budget || 0), 0) || 0
+    const totalExpenses = projects?.reduce((sum, p) => sum + (p.expenses || 0), 0) || 0
+    const totalReceived = projects?.reduce((sum, p) => sum + (p.payment_received || 0), 0) || 0
+    const totalPending = projects?.reduce((sum, p) => {
+      const budget = p.budget || 0
+      const received = p.payment_received || 0
+      return sum + Math.max(0, budget - received)
+    }, 0) || 0
+
+    return {
+      totalProjects,
+      activeProjects,
+      pipelineProjects,
+      completedProjects,
+      onHoldProjects,
+      cancelledProjects,
+      totalBudget,
+      totalExpenses,
+      totalReceived,
+      totalPending
+    }
+  } catch (error) {
+    console.error('Error fetching database metrics:', error)
+    return {
+      totalProjects: 0,
+      activeProjects: 0,
+      pipelineProjects: 0,
+      completedProjects: 0,
+      onHoldProjects: 0,
+      cancelledProjects: 0,
+      totalBudget: 0,
+      totalExpenses: 0,
+      totalReceived: 0,
+      totalPending: 0
+    }
+  }
+}
+
 // Infinite projects hook with real-time updates
 export function useInfiniteProjects(filters: ProjectFilters = {}, pageSize: number = 50) {
   const queryClient = useQueryClient()
@@ -185,31 +254,36 @@ export function useInfiniteProjects(filters: ProjectFilters = {}, pageSize: numb
     retry: 3,
   })
 
+  // Separate query for database-wide metrics
+  const metricsQuery = useQuery({
+    queryKey: ['database-metrics'],
+    queryFn: fetchDatabaseMetrics,
+    staleTime: 2 * 60 * 1000, // Consider stale after 2 minutes
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    refetchOnWindowFocus: false, // Don't refetch on window focus for metrics
+    retry: 2,
+  })
+
   // Flatten all pages into a single array
   const allProjects = useMemo(() => {
     return infiniteQuery.data?.pages.flatMap(page => page.data) || []
   }, [infiniteQuery.data])
 
-  // Calculate metrics from all loaded data
+  // Use database-wide metrics instead of calculating from loaded projects
   const metrics = useMemo(() => {
-    const projects = allProjects
-    return {
-      totalProjects: projects.length,
-      activeProjects: projects.filter(p => p.status === 'active').length,
-      pipelineProjects: projects.filter(p => p.status === 'pipeline').length,
-      completedProjects: projects.filter(p => p.status === 'completed').length,
-      onHoldProjects: projects.filter(p => p.status === 'on_hold').length,
-      cancelledProjects: projects.filter(p => p.status === 'cancelled').length,
-      totalBudget: projects.reduce((sum, p) => sum + (p.budget || 0), 0),
-      totalExpenses: projects.reduce((sum, p) => sum + (p.expenses || 0), 0),
-      totalReceived: projects.reduce((sum, p) => sum + (p.received || 0), 0),
-      totalPending: projects.reduce((sum, p) => {
-        const budget = p.budget || 0
-        const received = p.received || 0
-        return sum + Math.max(0, budget - received)
-      }, 0)
+    return metricsQuery.data || {
+      totalProjects: 0,
+      activeProjects: 0,
+      pipelineProjects: 0,
+      completedProjects: 0,
+      onHoldProjects: 0,
+      cancelledProjects: 0,
+      totalBudget: 0,
+      totalExpenses: 0,
+      totalReceived: 0,
+      totalPending: 0
     }
-  }, [allProjects])
+  }, [metricsQuery.data])
 
   // Instant search with client-side filtering
   const {
@@ -297,14 +371,17 @@ export function useInfiniteProjects(filters: ProjectFilters = {}, pageSize: numb
 
   // Manual refetch function
   const refetch = useCallback(() => {
+    metricsQuery.refetch() // Also refetch metrics
     return infiniteQuery.refetch()
-  }, [infiniteQuery])
+  }, [infiniteQuery, metricsQuery])
 
   // Force refresh (bypasses cache)
   const forceRefresh = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: queryKeys.projectsInfinite(filters) })
+    queryClient.invalidateQueries({ queryKey: ['database-metrics'] }) // Also invalidate metrics
+    metricsQuery.refetch()
     return infiniteQuery.refetch()
-  }, [queryClient, infiniteQuery, filters])
+  }, [queryClient, infiniteQuery, metricsQuery, filters])
 
   return {
     // Data
@@ -314,11 +391,11 @@ export function useInfiniteProjects(filters: ProjectFilters = {}, pageSize: numb
     totalCount: infiniteQuery.data?.pages[0]?.totalCount || 0,
     
     // Loading states
-    isLoading: infiniteQuery.isLoading,
-    isFetching: infiniteQuery.isFetching,
+    isLoading: infiniteQuery.isLoading || metricsQuery.isLoading,
+    isFetching: infiniteQuery.isFetching || metricsQuery.isFetching,
     isFetchingNextPage: infiniteQuery.isFetchingNextPage,
-    isError: infiniteQuery.isError,
-    error: infiniteQuery.error,
+    isError: infiniteQuery.isError || metricsQuery.isError,
+    error: infiniteQuery.error || metricsQuery.error,
     
     // Infinite loading
     hasNextPage: infiniteQuery.hasNextPage,

@@ -38,7 +38,7 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
   --font-serif: var(--font-sans);
 
@@ -100,8 +100,8 @@
   --sidebar-border: oklch(0.92 0.00 286.61);
   --sidebar-ring: oklch(0.71 0.01 286.09);
 
-  --font-sans: 'Geist', 'Geist Fallback', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
-  --font-serif: "Geist", "Geist Fallback", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  --font-serif: "Inter", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
   --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
   --shadow-2xs: 0 1px 1px 0px oklch(0.00 0 0 / 0.03);
@@ -201,12 +201,91 @@
   }
 }
 
-/* Using Geist font for modern, clean typography */
+/* Using Inter font for modern, clean typography with optimal rendering */
 body {
-  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans",
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans",
     "Droid Sans", "Helvetica Neue", sans-serif;
-  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  
+  /* Font smoothing and rendering optimization */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  
+  /* Inter-specific OpenType features for optimal readability */
+  font-feature-settings: 
+    "kern" 1,          /* Enable kerning for better letter spacing */
+    "liga" 1,          /* Enable ligatures for better character combinations */
+    "calt" 1,          /* Enable contextual alternates for natural text flow */
+    "cv02" 1,          /* Use alternate 'a' for better readability */
+    "cv03" 1,          /* Use alternate 'g' (single-story) */
+    "cv04" 1,          /* Use alternate 'i', 'j', 'l' with improved dots/shapes */
+    "cv11" 1,          /* Use alternate single-story 'a' (modern style) */
+    "ss01" 1,          /* Enable stylistic set 1 for enhanced characters */
+    "case" 1;          /* Enable case-sensitive forms for proper punctuation */
+  
+  /* Optimal spacing and numeric rendering */
   font-variant-numeric: tabular-nums;
+  font-kerning: auto;
+  letter-spacing: -0.011em; /* Slight negative letter spacing for Inter */
+}
+
+/* Size-specific optimizations for Inter font */
+h1, h2, h3, h4, h5, h6 {
+  font-kerning: auto;
+  letter-spacing: -0.025em; /* More negative spacing for larger text */
+  text-rendering: optimizeLegibility;
+}
+
+/* Fine-tune letter spacing for different text sizes */
+.text-xs, .text-sm {
+  letter-spacing: 0.01em; /* Slightly positive for small text */
+}
+
+.text-lg, .text-xl, .text-2xl, .text-3xl, .text-4xl, .text-5xl, .text-6xl {
+  letter-spacing: -0.025em; /* More negative for large text */
+}
+
+/* Optimize Inter for button and UI text */
+button, .btn, [role="button"] {
+  font-feature-settings: 
+    "kern" 1,
+    "liga" 1,
+    "cv02" 1,
+    "cv11" 1;
+  letter-spacing: -0.005em; /* Subtle negative spacing for buttons */
+}
+
+/* Optimize for code and monospace scenarios when using Inter */
+code:not([class*="language-"]), pre:not([class*="language-"]) {
+  font-feature-settings: 
+    "kern" 1,
+    "liga" 0, /* Disable ligatures for code */
+    "tnum" 1; /* Use tabular numbers */
+  letter-spacing: 0; /* Reset letter spacing for code */
+}
+
+/* Utility classes for enhanced Inter typography */
+.font-inter-tight {
+  letter-spacing: -0.025em;
+  font-feature-settings: "kern" 1, "liga" 1, "cv02" 1, "cv11" 1;
+}
+
+.font-inter-loose {
+  letter-spacing: 0.025em;
+  font-feature-settings: "kern" 1, "liga" 1;
+}
+
+.font-inter-numeric {
+  font-feature-settings: "kern" 1, "tnum" 1, "zero" 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Improve rendering for high-DPI screens */
+@media (-webkit-min-device-pixel-ratio: 1.5), (min-resolution: 144dpi) {
+  body {
+    -webkit-font-smoothing: subpixel-antialiased;
+    letter-spacing: -0.008em; /* Slightly less negative on high-DPI */
+  }
 }
 
 /* Accessibility: Respect user's motion preferences */

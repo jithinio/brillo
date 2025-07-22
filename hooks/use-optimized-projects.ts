@@ -206,10 +206,11 @@ export function useOptimizedProjects() {
       if (currentFilters.client.length > 0) {
         query = query.in('client_id', currentFilters.client)
       }
+      // Time period filtering - filter by project start_date, not created_at
       if (currentFilters.timePeriod) {
         const { dateFrom, dateTo } = getDateRangeFromTimePeriod(currentFilters.timePeriod)
-        if (dateFrom) query = query.gte('created_at', dateFrom)
-        if (dateTo) query = query.lte('created_at', dateTo)
+        if (dateFrom) query = query.gte('start_date', dateFrom)
+        if (dateTo) query = query.lte('start_date', dateTo)
       }
       
       // Add pagination

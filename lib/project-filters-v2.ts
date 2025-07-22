@@ -24,51 +24,51 @@ export function getDateRangeFromTimePeriod(timePeriod: string | null): { dateFro
       const start = new Date(currentYear, currentMonth, 1)
       const end = new Date(currentYear, currentMonth + 1, 0)
       return {
-        dateFrom: start.toISOString().split('T')[0],
-        dateTo: end.toISOString().split('T')[0]
+        dateFrom: `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01`,
+        dateTo: `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`
       }
     }
     case 'last_month': {
-      const start = new Date(currentYear, currentMonth - 1, 1)
-      const end = new Date(currentYear, currentMonth, 0)
+      const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1
+      const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear
+      const end = new Date(lastMonthYear, lastMonth + 1, 0)
       return {
-        dateFrom: start.toISOString().split('T')[0],
-        dateTo: end.toISOString().split('T')[0]
+        dateFrom: `${lastMonthYear}-${String(lastMonth + 1).padStart(2, '0')}-01`,
+        dateTo: `${lastMonthYear}-${String(lastMonth + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`
       }
     }
     case 'this_quarter': {
-      const start = new Date(currentYear, currentQuarter * 3, 1)
-      const end = new Date(currentYear, (currentQuarter + 1) * 3, 0)
+      const quarterStartMonth = currentQuarter * 3
+      const quarterEndMonth = (currentQuarter + 1) * 3
+      const end = new Date(currentYear, quarterEndMonth, 0)
       return {
-        dateFrom: start.toISOString().split('T')[0],
-        dateTo: end.toISOString().split('T')[0]
+        dateFrom: `${currentYear}-${String(quarterStartMonth + 1).padStart(2, '0')}-01`,
+        dateTo: `${currentYear}-${String(quarterEndMonth).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`
       }
     }
     case 'last_quarter': {
       const lastQuarter = currentQuarter - 1
       const year = lastQuarter < 0 ? currentYear - 1 : currentYear
       const quarter = lastQuarter < 0 ? 3 : lastQuarter
-      const start = new Date(year, quarter * 3, 1)
-      const end = new Date(year, (quarter + 1) * 3, 0)
+      const quarterStartMonth = quarter * 3
+      const quarterEndMonth = (quarter + 1) * 3
+      const end = new Date(year, quarterEndMonth, 0)
       return {
-        dateFrom: start.toISOString().split('T')[0],
-        dateTo: end.toISOString().split('T')[0]
+        dateFrom: `${year}-${String(quarterStartMonth + 1).padStart(2, '0')}-01`,
+        dateTo: `${year}-${String(quarterEndMonth).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`
       }
     }
     case 'this_year': {
-      const start = new Date(currentYear, 0, 1)
-      const end = new Date(currentYear, 11, 31)
       return {
-        dateFrom: start.toISOString().split('T')[0],
-        dateTo: end.toISOString().split('T')[0]
+        dateFrom: `${currentYear}-01-01`,
+        dateTo: `${currentYear}-12-31`
       }
     }
     case 'last_year': {
-      const start = new Date(currentYear - 1, 0, 1)
-      const end = new Date(currentYear - 1, 11, 31)
+      const lastYear = currentYear - 1
       return {
-        dateFrom: start.toISOString().split('T')[0],
-        dateTo: end.toISOString().split('T')[0]
+        dateFrom: `${lastYear}-01-01`,
+        dateTo: `${lastYear}-12-31`
       }
     }
     default:

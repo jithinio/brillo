@@ -149,7 +149,7 @@ export function useRealtimeProjects() {
           created_at,
           updated_at,
           client_id,
-          clients!inner (
+          clients (
             id,
             name,
             company,
@@ -178,23 +178,34 @@ export function useRealtimeProjects() {
       }
       
       // Transform data
-      const transformedProjects = (data || []).map(project => ({
-        id: project.id,
-        name: project.name,
-        status: project.status,
-        start_date: project.start_date,
-        due_date: project.due_date,
-        budget: project.budget,
-        expenses: project.expenses,
-        received: project.payment_received,
-        pending: project.payment_pending,
-        created_at: project.created_at,
-        clients: project.clients && Array.isArray(project.clients) && project.clients.length > 0 ? {
-          name: project.clients[0].name,
-          company: project.clients[0].company,
-          avatar_url: project.clients[0].avatar_url
-        } : undefined
-      }))
+      const transformedProjects = (data || []).map(project => {
+        // Handle client data - could be array or single object from Supabase
+        let clientData: { name: string; company?: string; avatar_url?: string | null } | undefined = undefined
+        if (project.clients) {
+          const client = Array.isArray(project.clients) ? project.clients[0] : project.clients
+          if (client) {
+            clientData = {
+              name: client.name,
+              company: client.company,
+              avatar_url: client.avatar_url
+            }
+          }
+        }
+
+        return {
+          id: project.id,
+          name: project.name,
+          status: project.status,
+          start_date: project.start_date,
+          due_date: project.due_date,
+          budget: project.budget,
+          expenses: project.expenses,
+          received: project.payment_received || 0,
+          pending: project.payment_pending || 0,
+          created_at: project.created_at,
+          clients: clientData
+        } as Project
+      })
       
       setState(prev => ({
         ...prev,
