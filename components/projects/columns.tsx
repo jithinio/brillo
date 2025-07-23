@@ -1,6 +1,7 @@
 "use client"
 
 import type { ColumnDef } from "@tanstack/react-table"
+import * as React from "react"
 import {
   ArrowUpDown,
   MoreHorizontal,
@@ -24,6 +25,8 @@ import {
   ArrowUp,
   ArrowDown,
   ChevronsUpDown,
+  Check,
+  X,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -42,10 +45,19 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
 import { Badge } from "@/components/ui/badge"
 import { formatCurrency } from "@/lib/currency"
 import { ClientAvatar } from "@/components/ui/client-avatar"
 import { DatePickerTable } from "@/components/ui/date-picker-table"
+import { cn } from "@/lib/utils"
 
 export type Project = {
   id: string
@@ -59,6 +71,7 @@ export type Project = {
   pending?: number
   created_at: string
   clients?: {
+    id: string
     name: string
     company?: string
     avatar_url?: string | null
@@ -104,6 +117,14 @@ interface ColumnActions {
   onDeleteProject: (project: Project) => void
   onStatusChange: (project: Project, newStatus: string) => void
   onDateChange: (project: Project, field: 'start_date' | 'due_date', date: Date | undefined) => void
+  onClientChange?: (project: Project, clientId: string | null, onUpdate?: () => void) => void
+  availableClients?: Array<{
+    id: string
+    name: string
+    company?: string
+    email?: string
+    avatar_url?: string | null
+  }>
 }
 
 // Reusable sortable header component with compact design
@@ -190,6 +211,123 @@ function SortableHeader({
   )
 }
 
+// Client selector component
+function ClientSelector({
+  project,
+  client,
+  availableClients,
+  onClientChange,
+}: {
+  project: Project
+  client: Project['clients']
+  availableClients: ColumnActions['availableClients']
+  onClientChange: ColumnActions['onClientChange']
+}) {
+  const [open, setOpen] = React.useState(false)
+  const [searchQuery, setSearchQuery] = React.useState("")
+
+  const filteredClients = React.useMemo(() => {
+    if (!availableClients) return []
+    if (!searchQuery) return availableClients
+    
+    const query = searchQuery.toLowerCase()
+    return availableClients.filter(c => 
+      c.name.toLowerCase().includes(query) ||
+      (c.company && c.company.toLowerCase().includes(query)) ||
+      (c.email && c.email.toLowerCase().includes(query))
+    )
+  }, [availableClients, searchQuery])
+
+  const handleClientSelect = (clientId: string) => {
+    if (onClientChange) {
+      onClientChange(project, clientId, () => setOpen(false))
+    }
+  }
+
+  const handleRemoveClient = () => {
+    if (onClientChange) {
+      onClientChange(project, null, () => setOpen(false))
+    }
+  }
+
+  return (
+    <div className="px-2 py-1 w-full">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-auto p-1 hover:bg-gray-100 w-full justify-start cursor-pointer transition-colors"
+          >
+            {client ? (
+              <div className="flex items-center space-x-2 min-w-0">
+                <ClientAvatar name={client.name} avatarUrl={client.avatar_url} size="sm" className="flex-shrink-0" />
+                <div className="truncate font-normal flex-1 min-w-0 text-sm" title={client.name}>
+                  {client.name}
+                </div>
+              </div>
+            ) : (
+              <span className="text-muted-foreground text-sm">No client</span>
+            )}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[300px] p-0" align="start">
+          <Command shouldFilter={false}>
+            <CommandInput 
+              placeholder="Search clients..." 
+              value={searchQuery}
+              onValueChange={setSearchQuery}
+            />
+            <CommandList>
+              <CommandEmpty>No clients found.</CommandEmpty>
+              <CommandGroup>
+                {client && (
+                  <CommandItem
+                    onSelect={handleRemoveClient}
+                    className="text-muted-foreground"
+                  >
+                    <X className="mr-2 h-4 w-4" />
+                    Remove client
+                  </CommandItem>
+                )}
+                {filteredClients.map((availableClient) => {
+                  const isSelected = client?.id === availableClient.id
+                  return (
+                    <CommandItem
+                      key={availableClient.id}
+                      value={`${availableClient.name} ${availableClient.company || ''}`}
+                      onSelect={() => handleClientSelect(availableClient.id)}
+                      className="flex items-center space-x-3 py-2"
+                    >
+                      <ClientAvatar 
+                        name={availableClient.name} 
+                        avatarUrl={availableClient.avatar_url}
+                        size="sm"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm">{availableClient.name}</div>
+                        {availableClient.company && (
+                          <div className="text-xs text-muted-foreground">{availableClient.company}</div>
+                        )}
+                      </div>
+                      <Check
+                        className={cn(
+                          "ml-auto h-4 w-4",
+                          isSelected ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                    </CommandItem>
+                  )
+                })}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    </div>
+  )
+}
+
 export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
   return [
     {
@@ -250,18 +388,16 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
         </SortableHeader>
       ),
       cell: ({ row }) => {
+        const project = row.original
         const client = row.original.clients
-        return client ? (
-          <div className="flex items-center space-x-2 px-2 py-1 w-full min-w-0">
-            <ClientAvatar name={client.name} avatarUrl={client.avatar_url} size="sm" className="flex-shrink-0" />
-            <div className="truncate font-normal flex-1 min-w-0 text-sm" title={client.name}>
-              {client.name}
-            </div>
-          </div>
-        ) : (
-          <div className="px-2 py-1 w-full">
-            <span className="text-muted-foreground text-sm">No client</span>
-          </div>
+
+        return (
+          <ClientSelector
+            project={project}
+            client={client}
+            availableClients={actions.availableClients || []}
+            onClientChange={actions.onClientChange}
+          />
         )
       },
       enableHiding: true,

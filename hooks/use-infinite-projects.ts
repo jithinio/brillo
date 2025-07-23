@@ -87,15 +87,38 @@ const fetchProjectsPage = async (
     }
   }
 
-  // Cursor-based pagination
-  if (pageParam) {
-    query = query.lt('created_at', pageParam)
-  }
-
   // Sorting
   const sortBy = filters.sortBy || 'created_at'
   const sortOrder = filters.sortOrder || 'desc'
+  
+  // Cursor-based pagination with proper handling
+  if (pageParam) {
+    const [cursorValue, cursorId] = pageParam.split('::')
+    
+    // Use compound cursor for stable pagination
+    if (sortBy === 'created_at') {
+      // Simple cursor for created_at sorting
+      if (sortOrder === 'desc') {
+        query = query.lt('created_at', cursorValue)
+      } else {
+        query = query.gt('created_at', cursorValue)
+      }
+    } else {
+      // Compound cursor for other sort fields to ensure uniqueness
+      // This prevents duplicates when values are the same
+      if (sortOrder === 'desc') {
+        query = query.or(`${sortBy}.lt.${cursorValue},and(${sortBy}.eq.${cursorValue},id.lt.${cursorId})`)
+      } else {
+        query = query.or(`${sortBy}.gt.${cursorValue},and(${sortBy}.eq.${cursorValue},id.gt.${cursorId})`)
+      }
+    }
+  }
+
+  // Apply sorting with ID as secondary sort for stability
   query = query.order(sortBy, { ascending: sortOrder === 'asc' })
+  if (sortBy !== 'id') {
+    query = query.order('id', { ascending: sortOrder === 'asc' })
+  }
 
   // Limit results
   query = query.limit(pageSize)
@@ -130,7 +153,14 @@ const fetchProjectsPage = async (
 
   // Determine if there are more pages
   const hasMore = transformedProjects.length === pageSize
-  const nextCursor = hasMore ? transformedProjects[transformedProjects.length - 1]?.created_at : undefined
+  
+  // Create compound cursor for next page
+  let nextCursor: string | undefined = undefined
+  if (hasMore && transformedProjects.length > 0) {
+    const lastProject = transformedProjects[transformedProjects.length - 1]
+    const cursorField = sortBy === 'created_at' ? lastProject.created_at : lastProject[sortBy as keyof Project]
+    nextCursor = `${cursorField}::${lastProject.id}`
+  }
 
   return {
     data: transformedProjects,
@@ -237,6 +267,114 @@ async function fetchDatabaseMetrics(): Promise<{
   }
 }
 
+// Fetch filtered metrics (affected by filters but not pagination)
+async function fetchFilteredMetrics(filters: ProjectFilters = {}): Promise<{
+  totalProjects: number
+  activeProjects: number
+  pipelineProjects: number
+  completedProjects: number
+  onHoldProjects: number
+  cancelledProjects: number
+  totalBudget: number
+  totalExpenses: number
+  totalReceived: number
+  totalPending: number
+}> {
+  if (!isSupabaseConfigured()) {
+    return {
+      totalProjects: 0,
+      activeProjects: 0,
+      pipelineProjects: 0,
+      completedProjects: 0,
+      onHoldProjects: 0,
+      cancelledProjects: 0,
+      totalBudget: 0,
+      totalExpenses: 0,
+      totalReceived: 0,
+      totalPending: 0
+    }
+  }
+
+  try {
+    // Build query with filters applied
+    let query = supabase
+      .from('projects')
+      .select('status, budget, expenses, payment_received')
+
+    // Apply filters (matching the same logic as fetchProjectsPage)
+    if (filters.status && filters.status.length > 0) {
+      query = query.in('status', filters.status)
+    }
+
+    if (filters.client && filters.client.length > 0) {
+      query = query.in('client_id', filters.client)
+    }
+
+    if (filters.search) {
+      query = query.or(`name.ilike.%${filters.search}%,description.ilike.%${filters.search}%`)
+    }
+
+    // Time period filtering
+    if (filters.timePeriod) {
+      const { dateFrom, dateTo } = getDateRangeFromTimePeriod(filters.timePeriod)
+      
+      if (dateFrom) {
+        query = query.gte('start_date', dateFrom)
+      }
+      if (dateTo) {
+        query = query.lte('start_date', dateTo)
+      }
+    }
+
+    const { data: projects, error } = await query
+
+    if (error) throw error
+
+    const totalProjects = projects?.length || 0
+    const activeProjects = projects?.filter(p => p.status === 'active').length || 0
+    const pipelineProjects = projects?.filter(p => p.status === 'pipeline').length || 0
+    const completedProjects = projects?.filter(p => p.status === 'completed').length || 0
+    const onHoldProjects = projects?.filter(p => p.status === 'on_hold').length || 0
+    const cancelledProjects = projects?.filter(p => p.status === 'cancelled').length || 0
+    
+    const totalBudget = projects?.reduce((sum, p) => sum + (p.budget || 0), 0) || 0
+    const totalExpenses = projects?.reduce((sum, p) => sum + (p.expenses || 0), 0) || 0
+    const totalReceived = projects?.reduce((sum, p) => sum + (p.payment_received || 0), 0) || 0
+    const totalPending = projects?.reduce((sum, p) => {
+      const budget = p.budget || 0
+      const received = p.payment_received || 0
+      return sum + Math.max(0, budget - received)
+    }, 0) || 0
+
+    return {
+      totalProjects,
+      activeProjects,
+      pipelineProjects,
+      completedProjects,
+      onHoldProjects,
+      cancelledProjects,
+      totalBudget,
+      totalExpenses,
+      totalReceived,
+      totalPending
+    }
+  } catch (error) {
+    console.error('Error fetching filtered metrics:', error)
+    return {
+      totalProjects: 0,
+      activeProjects: 0,
+      pipelineProjects: 0,
+      completedProjects: 0,
+      onHoldProjects: 0,
+      cancelledProjects: 0,
+      totalBudget: 0,
+      totalExpenses: 0,
+      totalReceived: 0,
+      totalPending: 0
+    }
+  }
+}
+
 // Infinite projects hook with real-time updates
 export function useInfiniteProjects(filters: ProjectFilters = {}, pageSize: number = 50) {
   const queryClient = useQueryClient()
@@ -264,14 +402,39 @@ export function useInfiniteProjects(filters: ProjectFilters = {}, pageSize: numb
     retry: 2,
   })
 
+  // Separate query for filtered metrics
+  const filteredMetricsQuery = useQuery({
+    queryKey: ['filtered-metrics', filters],
+    queryFn: () => fetchFilteredMetrics(filters),
+    staleTime: 30 * 1000, // Consider stale after 30 seconds
+    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+    refetchOnWindowFocus: true,
+    retry: 2,
+    // Only fetch if we have active filters
+    enabled: !!(filters.status?.length || filters.client?.length || filters.search || filters.timePeriod)
+  })
+
   // Flatten all pages into a single array
   const allProjects = useMemo(() => {
-    return infiniteQuery.data?.pages.flatMap(page => page.data) || []
+    const projects = infiniteQuery.data?.pages.flatMap(page => page.data) || []
+    
+    // Remove duplicates based on project ID
+    const uniqueProjectsMap = new Map<string, Project>()
+    projects.forEach(project => {
+      if (!uniqueProjectsMap.has(project.id)) {
+        uniqueProjectsMap.set(project.id, project)
+      }
+    })
+    
+    return Array.from(uniqueProjectsMap.values())
   }, [infiniteQuery.data])
 
-  // Use database-wide metrics instead of calculating from loaded projects
+  // Use filtered metrics when filters are active, otherwise use database-wide metrics
   const metrics = useMemo(() => {
-    return metricsQuery.data || {
+    const hasActiveFilters = !!(filters.status?.length || filters.client?.length || filters.search || filters.timePeriod)
+    const metricsData = hasActiveFilters ? filteredMetricsQuery.data : metricsQuery.data
+    
+    return metricsData || {
       totalProjects: 0,
       activeProjects: 0,
       pipelineProjects: 0,
@@ -283,7 +446,7 @@ export function useInfiniteProjects(filters: ProjectFilters = {}, pageSize: numb
       totalReceived: 0,
       totalPending: 0
     }
-  }, [metricsQuery.data])
+  }, [metricsQuery.data, filteredMetricsQuery.data, filters])
 
   // Instant search with client-side filtering
   const {
@@ -369,33 +532,44 @@ export function useInfiniteProjects(filters: ProjectFilters = {}, pageSize: numb
     }
   }, [infiniteQuery])
 
+  const hasActiveFilters = !!(filters.status?.length || filters.client?.length || filters.search || filters.timePeriod)
+  
   // Manual refetch function
   const refetch = useCallback(() => {
     metricsQuery.refetch() // Also refetch metrics
+    if (hasActiveFilters) {
+      filteredMetricsQuery.refetch()
+    }
     return infiniteQuery.refetch()
-  }, [infiniteQuery, metricsQuery])
+  }, [infiniteQuery, metricsQuery, filteredMetricsQuery, hasActiveFilters])
 
   // Force refresh (bypasses cache)
   const forceRefresh = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: queryKeys.projectsInfinite(filters) })
     queryClient.invalidateQueries({ queryKey: ['database-metrics'] }) // Also invalidate metrics
+    queryClient.invalidateQueries({ queryKey: ['filtered-metrics', filters] }) // Also invalidate filtered metrics
     metricsQuery.refetch()
+    if (hasActiveFilters) {
+      filteredMetricsQuery.refetch()
+    }
     return infiniteQuery.refetch()
-  }, [queryClient, infiniteQuery, metricsQuery, filters])
-
+  }, [queryClient, infiniteQuery, metricsQuery, filteredMetricsQuery, filters, hasActiveFilters])
+  
   return {
     // Data
     projects: hasClientResults ? clientFilteredData : allProjects,
     allProjects, // Raw data without client filtering
     metrics,
-    totalCount: infiniteQuery.data?.pages[0]?.totalCount || 0,
+    totalCount: hasActiveFilters && filteredMetricsQuery.data 
+      ? filteredMetricsQuery.data.totalProjects 
+      : (infiniteQuery.data?.pages[0]?.totalCount || 0),
     
     // Loading states
-    isLoading: infiniteQuery.isLoading || metricsQuery.isLoading,
-    isFetching: infiniteQuery.isFetching || metricsQuery.isFetching,
+    isLoading: infiniteQuery.isLoading || metricsQuery.isLoading || (hasActiveFilters && filteredMetricsQuery.isLoading),
+    isFetching: infiniteQuery.isFetching || metricsQuery.isFetching || (hasActiveFilters && filteredMetricsQuery.isFetching),
     isFetchingNextPage: infiniteQuery.isFetchingNextPage,
-    isError: infiniteQuery.isError || metricsQuery.isError,
-    error: infiniteQuery.error || metricsQuery.error,
+    isError: infiniteQuery.isError || metricsQuery.isError || (hasActiveFilters && filteredMetricsQuery.isError),
+    error: infiniteQuery.error || metricsQuery.error || (hasActiveFilters && filteredMetricsQuery.error),
     
     // Infinite loading
     hasNextPage: infiniteQuery.hasNextPage,
