@@ -22,7 +22,8 @@ import {
   Clock, 
   Pause, 
   XCircle, 
-  GitBranch 
+  GitBranch,
+  Check 
 } from "lucide-react"
 import { toast } from "sonner"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
@@ -432,6 +433,32 @@ export function FinalDataTable({
                     </ContextMenuContent>
                   </ContextMenu>
                 ))}
+                
+                {/* Infinite Scroll Loading Indicator */}
+                {isFetchingNextPage && (
+                  <div className="flex justify-center py-4">
+                    <Badge 
+                      variant="secondary" 
+                      className="flex items-center gap-2 text-xs shadow-sm border bg-white"
+                    >
+                      <div className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                      <span>Loading more projects...</span>
+                    </Badge>
+                  </div>
+                )}
+                
+                {/* All Loaded Indicator */}
+                {!hasNextPage && projects.length > 0 && !isFetchingNextPage && (
+                  <div className="flex justify-center py-4">
+                    <Badge 
+                      variant="outline" 
+                      className="flex items-center gap-2 text-xs"
+                    >
+                      <Check className="w-3 h-3" />
+                      <span>All projects loaded</span>
+                    </Badge>
+                  </div>
+                )}
                 
                 {/* Bottom padding to keep footer stable */}
                 <div className="h-8"></div>
