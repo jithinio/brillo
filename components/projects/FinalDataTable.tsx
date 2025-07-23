@@ -49,6 +49,14 @@ const scrollbarStyles = `
     background: rgba(156, 163, 175, 0.5);
   }
   
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(156, 163, 175, 0.5);
+  }
+  
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(156, 163, 175, 0.7);
+  }
+  
   .custom-scrollbar::-webkit-scrollbar-corner {
     background: transparent;
   }
@@ -57,6 +65,10 @@ const scrollbarStyles = `
   .custom-scrollbar {
     scrollbar-width: thin;
     scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
+  }
+  
+  .dark .custom-scrollbar {
+    scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
   }
 `
 
@@ -198,17 +210,17 @@ export function FinalDataTable({
             }}
             className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50 pointer-events-auto"
           >
-            <div className="flex items-center gap-3 px-4 py-2.5 bg-white border border-gray-200 rounded-full shadow-lg backdrop-blur-sm">
-              <span className="text-sm font-medium text-gray-700">
+            <div className="flex items-center gap-3 px-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full shadow-lg backdrop-blur-sm">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 {selectedProjects.length} selected
               </span>
-              <div className="w-px h-4 bg-gray-300" />
+              <div className="w-px h-4 bg-gray-300 dark:bg-gray-600" />
               <div className="flex items-center gap-2">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setRowSelection({})}
-                  className="h-7 px-3 text-xs hover:bg-gray-100"
+                  className="h-7 px-3 text-xs hover:bg-gray-100 dark:hover:bg-gray-700"
                 >
                   Clear
                 </Button>
@@ -228,15 +240,15 @@ export function FinalDataTable({
       </AnimatePresence>
 
       {/* Table Container with div-based sticky structure */}
-      <div ref={tableRef} className="flex-1 overflow-auto relative border-l border-gray-200/80 custom-scrollbar">
+      <div ref={tableRef} className="flex-1 overflow-auto relative border-l border-gray-200/80 dark:border-gray-700/80 custom-scrollbar">
         {/* Table Loading Overlay */}
         {(preferencesLoading || !preferencesLoaded || isLoading || (!hasLoadedOnce && isFetching)) && (
-          <div className="absolute inset-0 bg-white/95 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm z-50 flex items-center justify-center">
             <Badge 
               variant="secondary" 
-              className="flex items-center gap-2 text-xs shadow-md border bg-white"
+              className="flex items-center gap-2 text-xs shadow-md border bg-white dark:bg-gray-800 dark:text-gray-200"
             >
-              <div className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+              <div className="w-3 h-3 border-2 border-gray-400 dark:border-gray-500 border-t-transparent rounded-full animate-spin" />
               <span>Loading...</span>
             </Badge>
           </div>
@@ -244,12 +256,12 @@ export function FinalDataTable({
 
         <div className="min-w-full inline-block align-middle" style={{ minWidth: `${tableWidth}px` }}>
           {/* Sticky Table Header */}
-          <div className="sticky top-0 z-10 bg-white border-t border-b border-gray-200/80">
+          <div className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-t border-b border-gray-200/80 dark:border-gray-700/80">
             <div className="flex">
               {columns.map((column: any, colIndex: number) => (
                 <div
                   key={`header-${column.id || colIndex}`}
-                  className={`flex-shrink-0 px-3 font-medium text-gray-700 text-sm flex items-center gap-2 select-none h-11 relative group ${(column.accessorKey || column.id) !== 'select' ? 'border-r border-gray-200/80' : ''}`}
+                  className={`flex-shrink-0 px-3 font-medium text-gray-700 dark:text-gray-300 text-sm flex items-center gap-2 select-none h-11 relative group ${(column.accessorKey || column.id) !== 'select' ? 'border-r border-gray-200/80 dark:border-gray-700/80' : ''}`}
                   style={{ 
                     width: column.size ? `${column.size}px` : 'auto',
                     minWidth: column.minSize ? `${column.minSize}px` : 'auto',
@@ -298,7 +310,7 @@ export function FinalDataTable({
           </div>
 
           {/* Table Body - Div-based */}
-          <div className="bg-white relative" data-table-body>
+          <div className="bg-white dark:bg-gray-900 relative" data-table-body>
             {projects.length === 0 ? (
               <div className="p-12 text-center">
                 <div className="text-muted-foreground">No projects found.</div>
@@ -309,7 +321,7 @@ export function FinalDataTable({
                   <ContextMenu key={project.id}>
                     <ContextMenuTrigger asChild>
                       <motion.div
-                        className="flex border-b border-gray-100 hover:bg-gray-50/50 transition-colors group cursor-default h-11"
+                        className="flex border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors group cursor-default h-11"
                         initial={{ opacity: 0, y: 5 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.15, delay: Math.min(index * 0.01, 0.3) }}
@@ -317,7 +329,7 @@ export function FinalDataTable({
                         {columns.map((column: any, colIndex: number) => (
                           <div
                             key={`${project.id}-${column.id || colIndex}`}
-                            className={`px-3 text-sm flex-shrink-0 flex items-center h-11 ${(column.accessorKey || column.id) !== 'select' ? 'border-r border-gray-200/80' : ''}`}
+                            className={`px-3 text-sm flex-shrink-0 flex items-center h-11 ${(column.accessorKey || column.id) !== 'select' ? 'border-r border-gray-200/80 dark:border-gray-700/80' : ''}`}
                             style={{ 
                               width: column.size ? `${column.size}px` : 'auto',
                               minWidth: column.minSize ? `${column.minSize}px` : 'auto',
@@ -436,12 +448,12 @@ export function FinalDataTable({
                 
                 {/* Infinite Scroll Loading Indicator */}
                 {isFetchingNextPage && (
-                  <div className="flex justify-center py-4">
+                  <div className="flex items-center justify-center py-4 text-sm text-muted-foreground">
                     <Badge 
                       variant="secondary" 
-                      className="flex items-center gap-2 text-xs shadow-sm border bg-white"
+                      className="flex items-center gap-2 text-xs shadow-sm border bg-white dark:bg-gray-800 dark:text-gray-200"
                     >
-                      <div className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                      <div className="w-3 h-3 border-2 border-gray-400 dark:border-gray-500 border-t-transparent rounded-full animate-spin" />
                       <span>Loading more projects...</span>
                     </Badge>
                   </div>
@@ -466,38 +478,20 @@ export function FinalDataTable({
             )}
           </div>
 
-          {/* Sticky Footer with Calculations */}
-          <div className="sticky bottom-0 bg-white z-10 border-t border-b border-gray-200/80 h-11">
-            <div className="flex h-11">
+          {/* Sticky Footer with Aggregations */}
+          <div className="sticky bottom-0 bg-white dark:bg-gray-900 z-10 border-t border-b border-gray-200/80 dark:border-gray-700/80 h-11">
+            <div className="flex h-full">
               {columns.map((column: any, colIndex: number) => (
                 <div
                   key={`footer-${column.id || colIndex}`}
-                  className={`flex-shrink-0 ${(column.accessorKey || column.id) === 'select' ? 'px-3' : 'px-5'} text-sm font-medium flex items-center h-11 ${(column.accessorKey || column.id) !== 'select' ? 'border-r border-gray-200/80' : ''}`}
+                  className={`px-3 text-sm font-medium flex-shrink-0 flex items-center h-11 ${(column.accessorKey || column.id) !== 'select' ? 'border-r border-gray-200/80 dark:border-gray-700/80' : ''}`}
                   style={{ 
                     width: column.size ? `${column.size}px` : 'auto',
                     minWidth: column.minSize ? `${column.minSize}px` : 'auto',
                     maxWidth: column.maxSize ? `${column.maxSize}px` : 'auto'
                   }}
                 >
-                  {/* Footer aggregations */}
-                  {column.accessorKey === 'name' && aggregations.totalProjects > 0 && (
-                    <span className="text-black font-medium">{aggregations.totalProjects}</span>
-                  )}
-                  {column.accessorKey === 'status' && aggregations.activeCount > 0 && (
-                    <span className="text-black font-medium">{aggregations.activeCount}</span>
-                  )}
-                  {column.accessorKey === 'budget' && aggregations.totalBudget > 0 && (
-                    <span className="text-black font-medium">{formatCurrencyAbbreviated(aggregations.totalBudget)}</span>
-                  )}
-                  {column.accessorKey === 'expenses' && aggregations.totalExpenses > 0 && (
-                    <span className="text-black font-medium">{formatCurrencyAbbreviated(aggregations.totalExpenses)}</span>
-                  )}
-                  {column.accessorKey === 'received' && aggregations.totalReceived > 0 && (
-                    <span className="text-black font-medium">{formatCurrencyAbbreviated(aggregations.totalReceived)}</span>
-                  )}
-                  {column.accessorKey === 'pending' && aggregations.totalPending > 0 && (
-                    <span className="text-black font-medium">{formatCurrencyAbbreviated(aggregations.totalPending)}</span>
-                  )}
+                  {column.footer && typeof column.footer === 'function' ? column.footer({ table: { aggregations, metrics }, getFilteredRowModel: () => ({ rows: projects.map(p => ({ original: p })) }) }) : null}
                 </div>
               ))}
             </div>

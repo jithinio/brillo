@@ -533,7 +533,7 @@ export function useInfiniteProjects(filters: ProjectFilters = {}, pageSize: numb
   }, [infiniteQuery])
 
   const hasActiveFilters = !!(filters.status?.length || filters.client?.length || filters.search || filters.timePeriod)
-  
+
   // Manual refetch function
   const refetch = useCallback(() => {
     metricsQuery.refetch() // Also refetch metrics
@@ -554,7 +554,7 @@ export function useInfiniteProjects(filters: ProjectFilters = {}, pageSize: numb
     }
     return infiniteQuery.refetch()
   }, [queryClient, infiniteQuery, metricsQuery, filteredMetricsQuery, filters, hasActiveFilters])
-  
+
   return {
     // Data
     projects: hasClientResults ? clientFilteredData : allProjects,

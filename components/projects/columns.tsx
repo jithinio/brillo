@@ -101,7 +101,7 @@ const statusConfig = {
     label: "Cancelled",
     icon: XCircle,
     variant: "outline" as const,
-    iconClassName: "text-gray-400",
+          iconClassName: "text-gray-400 dark:text-gray-500",
   },
   pipeline: {
     label: "Pipeline",
@@ -257,7 +257,7 @@ function ClientSelector({
           <Button
             variant="ghost"
             size="sm"
-            className="h-auto p-1 hover:bg-gray-100 w-full justify-start cursor-pointer transition-colors"
+            className="h-auto p-1 hover:bg-gray-100 dark:hover:bg-gray-800 w-full justify-start cursor-pointer transition-colors"
           >
             {client ? (
               <div className="flex items-center space-x-2 min-w-0">

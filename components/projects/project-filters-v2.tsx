@@ -115,7 +115,7 @@ export function ProjectFiltersV2({
         {/* Search Input */}
         <div className="relative w-[200px]">
           {isSearching ? (
-            <div className="absolute left-3 top-2 h-4 w-4 border-2 border-gray-300 border-t-primary rounded-full animate-spin" />
+            <div className="absolute left-3 top-2 h-4 w-4 border-2 border-gray-300 dark:border-gray-600 border-t-primary rounded-full animate-spin" />
           ) : (
             <Search className="absolute left-3 top-2 h-4 w-4 text-muted-foreground" />
           )}
@@ -156,7 +156,7 @@ export function ProjectFiltersV2({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-8 border-dashed transition-colors text-sm font-normal text-muted-foreground hover:text-gray-800 hover:border-gray-600"
+                  className="h-8 border-dashed transition-colors text-sm font-normal text-muted-foreground hover:text-gray-800 dark:hover:text-gray-200 hover:border-gray-600 dark:hover:border-gray-400"
                 >
                   <Settings className="mr-1 h-3 w-3 text-muted-foreground" />
                   View
@@ -207,16 +207,16 @@ export function ProjectFiltersV2({
                   size="sm"
                   className={cn(
                     "h-8 border-dashed transition-colors text-sm font-normal text-muted-foreground",
-                    filters.status.length > 0 && "border-gray-600 bg-gray-100 text-gray-800"
+                    filters.status.length > 0 && "border-gray-600 dark:border-gray-400 bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"
                   )}
                 >
-                  <CheckCircle className={cn("mr-1 h-3 w-3", filters.status.length > 0 ? "text-gray-600" : "text-muted-foreground")} />
-                  Status
-                  {filters.status.length > 0 && (
-                    <Badge variant="secondary" className="ml-1 h-4 px-1 text-xs font-normal bg-gray-200 text-gray-700">
-                      {filters.status.length}
-                    </Badge>
-                  )}
+                                      <CheckCircle className={cn("mr-1 h-3 w-3", filters.status.length > 0 ? "text-gray-600 dark:text-gray-400" : "text-muted-foreground")} />
+                    Status
+                    {filters.status.length > 0 && (
+                      <Badge variant="secondary" className="ml-1 h-4 px-1 text-xs font-normal bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                        {filters.status.length}
+                      </Badge>
+                    )}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[220px] p-0" align="start">
@@ -252,13 +252,13 @@ export function ProjectFiltersV2({
                 size="sm"
                 className={cn(
                   "h-8 border-dashed transition-colors text-sm font-normal text-muted-foreground",
-                  filters.client.length > 0 && "border-gray-600 bg-gray-100 text-gray-800"
+                  filters.client.length > 0 && "border-gray-600 dark:border-gray-400 bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"
                 )}
               >
-                <Users className={cn("mr-1 h-3 w-3", filters.client.length > 0 ? "text-gray-600" : "text-muted-foreground")} />
+                <Users className={cn("mr-1 h-3 w-3", filters.client.length > 0 ? "text-gray-600 dark:text-gray-400" : "text-muted-foreground")} />
                 Client
                 {filters.client.length > 0 && (
-                  <Badge variant="secondary" className="ml-1 h-4 px-1 text-xs font-normal bg-gray-200 text-gray-700">
+                  <Badge variant="secondary" className="ml-1 h-4 px-1 text-xs font-normal bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
                     {filters.client.length}
                   </Badge>
                 )}
@@ -303,10 +303,10 @@ export function ProjectFiltersV2({
                 size="sm"
                 className={cn(
                   "h-8 border-dashed transition-colors text-sm font-normal text-muted-foreground",
-                  filters.timePeriod && "border-gray-600 bg-gray-100 text-gray-800"
+                  filters.timePeriod && "border-gray-600 dark:border-gray-400 bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"
                 )}
               >
-                <Calendar className={cn("mr-1 h-3 w-3", filters.timePeriod ? "text-gray-600" : "text-muted-foreground")} />
+                                  <Calendar className={cn("mr-1 h-3 w-3", filters.timePeriod ? "text-gray-600 dark:text-gray-400" : "text-muted-foreground")} />
                 {filters.timePeriod ? getTimePeriodLabel(filters.timePeriod) : "Period"}
               </Button>
             </PopoverTrigger>
@@ -338,7 +338,7 @@ export function ProjectFiltersV2({
               variant="ghost"
               size="sm"
               onClick={clearFilters}
-              className="h-8 text-sm font-normal text-muted-foreground hover:text-gray-800"
+              className="h-8 text-sm font-normal text-muted-foreground hover:text-gray-800 dark:hover:text-gray-200"
             >
               Clear all
             </Button>

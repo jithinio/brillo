@@ -53,7 +53,7 @@ import { PageActionsMenu } from "@/components/page-actions-menu"
 import { ProjectFiltersV2 } from "@/components/projects/project-filters-v2"
 import { createColumns } from "@/components/projects/columns"
 import { formatCurrency, getDefaultCurrency } from "@/lib/currency"
-import { cn, debounce } from "@/lib/utils"
+import { cn } from "@/lib/utils"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import {
   ContextMenu,
@@ -256,6 +256,7 @@ export function ProjectsTableWrapper({
   const [columnOrder, setColumnOrder] = React.useState<string[]>([])
   const [columnVisibility, setColumnVisibility] = React.useState<Record<string, boolean>>({})
   const [columnWidths, setColumnWidths] = React.useState<Record<string, number>>({})
+  const columnWidthsRef = React.useRef<Record<string, number>>({})
   const [isResizing, setIsResizing] = React.useState<string | null>(null)
   const [resizeStartX, setResizeStartX] = React.useState(0)
   const [resizeStartWidth, setResizeStartWidth] = React.useState(0)
@@ -290,14 +291,57 @@ export function ProjectsTableWrapper({
     fetchClients()
   }, [])
 
-  // Load preferences
+  // Load preferences with inheritance from main projects page
   React.useEffect(() => {
     if (!preferencesLoading && !preferencesLoaded) {
-      const savedWidths = getTablePreference(TABLE_NAME, "column_widths", {})
-      const savedOrder = getTablePreference(TABLE_NAME, "column_order", [])
-      const savedVisibility = getTablePreference(TABLE_NAME, "column_visibility", {})
+      // Define parent table name (main projects page)
+      const PARENT_TABLE_NAME = "projects-table-all-projects"
+      const isMainPage = TABLE_NAME === PARENT_TABLE_NAME
+      
+      // Load saved preferences for current page
+      let savedWidths = getTablePreference(TABLE_NAME, "column_widths", {})
+      let savedOrder = getTablePreference(TABLE_NAME, "column_order", [])
+      let savedVisibility = getTablePreference(TABLE_NAME, "column_visibility", {})
       const savedSort = getTablePreference(TABLE_NAME, "sorting", {})
+      const lastInheritedFrom = getTablePreference(TABLE_NAME, "last_inherited_from", null)
+      
+      // If this is a sub-page, check if we should inherit from parent
+      if (!isMainPage) {
+        // Get parent preferences and their update time
+        const parentWidths = getTablePreference(PARENT_TABLE_NAME, "column_widths", {})
+        const parentOrder = getTablePreference(PARENT_TABLE_NAME, "column_order", [])
+        const parentVisibility = getTablePreference(PARENT_TABLE_NAME, "column_visibility", {})
+        const parentLastUpdated = getTablePreference(PARENT_TABLE_NAME, "last_updated", 0)
+        
+        // Check if we have any saved preferences for this page
+        const hasOwnWidths = Object.keys(savedWidths).length > 0
+        const hasOwnOrder = savedOrder.length > 0
+        const hasOwnVisibility = Object.keys(savedVisibility).length > 0
+        
+        // Determine if we should inherit from parent
+        const shouldInheritFromParent = !hasOwnWidths && !hasOwnOrder && !hasOwnVisibility || 
+          (lastInheritedFrom && parentLastUpdated > lastInheritedFrom)
+        
+        if (shouldInheritFromParent) {
+          // Inherit all preferences from parent
+          if (Object.keys(parentWidths).length > 0) {
+            savedWidths = parentWidths
+          }
+          if (parentOrder.length > 0) {
+            savedOrder = parentOrder
+          }
+          if (Object.keys(parentVisibility).length > 0) {
+            savedVisibility = parentVisibility
+          }
+          
+          // Mark that we've inherited from parent at this time
+          if (parentLastUpdated > 0) {
+            updateTablePreference(TABLE_NAME, "last_inherited_from", parentLastUpdated)
+          }
+        }
+      }
 
+      // Apply the preferences (either own or inherited)
       if (Object.keys(savedWidths).length > 0) {
         setColumnWidths(savedWidths)
       }
@@ -314,7 +358,7 @@ export function ProjectsTableWrapper({
       
       setPreferencesLoaded(true)
     }
-  }, [preferencesLoading, preferencesLoaded, getTablePreference, TABLE_NAME])
+  }, [preferencesLoading, preferencesLoaded, getTablePreference, updateTablePreference, TABLE_NAME])
 
   // All the handler functions from the original implementation
   const handleClientSelect = (clientId: string) => {
@@ -487,7 +531,7 @@ export function ProjectsTableWrapper({
       availableClients: clients,
     })
 
-    // Apply dynamic widths
+    // Apply dynamic widths and add footer functions
     return columns.map((column: any) => {
       const columnKey = column.accessorKey || column.id
       const defaultWidth = columnKey === 'select' ? COLUMN_WIDTHS.select : 
@@ -503,11 +547,59 @@ export function ProjectsTableWrapper({
       }
       
       const currentWidth = columnWidths[columnKey] || defaultWidth
+      
+      // Add footer functions for specific columns
+      let footer = undefined
+      if (columnKey === 'name') {
+        footer = ({ table }: any) => {
+          const total = table.aggregations?.totalProjects || 0
+          return total > 0 ? (
+            <span className="text-black dark:text-white font-medium">{total}</span>
+          ) : null
+        }
+      } else if (columnKey === 'status') {
+        footer = ({ table }: any) => {
+          const active = table.aggregations?.activeCount || 0
+          return active > 0 ? (
+            <span className="text-black dark:text-white font-medium">{active}</span>
+          ) : null
+        }
+      } else if (columnKey === 'budget') {
+        footer = ({ table }: any) => {
+          const total = table.aggregations?.totalBudget || 0
+          return total > 0 ? (
+            <span className="text-black dark:text-white font-medium">{formatCurrencyAbbreviated(total)}</span>
+          ) : null
+        }
+      } else if (columnKey === 'expenses') {
+        footer = ({ table }: any) => {
+          const total = table.aggregations?.totalExpenses || 0
+          return total > 0 ? (
+            <span className="text-black dark:text-white font-medium">{formatCurrencyAbbreviated(total)}</span>
+          ) : null
+        }
+      } else if (columnKey === 'received') {
+        footer = ({ table }: any) => {
+          const total = table.aggregations?.totalReceived || 0
+          return total > 0 ? (
+            <span className="text-black dark:text-white font-medium">{formatCurrencyAbbreviated(total)}</span>
+          ) : null
+        }
+      } else if (columnKey === 'pending') {
+        footer = ({ table }: any) => {
+          const total = table.aggregations?.totalPending || 0
+          return total > 0 ? (
+            <span className="text-black dark:text-white font-medium">{formatCurrencyAbbreviated(total)}</span>
+          ) : null
+        }
+      }
+      
       return {
         ...column,
         size: currentWidth,
         minSize: 80,
         maxSize: 500,
+        ...(footer ? { footer } : {})
       }
     })
   }, [updateStatus, refetch, forceRefresh, columnWidths, clients])
@@ -658,6 +750,42 @@ export function ProjectsTableWrapper({
       return newOrder
     })
   }, [])
+  
+  // Reset to parent preferences (for sub-pages)
+  const resetToParentPreferences = React.useCallback(() => {
+    const PARENT_TABLE_NAME = "projects-table-all-projects"
+    const isMainPage = TABLE_NAME === PARENT_TABLE_NAME
+    
+    if (!isMainPage) {
+      // Clear current page preferences and inheritance timestamp
+      updateTablePreference(TABLE_NAME, "column_widths", {})
+      updateTablePreference(TABLE_NAME, "column_order", [])
+      updateTablePreference(TABLE_NAME, "column_visibility", {})
+      updateTablePreference(TABLE_NAME, "last_inherited_from", null)
+      
+      // Load parent preferences
+      const parentWidths = getTablePreference(PARENT_TABLE_NAME, "column_widths", {})
+      const parentOrder = getTablePreference(PARENT_TABLE_NAME, "column_order", [])
+      const parentVisibility = getTablePreference(PARENT_TABLE_NAME, "column_visibility", {})
+      const parentLastUpdated = getTablePreference(PARENT_TABLE_NAME, "last_updated", Date.now())
+      
+      // Apply parent preferences
+      if (Object.keys(parentWidths).length > 0) {
+        setColumnWidths(parentWidths)
+      }
+      if (parentOrder.length > 0) {
+        setColumnOrder(parentOrder)
+      }
+      if (Object.keys(parentVisibility).length > 0) {
+        setColumnVisibility(parentVisibility)
+      }
+      
+      // Mark that we've inherited from parent at this time
+      updateTablePreference(TABLE_NAME, "last_inherited_from", parentLastUpdated)
+      
+      toast.success("Reset to main page column settings")
+    }
+  }, [TABLE_NAME, updateTablePreference, getTablePreference])
 
   const handleColumnVisibilityChange = React.useCallback((columnId: string, visible: boolean) => {
     setColumnVisibility(prev => ({
@@ -703,14 +831,41 @@ export function ProjectsTableWrapper({
     })
   }, [isResizing, resizeStartX, resizeStartWidth])
 
+  // Helper to update preference with timestamp
+  const updatePreferenceWithTimestamp = React.useCallback((key: string, value: any) => {
+    updateTablePreference(TABLE_NAME, key, value)
+    // Update last_updated timestamp for the main projects page
+    if (TABLE_NAME === "projects-table-all-projects") {
+      updateTablePreference(TABLE_NAME, "last_updated", Date.now())
+    }
+  }, [TABLE_NAME, updateTablePreference])
+
+  // Save column widths immediately
+  const saveColumnWidths = React.useCallback((widths: Record<string, number>) => {
+    if (preferencesLoaded && Object.keys(widths).length > 0) {
+      updatePreferenceWithTimestamp("column_widths", widths)
+    }
+  }, [updatePreferenceWithTimestamp, preferencesLoaded])
+
+  // Keep ref in sync with state for immediate access
+  React.useEffect(() => {
+    columnWidthsRef.current = columnWidths
+  }, [columnWidths])
+
   const handleResizeEnd = React.useCallback(() => {
+    // Save column widths immediately when resize ends
+    const currentWidths = columnWidthsRef.current
+    if (preferencesLoaded && Object.keys(currentWidths).length > 0) {
+      saveColumnWidths(currentWidths)
+    }
+    
     setIsResizing(null)
     setResizeStartX(0)
     setResizeStartWidth(0)
     setResizeTooltip(null)
     document.body.style.cursor = ''
     document.body.style.userSelect = ''
-  }, [])
+  }, [preferencesLoaded, saveColumnWidths])
 
   React.useEffect(() => {
     if (!isResizing) return
@@ -732,39 +887,50 @@ export function ProjectsTableWrapper({
     }
   }, [isResizing, handleResizeMove, handleResizeEnd])
 
-  // Save preferences
-  const debouncedSaveWidths = React.useMemo(
-    () => debounce((widths: Record<string, number>) => {
-      if (preferencesLoaded && Object.keys(widths).length > 0) {
-        updateTablePreference(TABLE_NAME, "column_widths", widths)
-      }
-    }, 200),
-    [updateTablePreference, TABLE_NAME, preferencesLoaded]
-  )
-
+  // Save preferences on unmount or page unload
   React.useEffect(() => {
-    if (preferencesLoaded && Object.keys(columnWidths).length > 0) {
-      debouncedSaveWidths(columnWidths)
+    const handleBeforeUnload = () => {
+      const currentWidths = columnWidthsRef.current
+      if (preferencesLoaded && Object.keys(currentWidths).length > 0) {
+        // Use synchronous localStorage as a fallback for immediate save
+        const preferences = JSON.parse(localStorage.getItem('table-preferences') || '{}')
+        preferences[TABLE_NAME] = {
+          ...preferences[TABLE_NAME],
+          column_widths: currentWidths
+        }
+        localStorage.setItem('table-preferences', JSON.stringify(preferences))
+      }
     }
-  }, [columnWidths, debouncedSaveWidths, preferencesLoaded])
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      // Save on component unmount
+      const currentWidths = columnWidthsRef.current
+      if (preferencesLoaded && Object.keys(currentWidths).length > 0) {
+        saveColumnWidths(currentWidths)
+      }
+    }
+  }, [TABLE_NAME, preferencesLoaded, saveColumnWidths])
 
   React.useEffect(() => {
     if (preferencesLoaded && columnOrder.length > 0) {
-      updateTablePreference(TABLE_NAME, "column_order", columnOrder)
+      updatePreferenceWithTimestamp("column_order", columnOrder)
     }
-  }, [columnOrder, updateTablePreference, TABLE_NAME, preferencesLoaded])
+  }, [columnOrder, updatePreferenceWithTimestamp, preferencesLoaded])
 
   React.useEffect(() => {
     if (preferencesLoaded && Object.keys(columnVisibility).length > 0) {
-      updateTablePreference(TABLE_NAME, "column_visibility", columnVisibility)
+      updatePreferenceWithTimestamp("column_visibility", columnVisibility)
     }
-  }, [columnVisibility, updateTablePreference, TABLE_NAME, preferencesLoaded])
+  }, [columnVisibility, updatePreferenceWithTimestamp, preferencesLoaded])
 
   React.useEffect(() => {
     if (preferencesLoaded && (sortBy || sortDirection)) {
-      updateTablePreference(TABLE_NAME, "sorting", { sortBy, sortDirection })
+      updatePreferenceWithTimestamp("sorting", { sortBy, sortDirection })
     }
-  }, [sortBy, sortDirection, updateTablePreference, TABLE_NAME, preferencesLoaded])
+  }, [sortBy, sortDirection, updatePreferenceWithTimestamp, preferencesLoaded])
 
   // Summary metrics
   const summaryMetrics = React.useMemo(() => ({
@@ -796,7 +962,7 @@ export function ProjectsTableWrapper({
   }
 
   return (
-    <div className="w-full h-screen flex flex-col bg-gray-50/30">
+    <div className="w-full h-screen flex flex-col bg-gray-50/30 dark:bg-gray-950">
       {/* Resize Tooltip */}
       <AnimatePresence>
         {resizeTooltip && (
@@ -805,7 +971,7 @@ export function ProjectsTableWrapper({
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
             transition={{ duration: 0.1 }}
-            className="fixed z-50 px-2 py-1 bg-gray-900 text-white text-xs rounded shadow-lg pointer-events-none"
+            className="fixed z-50 px-2 py-1 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded shadow-lg pointer-events-none"
             style={{
               left: resizeTooltip.x - 20,
               top: resizeTooltip.y,
@@ -819,7 +985,14 @@ export function ProjectsTableWrapper({
       {/* Fixed Header */}
       <PageHeader
         title={pageTitle}
-        action={<PageActionsMenu entityType="projects" onExport={handleExport} />}
+        action={
+          <PageActionsMenu 
+            entityType="projects" 
+            onExport={handleExport}
+            onResetColumns={resetToParentPreferences}
+            showResetColumns={TABLE_NAME !== "projects-table-all-projects"}
+          />
+        }
       />
       
       {/* Fixed Summary Cards and Filters */}
@@ -827,25 +1000,25 @@ export function ProjectsTableWrapper({
         {/* Summary Cards */}
         {showSummaryCards && (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-0 w-full border-t border-gray-200">
-              <div className="px-6 py-4 border-r border-gray-200 last:border-r-0">
-                <div className="text-lg font-medium text-black">{summaryMetrics.totalProjects}</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-0 w-full border-t border-gray-200 dark:border-gray-700">
+              <div className="px-6 py-4 border-r border-gray-200 dark:border-gray-700 last:border-r-0">
+                <div className="text-lg font-medium text-black dark:text-white">{summaryMetrics.totalProjects}</div>
                 <h3 className="text-xs font-medium text-muted-foreground mt-1">Total Projects</h3>
               </div>
-              <div className="px-6 py-4 border-r border-gray-200 last:border-r-0">
-                <div className="text-lg font-medium text-black">{summaryMetrics.activeProjects}</div>
+              <div className="px-6 py-4 border-r border-gray-200 dark:border-gray-700 last:border-r-0">
+                <div className="text-lg font-medium text-black dark:text-white">{summaryMetrics.activeProjects}</div>
                 <h3 className="text-xs font-medium text-muted-foreground mt-1">Active Projects</h3>
               </div>
-              <div className="px-6 py-4 border-r border-gray-200 last:border-r-0">
-                <div className="text-lg font-medium text-black">{formatCurrencyAbbreviated(summaryMetrics.totalReceived)}</div>
+              <div className="px-6 py-4 border-r border-gray-200 dark:border-gray-700 last:border-r-0">
+                <div className="text-lg font-medium text-black dark:text-white">{formatCurrencyAbbreviated(summaryMetrics.totalReceived)}</div>
                 <h3 className="text-xs font-medium text-muted-foreground mt-1">Total Received</h3>
               </div>
-              <div className="px-6 py-4 border-r border-gray-200 last:border-r-0">
-                <div className="text-lg font-medium text-black">{formatCurrencyAbbreviated(summaryMetrics.totalPending)}</div>
+              <div className="px-6 py-4 border-r border-gray-200 dark:border-gray-700 last:border-r-0">
+                <div className="text-lg font-medium text-black dark:text-white">{formatCurrencyAbbreviated(summaryMetrics.totalPending)}</div>
                 <h3 className="text-xs font-medium text-muted-foreground mt-1">Total Pending</h3>
               </div>
             </div>
-            <div className="border-b border-gray-200"></div>
+            <div className="border-b border-gray-200 dark:border-gray-700"></div>
           </>
         )}
 

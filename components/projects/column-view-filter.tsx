@@ -96,13 +96,13 @@ function SortableColumnItem({ column, onVisibilityToggle }: SortableColumnItemPr
       ref={setNodeRef}
       style={style}
       className={cn(
-        "flex items-center justify-between p-3 border-b border-gray-100 bg-white hover:bg-gray-50 transition-colors",
-        isDragging && "opacity-50 shadow-lg border border-gray-200 rounded-md"
+                        "flex items-center justify-between p-3 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors",
+                isDragging && "opacity-50 shadow-lg border border-gray-200 dark:border-gray-700 rounded-md"
       )}
     >
       <div className="flex items-center gap-2 flex-1 min-w-0">
         <div
-          className="cursor-grab hover:cursor-grabbing text-gray-400 hover:text-gray-600 transition-colors"
+                        className="cursor-grab hover:cursor-grabbing text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 transition-colors"
           {...attributes}
           {...listeners}
         >
@@ -117,13 +117,13 @@ function SortableColumnItem({ column, onVisibilityToggle }: SortableColumnItemPr
         <Button
           variant="ghost"
           size="sm"
-          className="h-8 w-8 p-0 hover:bg-gray-100"
+                        className="h-8 w-8 p-0 hover:bg-gray-100 dark:hover:bg-gray-800"
           onClick={() => onVisibilityToggle(column.id, !column.visible)}
         >
           {column.visible ? (
-            <Eye className="h-4 w-4 text-gray-600" />
-          ) : (
-            <EyeOff className="h-4 w-4 text-gray-400" />
+                          <Eye className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+            ) : (
+              <EyeOff className="h-4 w-4 text-gray-400 dark:text-gray-500" />
           )}
         </Button>
       )}
@@ -170,21 +170,21 @@ export function ColumnViewFilter({ columns, onColumnReorder, onColumnVisibilityC
           size="sm" 
           className={cn(
             "h-8 border-dashed transition-colors text-sm font-normal text-muted-foreground",
-            hasHiddenColumns && "border-gray-600 bg-gray-100 text-gray-800",
+            hasHiddenColumns && "border-gray-600 dark:border-gray-400 bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200",
             className
           )}
         >
-          <Settings className={cn("mr-1 h-3 w-3", hasHiddenColumns ? "text-gray-600" : "text-muted-foreground")} />
+          <Settings className={cn("mr-1 h-3 w-3", hasHiddenColumns ? "text-gray-600 dark:text-gray-400" : "text-muted-foreground")} />
           View
           {hasHiddenColumns && (
-            <Badge variant="secondary" className="ml-1 h-4 px-1 text-xs font-normal bg-gray-200 text-gray-700">
+            <Badge variant="secondary" className="ml-1 h-4 px-1 text-xs font-normal bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
               {totalCount - visibleCount}
             </Badge>
           )}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80 p-0" align="start">
-        <div className="border-b border-gray-200 p-3">
+        <div className="border-b border-gray-200 dark:border-gray-700 p-3">
           <h4 className="font-medium text-sm">Customize columns</h4>
           <p className="text-xs text-muted-foreground mt-1">
             Drag to reorder • Click eye to show/hide
@@ -209,7 +209,7 @@ export function ColumnViewFilter({ columns, onColumnReorder, onColumnVisibilityC
           </DndContext>
         </div>
         
-        <div className="border-t border-gray-200 p-3">
+        <div className="border-t border-gray-200 dark:border-gray-700 p-3">
           <div className="flex justify-between items-center">
             <span className="text-xs text-muted-foreground">
               {visibleCount} of {totalCount} columns shown

@@ -24,8 +24,8 @@ export default function OnHoldProjectsPage() {
           status: true
         }}
         showSummaryCards={true}
-        showStatusFilter={false}
-      />
+              showStatusFilter={false}
+            />
     </React.Suspense>
   )
 } 

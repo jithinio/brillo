@@ -1,21 +1,24 @@
 "use client"
 
-import { MoreHorizontal, Upload, Download } from "lucide-react"
+import { MoreHorizontal, Upload, Download, RotateCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { useRouter } from "next/navigation"
 
 interface PageActionsMenuProps {
   entityType: 'clients' | 'projects' | 'invoices'
   onExport?: () => void
+  onResetColumns?: () => void
+  showResetColumns?: boolean
 }
 
-export function PageActionsMenu({ entityType, onExport }: PageActionsMenuProps) {
+export function PageActionsMenu({ entityType, onExport, onResetColumns, showResetColumns = false }: PageActionsMenuProps) {
   const router = useRouter()
 
   const handleImport = () => {
@@ -43,6 +46,15 @@ export function PageActionsMenu({ entityType, onExport }: PageActionsMenuProps) 
           <Download className="mr-2 h-4 w-4" />
           Export
         </DropdownMenuItem>
+        {showResetColumns && onResetColumns && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={onResetColumns}>
+              <RotateCcw className="mr-2 h-4 w-4" />
+              Reset Column Settings
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   )

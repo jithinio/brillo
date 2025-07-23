@@ -1174,13 +1174,13 @@ function FinalProjectsContent() {
     // Use the ordered columns but include hidden ones for the view filter
     if (columnOrder.length === 0) {
       // If no order is set yet, use allColumns
-      return allColumns.map(col => ({
-        id: col.id || col.accessorKey,
-        accessorKey: col.accessorKey,
-        header: col.header,
-        visible: columnVisibility[col.id || col.accessorKey] !== false,
-        canHide: col.accessorKey !== 'select' // Can't hide select column
-      }))
+    return allColumns.map(col => ({
+      id: col.id || col.accessorKey,
+      accessorKey: col.accessorKey,
+      header: col.header,
+      visible: columnVisibility[col.id || col.accessorKey] !== false,
+      canHide: col.accessorKey !== 'select' // Can't hide select column
+    }))
     }
     
     // Create a map for easy lookup

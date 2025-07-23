@@ -24,8 +24,8 @@ export default function CompletedProjectsPage() {
           status: true
         }}
         showSummaryCards={true}
-        showStatusFilter={false}
-      />
+              showStatusFilter={false}
+            />
     </React.Suspense>
   )
 } 
