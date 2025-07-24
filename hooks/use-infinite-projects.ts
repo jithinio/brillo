@@ -8,6 +8,50 @@ import { toast } from "sonner"
 import { useInstantSearch } from "./use-instant-search"
 import { getDateRangeFromTimePeriod } from "@/lib/project-filters-v2"
 
+// Request deduplication manager
+const requestManager = new Map<string, Promise<any>>()
+
+function deduplicateRequest<T>(
+  key: string,
+  requestFn: () => Promise<T>
+): Promise<T> {
+  const existing = requestManager.get(key)
+  if (existing) {
+    return existing
+  }
+
+  const promise = requestFn()
+    .finally(() => {
+      requestManager.delete(key)
+    })
+
+  requestManager.set(key, promise)
+  return promise
+}
+
+// Exponential backoff retry
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  baseDelay: number = 1000
+): Promise<T> {
+  let lastError: any
+  
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fn()
+    } catch (error) {
+      lastError = error
+      if (i < maxRetries - 1) {
+        const delay = baseDelay * Math.pow(2, i)
+        await new Promise(resolve => setTimeout(resolve, delay))
+      }
+    }
+  }
+  
+  throw lastError
+}
+
 export interface Project {
   id: string
   name: string
@@ -50,6 +94,9 @@ const fetchProjectsPage = async (
   pageParam?: string,
   pageSize: number = 50
 ): Promise<ProjectsPage> => {
+  const requestKey = `projects-${JSON.stringify(filters)}-${pageParam}-${pageSize}`
+  
+  return deduplicateRequest(requestKey, async () => {
   let query = supabase
     .from('projects')
     .select(`
@@ -168,6 +215,7 @@ const fetchProjectsPage = async (
     hasMore,
     totalCount: count || 0
   }
+  })
 }
 
 // Update project status with optimistic updates

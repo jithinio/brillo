@@ -77,6 +77,7 @@ import {
 
 // Import the existing FinalDataTable component
 import { FinalDataTable } from "./FinalDataTable"
+import { TableErrorBoundary } from "./ErrorBoundary"
 import { formatCurrencyAbbreviated } from "@/lib/currency-utils"
 
 // Types
@@ -1039,26 +1040,28 @@ export function ProjectsTableWrapper({
 
       {/* Full Height Table Container */}
       <div className="flex-1 overflow-hidden relative">
-        <FinalDataTable
-          projects={projects}
-          columns={columns}
-          totalCount={totalCount}
-          metrics={metrics}
-          isLoading={isLoading}
-          isFetching={isFetching}
-          isFetchingNextPage={isFetchingNextPage}
-          hasNextPage={hasNextPage}
-          loadMore={loadMore}
-          updateStatus={updateStatus}
-          refetch={refetch}
-          forceRefresh={forceRefresh}
-          onEditProject={handleEditProject}
-          onBatchDelete={handleBatchDelete}
-          onResizeStart={handleResizeStart}
-          createSortingFunctions={createSortingFunctions}
-          preferencesLoading={preferencesLoading}
-          preferencesLoaded={preferencesLoaded}
-        />
+        <TableErrorBoundary>
+          <FinalDataTable
+            projects={projects}
+            columns={columns}
+            totalCount={totalCount}
+            metrics={metrics}
+            isLoading={isLoading}
+            isFetching={isFetching}
+            isFetchingNextPage={isFetchingNextPage}
+            hasNextPage={hasNextPage}
+            loadMore={loadMore}
+            updateStatus={updateStatus}
+            refetch={refetch}
+            forceRefresh={forceRefresh}
+            onEditProject={handleEditProject}
+            onBatchDelete={handleBatchDelete}
+            onResizeStart={handleResizeStart}
+            createSortingFunctions={createSortingFunctions}
+            preferencesLoading={preferencesLoading}
+            preferencesLoaded={preferencesLoaded}
+          />
+        </TableErrorBoundary>
       </div>
 
       {/* Edit Project Dialog */}

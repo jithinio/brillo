@@ -29,7 +29,7 @@ import { toast } from "sonner"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { formatCurrencyAbbreviated } from "../../lib/currency-utils"
 
-// Custom scrollbar styles
+// Custom scrollbar styles with performance optimizations
 const scrollbarStyles = `
   .custom-scrollbar::-webkit-scrollbar {
     height: 4px;
@@ -70,6 +70,17 @@ const scrollbarStyles = `
   .dark .custom-scrollbar {
     scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
   }
+  
+  /* Performance optimizations */
+  .table-container {
+    will-change: transform;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+  
+  .table-row {
+    contain: layout style paint;
+  }
 `
 
 interface FinalDataTableProps {
@@ -97,7 +108,7 @@ interface FinalDataTableProps {
   preferencesLoaded: boolean
 }
 
-export function FinalDataTable({
+function FinalDataTableComponent({
   projects,
   columns,
   totalCount,
@@ -150,19 +161,24 @@ export function FinalDataTable({
     }
   }, [totalCount, metrics])
 
-  // Stable intersection observer for infinite scroll
+  // Stable intersection observer for infinite scroll with prefetching
   React.useEffect(() => {
     if (!hasNextPage || isLoading || isFetchingNextPage) return
 
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
-          loadMore()
+          // Use requestIdleCallback for non-critical prefetching
+          if ('requestIdleCallback' in window) {
+            window.requestIdleCallback(() => loadMore(), { timeout: 100 })
+          } else {
+            loadMore()
+          }
         }
       },
       {
         threshold: 0.1,
-        rootMargin: '100px'
+        rootMargin: '200px' // Increased for earlier prefetching
       }
     )
 
@@ -240,7 +256,7 @@ export function FinalDataTable({
       </AnimatePresence>
 
       {/* Table Container with div-based sticky structure */}
-      <div ref={tableRef} className="flex-1 overflow-auto relative border-l border-gray-200/80 dark:border-gray-700/80 custom-scrollbar">
+      <div ref={tableRef} className="flex-1 overflow-auto relative border-l border-gray-200/80 dark:border-gray-700/80 custom-scrollbar table-container">
         {/* Table Loading Overlay */}
         {(preferencesLoading || !preferencesLoaded || isLoading || (!hasLoadedOnce && isFetching)) && (
           <div className="absolute inset-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm z-50 flex items-center justify-center">
@@ -500,4 +516,20 @@ export function FinalDataTable({
       </div>
     </div>
   )
-} 
+}
+
+export const FinalDataTable = React.memo(FinalDataTableComponent, (prevProps, nextProps) => {
+  // Custom comparison to prevent unnecessary re-renders
+  return (
+    prevProps.projects === nextProps.projects &&
+    prevProps.columns === nextProps.columns &&
+    prevProps.totalCount === nextProps.totalCount &&
+    prevProps.metrics === nextProps.metrics &&
+    prevProps.isLoading === nextProps.isLoading &&
+    prevProps.isFetching === nextProps.isFetching &&
+    prevProps.isFetchingNextPage === nextProps.isFetchingNextPage &&
+    prevProps.hasNextPage === nextProps.hasNextPage &&
+    prevProps.preferencesLoading === nextProps.preferencesLoading &&
+    prevProps.preferencesLoaded === nextProps.preferencesLoaded
+  )
+}) 

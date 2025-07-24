@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo } from "react"
+import { useState, useEffect, useCallback, useMemo, useDeferredValue } from "react"
 
 export interface InstantSearchOptions {
   debounceMs?: number
@@ -82,12 +82,15 @@ export function useInstantSearch<T>(
     setIsSearching(false)
   }, [])
 
+  // Use deferred value for smoother search experience
+  const deferredClientFilteredData = useDeferredValue(clientFilteredData)
+
   return {
     searchQuery,
     updateSearch,
     clearSearch,
     isSearching,
-    clientFilteredData,
+    clientFilteredData: deferredClientFilteredData,
     hasClientResults: enableClientSide && searchQuery.length > 0,
     serverSearchQuery: debouncedSearchQuery,
   }
