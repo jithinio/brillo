@@ -14,6 +14,7 @@ import { useSettings } from '@/components/settings-provider'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import { PageHeader, PageContent, PageTitle } from '@/components/page-header'
 import { renderInvoiceHTML } from '@/lib/invoice-renderer'
+import { useQueryClient } from '@tanstack/react-query'
 
 interface Invoice {
   id: string
@@ -56,6 +57,7 @@ export default function InvoicePreviewPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { settings } = useSettings()
+  const queryClient = useQueryClient()
   
   const [invoice, setInvoice] = useState<Invoice | null>(null)
   const [loading, setLoading] = useState(true)
@@ -442,6 +444,9 @@ export default function InvoicePreviewPage() {
   }
 
   function handleBack() {
+    // Invalidate invoice cache to ensure fresh data when navigating back
+    queryClient.invalidateQueries({ queryKey: ['invoices'] })
+    
     // Navigate back based on the action
     if (action === 'created' || action === 'updated') {
       router.push('/dashboard/invoices')
@@ -491,7 +496,10 @@ export default function InvoicePreviewPage() {
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
               <p className="text-muted-foreground">Invoice not found</p>
-              <Button onClick={() => router.push('/dashboard/invoices')} className="mt-4">
+              <Button onClick={() => {
+                queryClient.invalidateQueries({ queryKey: ['invoices'] })
+                router.push('/dashboard/invoices')
+              }} className="mt-4">
                 Back to Invoices
               </Button>
             </div>

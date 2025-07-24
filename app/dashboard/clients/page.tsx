@@ -1,7 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
-// Plus icon removed - no longer needed
+import { useState, useRef } from "react"
+import React from "react"
+import { useRouter } from "next/navigation"
+import { GenericTableWrapper } from "@/components/table/GenericTableWrapper"
+import { createClientColumns } from "@/components/clients/generic-columns"
+import { useClients } from "@/hooks/use-clients"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -11,931 +15,600 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { Plus, Upload, User } from "lucide-react"
+import { ClientMetrics } from "@/components/clients/ClientMetrics"
+import { DataHookReturn, EntityActions } from "@/components/table/types"
+import { toast } from "sonner"
+import { supabase } from "@/lib/supabase"
 import { PhoneInput } from "@/components/ui/phone-input"
 import { CountrySelect } from "@/components/ui/country-select"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { cn } from "@/lib/utils"
+import { countries } from "@/lib/countries"
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { Badge } from "@/components/ui/badge"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { PageHeader, PageContent, PageTitle } from "@/components/page-header"
-import { PageActionsMenu } from "@/components/page-actions-menu"
-import { supabase, isSupabaseConfigured } from "@/lib/supabase"
-import { toast } from "sonner"
-import { ClientAvatar } from "@/components/ui/client-avatar"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Upload, Loader2, AlertTriangle } from "lucide-react"
-import { DataTable } from "@/components/clients/data-table"
-import { createColumns, type Client } from "@/components/clients/columns"
-
-// Mock data removed - clients will be loaded from database
-
-const statusConfig = {
-  active: {
-    label: "Active",
-    variant: "outline" as const,
-    iconClassName: "text-green-500",
-  },
-  completed: {
-    label: "Completed",
-    variant: "outline" as const,
-    iconClassName: "text-blue-500",
-  },
-  on_hold: {
-    label: "On Hold",
-    variant: "outline" as const,
-    iconClassName: "text-yellow-500",
-  },
-  cancelled: {
-    label: "Cancelled",
-    variant: "outline" as const,
-    iconClassName: "text-gray-400",
-  },
+interface ClientFormData {
+  name: string
+  email: string
+  phone: string
+  company: string
+  address: string
+  city: string
+  state: string
+  zip_code: string
+  country: string
+  notes: string
+  avatar_url?: string
+  status: string
+  client_since?: Date
 }
 
 export default function ClientsPage() {
-  const [clients, setClients] = useState<Client[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [showEditDialog, setShowEditDialog] = useState(false)
-  const [showAddDialog, setShowAddDialog] = useState(false)
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null)
-  const [editingClient, setEditingClient] = useState<Partial<Client>>({})
-  const [undoData, setUndoData] = useState<{ items: Client[], timeout: NodeJS.Timeout } | null>(null)
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [selectedClient, setSelectedClient] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const router = useRouter()
 
+  // State for filters
+  const [filters, setFilters] = useState({})
+  const clientsData = useClients(filters)
 
-
-  useEffect(() => {
-    fetchClients()
-  }, [])
-
-  // Cleanup undo timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (undoData) {
-        clearTimeout(undoData.timeout)
-      }
-    }
-  }, [undoData])
-
-  // Listen for command menu events
-  useEffect(() => {
-    const handleCommandMenuAddClient = () => {
-      handleAddClient()
-    }
-
-    window.addEventListener('trigger-add-client', handleCommandMenuAddClient)
-    return () => {
-      window.removeEventListener('trigger-add-client', handleCommandMenuAddClient)
-    }
-  }, [])
-
-  async function fetchClients() {
-    try {
-      setError(null)
-
-      // Check if Supabase is properly configured
-      if (!isSupabaseConfigured()) {
-        console.log("Supabase not configured")
-        setClients([])
-        setError("Database not configured - please set up Supabase")
-        return
-      }
-
-      // Data is automatically filtered by RLS policies for the current user
-      const { data, error } = await supabase
-        .from("clients")
-        .select(`
-          *,
-          projects (
-            id,
-            name,
-            status
-          )
-        `)
-        .order("created_at", { ascending: false })
-
-      if (error) {
-        console.error("Supabase error:", error)
-        setClients([])
-        setError("Database connection failed")
-      } else {
-        // Use database data directly (includes avatar_url)
-        setClients(data || [])
-      }
-    } catch (error) {
-      console.error("Error fetching clients:", error)
-      setClients([])
-      setError("Connection error")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleEditClient = (client: Client) => {
-    setSelectedClient(client)
-    setEditingClient(client)
-    setShowEditDialog(true)
-  }
-
-  const handleAddClient = () => {
-    setEditingClient({})
-    setShowAddDialog(true)
-  }
-
-  const handleCreateInvoice = (client: Client) => {
-    // Store client data for invoice creation
-    sessionStorage.setItem('invoice-client-data', JSON.stringify({
-      clientId: client.id,
-      clientName: client.name,
-      clientCompany: client.company,
-      clientEmail: client.email,
-      clientPhone: client.phone,
-      clientAddress: client.address,
-      clientCity: client.city,
-      clientState: client.state,
-      clientZipCode: client.zip_code,
-      clientCountry: client.country,
-    }))
-    
-    toast.success(`Creating invoice for ${client.name}`, {
-      description: "Redirecting to generate invoice..."
-    })
-    
-    // Navigate to invoices page
-    setTimeout(() => {
-      window.location.href = '/dashboard/invoices/generate'
-    }, 1000)
-  }
-
-  const handleNewProject = (client: Client) => {
-    // Store client data for project creation
-    sessionStorage.setItem('project-client-data', JSON.stringify({
-      clientId: client.id,
-      clientName: client.name,
-      clientCompany: client.company,
-    }))
-    
-    toast.success(`Creating project for ${client.name}`, {
-      description: "Opening project form..."
-    })
-    
-    // Navigate to projects page with action parameter
-    setTimeout(() => {
-      window.location.href = '/dashboard/projects?action=add-project'
-    }, 500)
-  }
-
-  const handleDeleteClient = (client: Client) => {
-    setSelectedClient(client)
-    setShowDeleteDialog(true)
-  }
-
-  const handleDateChange = async (client: Client, field: 'created_at', date: Date | undefined) => {
-    try {
-      if (isSupabaseConfigured()) {
-        const { error } = await supabase
-          .from('clients')
-          .update({ [field]: date ? date.toISOString().split('T')[0] : null })
-          .eq('id', client.id)
-
-        if (error) {
-          console.error('Error updating client date:', error)
-          throw new Error(error.message)
-        }
-      }
-
-      // Update local state
-      setClients(clients.map(c => 
-        c.id === client.id ? { ...c, [field]: date ? date.toISOString().split('T')[0] : new Date().toISOString().split('T')[0] } : c
-      ))
-
-      const fieldLabel = field === 'created_at' ? 'client since date' : field
-      toast.success(`Client "${client.name}" ${fieldLabel} updated`)
-    } catch (error) {
-      console.error('Error updating client date:', error)
-      toast.error(`Failed to update client date: ${error instanceof Error ? error.message : 'Unknown error'}`)
-    }
-  }
-
-  const handleStatusChange = async (client: Client, newStatus: string) => {
-    try {
-      if (isSupabaseConfigured()) {
-        const { error } = await supabase
-          .from('clients')
-          .update({ status: newStatus })
-          .eq('id', client.id)
-
-        if (error) {
-          console.error('Error updating client status:', error)
-          throw new Error(error.message)
-        }
-      }
-
-      // Update local state
-      setClients(clients.map(c => 
-        c.id === client.id ? { ...c, status: newStatus } : c
-      ))
-
-      toast.success(`Client "${client.name}" status updated to ${newStatus}`)
-    } catch (error) {
-      console.error('Error updating client status:', error)
-      toast.error(`Failed to update client status: ${error instanceof Error ? error.message : 'Unknown error'}`)
-    }
-  }
-
-  const handleBatchDelete = (clients: Client[], onUndo: (items: Client[]) => void) => {
-    if (clients.length === 0) return
-    confirmBatchDelete(clients, onUndo)
-  }
-
-  const handleUndo = (deletedClients: Client[]) => {
-    // Clear any existing undo timeout
-    if (undoData) {
-      clearTimeout(undoData.timeout)
-    }
-    
-    // Restore the deleted clients
-    setClients(prev => [...deletedClients, ...prev])
-    setUndoData(null)
-    
-    toast.success(`${deletedClients.length} client${deletedClients.length > 1 ? 's' : ''} restored successfully`)
-  }
-
-  const confirmBatchDelete = async (clientsToDelete: Client[], onUndo: (items: Client[]) => void) => {
-    if (clientsToDelete.length === 0) return
-
-    // Show progress toast for operations with 3+ items or after 1 second delay
-    const showProgress = clientsToDelete.length >= 3
-    let progressToastId: string | number | undefined
-    let progressTimeout: NodeJS.Timeout | undefined
-
-    try {
-      // Set up progress notification for longer operations
-      if (showProgress) {
-        progressToastId = toast.loading(`Deleting ${clientsToDelete.length} client${clientsToDelete.length > 1 ? 's' : ''}...`, {
-          description: "Please wait while we process your request."
-        })
-      } else {
-        // For smaller operations, show progress toast after 1 second delay
-        progressTimeout = setTimeout(() => {
-          progressToastId = toast.loading(`Deleting ${clientsToDelete.length} client${clientsToDelete.length > 1 ? 's' : ''}...`, {
-            description: "Please wait while we process your request."
-          })
-        }, 1000)
-      }
-
-      const deletedIds: string[] = []
-      
-      for (let i = 0; i < clientsToDelete.length; i++) {
-        const client = clientsToDelete[i]
-        try {
-          if (isSupabaseConfigured()) {
-            const { error } = await supabase.from("clients").delete().eq("id", client.id)
-            if (error) throw error
-          }
-          
-          deletedIds.push(client.id)
-
-          // Update progress for larger operations
-          if (progressToastId) {
-            const progress = Math.round(((i + 1) / clientsToDelete.length) * 100)
-            toast.loading(`Deleting clients... ${i + 1}/${clientsToDelete.length} (${progress}%)`, {
-              id: progressToastId,
-              description: `Processing "${client.name}"`
-            })
-          }
-        } catch (error) {
-          console.error(`Error deleting client ${client.name}:`, error)
-        }
-      }
-
-      // Clear progress notifications
-      if (progressTimeout) {
-        clearTimeout(progressTimeout)
-      }
-      if (progressToastId) {
-        toast.dismiss(progressToastId)
-      }
-      
-      // Get the successfully deleted clients
-      const deletedClients = clientsToDelete.filter(client => deletedIds.includes(client.id))
-      
-      // Remove successfully deleted clients from local state
-      setClients(prev => prev.filter(client => !deletedIds.includes(client.id)))
-      
-      if (deletedIds.length === clientsToDelete.length) {
-        // Clear any existing undo timeout
-        if (undoData) {
-          clearTimeout(undoData.timeout)
-        }
-        
-        // Set up new undo timeout (30 seconds)
-        const timeout = setTimeout(() => {
-          setUndoData(null)
-        }, 30000)
-        
-        setUndoData({ items: deletedClients, timeout })
-        
-        // Show toast with undo action
-        toast.success(`${deletedIds.length} client${deletedIds.length > 1 ? 's' : ''} deleted successfully`, {
-          action: {
-            label: "Undo",
-            onClick: () => handleUndo(deletedClients),
-          },
-        })
-      } else {
-        toast.success(`${deletedIds.length} of ${clientsToDelete.length} clients deleted successfully`)
-        if (deletedIds.length < clientsToDelete.length) {
-          toast.error(`${clientsToDelete.length - deletedIds.length} client${clientsToDelete.length - deletedIds.length > 1 ? 's' : ''} failed to delete`)
-        }
-      }
-    } catch (error) {
-      console.error('Error during batch delete:', error)
-      
-      // Clear progress notifications on error
-      if (progressTimeout) {
-        clearTimeout(progressTimeout)
-      }
-      if (progressToastId) {
-        toast.dismiss(progressToastId)
-      }
-      
-      toast.error("Failed to delete clients. Please try again.")
-    }
-  }
-
-  const confirmDelete = async () => {
-    if (!selectedClient) return
-
-    try {
-      if (isSupabaseConfigured()) {
-        const { error } = await supabase.from("clients").delete().eq("id", selectedClient.id)
-
-        if (error) throw error
-      }
-
-      // Remove from local state
-      setClients(clients.filter((c) => c.id !== selectedClient.id))
-
-      toast.success(`${selectedClient.name} has been deleted successfully`)
-    } catch (error) {
-      toast.error("Failed to delete client. Please try again.")
-    } finally {
-      setShowDeleteDialog(false)
-      setSelectedClient(null)
-    }
-  }
-
-  const handleSaveClient = async () => {
-    try {
-      // Validate required fields
-      if (!editingClient.name?.trim()) {
-        toast.error("Client name is required")
-        return
-      }
-
-      if (isSupabaseConfigured()) {
-        // Prepare database fields including avatar_url
-        const dbClientData: {
-          name: string
-          email: string | null
-          phone: string | null
-          company: string | null
-          address: string | null
-          city: string | null
-          state: string | null
-          zip_code: string | null
-          country: string
-          notes: string | null
-          avatar_url: string | null
-        } = {
-          name: editingClient.name.trim(),
-          email: editingClient.email?.trim() || null,
-          phone: editingClient.phone?.trim() || null,
-          company: editingClient.company?.trim() || null,
-          address: editingClient.address?.trim() || null,
-          city: editingClient.city?.trim() || null,
-          state: editingClient.state?.trim() || null,
-          zip_code: editingClient.zip_code?.trim() || null,
-          country: editingClient.country?.trim() || 'United States',
-          notes: editingClient.notes?.trim() || null,
-          avatar_url: editingClient.avatar_url || null,
-        }
-
-        // Clean up empty strings to null (except for country which always has a default)
-        Object.keys(dbClientData).forEach(key => {
-          if (key === 'country' || key === 'name') return // Skip required fields
-          const value = dbClientData[key as keyof typeof dbClientData]
-          if (value === '' || value === undefined) {
-            (dbClientData as any)[key] = null
-          }
-        })
-
-        // Ensure name is not null (database constraint)
-        if (!dbClientData.name) {
-          throw new Error('Client name is required')
-        }
-
-        console.log("Sending to Supabase:", dbClientData)
-        
-        if (selectedClient) {
-          // Update existing client
-          const { data, error } = await supabase
-            .from("clients")
-            .update(dbClientData)
-            .eq("id", selectedClient.id)
-            .select()
-
-          if (error) {
-            console.error("Supabase update error:", error)
-            console.error("Error details:", JSON.stringify(error, null, 2))
-            throw new Error(error.message || error.details || 'Database update failed')
-          }
-
-          if (!data || data.length === 0) {
-            throw new Error('No data returned from update')
-          }
-
-          // Update local state with database data (including avatar_url)
-          setClients(clients.map((c) => (c.id === selectedClient.id ? data[0] : c)))
-        } else {
-          // Add new client
-          const { data, error } = await supabase
-            .from("clients")
-            .insert([dbClientData])
-            .select()
-
-          if (error) {
-            console.error("Supabase insert error:", error)
-            console.error("Error details:", JSON.stringify(error, null, 2))
-            throw new Error(error.message || error.details || 'Database insert failed')
-          }
-
-          if (!data || data.length === 0) {
-            throw new Error('No data returned from insert')
-          }
-
-          // Add to local state with database data (including avatar_url)
-          setClients([data[0], ...clients])
-        }
-      } else {
-        // Mock data handling
-        if (selectedClient) {
-          const updatedClient = { ...selectedClient, ...editingClient }
-          setClients(clients.map((c) => (c.id === selectedClient.id ? updatedClient : c)))
-        } else {
-          const newClient = {
-            ...editingClient,
-            id: Date.now().toString(),
-            created_at: new Date().toISOString(),
-          } as Client
-          setClients([newClient, ...clients])
-        }
-      }
-
-      toast.success(`${editingClient.name} has been ${selectedClient ? "updated" : "added"} successfully`)
-
-      setShowEditDialog(false)
-      setShowAddDialog(false)
-      setSelectedClient(null)
-      setEditingClient({})
-    } catch (error) {
-      console.error("Error saving client:", error)
-      let errorMessage = 'Unknown error occurred'
-      
-      if (error instanceof Error) {
-        errorMessage = error.message
-      } else if (typeof error === 'object' && error !== null) {
-        errorMessage = JSON.stringify(error)
-      }
-      
-      toast.error(`Failed to ${selectedClient ? "update" : "add"} client: ${errorMessage}`)
-    }
-  }
-
-  const handleExport = () => {
-    // Create CSV content
-    const headers = ['Name', 'Email', 'Phone', 'Company', 'Address', 'City', 'State', 'ZIP Code', 'Country', 'Notes']
-    const csvContent = [
-      headers.join(','),
-      ...clients.map(client => [
-        client.name,
-        client.email || '',
-        client.phone || '',
-        client.company || '',
-        client.address || '',
-        client.city || '',
-        client.state || '',
-        client.zip_code || '',
-        client.country || '',
-        client.notes || ''
-      ].map(field => `"${field}"`).join(','))
-    ].join('\n')
-
-    // Download CSV
-    const blob = new Blob([csvContent], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `clients-export-${new Date().toISOString().split('T')[0]}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
-    
-    toast.success(`Exported ${clients.length} clients to CSV`)
-  }
-
-
-  const columns = createColumns({
-    onEditClient: handleEditClient,
-    onCreateInvoice: handleCreateInvoice,
-    onNewProject: handleNewProject,
-    onDeleteClient: handleDeleteClient,
-    onStatusChange: handleStatusChange,
-    onDateChange: handleDateChange,
+  // Form data state
+  const [formData, setFormData] = useState<ClientFormData>({
+    name: "",
+    email: "",
+    phone: "",
+    company: "",
+    address: "",
+    city: "",
+    state: "",
+    zip_code: "",
+    country: "US",
+    notes: "",
+    status: "active",
   })
 
-  if (loading) {
-    return (
-      <>
-        <PageHeader
-          title="Clients"
-        />
-        <PageContent>
-          <div className="flex items-center justify-center h-[calc(100vh-300px)]">
-            <div className="flex flex-col items-center space-y-4">
-              <div className="relative">
-                <div className="w-12 h-12 rounded-full border-2 border-gray-200 dark:border-gray-700"></div>
-                <div className="absolute top-0 left-0 w-12 h-12 rounded-full border-2 border-primary border-t-transparent animate-spin"></div>
-              </div>
-              <div className="text-center">
-                <p className="text-sm font-medium text-zinc-600">Loading clients</p>
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Please wait a moment...</p>
-              </div>
+  const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [avatarPreview, setAvatarPreview] = useState<string>("")
+
+  // Entity actions for generic table  
+  const entityActions: EntityActions<any> = {
+    onCreate: () => {
+      resetForm()
+      setIsAddDialogOpen(true)
+    },
+    onEdit: (client: any) => {
+      setSelectedClient(client)
+      setFormData({
+        name: client.name || "",
+        email: client.email || "",
+        phone: client.phone || "",
+        company: client.company || "",
+        address: client.address || "",
+        city: client.city || "",
+        state: client.state || "",
+        zip_code: client.zip_code || "",
+        country: client.country || "US",
+        notes: client.notes || "",
+        avatar_url: client.avatar_url || "",
+        status: client.status || "active",
+        client_since: client.client_since ? new Date(client.client_since) : undefined,
+      })
+      setAvatarPreview(client.avatar_url || "")
+      setIsEditDialogOpen(true)
+    },
+    onDelete: async (client: any) => {
+      try {
+        const { error } = await supabase
+          .from('clients')
+          .delete()
+          .eq('id', client.id)
+
+        if (error) throw error
+
+        toast.success('Client deleted')
+        clientsData.refetch()
+      } catch (error) {
+        console.error('Error deleting client:', error)
+        toast.error('Failed to delete client')
+      }
+    },
+    onBatchDelete: async (clients: any[]) => {
+      try {
+        const ids = clients.map(client => client.id)
+        const { error } = await supabase
+          .from('clients')
+          .delete()
+          .in('id', ids)
+
+        if (error) throw error
+
+        toast.success(`Deleted ${ids.length} client${ids.length > 1 ? 's' : ''}`)
+        clientsData.refetch()
+      } catch (error) {
+        console.error('Error deleting clients:', error)
+        toast.error('Failed to delete clients')
+      }
+    },
+    onExport: () => {
+      toast.info('Export feature coming soon')
+    },
+    // Context menu specific actions
+    customActions: {
+      'Create Invoice': (client: any) => {
+        // Store client data for invoice creation
+        const clientData = {
+          clientId: client.id,
+          clientName: client.name,
+          clientCompany: client.company
+        }
+        
+        sessionStorage.setItem('invoice-client-data', JSON.stringify(clientData))
+        router.push('/dashboard/invoices/generate')
+      },
+      'New Project': (client: any) => {
+        // Store client data for project creation
+        const clientData = {
+          clientId: client.id,
+          clientName: client.name,
+          clientCompany: client.company
+        }
+        
+        sessionStorage.setItem('project-client-data', JSON.stringify(clientData))
+        router.push('/dashboard/projects') // Navigate to projects page with client data
+        toast.info('New project feature will be available soon')
+      }
+    }
+  }
+
+  // Calculate metrics from data
+  const metrics = React.useMemo(() => {
+    if (!clientsData.data || clientsData.isLoading) return null
+    
+    const activeClients = clientsData.data.filter(c => c.status === 'active').length
+    const totalProjects = clientsData.data.reduce((sum, c) => sum + (c.projects?.length || 0), 0)
+    const totalRevenue = clientsData.data.reduce((sum, c) => {
+      const clientProjects = c.projects || []
+      return sum + clientProjects.reduce((projSum: number, proj: any) => 
+        projSum + (proj.payment_received || 0), 0
+      )
+    }, 0)
+    
+    return {
+      totalClients: clientsData.data.length,
+      activeClients,
+      totalProjects,
+      totalRevenue
+    }
+  }, [clientsData.data, clientsData.isLoading])
+
+  const resetForm = () => {
+    setFormData({
+      name: "",
+      email: "",
+      phone: "",
+      company: "",
+      address: "",
+      city: "",
+      state: "",
+      zip_code: "",
+      country: "US",
+      notes: "",
+      status: "active",
+    })
+    setAvatarFile(null)
+    setAvatarPreview("")
+    setSelectedClient(null)
+  }
+
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("Avatar image must be less than 5MB")
+        return
+      }
+      
+      setAvatarFile(file)
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const uploadAvatar = async (file: File): Promise<string | null> => {
+    try {
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${Math.random()}.${fileExt}`
+      const filePath = `avatars/${fileName}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('company')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        })
+
+      if (uploadError) throw uploadError
+
+      const { data } = supabase.storage
+        .from('company')
+        .getPublicUrl(filePath)
+
+      return data.publicUrl
+    } catch (error) {
+      console.error('Error uploading avatar:', error)
+      return null
+    }
+  }
+
+  const handleSave = async () => {
+    if (!formData.name.trim()) {
+      toast.error("Name is required")
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      let avatarUrl = formData.avatar_url
+
+      // Upload avatar if new file selected
+      if (avatarFile) {
+        const uploadedUrl = await uploadAvatar(avatarFile)
+        if (uploadedUrl) {
+          avatarUrl = uploadedUrl
+        }
+      }
+
+      const clientData = {
+        ...formData,
+        avatar_url: avatarUrl,
+        client_since: formData.client_since || new Date(),
+      }
+
+      if (selectedClient) {
+        // Update existing client
+        const { error } = await supabase
+          .from('clients')
+          .update(clientData)
+          .eq('id', selectedClient.id)
+
+        if (error) throw error
+        toast.success('Client updated successfully')
+        setIsEditDialogOpen(false)
+      } else {
+        // Create new client
+        const { error } = await supabase
+          .from('clients')
+          .insert([clientData])
+
+        if (error) throw error
+        toast.success('Client created successfully')
+        setIsAddDialogOpen(false)
+      }
+
+      clientsData.refetch()
+      resetForm()
+    } catch (error: any) {
+      console.error('Error saving client:', error)
+      toast.error(error.message || 'Failed to save client')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const getInitials = (name: string) => {
+    if (!name) return "?"
+    const words = name.trim().split(" ")
+    if (words.length === 1) {
+      return words[0].slice(0, 2).toUpperCase()
+    }
+    return (words[0]?.[0] || "") + (words[words.length - 1]?.[0] || "")
+  }
+
+  const DialogForm = () => (
+    <div className="space-y-6">
+      {/* Avatar Section */}
+      <div className="flex items-center gap-6 pb-6 border-b border-gray-200 dark:border-gray-700">
+        <Avatar className="h-24 w-24">
+          {avatarPreview ? (
+            <AvatarImage src={avatarPreview} alt={formData.name} />
+          ) : (
+            <AvatarFallback className="text-lg">
+              {formData.name ? getInitials(formData.name) : <User className="h-10 w-10 text-muted-foreground" />}
+            </AvatarFallback>
+          )}
+        </Avatar>
+        <div className="flex-1">
+          <h4 className="text-sm font-medium mb-2">Profile Picture</h4>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            {avatarPreview ? "Change Photo" : "Upload Photo"}
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleAvatarUpload}
+            className="hidden"
+          />
+          <p className="text-xs text-muted-foreground mt-1">Maximum 5MB • JPG, PNG</p>
+        </div>
+      </div>
+
+      {/* Basic Information */}
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="name" className="text-sm font-medium">
+              Full Name <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="name"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="John Doe"
+              className="h-9"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="company" className="text-sm font-medium">
+              Company
+            </Label>
+            <Input
+              id="company"
+              value={formData.company}
+              onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+              placeholder="Acme Inc."
+              className="h-9"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Contact Information */}
+      <div className="space-y-4 pt-6 border-t border-gray-200 dark:border-gray-700">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="email" className="text-sm font-medium">
+              Email Address
+            </Label>
+            <Input
+              id="email"
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              placeholder="john@example.com"
+              className="h-9"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="phone" className="text-sm font-medium">
+              Phone Number
+            </Label>
+            <PhoneInput
+              value={formData.phone}
+              onChange={(value) => setFormData({ ...formData, phone: value })}
+              placeholder="Enter phone number"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Address Information */}
+      <div className="space-y-4 pt-6 border-t border-gray-200 dark:border-gray-700">
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="address" className="text-sm font-medium">
+                Street Address
+              </Label>
+              <Input
+                id="address"
+                value={formData.address}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                placeholder="123 Main Street"
+                className="h-9"
+              />
             </div>
           </div>
-        </PageContent>
-      </>
-    )
-  }
+          <div className="grid grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="city" className="text-sm font-medium">
+                City
+              </Label>
+              <Input
+                id="city"
+                value={formData.city}
+                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                placeholder="New York"
+                className="h-9"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="state" className="text-sm font-medium">
+                State/Province
+              </Label>
+              <Input
+                id="state"
+                value={formData.state}
+                onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                placeholder="NY"
+                className="h-9"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="zip_code" className="text-sm font-medium">
+                Zip/Postal Code
+              </Label>
+              <Input
+                id="zip_code"
+                value={formData.zip_code}
+                onChange={(e) => setFormData({ ...formData, zip_code: e.target.value })}
+                placeholder="10001"
+                className="h-9"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="country" className="text-sm font-medium">
+                Country
+              </Label>
+              <CountrySelect
+                value={formData.country}
+                onValueChange={(value) => setFormData({ ...formData, country: value })}
+                placeholder="Select country"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Additional Information */}
+      <div className="space-y-4 pt-6 border-t border-gray-200 dark:border-gray-700">
+        <div className="space-y-2">
+          <Label htmlFor="notes" className="text-sm font-medium">
+            Notes
+          </Label>
+          <Textarea
+            id="notes"
+            value={formData.notes}
+            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+            placeholder="Additional notes about the client..."
+            className="min-h-[80px] resize-none"
+          />
+        </div>
+      </div>
+    </div>
+  )
 
   return (
     <>
-      <PageHeader
-        title="Clients"
-        action={<PageActionsMenu entityType="clients" onExport={handleExport} />}
+      <GenericTableWrapper
+        entityType="clients"
+        pageTitle="Clients"
+        dataHook={() => clientsData as DataHookReturn<any>}
+        createColumns={(actions: any) => createClientColumns({
+          onStatusChange: clientsData.updateStatus,
+          onEditClient: entityActions.onEdit,
+        })}
+        features={{
+          search: true,
+          batchOperations: true,
+          contextMenu: true,
+          infiniteScroll: false,
+          footerAggregations: true,
+          columnResizing: true,
+        }}
+        actions={entityActions}
+        defaultColumnWidths={{
+          select: 50,
+          name: 250,
+          company: 200,
+          email: 250,
+          phone: 150,
+          location: 200,
+          projects: 120,
+          status: 120,
+          client_since: 140,
+        }}
+        metricsComponent={<ClientMetrics metrics={metrics} />}
+        addButton={
+          <Button
+            onClick={() => {
+              resetForm()
+              setIsAddDialogOpen(true)
+            }}
+            size="sm"
+            className="h-8"
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Add Client
+          </Button>
+        }
       />
-      <PageContent>
-        {error && (
-          <Alert className="border-yellow-200 bg-yellow-50 mb-4">
-            <AlertTriangle className="h-4 w-4 text-yellow-600" />
-            <AlertDescription className="text-yellow-800">
-              {error}
-            </AlertDescription>
-          </Alert>
-        )}
-
-        <DataTable 
-          columns={columns} 
-          data={clients} 
-          onAddClient={handleAddClient} 
-          onBatchDelete={handleBatchDelete}
-          contextActions={{
-            onEditClient: handleEditClient,
-            onCreateInvoice: handleCreateInvoice,
-            onNewProject: handleNewProject,
-            onDeleteClient: handleDeleteClient,
-          }}
-        />
-      </PageContent>
-
-      {/* Edit Client Dialog */}
-      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="max-w-2xl" onOpenAutoFocus={(e) => e.preventDefault()}>
-          <DialogHeader>
-            <DialogTitle>Edit Client</DialogTitle>
-            <DialogDescription>Update client information</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4">
-            {/* Avatar Upload */}
-            <div className="flex items-center space-x-4">
-              <ClientAvatar 
-                name={editingClient.name || ""} 
-                avatarUrl={editingClient.avatar_url}
-                size="xl"
-              />
-              <div className="flex-1">
-                <Label htmlFor="edit-avatar-upload" className="cursor-pointer">
-                  <Button variant="outline" size="sm" asChild>
-                    <span>
-                      <Upload className="mr-1.5 h-4 w-4" />
-                      Upload Avatar
-                    </span>
-                  </Button>
-                </Label>
-                <Input
-                  id="edit-avatar-upload"
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0]
-                    if (file) {
-                      const reader = new FileReader()
-                      reader.onload = (e) => {
-                        setEditingClient({ ...editingClient, avatar_url: e.target?.result as string })
-                      }
-                      reader.readAsDataURL(file)
-                    }
-                  }}
-                  className="hidden"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Recommended: Square image, max 2MB
-                </p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="name">Name *</Label>
-                <Input
-                  id="name"
-                  value={editingClient.name || ""}
-                  onChange={(e) => setEditingClient({ ...editingClient, name: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="company">Company</Label>
-                <Input
-                  id="company"
-                  value={editingClient.company || ""}
-                  onChange={(e) => setEditingClient({ ...editingClient, company: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={editingClient.email || ""}
-                  onChange={(e) => setEditingClient({ ...editingClient, email: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="phone">Phone</Label>
-                <PhoneInput
-                  id="phone"
-                  value={editingClient.phone || ""}
-                  onChange={(value) => setEditingClient({ ...editingClient, phone: value })}
-                  placeholder="Enter phone number"
-                />
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="address">Address</Label>
-              <Input
-                id="address"
-                value={editingClient.address || ""}
-                onChange={(e) => setEditingClient({ ...editingClient, address: e.target.value })}
-              />
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="city">City</Label>
-                <Input
-                  id="city"
-                  value={editingClient.city || ""}
-                  onChange={(e) => setEditingClient({ ...editingClient, city: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="state">State</Label>
-                <Input
-                  id="state"
-                  value={editingClient.state || ""}
-                  onChange={(e) => setEditingClient({ ...editingClient, state: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="zip_code">Zip Code</Label>
-                <Input
-                  id="zip_code"
-                  value={editingClient.zip_code || ""}
-                  onChange={(e) => setEditingClient({ ...editingClient, zip_code: e.target.value })}
-                />
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="country">Country</Label>
-              <CountrySelect
-                value={editingClient.country || ""}
-                onValueChange={(value) => setEditingClient({ ...editingClient, country: value })}
-                placeholder="Select country"
-              />
-            </div>
-            <div>
-              <Label htmlFor="notes">Notes</Label>
-              <Textarea
-                id="notes"
-                value={editingClient.notes || ""}
-                onChange={(e) => setEditingClient({ ...editingClient, notes: e.target.value })}
-                rows={3}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => setShowEditDialog(false)}>
-              Cancel
-            </Button>
-            <Button size="sm" onClick={handleSaveClient} disabled={!editingClient.name}>
-              Save Changes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Add Client Dialog */}
-      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="max-w-2xl add-client-dialog" onOpenAutoFocus={(e) => e.preventDefault()}>
-          <DialogHeader>
-            <DialogTitle>Add New Client</DialogTitle>
-            <DialogDescription>Create a new client record</DialogDescription>
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
+            <DialogTitle className="text-xl font-semibold">Add New Client</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground">
+              Fill in the information below to create a new client profile.
+            </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4">
-            {/* Avatar Upload */}
-            <div className="flex items-center space-x-4">
-              <ClientAvatar 
-                name={editingClient.name || ""} 
-                avatarUrl={editingClient.avatar_url}
-                size="xl"
-              />
-              <div className="flex-1">
-                <Label htmlFor="avatar-upload" className="cursor-pointer">
-                  <Button variant="outline" size="sm" asChild>
-                    <span>
-                      <Upload className="mr-1.5 h-4 w-4" />
-                      Upload Avatar
-                    </span>
-                  </Button>
-                </Label>
-                <Input
-                  id="avatar-upload"
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0]
-                    if (file) {
-                      const reader = new FileReader()
-                      reader.onload = (e) => {
-                        setEditingClient({ ...editingClient, avatar_url: e.target?.result as string })
-                      }
-                      reader.readAsDataURL(file)
-                    }
-                  }}
-                  className="hidden"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Recommended: Square image, max 2MB
-                </p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="new-name">Name *</Label>
-                <Input
-                  id="new-name"
-                  value={editingClient.name || ""}
-                  onChange={(e) => setEditingClient({ ...editingClient, name: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="new-company">Company</Label>
-                <Input
-                  id="new-company"
-                  value={editingClient.company || ""}
-                  onChange={(e) => setEditingClient({ ...editingClient, company: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="new-email">Email</Label>
-                <Input
-                  id="new-email"
-                  type="email"
-                  value={editingClient.email || ""}
-                  onChange={(e) => setEditingClient({ ...editingClient, email: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="new-phone">Phone</Label>
-                <PhoneInput
-                  id="new-phone"
-                  value={editingClient.phone || ""}
-                  onChange={(value) => setEditingClient({ ...editingClient, phone: value })}
-                  placeholder="Enter phone number"
-                />
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="new-address">Address</Label>
-              <Input
-                id="new-address"
-                value={editingClient.address || ""}
-                onChange={(e) => setEditingClient({ ...editingClient, address: e.target.value })}
-              />
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="new-city">City</Label>
-                <Input
-                  id="new-city"
-                  value={editingClient.city || ""}
-                  onChange={(e) => setEditingClient({ ...editingClient, city: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="new-state">State</Label>
-                <Input
-                  id="new-state"
-                  value={editingClient.state || ""}
-                  onChange={(e) => setEditingClient({ ...editingClient, state: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="new-zip_code">Zip Code</Label>
-                <Input
-                  id="new-zip_code"
-                  value={editingClient.zip_code || ""}
-                  onChange={(e) => setEditingClient({ ...editingClient, zip_code: e.target.value })}
-                />
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="new-country">Country</Label>
-              <CountrySelect
-                value={editingClient.country || ""}
-                onValueChange={(value) => setEditingClient({ ...editingClient, country: value })}
-                placeholder="Select country"
-              />
-            </div>
-            <div>
-              <Label htmlFor="new-notes">Notes</Label>
-              <Textarea
-                id="new-notes"
-                value={editingClient.notes || ""}
-                onChange={(e) => setEditingClient({ ...editingClient, notes: e.target.value })}
-                rows={3}
-              />
-            </div>
-
+          
+          <div className="flex-1 overflow-y-auto px-1">
+            <DialogForm />
           </div>
-          <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => setShowAddDialog(false)}>
-              Cancel
-            </Button>
-            <Button size="sm" onClick={handleSaveClient} disabled={!editingClient.name}>
-              Add Client
-            </Button>
+
+          <DialogFooter className="flex-shrink-0 border-t border-gray-200 dark:border-gray-700 pt-4">
+            <div className="flex justify-end gap-3 w-full">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsAddDialogOpen(false)}
+                disabled={isLoading}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleSave} 
+                disabled={isLoading || !formData.name.trim()}
+                className="min-w-[100px]"
+              >
+                {isLoading ? "Creating..." : "Create Client"}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete {selectedClient?.name} and all associated data.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete Client
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Edit Client Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
+            <DialogTitle className="text-xl font-semibold">Edit Client</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground">
+              Update the client information below.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex-1 overflow-y-auto px-1">
+            <DialogForm />
+          </div>
 
-
+          <DialogFooter className="flex-shrink-0 border-t border-gray-200 dark:border-gray-700 pt-4">
+            <div className="flex justify-end gap-3 w-full">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsEditDialogOpen(false)}
+                disabled={isLoading}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleSave} 
+                disabled={isLoading || !formData.name.trim()}
+                className="min-w-[100px]"
+              >
+                {isLoading ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

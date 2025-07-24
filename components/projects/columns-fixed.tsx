@@ -172,11 +172,10 @@ function StatusBadge({ status, onStatusChange, project }: {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
+        <Badge
+          variant="outline"
           className={cn(
-            "h-7 px-2 gap-1 text-xs font-medium rounded-full",
+            "h-7 px-2 gap-1 text-xs font-medium rounded-full cursor-pointer",
             "border transition-colors duration-200",
             config.className,
             "hover:shadow-sm min-w-[100px] justify-center" // Fixed minimum width
@@ -184,7 +183,7 @@ function StatusBadge({ status, onStatusChange, project }: {
         >
           <Icon className="h-3 w-3 flex-shrink-0" />
           <span className="truncate">{config.label}</span>
-        </Button>
+        </Badge>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-48">
         <DropdownMenuLabel>Change Status</DropdownMenuLabel>
@@ -197,7 +196,7 @@ function StatusBadge({ status, onStatusChange, project }: {
               onClick={() => onStatusChange(project, value)}
               className="gap-2"
             >
-              <Icon className="h-4 w-4" />
+              <Icon className="h-3 w-3" />
               {config.label}
               {status === value && <CheckCircle className="h-3 w-3 ml-auto" />}
             </DropdownMenuItem>

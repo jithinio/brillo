@@ -17,11 +17,16 @@ export function useProjectFiltersV2() {
   // Local state for immediate UI updates (especially search)
   const [localSearch, setLocalSearch] = useState(urlFilters.search)
   const [isSearching, setIsSearching] = useState(false)
+  const searchingTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
   
   // Update local search when URL changes
   useEffect(() => {
     setLocalSearch(urlFilters.search)
     setIsSearching(false) // Reset searching state when URL updates
+    // Clear any pending timeout
+    if (searchingTimeoutRef.current) {
+      clearTimeout(searchingTimeoutRef.current)
+    }
   }, [urlFilters.search])
 
   // Combine URL filters with local search for immediate feedback
@@ -40,17 +45,30 @@ export function useProjectFiltersV2() {
     })
   }, [urlFilters, pathname, router])
 
-  // Fast debounced update for search with immediate UI feedback
+  // Fast debounced update for search with improved loading state
   const debouncedSearchUpdate = useMemo(() => {
     return fastDebounce((searchValue: string) => {
       updateFilters({ search: searchValue })
-      setIsSearching(false) // Reset searching state after update
-    }, 100) // Ultra-fast debounce for search responsiveness
+      
+      // Ensure minimum loading duration for better UX
+      if (searchingTimeoutRef.current) {
+        clearTimeout(searchingTimeoutRef.current)
+      }
+      
+      searchingTimeoutRef.current = setTimeout(() => {
+        setIsSearching(false)
+      }, 300) // Minimum 300ms loading duration
+    }, 150) // Slightly longer debounce for better visual feedback
   }, [updateFilters])
 
   // Immediate search update function for instant UI feedback
   const updateSearch = useCallback((searchValue: string) => {
     setLocalSearch(searchValue) // Immediate UI update
+    
+    // Clear any existing timeout
+    if (searchingTimeoutRef.current) {
+      clearTimeout(searchingTimeoutRef.current)
+    }
     
     // Only set searching state if there's actual content to search
     if (searchValue.trim()) {
@@ -112,6 +130,15 @@ export function useProjectFiltersV2() {
       updateFilter(filterType, null)
     }
   }, [updateFilter])
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (searchingTimeoutRef.current) {
+        clearTimeout(searchingTimeoutRef.current)
+      }
+    }
+  }, [])
 
   return {
     filters,

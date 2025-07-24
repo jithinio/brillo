@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { useAuth } from "@/components/auth-provider"
 import { useToast } from "@/hooks/use-toast"
+import React from "react"
 
 interface TablePreferences {
   [tableName: string]: {
@@ -34,6 +35,12 @@ export function useTablePreferences() {
   // Use ref to track current preferences to prevent function recreation
   const preferencesRef = useRef<TablePreferences>({})
   preferencesRef.current = preferences
+
+  const storageKey = React.useMemo(() => {
+    // Use entity-specific keys for different tables
+    // This ensures preferences are saved separately for projects, clients, invoices, etc.
+    return user ? `table_preferences_${user.id}` : 'table_preferences_guest'
+  }, [user])
 
   // Load preferences from database
   const loadPreferences = useCallback(async () => {

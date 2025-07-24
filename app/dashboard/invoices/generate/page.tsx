@@ -19,6 +19,7 @@ import { PageHeader, PageContent, PageTitle } from "@/components/page-header"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { useSettings } from "@/components/settings-provider"
 import type { Client } from "@/components/clients/columns"
+import { useQueryClient } from "@tanstack/react-query"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useRouter } from "next/navigation"
@@ -37,6 +38,7 @@ interface InvoiceItem {
 export default function GenerateInvoicePage() {
   const router = useRouter()
   const { settings, isLoading: settingsLoading } = useSettings()
+  const queryClient = useQueryClient()
   
   // Check if we're in edit mode
   const [isEditMode, setIsEditMode] = useState(false)
@@ -85,6 +87,7 @@ export default function GenerateInvoicePage() {
   
   // Invoice number state
   const [invoiceNumber, setInvoiceNumber] = useState<string>("")
+  const [isPreviewNumber, setIsPreviewNumber] = useState(true)
   const [editInvoiceId, setEditInvoiceId] = useState<string | null>(null)
   
 
@@ -98,9 +101,8 @@ export default function GenerateInvoicePage() {
     defaultDueDate.setDate(defaultDueDate.getDate() + 30)
     setDueDate(defaultDueDate)
     
-    // Generate a simple sequential invoice number (skip if in edit mode)
-    const generateInvoiceNumber = async () => {
-      // Don't generate new invoice number if in edit mode
+    // Preview the next invoice number without actually generating it
+    const previewInvoiceNumber = async () => {
       if (isEditMode) return
       
       const now = new Date()
@@ -109,66 +111,66 @@ export default function GenerateInvoicePage() {
 
       if (isSupabaseConfigured()) {
         try {
-          // Get all existing invoice numbers for the current year
-          const { data: existingInvoices, error } = await supabase
+          const { data: userData } = await supabase.auth.getUser()
+          
+          // First, check what actual invoices exist for this user and year
+          const { data: existingInvoices, error: invoicesError } = await supabase
             .from('invoices')
             .select('invoice_number')
+            .eq('user_id', userData.user?.id)
             .like('invoice_number', `${prefix}-${year}-%`)
             .order('invoice_number', { ascending: false })
 
-          if (error) {
-            console.error('Error fetching existing invoices:', error)
-            // Fallback to simple count
-            const { count } = await supabase
-            .from('invoices')
-            .select('*', { count: 'exact', head: true })
-            const invoiceCount = (count || 0) + 1
-            const generatedNumber = `${prefix}-${year}-${String(invoiceCount).padStart(3, '0')}`
-            setInvoiceNumber(generatedNumber)
+          if (invoicesError) {
+            console.error('Error checking existing invoices:', invoicesError)
+            setInvoiceNumber(`${prefix}-${year}-001`)
+            setIsPreviewNumber(true)
             return
           }
 
-          // Extract numbers from existing invoice numbers and find the highest
-          let maxNumber = 0
+          // Find the highest number from actual invoices
+          let maxInvoiceNumber = 0
           if (existingInvoices && existingInvoices.length > 0) {
             existingInvoices.forEach(invoice => {
-              const match = invoice.invoice_number.match(new RegExp(`${prefix}-${year}-(\\d+)`))
-              if (match) {
-                const num = parseInt(match[1], 10)
-                if (num > maxNumber) {
-                  maxNumber = num
+              if (invoice.invoice_number) {
+                // Extract number from format like "INV-2024-003"
+                const match = invoice.invoice_number.match(/-(\d+)$/)
+                if (match) {
+                  const num = parseInt(match[1], 10)
+                  if (num > maxInvoiceNumber) {
+                    maxInvoiceNumber = num
+                  }
                 }
               }
             })
           }
-          
-          // Generate next sequential number
-          const nextNumber = maxNumber + 1
-          const generatedNumber = `${prefix}-${year}-${String(nextNumber).padStart(3, '0')}`
-          console.log(`Generated invoice number: ${generatedNumber} (next after ${maxNumber})`)
-          setInvoiceNumber(generatedNumber)
+
+          // The next number should be maxInvoiceNumber + 1
+          const nextNumber = maxInvoiceNumber + 1
+          const previewNumber = `${prefix}-${year}-${String(nextNumber).padStart(3, '0')}`
+          setInvoiceNumber(previewNumber)
+          setIsPreviewNumber(true)
           
         } catch (error) {
-          console.error('Error generating invoice number:', error)
-          // Ultimate fallback - use timestamp
-          const timestamp = Date.now().toString().slice(-3)
-          const generatedNumber = `${prefix}-${year}-${timestamp}`
-          setInvoiceNumber(generatedNumber)
+          console.error('Error previewing invoice number:', error)
+          setInvoiceNumber(`${prefix}-${year}-001`)
+          setIsPreviewNumber(true)
         }
       } else {
-        // Demo mode: count from session storage
+        // Demo mode: preview based on existing invoices
         const existingInvoices = JSON.parse(sessionStorage.getItem('demo-invoices') || '[]')
         const currentYearInvoices = existingInvoices.filter((inv: any) => 
           inv.invoice_number?.startsWith(`${prefix}-${year}-`)
         )
-        const invoiceCount = currentYearInvoices.length + 1
-        const generatedNumber = `${prefix}-${year}-${String(invoiceCount).padStart(3, '0')}`
-      setInvoiceNumber(generatedNumber)
+        const nextNumber = currentYearInvoices.length + 1
+        const previewNumber = `${prefix}-${year}-${String(nextNumber).padStart(3, '0')}`
+        setInvoiceNumber(previewNumber)
+        setIsPreviewNumber(true)
       }
     }
-
-    generateInvoiceNumber()
-  }, [settings.invoicePrefix, isEditMode])
+    
+    previewInvoiceNumber()
+  }, [isEditMode, settings.invoicePrefix])
 
   // Update tax settings when settings change
   useEffect(() => {
@@ -264,6 +266,7 @@ export default function GenerateInvoicePage() {
         
         // Set invoice number (don't auto-generate for editing)
         setInvoiceNumber(editInfo.invoiceNumber)
+        setIsPreviewNumber(false)
         
         // Set dates
         if (editInfo.issueDate) {
@@ -579,7 +582,47 @@ export default function GenerateInvoicePage() {
     setIsSavingDraft(true)
     
     try {
-      // Use the pre-generated invoice number from state
+      // Generate invoice number if not already generated
+      let finalInvoiceNumber = invoiceNumber
+      
+      if (!isEditMode) {
+        const now = new Date()
+        const year = now.getFullYear()
+        const prefix = settings.invoicePrefix || 'INV'
+
+        if (isSupabaseConfigured()) {
+          try {
+            const { data: userData } = await supabase.auth.getUser()
+            const { data, error } = await supabase
+              .rpc('get_next_invoice_number', {
+                p_user_id: userData.user?.id,
+                p_prefix: prefix,
+                p_year: year
+              })
+
+            if (error) {
+              console.error('Error generating invoice number:', error)
+              const timestamp = Date.now().toString().slice(-6)
+              finalInvoiceNumber = `${prefix}-${year}-${timestamp}`
+            } else {
+              finalInvoiceNumber = data
+              setIsPreviewNumber(false)
+            }
+          } catch (error) {
+            console.error('Error generating invoice number:', error)
+            const timestamp = Date.now().toString().slice(-6)
+            finalInvoiceNumber = `${prefix}-${year}-${timestamp}`
+          }
+        } else {
+          const existingInvoices = JSON.parse(sessionStorage.getItem('demo-invoices') || '[]')
+          const currentYearInvoices = existingInvoices.filter((inv: any) => 
+            inv.invoice_number?.startsWith(`${prefix}-${year}-`)
+          )
+          const invoiceCount = currentYearInvoices.length + 1
+          finalInvoiceNumber = `${prefix}-${year}-${String(invoiceCount).padStart(3, '0')}`
+        }
+      }
+      
       const subtotal = calculateSubtotal()
       const tax = calculateTax()
       const total = calculateTotal()
@@ -593,7 +636,7 @@ export default function GenerateInvoicePage() {
         
         // Prepare invoice data matching exact database schema
         const invoiceInsertData = {
-          invoice_number: invoiceNumber,
+          invoice_number: finalInvoiceNumber,
           client_id: selectedClient.id,
           project_id: selectedProject?.id || null,
           amount: subtotal,
@@ -642,6 +685,9 @@ export default function GenerateInvoicePage() {
         }
 
         toast.success("Draft saved successfully")
+        
+        // Invalidate invoice cache to ensure fresh data
+        queryClient.invalidateQueries({ queryKey: ['invoices'] })
       } else {
         // For demo mode, store in sessionStorage
         const existingInvoices = JSON.parse(sessionStorage.getItem('demo-invoices') || '[]')
@@ -650,7 +696,7 @@ export default function GenerateInvoicePage() {
         
         const draftInvoice = {
           id: mockId,
-          invoice_number: invoiceNumber,
+          invoice_number: finalInvoiceNumber,
           client_id: selectedClient.id,
           project_id: selectedProject?.id || null,
           issue_date: invoiceDate.toISOString().split('T')[0],
@@ -679,6 +725,9 @@ export default function GenerateInvoicePage() {
         sessionStorage.setItem('demo-invoices', JSON.stringify(existingInvoices))
 
         toast.success("Draft saved successfully (demo mode)")
+        
+        // Invalidate invoice cache to ensure fresh data
+        queryClient.invalidateQueries({ queryKey: ['invoices'] })
       }
       
       // No redirect for draft save - user stays on the page
@@ -725,7 +774,53 @@ export default function GenerateInvoicePage() {
     }
 
     try {
-      // Use the pre-generated invoice number from state
+      // Generate invoice number only when actually creating the invoice
+      let finalInvoiceNumber = invoiceNumber
+      
+      if (!isEditMode) {
+        const now = new Date()
+        const year = now.getFullYear()
+        const prefix = settings.invoicePrefix || 'INV'
+
+        if (isSupabaseConfigured()) {
+          try {
+            // Use the database function to get the next invoice number for this user
+            const { data: userData } = await supabase.auth.getUser()
+            const { data, error } = await supabase
+              .rpc('get_next_invoice_number', {
+                p_user_id: userData.user?.id,
+                p_prefix: prefix,
+                p_year: year
+              })
+
+            if (error) {
+              console.error('Error generating invoice number:', error)
+              // Fallback to timestamp-based generation
+              const timestamp = Date.now().toString().slice(-6)
+              finalInvoiceNumber = `${prefix}-${year}-${timestamp}`
+            } else {
+              console.log(`Generated invoice number: ${data}`)
+              finalInvoiceNumber = data
+              setIsPreviewNumber(false)
+            }
+          } catch (error) {
+            console.error('Error generating invoice number:', error)
+            // Ultimate fallback - use timestamp
+            const timestamp = Date.now().toString().slice(-6)
+            finalInvoiceNumber = `${prefix}-${year}-${timestamp}`
+          }
+        } else {
+          // Demo mode: count from session storage per user
+          const existingInvoices = JSON.parse(sessionStorage.getItem('demo-invoices') || '[]')
+          const currentYearInvoices = existingInvoices.filter((inv: any) => 
+            inv.invoice_number?.startsWith(`${prefix}-${year}-`)
+          )
+          const invoiceCount = currentYearInvoices.length + 1
+          finalInvoiceNumber = `${prefix}-${year}-${String(invoiceCount).padStart(3, '0')}`
+        }
+      }
+
+      // Use the generated invoice number from here on
       const subtotal = calculateSubtotal()
       const tax = calculateTax()
       const total = calculateTotal()
@@ -744,7 +839,7 @@ export default function GenerateInvoicePage() {
         taxEnabled,
         taxRate: customTaxRate,
         taxName: settings.taxName,
-        invoiceNumber
+        invoiceNumber: finalInvoiceNumber
       }
 
       // Save invoice to database or add to session storage for demo
@@ -758,7 +853,7 @@ export default function GenerateInvoicePage() {
         if (!selectedClient.id) {
           throw new Error('Selected client does not have a valid ID')
         }
-        if (!invoiceNumber) {
+        if (!finalInvoiceNumber) {
           throw new Error('Invoice number is required')
         }
         if (items.length === 0) {
@@ -773,14 +868,14 @@ export default function GenerateInvoicePage() {
         
         // Prepare invoice data matching exact database schema
         const invoiceInsertData = {
-          invoice_number: invoiceNumber,
+          invoice_number: finalInvoiceNumber,
           client_id: selectedClient.id,
           project_id: selectedProject?.id || null, // Include selected project if any
           amount: subtotal,
           tax_rate: taxRatePercent,
           tax_amount: tax,
           total_amount: total,
-          status: 'draft', // Start as draft, can be changed to 'sent' later
+          status: 'sent', // Start as sent, can be changed to 'draft' later
           issue_date: invoiceDate.toISOString().split('T')[0], // DATE format (YYYY-MM-DD)
           due_date: (dueDate?.toISOString() || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()).split('T')[0], // DATE format
           notes: notes || '',
@@ -879,7 +974,11 @@ export default function GenerateInvoicePage() {
           console.log('Invoice items saved successfully:', itemsData)
         }
 
-        toast.success(isEditMode ? "Invoice updated successfully" : "Invoice generated successfully")
+        // Don't show toast here - preview page will show it
+        // toast.success(isEditMode ? "Invoice updated successfully" : "Invoice generated successfully")
+        
+        // Invalidate invoice cache to ensure fresh data when navigating back
+        queryClient.invalidateQueries({ queryKey: ['invoices'] })
         
         // Redirect to preview page with appropriate action
         router.push(`/dashboard/invoices/${invoiceData.id}/preview?action=${isEditMode ? 'updated' : 'created'}`)
@@ -898,7 +997,7 @@ export default function GenerateInvoicePage() {
             if (inv.id === editInvoiceId) {
               return {
                 ...inv,
-                invoice_number: invoiceNumber,
+                invoice_number: finalInvoiceNumber,
                 client_id: selectedClient.id,
                 project_id: selectedProject?.id || null,
                 issue_date: invoiceDate.toISOString().split('T')[0],
@@ -930,7 +1029,7 @@ export default function GenerateInvoicePage() {
           
           const newInvoice = {
             id: mockId,
-            invoice_number: invoiceNumber,
+            invoice_number: finalInvoiceNumber,
             client_id: selectedClient.id,
             project_id: selectedProject?.id || null,
             issue_date: invoiceDate.toISOString().split('T')[0],
@@ -939,7 +1038,7 @@ export default function GenerateInvoicePage() {
             tax_rate: taxEnabled ? parseFloat(customTaxRate) : 0,
             tax_amount: tax,
             total_amount: total,
-            status: 'draft' as const,
+            status: 'sent' as const,
             notes: notes || '',
             terms: paymentTerms || '',
             created_at: new Date().toISOString(),
@@ -960,7 +1059,11 @@ export default function GenerateInvoicePage() {
         
         sessionStorage.setItem('demo-invoices', JSON.stringify(existingInvoices))
 
-        toast.success(isEditMode ? "Invoice updated successfully (demo mode)" : "Invoice generated successfully (demo mode)")
+        // Don't show toast here - preview page will show it
+        // toast.success(isEditMode ? "Invoice updated successfully (demo mode)" : "Invoice generated successfully (demo mode)")
+        
+        // Invalidate invoice cache to ensure fresh data when navigating back
+        queryClient.invalidateQueries({ queryKey: ['invoices'] })
         
         // Redirect to preview page with appropriate action
         router.push(`/dashboard/invoices/${invoiceId}/preview?action=${isEditMode ? 'updated' : 'created'}`)
@@ -1603,7 +1706,10 @@ export default function GenerateInvoicePage() {
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-gray-500">Invoice number</p>
-                  <p className="text-sm font-medium text-gray-900 font-mono">{invoiceNumber || "Generating..."}</p>
+                  <p className="text-sm font-medium text-gray-900 font-mono">{invoiceNumber || "Will be generated"}</p>
+                  {!isEditMode && isPreviewNumber && invoiceNumber && (
+                    <p className="text-xs text-gray-500 mt-0.5">(Preview)</p>
+                  )}
                 </div>
               </div>
 

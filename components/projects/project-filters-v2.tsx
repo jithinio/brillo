@@ -211,12 +211,12 @@ export function ProjectFiltersV2({
                   )}
                 >
                                       <CheckCircle className={cn("mr-1 h-3 w-3", filters.status.length > 0 ? "text-gray-600 dark:text-gray-400" : "text-muted-foreground")} />
-                    Status
-                    {filters.status.length > 0 && (
+                  Status
+                  {filters.status.length > 0 && (
                       <Badge variant="secondary" className="ml-1 h-4 px-1 text-xs font-normal bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-                        {filters.status.length}
-                      </Badge>
-                    )}
+                      {filters.status.length}
+                    </Badge>
+                  )}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[220px] p-0" align="start">

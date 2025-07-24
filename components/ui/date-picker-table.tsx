@@ -29,19 +29,17 @@ export function DatePickerTable({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
+        <div
           className={cn(
-            "flex justify-start text-left font-normal w-full min-w-0 h-6 px-2 max-w-full overflow-hidden text-sm",
-            !date && "text-muted-foreground"
+            "cursor-pointer text-left font-normal w-full min-w-0 text-sm",
+            !date && "text-muted-foreground",
+            disabled && "cursor-not-allowed opacity-50"
           )}
-          disabled={disabled}
         >
           <span className="truncate min-w-0">
             {date ? format(date, "MMM d, yy") : placeholder}
           </span>
-        </Button>
+        </div>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
         <Calendar

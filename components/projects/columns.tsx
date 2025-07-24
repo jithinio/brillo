@@ -140,7 +140,7 @@ function SortableHeader({
   const sortDirection = column.getIsSorted()
   
   return (
-    <div className="px-2 py-1">
+            <div className="">
       <Popover>
         <PopoverTrigger asChild>
           <Button
@@ -251,14 +251,10 @@ function ClientSelector({
   }
 
   return (
-    <div className="px-2 py-1 w-full">
+    <div className="w-full">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-auto p-1 hover:bg-gray-100 dark:hover:bg-gray-800 w-full justify-start cursor-pointer transition-colors"
-          >
+          <div className="w-full justify-start cursor-pointer">
             {client ? (
               <div className="flex items-center space-x-2 min-w-0">
                 <ClientAvatar name={client.name} avatarUrl={client.avatar_url} size="sm" className="flex-shrink-0" />
@@ -269,7 +265,7 @@ function ClientSelector({
             ) : (
               <span className="text-muted-foreground text-sm">No client</span>
             )}
-          </Button>
+          </div>
         </PopoverTrigger>
         <PopoverContent className="w-[300px] p-0" align="start">
           <Command shouldFilter={false}>
@@ -333,7 +329,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
     {
       id: "select",
       header: ({ table }) => (
-        <div className="flex items-center justify-center px-2 py-1 w-full">
+        <div className="flex items-center justify-center w-full">
           <Checkbox
             checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
             onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
@@ -343,7 +339,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
         </div>
       ),
       cell: ({ row }) => (
-        <div className="flex items-center justify-center px-2 py-1 w-full">
+        <div className="flex items-center justify-center w-full">
           <Checkbox
             checked={row.getIsSelected()}
             onCheckedChange={(value) => row.toggleSelected(!!value)}
@@ -366,7 +362,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
       cell: ({ row }) => {
         const project = row.original
         return (
-          <div className="px-2 py-1 w-full min-w-0">
+          <div className="w-full min-w-0">
             <div 
               className="truncate font-medium cursor-pointer transition-colors hover:text-primary text-sm" 
               title={project.name}
@@ -421,7 +417,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
         const Icon = config.icon
 
         return (
-          <div className="px-2 py-1 w-full">
+          <div className="w-full">
             <Popover>
               <PopoverTrigger asChild>
                 <Badge variant={config.variant} className="cursor-pointer hover:bg-slate-100 transition-colors font-normal text-sm focus:outline-none focus-visible:outline-none whitespace-nowrap min-w-fit">
@@ -502,7 +498,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
         const date = startDate ? new Date(startDate) : undefined
 
         return (
-          <div className="px-2 py-1 w-full min-w-0">
+          <div className="w-full min-w-0">
             <div className="min-w-0">
               <DatePickerTable
                 date={date}
@@ -525,7 +521,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
       cell: ({ row }) => {
         const budget = row.getValue("budget") as number
         return (
-          <div className="px-2 py-1 w-full">
+          <div className="w-full">
             {budget ? (
               <span className="truncate font-normal text-sm">{formatCurrency(budget)}</span>
             ) : (
@@ -546,7 +542,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
       cell: ({ row }) => {
         const expenses = row.getValue("expenses") as number
         return (
-          <div className="px-2 py-1 w-full">
+          <div className="w-full">
             {expenses ? (
               <span className="truncate font-normal text-sm">{formatCurrency(expenses)}</span>
             ) : (
@@ -567,7 +563,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
       cell: ({ row }) => {
         const received = row.getValue("received") as number
         return (
-          <div className="px-2 py-1 w-full">
+          <div className="w-full">
             {received ? (
               <span className="truncate font-normal text-sm">{formatCurrency(received)}</span>
             ) : (
@@ -593,7 +589,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
         const pending = Math.max(0, budget - received) // Ensure it's not negative
         
                 return (
-          <div className="px-2 py-1 w-full">
+          <div className="w-full">
             <span className="truncate font-normal text-sm">{formatCurrency(pending)}</span>
           </div>
         )
@@ -613,7 +609,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
         const date = dueDate ? new Date(dueDate) : undefined
 
                     return (
-            <div className="px-2 py-1 w-full min-w-0">
+            <div className="w-full min-w-0">
               <div className="min-w-0">
                 <DatePickerTable
                   date={date}

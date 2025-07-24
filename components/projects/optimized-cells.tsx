@@ -51,7 +51,7 @@ const statusConfig = {
 // Memoized Project Name Cell
 export const ProjectNameCell = React.memo(({ name }: { name: string }) => {
   return (
-    <div className="font-medium text-gray-900 dark:text-gray-100 truncate px-2 py-1">
+    <div className="font-medium text-gray-900 dark:text-gray-100 truncate">
       {name}
     </div>
   )
@@ -70,7 +70,7 @@ export const StatusCell = React.memo(({
   const Icon = config.icon
   
   return (
-    <div className="px-2 py-1">
+    <div className="">
       <Badge
         variant={config.variant}
         className="font-normal flex items-center gap-1.5 cursor-pointer transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
@@ -92,14 +92,14 @@ export const ClientCell = React.memo(({
 }) => {
   if (!client) {
     return (
-      <div className="px-2 py-1">
+      <div className="">
         <span className="text-muted-foreground text-sm">No client</span>
       </div>
     )
   }
   
   return (
-    <div className="px-2 py-1 flex items-center gap-2">
+    <div className="flex items-center gap-2">
       <ClientAvatar 
         name={client.name} 
         avatarUrl={client.avatar_url} 
@@ -127,7 +127,7 @@ export const DateCell = React.memo(({
   placeholder?: string
 }) => {
   return (
-    <div className="px-2 py-1">
+    <div className="">
       <DatePickerTable
         date={date ? new Date(date) : undefined}
         onSelect={onChange}
@@ -148,7 +148,7 @@ export const CurrencyCell = React.memo(({
 }) => {
   return (
     <div className={cn(
-      "text-right font-mono text-sm px-2 py-1",
+              "text-right font-mono text-sm",
       isNegative && value && value > 0 && "text-red-600 dark:text-red-400"
     )}>
       {value ? formatCurrency(value) : "—"}

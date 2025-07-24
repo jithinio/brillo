@@ -508,7 +508,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
                   className="whitespace-nowrap"
                 >
                   <Eye className="mr-2 h-4 w-4" />
-                  View Invoice
+                  View PDF
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem

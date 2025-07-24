@@ -122,7 +122,7 @@ function SortableColumnItem({ column, onVisibilityToggle }: SortableColumnItemPr
         >
           {column.visible ? (
                           <Eye className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-            ) : (
+          ) : (
               <EyeOff className="h-4 w-4 text-gray-400 dark:text-gray-500" />
           )}
         </Button>
