@@ -481,8 +481,10 @@ export default function ClientsPage() {
         throw new Error('User not authenticated')
       }
 
-      // Use the EXACT same path structure as profile page: {user_id}/avatar.{ext}
-      const filePath = `${user.id}/client-avatar.${fileExt}`
+      // Create unique filename for each client avatar
+      const timestamp = Date.now()
+      const randomId = Math.random().toString(36).substring(7)
+      const filePath = `${user.id}/client-avatar-${timestamp}-${randomId}.${fileExt}`
 
       console.log('Attempting to upload avatar:', { filePath, fileSize: file.size })
 
