@@ -472,17 +472,19 @@ export default function ClientsPage() {
   const uploadAvatar = async (file: File): Promise<string> => {
     try {
       const fileExt = file.name.split('.').pop()
-      const filePath = `${Math.random().toString(36).substring(7)}/client-avatar.${fileExt}` // Use random folder like profile does with user ID
-
-      console.log('Attempting to upload avatar:', { filePath, fileSize: file.size })
-
-      // Debug: Check current user authentication state
+      
+      // Get current user ID like profile page does
       const { data: { user }, error: authError } = await supabase.auth.getUser()
       console.log('Current user state:', { user: user?.id, authError })
       
       if (!user) {
         throw new Error('User not authenticated')
       }
+
+      // Use the EXACT same path structure as profile page: {user_id}/avatar.{ext}
+      const filePath = `${user.id}/client-avatar.${fileExt}`
+
+      console.log('Attempting to upload avatar:', { filePath, fileSize: file.size })
 
       // Use the exact same approach as profile page: avatars bucket with upsert: true
       const { error: uploadError } = await supabase.storage
@@ -493,6 +495,8 @@ export default function ClientsPage() {
 
       if (uploadError) {
         console.error('Upload error details:', uploadError)
+        console.error('Upload error message:', uploadError.message)
+        console.error('File path being used:', filePath)
         
         // Handle storage not configured (like profile page does)
         if (uploadError.message.includes("bucket") || uploadError.message.includes("not found")) {
@@ -501,6 +505,11 @@ export default function ClientsPage() {
         
         // Handle RLS policy errors
         if (uploadError.message?.includes('row-level security policy')) {
+          console.error('RLS Policy Error Details:', {
+            message: uploadError.message,
+            name: uploadError.name,
+            stack: uploadError.stack
+          })
           throw new Error('Storage RLS policy blocking upload - policies need to be configured for avatars bucket')
         }
         
