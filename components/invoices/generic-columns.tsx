@@ -19,8 +19,10 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { formatCurrency } from "@/lib/currency"
+import { formatCurrencyAbbreviated } from "@/lib/currency-utils"
 import { Invoice } from "@/hooks/use-invoices"
 import { SortableHeader } from "@/components/table/column-utils"
+import { ClientAvatar } from "@/components/ui/client-avatar"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -64,9 +66,50 @@ const invoiceStatusConfig = {
 interface InvoiceColumnConfig {
   onStatusChange?: (invoice: Invoice, newStatus: string) => void
   refetch?: () => void
+  onInvoiceClick?: (invoice: Invoice) => void
 }
 
+// Footer cell components
+const FooterCell = ({ value, label }: { value: number | string; label?: string }) => (
+  <div className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center justify-between">
+    {label && <span className="text-xs text-muted-foreground mr-2">{label}</span>}
+    <span>{value}</span>
+  </div>
+)
+
+const CurrencyFooterCell = ({ value }: { value: number }) => (
+  <div className="text-right font-mono text-sm font-medium text-gray-900 dark:text-gray-100">
+    {formatCurrencyAbbreviated(value)}
+  </div>
+)
+
+// Create footer functions
+const createFooterFunctions = () => ({
+  totalInvoices: ({ table }: any) => {
+    const aggregations = table.aggregations || {}
+    return <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{aggregations.totalInvoices || 0}</span>
+  },
+  totalAmount: ({ table }: any) => {
+    const aggregations = table.aggregations || {}
+    return <CurrencyFooterCell value={aggregations.totalAmount || 0} />
+  },
+  paidAmount: ({ table }: any) => {
+    const aggregations = table.aggregations || {}
+    return <CurrencyFooterCell value={aggregations.paidAmount || 0} />
+  },
+  pendingAmount: ({ table }: any) => {
+    const aggregations = table.aggregations || {}
+    return <CurrencyFooterCell value={aggregations.pendingAmount || 0} />
+  },
+  overdueAmount: ({ table }: any) => {
+    const aggregations = table.aggregations || {}
+    return <CurrencyFooterCell value={aggregations.overdueAmount || 0} />
+  }
+})
+
 export function createInvoiceColumns(columnConfig: InvoiceColumnConfig): ColumnDef<Invoice>[] {
+  
+  const footerFunctions = createFooterFunctions()
   
   const columns: ColumnDef<Invoice>[] = [
     {
@@ -104,12 +147,18 @@ export function createInvoiceColumns(columnConfig: InvoiceColumnConfig): ColumnD
       ),
       cell: ({ row }) => {
         const invoiceNumber = row.getValue("invoice_number") as string
+        const invoice = row.original
+        
         return (
-          <span className="font-medium text-sm">
+          <button
+            onClick={() => columnConfig.onInvoiceClick?.(invoice)}
+            className="font-medium text-sm cursor-pointer"
+          >
             {invoiceNumber}
-          </span>
+          </button>
         )
       },
+      footer: footerFunctions.totalInvoices,
       size: 150,
     },
     {
@@ -124,9 +173,16 @@ export function createInvoiceColumns(columnConfig: InvoiceColumnConfig): ColumnD
         const clientName = invoice.clients?.name || "Unknown Client"
         
         return (
-          <span className="text-sm">
-            {clientName}
-          </span>
+          <div className="flex items-center space-x-3">
+            <ClientAvatar 
+              name={clientName} 
+              avatarUrl={invoice.clients?.avatar_url}
+              size="sm"
+            />
+            <span className="text-sm truncate" title={clientName}>
+              {clientName}
+            </span>
+          </div>
         )
       },
       size: 200,
@@ -205,6 +261,7 @@ export function createInvoiceColumns(columnConfig: InvoiceColumnConfig): ColumnD
           </span>
         )
       },
+      footer: footerFunctions.totalAmount,
       size: 150,
     },
     {

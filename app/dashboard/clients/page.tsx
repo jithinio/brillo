@@ -18,6 +18,7 @@ import {
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Upload, User } from "lucide-react"
 import { ClientMetrics } from "@/components/clients/ClientMetrics"
 import { DataHookReturn, EntityActions } from "@/components/table/types"
@@ -43,14 +44,230 @@ interface ClientFormData {
   avatar_url?: string
   status: string
   client_since?: Date
+  relationship?: string
 }
+
+// Separate memoized component to prevent re-rendering and focus loss
+const ClientDialogForm = React.memo(({ 
+  formData, 
+  updateFormField, 
+  avatarPreview, 
+  handleAvatarUpload, 
+  fileInputRef,
+  getInitials 
+}: {
+  formData: any;
+  updateFormField: (field: string, value: any) => void;
+  avatarPreview: string | null;
+  handleAvatarUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
+  getInitials: (name: string) => string;
+}) => (
+  <div className="space-y-6">
+    {/* Avatar Section */}
+    <div className="flex items-center gap-6 pb-6 border-b border-gray-200 dark:border-gray-700">
+      <Avatar className="h-24 w-24">
+        {avatarPreview ? (
+          <AvatarImage src={avatarPreview} alt={formData.name} />
+        ) : (
+          <AvatarFallback className="text-lg">
+            {formData.name ? getInitials(formData.name) : <User className="h-10 w-10 text-muted-foreground" />}
+          </AvatarFallback>
+        )}
+      </Avatar>
+            <div className="flex-1">
+        <h4 className="text-sm font-medium mb-2">Profile Picture</h4>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <Upload className="h-4 w-4 mr-2" />
+          {avatarPreview ? "Change Photo" : "Upload Photo"}
+                </Button>
+        <input
+          ref={fileInputRef}
+                type="file"
+                accept="image/*"
+          onChange={handleAvatarUpload}
+                className="hidden"
+              />
+        <p className="text-xs text-muted-foreground mt-1">Maximum 5MB • JPG, PNG</p>
+            </div>
+          </div>
+
+    {/* Basic Information */}
+    <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="name" className="text-sm font-medium">
+            Full Name <span className="text-red-500">*</span>
+          </Label>
+              <Input
+                id="name"
+            value={formData.name}
+            onChange={(e) => updateFormField('name', e.target.value)}
+            placeholder="John Doe"
+            className="h-9"
+              />
+            </div>
+        <div className="space-y-2">
+          <Label htmlFor="company" className="text-sm font-medium">
+            Company
+          </Label>
+              <Input
+                id="company"
+            value={formData.company}
+            onChange={(e) => updateFormField('company', e.target.value)}
+            placeholder="Acme Inc."
+            className="h-9"
+              />
+            </div>
+          </div>
+        
+        <div className="grid grid-cols-1 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="relationship" className="text-sm font-medium">
+              Relationship Type
+            </Label>
+            <Select value={formData.relationship || "regular"} onValueChange={(value) => updateFormField('relationship', value)}>
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="Select relationship type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="recurring">Recurring</SelectItem>
+                <SelectItem value="one-time">One Time</SelectItem>
+                <SelectItem value="regular">Regular</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+    </div>
+
+    {/* Contact Information */}
+    <div className="space-y-4 pt-6 border-t border-gray-200 dark:border-gray-700">
+          <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="email" className="text-sm font-medium">
+            Email Address
+          </Label>
+              <Input
+                id="email"
+                type="email"
+            value={formData.email}
+            onChange={(e) => updateFormField('email', e.target.value)}
+            placeholder="john@example.com"
+            className="h-9"
+              />
+            </div>
+        <div className="space-y-2">
+          <Label htmlFor="phone" className="text-sm font-medium">
+            Phone Number
+          </Label>
+              <PhoneInput
+            value={formData.phone}
+            onChange={(value) => updateFormField('phone', value)}
+                placeholder="Enter phone number"
+              />
+            </div>
+          </div>
+    </div>
+
+    {/* Address Information */}
+    <div className="space-y-4 pt-6 border-t border-gray-200 dark:border-gray-700">
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="address" className="text-sm font-medium">
+              Street Address
+            </Label>
+            <Input
+              id="address"
+              value={formData.address}
+              onChange={(e) => updateFormField('address', e.target.value)}
+              placeholder="123 Main Street"
+              className="h-9"
+            />
+          </div>
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="city" className="text-sm font-medium">
+              City
+            </Label>
+              <Input
+                id="city"
+              value={formData.city}
+              onChange={(e) => updateFormField('city', e.target.value)}
+              placeholder="New York"
+              className="h-9"
+              />
+            </div>
+          <div className="space-y-2">
+            <Label htmlFor="state" className="text-sm font-medium">
+              State/Province
+            </Label>
+              <Input
+                id="state"
+              value={formData.state}
+              onChange={(e) => updateFormField('state', e.target.value)}
+              placeholder="NY"
+              className="h-9"
+              />
+            </div>
+          <div className="space-y-2">
+            <Label htmlFor="zip_code" className="text-sm font-medium">
+              Zip/Postal Code
+            </Label>
+              <Input
+                id="zip_code"
+              value={formData.zip_code}
+              onChange={(e) => updateFormField('zip_code', e.target.value)}
+              placeholder="10001"
+              className="h-9"
+              />
+            </div>
+          </div>
+        <div className="grid grid-cols-1 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="country" className="text-sm font-medium">
+              Country
+            </Label>
+            <CountrySelect
+              value={formData.country}
+              onValueChange={(value) => updateFormField('country', value)}
+              placeholder="Select country"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {/* Additional Information */}
+    <div className="space-y-4 pt-6 border-t border-gray-200 dark:border-gray-700">
+      <div className="space-y-2">
+        <Label htmlFor="notes" className="text-sm font-medium">
+          Notes
+        </Label>
+            <Textarea
+              id="notes"
+          value={formData.notes}
+          onChange={(e) => updateFormField('notes', e.target.value)}
+          placeholder="Additional notes about the client..."
+          className="min-h-[80px] resize-none"
+            />
+          </div>
+    </div>
+  </div>
+))
 
 export default function ClientsPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [selectedClient, setSelectedClient] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
   const router = useRouter()
 
   // State for filters
@@ -70,6 +287,7 @@ export default function ClientsPage() {
     country: "US",
     notes: "",
     status: "active",
+    relationship: "regular",
   })
 
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
@@ -96,6 +314,7 @@ export default function ClientsPage() {
         notes: client.notes || "",
         avatar_url: client.avatar_url || "",
         status: client.status || "active",
+        relationship: client.relationship || "regular",
         client_since: client.client_since ? new Date(client.client_since) : undefined,
       })
       setAvatarPreview(client.avatar_url || "")
@@ -161,6 +380,15 @@ export default function ClientsPage() {
         sessionStorage.setItem('project-client-data', JSON.stringify(clientData))
         router.push('/dashboard/projects') // Navigate to projects page with client data
         toast.info('New project feature will be available soon')
+      },
+      'Change to Recurring': (client: any) => {
+        clientsData.updateStatus?.(client.id, 'recurring')
+      },
+      'Change to One Time': (client: any) => {
+        clientsData.updateStatus?.(client.id, 'one-time')
+      },
+      'Change to Regular': (client: any) => {
+        clientsData.updateStatus?.(client.id, 'regular')
       }
     }
   }
@@ -251,8 +479,8 @@ export default function ClientsPage() {
   const handleSave = async () => {
     if (!formData.name.trim()) {
       toast.error("Name is required")
-      return
-    }
+        return
+      }
 
     setIsLoading(true)
     try {
@@ -271,9 +499,9 @@ export default function ClientsPage() {
         avatar_url: avatarUrl,
         client_since: formData.client_since || new Date(),
       }
-
-      if (selectedClient) {
-        // Update existing client
+        
+        if (selectedClient) {
+          // Update existing client
         const { error } = await supabase
           .from('clients')
           .update(clientData)
@@ -312,187 +540,9 @@ export default function ClientsPage() {
     return (words[0]?.[0] || "") + (words[words.length - 1]?.[0] || "")
   }
 
-  const DialogForm = () => (
-    <div className="space-y-6">
-      {/* Avatar Section */}
-      <div className="flex items-center gap-6 pb-6 border-b border-gray-200 dark:border-gray-700">
-        <Avatar className="h-24 w-24">
-          {avatarPreview ? (
-            <AvatarImage src={avatarPreview} alt={formData.name} />
-          ) : (
-            <AvatarFallback className="text-lg">
-              {formData.name ? getInitials(formData.name) : <User className="h-10 w-10 text-muted-foreground" />}
-            </AvatarFallback>
-          )}
-        </Avatar>
-        <div className="flex-1">
-          <h4 className="text-sm font-medium mb-2">Profile Picture</h4>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <Upload className="h-4 w-4 mr-2" />
-            {avatarPreview ? "Change Photo" : "Upload Photo"}
-          </Button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleAvatarUpload}
-            className="hidden"
-          />
-          <p className="text-xs text-muted-foreground mt-1">Maximum 5MB • JPG, PNG</p>
-        </div>
-      </div>
-
-      {/* Basic Information */}
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="name" className="text-sm font-medium">
-              Full Name <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="John Doe"
-              className="h-9"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="company" className="text-sm font-medium">
-              Company
-            </Label>
-            <Input
-              id="company"
-              value={formData.company}
-              onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-              placeholder="Acme Inc."
-              className="h-9"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Contact Information */}
-      <div className="space-y-4 pt-6 border-t border-gray-200 dark:border-gray-700">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="email" className="text-sm font-medium">
-              Email Address
-            </Label>
-            <Input
-              id="email"
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              placeholder="john@example.com"
-              className="h-9"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="phone" className="text-sm font-medium">
-              Phone Number
-            </Label>
-            <PhoneInput
-              value={formData.phone}
-              onChange={(value) => setFormData({ ...formData, phone: value })}
-              placeholder="Enter phone number"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Address Information */}
-      <div className="space-y-4 pt-6 border-t border-gray-200 dark:border-gray-700">
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="address" className="text-sm font-medium">
-                Street Address
-              </Label>
-              <Input
-                id="address"
-                value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                placeholder="123 Main Street"
-                className="h-9"
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="city" className="text-sm font-medium">
-                City
-              </Label>
-              <Input
-                id="city"
-                value={formData.city}
-                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                placeholder="New York"
-                className="h-9"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="state" className="text-sm font-medium">
-                State/Province
-              </Label>
-              <Input
-                id="state"
-                value={formData.state}
-                onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                placeholder="NY"
-                className="h-9"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="zip_code" className="text-sm font-medium">
-                Zip/Postal Code
-              </Label>
-              <Input
-                id="zip_code"
-                value={formData.zip_code}
-                onChange={(e) => setFormData({ ...formData, zip_code: e.target.value })}
-                placeholder="10001"
-                className="h-9"
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="country" className="text-sm font-medium">
-                Country
-              </Label>
-              <CountrySelect
-                value={formData.country}
-                onValueChange={(value) => setFormData({ ...formData, country: value })}
-                placeholder="Select country"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Additional Information */}
-      <div className="space-y-4 pt-6 border-t border-gray-200 dark:border-gray-700">
-        <div className="space-y-2">
-          <Label htmlFor="notes" className="text-sm font-medium">
-            Notes
-          </Label>
-          <Textarea
-            id="notes"
-            value={formData.notes}
-            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-            placeholder="Additional notes about the client..."
-            className="min-h-[80px] resize-none"
-          />
-        </div>
-      </div>
-    </div>
-  )
+  const updateFormField = React.useCallback((field: string, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
+  }, [])
 
   return (
     <>
@@ -502,6 +552,7 @@ export default function ClientsPage() {
         dataHook={() => clientsData as DataHookReturn<any>}
         createColumns={(actions: any) => createClientColumns({
           onStatusChange: clientsData.updateStatus,
+          onRelationshipChange: clientsData.updateStatus,
           onEditClient: entityActions.onEdit,
         })}
         features={{
@@ -522,6 +573,7 @@ export default function ClientsPage() {
           location: 200,
           projects: 120,
           status: 120,
+          relationship: 130,
           client_since: 140,
         }}
         metricsComponent={<ClientMetrics metrics={metrics} />}
@@ -551,7 +603,15 @@ export default function ClientsPage() {
           </DialogHeader>
           
           <div className="flex-1 overflow-y-auto px-1">
-            <DialogForm />
+            <ClientDialogForm 
+              key="add"
+              formData={formData} 
+              updateFormField={updateFormField} 
+              avatarPreview={avatarPreview} 
+              handleAvatarUpload={handleAvatarUpload} 
+              fileInputRef={fileInputRef}
+              getInitials={getInitials}
+            />
           </div>
 
           <DialogFooter className="flex-shrink-0 border-t border-gray-200 dark:border-gray-700 pt-4">
@@ -561,15 +621,15 @@ export default function ClientsPage() {
                 onClick={() => setIsAddDialogOpen(false)}
                 disabled={isLoading}
               >
-                Cancel
-              </Button>
+              Cancel
+            </Button>
               <Button 
                 onClick={handleSave} 
                 disabled={isLoading || !formData.name.trim()}
                 className="min-w-[100px]"
               >
                 {isLoading ? "Creating..." : "Create Client"}
-              </Button>
+            </Button>
             </div>
           </DialogFooter>
         </DialogContent>
@@ -586,7 +646,15 @@ export default function ClientsPage() {
           </DialogHeader>
           
           <div className="flex-1 overflow-y-auto px-1">
-            <DialogForm />
+            <ClientDialogForm 
+              key={selectedClient?.id || 'edit'} 
+              formData={formData} 
+              updateFormField={updateFormField} 
+              avatarPreview={avatarPreview} 
+              handleAvatarUpload={handleAvatarUpload} 
+              fileInputRef={fileInputRef}
+              getInitials={getInitials}
+            />
           </div>
 
           <DialogFooter className="flex-shrink-0 border-t border-gray-200 dark:border-gray-700 pt-4">
@@ -596,15 +664,15 @@ export default function ClientsPage() {
                 onClick={() => setIsEditDialogOpen(false)}
                 disabled={isLoading}
               >
-                Cancel
-              </Button>
+              Cancel
+            </Button>
               <Button 
                 onClick={handleSave} 
                 disabled={isLoading || !formData.name.trim()}
                 className="min-w-[100px]"
               >
                 {isLoading ? "Saving..." : "Save Changes"}
-              </Button>
+            </Button>
             </div>
           </DialogFooter>
         </DialogContent>

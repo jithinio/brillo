@@ -270,10 +270,10 @@ function FinalDataTableComponent({
           </div>
         )}
 
-        <div className="min-w-full inline-block align-middle" style={{ minWidth: `${tableWidth}px` }}>
+        <div className="inline-block min-w-full" style={{ width: `${tableWidth}px` }}>
           {/* Sticky Table Header */}
           <div className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-t border-b border-gray-200/80 dark:border-gray-700/80">
-            <div className="flex">
+            <div className="flex" style={{ width: `${tableWidth}px` }}>
               {columns.map((column: any, colIndex: number) => (
                 <div
                   key={`header-${column.id || colIndex}`}
@@ -496,7 +496,7 @@ function FinalDataTableComponent({
 
           {/* Sticky Footer with Aggregations */}
           <div className="sticky bottom-0 bg-white dark:bg-gray-900 z-10 border-t border-b border-gray-200/80 dark:border-gray-700/80 h-11">
-            <div className="flex h-full">
+            <div className="flex h-full" style={{ width: `${tableWidth}px` }}>
               {columns.map((column: any, colIndex: number) => (
                 <div
                   key={`footer-${column.id || colIndex}`}

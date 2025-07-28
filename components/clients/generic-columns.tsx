@@ -16,6 +16,8 @@ import {
   Activity,
   Copy,
   Calendar,
+  RotateCcw,
+  Zap,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -60,14 +62,50 @@ const clientStatusConfig = {
   },
 }
 
+const clientRelationshipConfig = {
+  recurring: {
+    label: "Recurring",
+    icon: RotateCcw,
+    variant: "outline" as const,
+    iconClassName: "text-blue-500",
+  },
+  "one-time": {
+    label: "One Time",
+    icon: Zap,
+    variant: "outline" as const,
+    iconClassName: "text-orange-500",
+  },
+  regular: {
+    label: "Regular",
+    icon: Clock,
+    variant: "outline" as const,
+    iconClassName: "text-green-500",
+  },
+}
+
 interface ClientColumnConfig {
   onStatusChange?: (clientId: string, newStatus: string) => void
+  onRelationshipChange?: (clientId: string, newRelationship: string) => void
   onProjectClick?: (projectId: string) => void
   onEditClient?: (client: any) => void
   refetch?: () => void
 }
 
+// Create footer functions
+const createFooterFunctions = () => ({
+  totalClients: ({ table }: any) => {
+    const aggregations = table.aggregations || {}
+    return <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{aggregations.totalClients || 0}</span>
+  },
+  totalProjects: ({ table }: any) => {
+    const aggregations = table.aggregations || {}
+    return <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{aggregations.totalProjects || 0}</span>
+  }
+})
+
 export function createClientColumns(columnConfig: ClientColumnConfig): ColumnDef<Client>[] {
+  
+  const footerFunctions = createFooterFunctions()
   
   const handleCopyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text)
@@ -101,6 +139,7 @@ export function createClientColumns(columnConfig: ClientColumnConfig): ColumnDef
       enableHiding: false,
       size: 50,
     },
+    // 1. Name
     {
       accessorKey: "name",
       header: ({ column }) => (
@@ -120,7 +159,7 @@ export function createClientColumns(columnConfig: ClientColumnConfig): ColumnDef
             <ClientAvatar 
               name={name} 
               avatarUrl={client.avatar_url}
-              size="xs"
+              size="sm"
             />
             <span className="font-medium truncate text-gray-900 dark:text-gray-100 hover:underline" title={name}>
               {name}
@@ -128,8 +167,10 @@ export function createClientColumns(columnConfig: ClientColumnConfig): ColumnDef
           </div>
         )
       },
+      footer: footerFunctions.totalClients,
       size: 250,
     },
+    // 2. Company
     {
       accessorKey: "company",
       header: ({ column }) => (
@@ -149,122 +190,48 @@ export function createClientColumns(columnConfig: ClientColumnConfig): ColumnDef
       },
       size: 200,
     },
+    // 3. Relationship
     {
-      accessorKey: "email",
+      accessorKey: "relationship",
       header: ({ column }) => (
-        <SortableHeader column={column} icon={Mail} className="px-0">
-          Email
+        <SortableHeader column={column} icon={RotateCcw} className="px-0">
+          Relationship
         </SortableHeader>
       ),
       cell: ({ row }) => {
-        const email = row.getValue("email") as string
-        return email ? (
-          <div className="relative group/cell w-full">
-            <a 
-              href={`mailto:${email}`} 
-              className="text-sm text-muted-foreground hover:text-foreground truncate block"
-              title={email}
-            >
-              {email}
-            </a>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity z-10"
-              onClick={(e) => {
-                e.stopPropagation()
-                handleCopyToClipboard(email, "Email")
-              }}
-            >
-              <Copy className="h-3 w-3" />
-            </Button>
-          </div>
-        ) : (
-          <span className="text-sm text-muted-foreground">—</span>
-        )
-      },
-      size: 250,
-    },
-    {
-      accessorKey: "phone",
-      header: ({ column }) => (
-        <SortableHeader column={column} icon={Phone} className="px-0">
-          Phone
-        </SortableHeader>
-      ),
-      cell: ({ row }) => {
-        const phone = row.getValue("phone") as string
-        return phone ? (
-          <div className="relative group/cell w-full">
-            <a 
-              href={`tel:${phone}`} 
-              className="text-sm text-muted-foreground hover:text-foreground truncate block"
-              title={phone}
-            >
-              {phone}
-            </a>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity z-10"
-              onClick={(e) => {
-                e.stopPropagation()
-                handleCopyToClipboard(phone, "Phone")
-              }}
-            >
-              <Copy className="h-3 w-3" />
-            </Button>
-          </div>
-        ) : (
-          <span className="text-sm text-muted-foreground">—</span>
-        )
-      },
-      size: 150,
-    },
-    {
-      id: "location",
-      header: ({ column }) => (
-        <SortableHeader column={column} icon={MapPin} className="px-0">
-          Location
-        </SortableHeader>
-      ),
-      cell: ({ row }) => {
-        const client = row.original
-        const parts = [client.city, client.state, client.country].filter(Boolean)
-        const location = parts.join(", ")
-        
-        return location ? (
-          <span className="text-sm text-muted-foreground truncate" title={location}>
-            {location}
-          </span>
-        ) : (
-          <span className="text-sm text-muted-foreground">—</span>
-        )
-      },
-      size: 200,
-    },
-    {
-      id: "projects",
-      header: ({ column }) => (
-        <SortableHeader column={column} icon={Briefcase} className="px-0">
-          Projects
-        </SortableHeader>
-      ),
-      cell: ({ row }) => {
-        const projects = row.original.projects || []
-        const activeProjects = projects.filter(p => p.status === 'active').length
-        const totalProjects = projects.length
+        const relationship = row.getValue("relationship") as string || "regular"
+        const config = clientRelationshipConfig[relationship as keyof typeof clientRelationshipConfig] || clientRelationshipConfig.regular
+        const Icon = config.icon
         
         return (
-          <div className="flex items-center space-x-2">
-            <Badge variant="secondary" className="text-xs">
-              {activeProjects}/{totalProjects}
-            </Badge>
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Badge variant={config.variant} className="flex items-center space-x-1 cursor-pointer">
+                <Icon className={`h-3 w-3 ${config.iconClassName}`} />
+                <span>{config.label}</span>
+              </Badge>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              {Object.entries(clientRelationshipConfig).map(([key, relationshipConfig]) => {
+                const RelationshipIcon = relationshipConfig.icon
+                return (
+                  <DropdownMenuItem
+                    key={key}
+                    onClick={() => columnConfig.onRelationshipChange?.(row.original.id, key)}
+                    disabled={relationship === key}
+                  >
+                    <RelationshipIcon className={`mr-2 h-3 w-3 ${relationshipConfig.iconClassName}`} />
+                    {relationshipConfig.label}
+                  </DropdownMenuItem>
+                )
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
         )
       },
-      size: 120,
+      size: 130,
     },
+    // 4. Status
     {
       accessorKey: "status",
       header: ({ column }) => (
@@ -305,6 +272,7 @@ export function createClientColumns(columnConfig: ClientColumnConfig): ColumnDef
       },
       size: 120,
     },
+    // 5. Client since
     {
       accessorKey: "client_since",
       header: ({ column }) => (
@@ -346,6 +314,127 @@ export function createClientColumns(columnConfig: ClientColumnConfig): ColumnDef
         )
       },
       size: 140,
+    },
+    // 6. Projects
+    {
+      id: "projects",
+      header: ({ column }) => (
+        <SortableHeader column={column} icon={Briefcase} className="px-0">
+          Projects
+        </SortableHeader>
+      ),
+      cell: ({ row }) => {
+        const projects = row.original.projects || []
+        const activeProjects = projects.filter(p => p.status === 'active').length
+        const totalProjects = projects.length
+        
+        return (
+          <div className="flex items-center space-x-2">
+            <Badge variant="secondary" className="text-xs">
+              {activeProjects}/{totalProjects}
+            </Badge>
+          </div>
+        )
+      },
+      footer: footerFunctions.totalProjects,
+      size: 120,
+    },
+    // 7. Email
+    {
+      accessorKey: "email",
+      header: ({ column }) => (
+        <SortableHeader column={column} icon={Mail} className="px-0">
+          Email
+        </SortableHeader>
+      ),
+      cell: ({ row }) => {
+        const email = row.getValue("email") as string
+        return email ? (
+          <div className="relative group/cell w-full">
+            <a 
+              href={`mailto:${email}`} 
+              className="text-sm text-muted-foreground hover:text-foreground truncate block"
+              title={email}
+            >
+              {email}
+            </a>
+            <Button
+              size="sm"
+              variant="outline"
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity z-20 bg-background border shadow-sm"
+              onClick={(e) => {
+                e.stopPropagation()
+                handleCopyToClipboard(email, "Email")
+              }}
+            >
+              <Copy className="h-3 w-3" />
+            </Button>
+          </div>
+        ) : (
+          <span className="text-sm text-muted-foreground">—</span>
+        )
+      },
+      size: 250,
+    },
+    // 8. Phone
+    {
+      accessorKey: "phone",
+      header: ({ column }) => (
+        <SortableHeader column={column} icon={Phone} className="px-0">
+          Phone
+        </SortableHeader>
+      ),
+      cell: ({ row }) => {
+        const phone = row.getValue("phone") as string
+        return phone ? (
+          <div className="relative group/cell w-full">
+            <a 
+              href={`tel:${phone}`} 
+              className="text-sm text-muted-foreground hover:text-foreground truncate block"
+              title={phone}
+            >
+              {phone}
+            </a>
+            <Button
+              size="sm"
+              variant="outline"
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 p-0 opacity-0 group-hover/cell:opacity-100 transition-opacity z-20 bg-background border shadow-sm"
+              onClick={(e) => {
+                e.stopPropagation()
+                handleCopyToClipboard(phone, "Phone")
+              }}
+            >
+              <Copy className="h-3 w-3" />
+            </Button>
+          </div>
+        ) : (
+          <span className="text-sm text-muted-foreground">—</span>
+        )
+      },
+      size: 150,
+    },
+    // 9. Location
+    {
+      id: "location",
+      header: ({ column }) => (
+        <SortableHeader column={column} icon={MapPin} className="px-0">
+          Location
+        </SortableHeader>
+      ),
+      cell: ({ row }) => {
+        const client = row.original
+        const parts = [client.city, client.state, client.country].filter(Boolean)
+        const location = parts.join(", ")
+        
+        return location ? (
+          <span className="text-sm text-muted-foreground truncate" title={location}>
+            {location}
+          </span>
+        ) : (
+          <span className="text-sm text-muted-foreground">—</span>
+        )
+      },
+      size: 200,
     },
   ]
 

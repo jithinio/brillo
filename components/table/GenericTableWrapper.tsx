@@ -12,7 +12,7 @@ import type { GenericEntity, DataHookReturn, TableFeatures, EntityActions } from
 import { useTablePreferences } from "@/hooks/use-table-preferences"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
-import { Search, X, Calendar, Plus } from "lucide-react"
+import { Search, X, Calendar, Plus, RotateCcw } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import {
@@ -55,6 +55,7 @@ interface GenericTableWrapperProps<T extends GenericEntity> {
   className?: string
   addButton?: React.ReactNode
   metricsComponent?: React.ReactNode
+  onFiltersChange?: (filters: any) => void
 }
 
 const TIME_PERIOD_OPTIONS = [
@@ -64,6 +65,12 @@ const TIME_PERIOD_OPTIONS = [
   { value: "last_quarter", label: "Last Quarter" },
   { value: "this_year", label: "This Year" },
   { value: "last_year", label: "Last Year" },
+]
+
+const RELATIONSHIP_OPTIONS = [
+  { value: "recurring", label: "Recurring" },
+  { value: "one-time", label: "One Time" },
+  { value: "regular", label: "Regular" },
 ]
 
 export function GenericTableWrapper<T extends GenericEntity>({
@@ -80,6 +87,7 @@ export function GenericTableWrapper<T extends GenericEntity>({
   className,
   addButton,
   metricsComponent,
+  onFiltersChange,
 }: GenericTableWrapperProps<T>) {
   // Data hook
   const {
@@ -115,6 +123,8 @@ export function GenericTableWrapper<T extends GenericEntity>({
   const [isSearching, setIsSearching] = React.useState(false)
   const [timePeriod, setTimePeriod] = React.useState<string | null>(null)
   const [timePeriodOpen, setTimePeriodOpen] = React.useState(false)
+  const [relationship, setRelationship] = React.useState<string[]>([])
+  const [relationshipOpen, setRelationshipOpen] = React.useState(false)
 
   // Create sorting functions
   const [sortBy, setSortBy] = React.useState<string | null>(null)
@@ -174,6 +184,13 @@ export function GenericTableWrapper<T extends GenericEntity>({
       })
     }
 
+    // Apply relationship filtering (for clients)
+    if (entityType === "clients" && relationship.length > 0) {
+      result = result.filter((item: any) => {
+        return relationship.includes(item.relationship || 'regular')
+      })
+    }
+
     // Apply sorting
     if (sortBy && sortDirection) {
       result = [...result].sort((a: any, b: any) => {
@@ -211,7 +228,7 @@ export function GenericTableWrapper<T extends GenericEntity>({
     }
 
     return result
-  }, [data, searchQuery, sortBy, sortDirection])
+  }, [data, searchQuery, sortBy, sortDirection, entityType, relationship])
 
   // Keep ref in sync
   React.useEffect(() => {
@@ -483,6 +500,25 @@ export function GenericTableWrapper<T extends GenericEntity>({
     setTimePeriodOpen(false)
   }
 
+  const handleRelationshipSelect = (value: string) => {
+    setRelationship(prev => 
+      prev.includes(value) 
+        ? prev.filter(r => r !== value)
+        : [...prev, value]
+    )
+  }
+
+  // Notify parent component when filters change
+  React.useEffect(() => {
+    if (onFiltersChange) {
+      onFiltersChange({
+        search: searchQuery,
+        timePeriod: timePeriod,
+        relationship: relationship,
+      })
+    }
+  }, [searchQuery, timePeriod, relationship, onFiltersChange])
+
   return (
     <div className={cn("w-full h-screen flex flex-col bg-gray-50/30 dark:bg-gray-950", className)}>
       <AnimatePresence>
@@ -601,6 +637,45 @@ export function GenericTableWrapper<T extends GenericEntity>({
               </Popover>
             )}
 
+            {/* Relationship Filter - Only show for clients */}
+            {entityType === "clients" && (
+              <Popover open={relationshipOpen} onOpenChange={setRelationshipOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      "h-8 border-dashed transition-colors text-sm font-normal text-muted-foreground",
+                      relationship.length > 0 && "border-gray-600 dark:border-gray-400 bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"
+                    )}
+                  >
+                    <RotateCcw className={cn("mr-1 h-3 w-3", relationship.length > 0 ? "text-gray-600 dark:text-gray-400" : "text-muted-foreground")} />
+                    {relationship.length > 0 ? `Relationship (${relationship.length})` : "Relationship"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[200px] p-0" align="start">
+                  <Command>
+                    <CommandList>
+                      <CommandGroup>
+                        {RELATIONSHIP_OPTIONS.map((relationshipOption) => (
+                          <CommandItem
+                            key={relationshipOption.value}
+                            onSelect={() => handleRelationshipSelect(relationshipOption.value)}
+                          >
+                            <Checkbox
+                              checked={relationship.includes(relationshipOption.value)}
+                              className="mr-2"
+                            />
+                            {relationshipOption.label}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            )}
+
             {/* Column View Filter */}
             <ColumnViewFilter
               columns={columnMetadata}
@@ -609,13 +684,14 @@ export function GenericTableWrapper<T extends GenericEntity>({
             />
 
             {/* Clear Filters Button */}
-            {(searchQuery || timePeriod) && (
+            {(searchQuery || timePeriod || relationship.length > 0) && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => {
                   setSearchQuery("")
                   setTimePeriod(null)
+                  setRelationship([])
                 }}
                 className="h-8 text-sm font-normal text-muted-foreground hover:text-gray-800 dark:hover:text-gray-200"
               >

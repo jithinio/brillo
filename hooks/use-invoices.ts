@@ -25,6 +25,7 @@ export interface Invoice {
     name: string
     company?: string
     email?: string
+    avatar_url?: string | null
   }
   projects?: {
     id?: string
@@ -73,7 +74,8 @@ async function fetchInvoices(filters: InvoiceFilters = {}): Promise<{
           id,
           name,
           company,
-          email
+          email,
+          avatar_url
         ),
         projects (
           id,

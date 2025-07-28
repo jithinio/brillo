@@ -13,11 +13,31 @@ import { EntityActions } from "@/components/table/types"
 import { DataHookReturn } from "@/components/table/types"
 import { toast } from "sonner"
 import { supabase } from "@/lib/supabase"
+import { getDateRangeFromTimePeriod } from "@/lib/project-filters-v2"
 
 export default function InvoicesPage() {
   const router = useRouter()
-  const [filters, setFilters] = useState({})
-  const invoicesData = useInvoices(filters)
+  const [filters, setFilters] = useState<any>({})
+  
+  // Convert timePeriod filter to dateRange for useInvoices
+  const processedFilters = React.useMemo(() => {
+    if (!filters.timePeriod) return filters
+    
+    const { dateFrom, dateTo } = getDateRangeFromTimePeriod(filters.timePeriod)
+    if (dateFrom && dateTo) {
+      return {
+        ...filters,
+        dateRange: {
+          from: new Date(dateFrom),
+          to: new Date(dateTo)
+        }
+      }
+    }
+    
+    return filters
+  }, [filters])
+  
+  const invoicesData = useInvoices(processedFilters)
 
   // Calculate metrics from data
   const metrics = React.useMemo(() => {
@@ -29,7 +49,7 @@ export default function InvoicesPage() {
       .filter(i => i.status === 'paid')
       .reduce((sum, i) => sum + (i.total_amount || 0), 0)
     const pendingAmount = invoicesData.data
-      .filter(i => i.status === 'pending')
+      .filter(i => i.status === 'sent')
       .reduce((sum, i) => sum + (i.total_amount || 0), 0)
     const overdueAmount = invoicesData.data
       .filter(i => i.status === 'overdue')
@@ -125,9 +145,6 @@ export default function InvoicesPage() {
         toast.info('Send invoice feature coming soon')
         // TODO: Implement send invoice functionality
       },
-      'View PDF': (invoice: any) => {
-        router.push(`/dashboard/invoices/${invoice.id}/preview`)
-      },
     }
   }
 
@@ -136,8 +153,10 @@ export default function InvoicesPage() {
       entityType="invoices"
       pageTitle="Invoices"
       dataHook={() => invoicesData as DataHookReturn<any>}
+      onFiltersChange={setFilters}
       createColumns={(actions: any) => createInvoiceColumns({
         onStatusChange: (invoice, status) => invoicesData.updateStatus?.(invoice.id, status),
+        onInvoiceClick: (invoice) => router.push(`/dashboard/invoices/${invoice.id}/preview`),
       })}
       features={{
         search: true,

@@ -4,12 +4,15 @@ import * as React from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Trash2, Edit, FileText, Check, Eye, Send, FolderPlus } from "lucide-react"
+import { Trash2, Edit, FileText, Check, Eye, Send, FolderPlus, RotateCcw, Zap, Clock } from "lucide-react"
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu"
 import { toast } from "sonner"
@@ -354,27 +357,86 @@ function GenericDataTableComponent<T extends GenericEntity>({
                             Edit {entityType.slice(0, -1)}
                           </ContextMenuItem>
                         )}
-                        {actions.customActions && Object.entries(actions.customActions).map(([label, action]) => {
-                          // Map action labels to appropriate icons
-                          const getActionIcon = (actionLabel: string) => {
-                            const lowerLabel = actionLabel.toLowerCase()
-                            if (lowerLabel.includes('view details')) return Eye
-                            if (lowerLabel.includes('send invoice')) return Send
-                            if (lowerLabel.includes('view pdf')) return FileText
-                            if (lowerLabel.includes('create invoice')) return FileText
-                            if (lowerLabel.includes('new project')) return FolderPlus
-                            return FileText // default
-                          }
+                        {actions.customActions && (() => {
+                          // Separate relationship actions from other actions
+                          const relationshipActions: [string, (item: any) => void][] = []
+                          const otherActions: [string, (item: any) => void][] = []
                           
-                          const ActionIcon = getActionIcon(label)
+                          Object.entries(actions.customActions).forEach(([label, action]) => {
+                            if (label.startsWith('Change to ')) {
+                              relationshipActions.push([label, action])
+                            } else {
+                              otherActions.push([label, action])
+                            }
+                          })
                           
                           return (
-                            <ContextMenuItem key={label} onClick={() => action(item)}>
-                              <ActionIcon className="mr-1.5 h-4 w-4" />
-                              {label}
-                            </ContextMenuItem>
+                            <>
+                              {/* Regular custom actions */}
+                              {otherActions.map(([label, action]) => {
+                                // Map action labels to appropriate icons
+                                const getActionIcon = (actionLabel: string) => {
+                                  const lowerLabel = actionLabel.toLowerCase()
+                                  if (lowerLabel.includes('view details')) return Eye
+                                  if (lowerLabel.includes('send invoice')) return Send
+                                  if (lowerLabel.includes('view pdf')) return FileText
+                                  if (lowerLabel.includes('create invoice')) return FileText
+                                  if (lowerLabel.includes('new project')) return FolderPlus
+                                  return FileText // default
+                                }
+                                
+                                const ActionIcon = getActionIcon(label)
+                                
+                                return (
+                                  <ContextMenuItem key={label} onClick={() => action(item)}>
+                                    <ActionIcon className="mr-1.5 h-4 w-4" />
+                                    {label}
+                                  </ContextMenuItem>
+                                )
+                              })}
+                              
+                              {/* Relationship submenu */}
+                              {relationshipActions.length > 0 && (
+                                <ContextMenuSub>
+                                  <ContextMenuSubTrigger className="flex items-center">
+                                    <RotateCcw className="mr-1.5 h-4 w-4" />
+                                    Relationship
+                                  </ContextMenuSubTrigger>
+                                  <ContextMenuSubContent className="w-44">
+                                    {relationshipActions.map(([label, action]) => {
+                                      // Get relationship type from label (e.g., "Change to Recurring" -> "recurring")
+                                      const relationshipType = label.replace('Change to ', '').toLowerCase()
+                                      
+                                      // Map relationship types to match clientRelationshipConfig
+                                      const getRelationshipConfig = (type: string) => {
+                                        switch (type) {
+                                          case 'recurring': 
+                                            return { icon: RotateCcw, label: 'Recurring', className: 'text-blue-500' }
+                                          case 'one time': 
+                                            return { icon: Zap, label: 'One Time', className: 'text-orange-500' }
+                                          case 'regular': 
+                                            return { icon: Clock, label: 'Regular', className: 'text-green-500' }
+                                          default: 
+                                            return { icon: Clock, label: 'Regular', className: 'text-green-500' }
+                                        }
+                                      }
+                                      
+                                      const config = getRelationshipConfig(relationshipType)
+                                      const RelationshipIcon = config.icon
+                                      
+                                      return (
+                                        <ContextMenuItem key={label} onClick={() => action(item)}>
+                                          <RelationshipIcon className={`mr-1.5 h-3 w-3 ${config.className}`} />
+                                          {config.label}
+                                        </ContextMenuItem>
+                                      )
+                                    })}
+                                  </ContextMenuSubContent>
+                                </ContextMenuSub>
+                              )}
+                            </>
                           )
-                        })}
+                        })()}
                         {(actions.onEdit || actions.customActions) && actions.onDelete && (
                           <ContextMenuSeparator />
                         )}

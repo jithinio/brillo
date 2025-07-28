@@ -20,6 +20,7 @@ export interface Client {
   notes?: string | null
   avatar_url?: string | null
   status?: string
+  relationship?: string
   created_at: string
   updated_at?: string
   client_since?: string | null
@@ -122,7 +123,7 @@ export function useClients(filters: ClientFilters = {}): DataHookReturn<Client> 
   // Update client status
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string, status: string }) => {
-      // Handle special case for client_since updates
+      // Handle client_since date updates
       if (status.startsWith('client_since:')) {
         const dateStr = status.replace('client_since:', '')
         const { error } = await supabase
@@ -132,6 +133,17 @@ export function useClients(filters: ClientFilters = {}): DataHookReturn<Client> 
         
         if (error) throw error
         return { id, client_since: dateStr }
+      }
+      
+      // Handle relationship updates
+      if (['recurring', 'one-time', 'regular'].includes(status)) {
+        const { error } = await supabase
+          .from('clients')
+          .update({ relationship: status })
+          .eq('id', id)
+        
+        if (error) throw error
+        return { id, relationship: status }
       }
       
       // Regular status update
@@ -152,9 +164,22 @@ export function useClients(filters: ClientFilters = {}): DataHookReturn<Client> 
         if (!old) return old
         return {
           ...old,
-          data: old.data.map((client: Client) =>
-            client.id === id ? { ...client, status } : client
-          )
+          data: old.data.map((client: Client) => {
+            if (client.id === id) {
+              // Handle client_since date updates
+              if (status.startsWith('client_since:')) {
+                const dateStr = status.replace('client_since:', '')
+                return { ...client, client_since: dateStr }
+              }
+              // Handle relationship updates
+              if (['recurring', 'one-time', 'regular'].includes(status)) {
+                return { ...client, relationship: status }
+              }
+              // Handle regular status updates
+              return { ...client, status }
+            }
+            return client
+          })
         }
       })
 
@@ -164,7 +189,7 @@ export function useClients(filters: ClientFilters = {}): DataHookReturn<Client> 
       if (context?.previousData) {
         queryClient.setQueryData(['clients', filters], context.previousData)
       }
-      toast.error('Failed to update client status')
+      toast.error('Failed to update client')
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] })
