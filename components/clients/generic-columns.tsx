@@ -27,6 +27,7 @@ import { formatCurrency } from "@/lib/currency"
 import { Client } from "@/hooks/use-clients"
 import { SortableHeader } from "@/components/table/column-utils"
 import { toast } from "sonner"
+import { countries } from "@/lib/countries"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -102,6 +103,13 @@ const createFooterFunctions = () => ({
     return <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{aggregations.totalProjects || 0}</span>
   }
 })
+
+// Helper function to get full country name from country code
+const getCountryName = (countryCode: string): string => {
+  if (!countryCode) return ""
+  const country = countries.find(c => c.code === countryCode)
+  return country ? country.name : countryCode // Fallback to code if not found
+}
 
 export function createClientColumns(columnConfig: ClientColumnConfig): ColumnDef<Client>[] {
   
@@ -423,7 +431,8 @@ export function createClientColumns(columnConfig: ClientColumnConfig): ColumnDef
       ),
       cell: ({ row }) => {
         const client = row.original
-        const parts = [client.city, client.state, client.country].filter(Boolean)
+        const countryName = getCountryName(client.country || "")
+        const parts = [client.city, client.state, countryName].filter(Boolean)
         const location = parts.join(", ")
         
         return location ? (

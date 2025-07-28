@@ -166,6 +166,7 @@ const ClientDialogForm = React.memo(({
             Phone Number
           </Label>
               <PhoneInput
+            key={`phone-${formData.name || 'new'}-${formData.email || 'empty'}`}
             value={formData.phone}
             onChange={(value) => updateFormField('phone', value)}
                 placeholder="Enter phone number"
@@ -427,10 +428,28 @@ export default function ClientsPage() {
       country: "US",
       notes: "",
       status: "active",
+      relationship: "regular",
     })
     setAvatarFile(null)
     setAvatarPreview("")
     setSelectedClient(null)
+  }
+
+  // Helper function to clean form data for database operations
+  const cleanFormData = (data: any) => {
+    return {
+      ...data,
+      // Convert empty strings to null for database fields
+      email: data.email?.trim() || null,
+      phone: data.phone?.trim() || null,
+      company: data.company?.trim() || null,
+      address: data.address?.trim() || null,
+      city: data.city?.trim() || null,
+      state: data.state?.trim() || null,
+      zip_code: data.zip_code?.trim() || null,
+      country: data.country?.trim() || "US",
+      notes: data.notes?.trim() || null,
+    }
   }
 
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -495,7 +514,7 @@ export default function ClientsPage() {
       }
 
       const clientData = {
-        ...formData,
+        ...cleanFormData(formData),
         avatar_url: avatarUrl,
         client_since: formData.client_since || new Date(),
       }

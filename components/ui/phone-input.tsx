@@ -46,17 +46,64 @@ export function PhoneInput({
   )
   const prevValueRef = React.useRef(value)
 
+  // Helper function to detect country from phone number
+  const detectCountryFromPhone = React.useCallback((phoneValue: string): Country | null => {
+    if (!phoneValue) return null
+    
+    // Remove any non-digit characters except +
+    const cleanPhone = phoneValue.replace(/[^\d+]/g, '')
+    
+    // Try to match country codes (sorted by length desc to match longer codes first)
+    const sortedCountries = [...countries].sort((a, b) => b.phoneCode.length - a.phoneCode.length)
+    
+    for (const country of sortedCountries) {
+      const phoneCode = country.phoneCode.replace(/[^\d]/g, '') // Remove + and spaces
+      if (cleanPhone.startsWith(`+${phoneCode}`) || cleanPhone.startsWith(phoneCode)) {
+        return country
+      }
+    }
+    
+    return null
+  }, [])
+
+  // Helper function to extract phone number without country code
+  const extractPhoneNumber = React.useCallback((phoneValue: string, country: Country): string => {
+    if (!phoneValue || !country) return phoneValue || ""
+    
+    const cleanPhone = phoneValue.replace(/[^\d+]/g, '')
+    const phoneCode = country.phoneCode.replace(/[^\d]/g, '')
+    
+    if (cleanPhone.startsWith(`+${phoneCode}`)) {
+      return cleanPhone.substring(phoneCode.length + 1) // +1 for the +
+    } else if (cleanPhone.startsWith(phoneCode)) {
+      return cleanPhone.substring(phoneCode.length)
+    }
+    
+    return phoneValue
+  }, [])
+
   // Initialize phone number from value prop
   React.useEffect(() => {
     if (value && value !== prevValueRef.current) {
-      const phoneWithoutCode = value.replace(/^\+\d+\s*/, "")
-      setPhoneNumber(phoneWithoutCode)
+      // Detect country from phone number
+      const detectedCountry = detectCountryFromPhone(value)
+      
+      if (detectedCountry) {
+        setCurrentCountry(detectedCountry)
+        const phoneWithoutCode = extractPhoneNumber(value, detectedCountry)
+        setPhoneNumber(phoneWithoutCode)
+      } else {
+        // Fallback to simple regex if detection fails
+        const phoneWithoutCode = value.replace(/^\+\d+\s*/, "")
+        setPhoneNumber(phoneWithoutCode)
+      }
+      
       prevValueRef.current = value
     } else if (!value && phoneNumber === "") {
       // Initialize with empty state
       prevValueRef.current = ""
     }
-  }, [value, phoneNumber])
+  }, [value, phoneNumber, detectCountryFromPhone, extractPhoneNumber])
 
   React.useEffect(() => {
     if (selectedCountry) {
