@@ -469,29 +469,73 @@ export default function ClientsPage() {
     }
   }
 
-  const uploadAvatar = async (file: File): Promise<string | null> => {
+  const uploadAvatar = async (file: File): Promise<string> => {
     try {
       const fileExt = file.name.split('.').pop()
-      const fileName = `${Math.random()}.${fileExt}`
-      const filePath = `avatars/${fileName}`
+      const filePath = `${Math.random().toString(36).substring(7)}/client-avatar.${fileExt}` // Use random folder like profile does with user ID
 
+      console.log('Attempting to upload avatar:', { filePath, fileSize: file.size })
+
+      // Debug: Check current user authentication state
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      console.log('Current user state:', { user: user?.id, authError })
+      
+      if (!user) {
+        throw new Error('User not authenticated')
+      }
+
+      // Use the exact same approach as profile page: avatars bucket with upsert: true
       const { error: uploadError } = await supabase.storage
-        .from('company')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false
+        .from('avatars')
+        .upload(filePath, file, { 
+          upsert: true  // This is key - profile page uses upsert: true
         })
 
-      if (uploadError) throw uploadError
+      if (uploadError) {
+        console.error('Upload error details:', uploadError)
+        
+        // Handle storage not configured (like profile page does)
+        if (uploadError.message.includes("bucket") || uploadError.message.includes("not found")) {
+          throw new Error('Storage bucket not found - avatars bucket needs to be created')
+        }
+        
+        // Handle RLS policy errors
+        if (uploadError.message?.includes('row-level security policy')) {
+          throw new Error('Storage RLS policy blocking upload - policies need to be configured for avatars bucket')
+        }
+        
+        throw uploadError
+      }
 
+      console.log('Upload successful, getting public URL for path:', filePath)
+
+      // Get public URL using the same method as profile page
       const { data } = supabase.storage
-        .from('company')
+        .from('avatars')
         .getPublicUrl(filePath)
+      
+      const avatarUrl = data.publicUrl
 
-      return data.publicUrl
-    } catch (error) {
+      if (!avatarUrl) {
+        throw new Error('Failed to get public URL')
+      }
+
+      console.log('Avatar upload completed successfully:', avatarUrl)
+      return avatarUrl
+    } catch (error: any) {
       console.error('Error uploading avatar:', error)
-      return null
+      
+      // Provide user-friendly error messages (matching profile page style)
+      if (error.message?.includes('Storage bucket not found')) {
+        toast.error('Storage bucket not found - please contact administrator')
+      } else if (error.message?.includes('RLS policy')) {
+        toast.error('Storage security policy error - please contact administrator')
+      } else {
+        const errorMessage = error?.message || 'Avatar upload failed'
+        toast.error(`Failed to upload avatar: ${errorMessage}`)
+      }
+      
+      throw error // Re-throw to stop the save process
     }
   }
 
@@ -507,9 +551,12 @@ export default function ClientsPage() {
 
       // Upload avatar if new file selected
       if (avatarFile) {
-        const uploadedUrl = await uploadAvatar(avatarFile)
-        if (uploadedUrl) {
-          avatarUrl = uploadedUrl
+        try {
+          avatarUrl = await uploadAvatar(avatarFile)
+        } catch (error) {
+          // Avatar upload failed, stop the save process
+          setIsLoading(false)
+          return
         }
       }
 

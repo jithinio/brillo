@@ -782,6 +782,21 @@ function FinalProjectsContent() {
     description: "",
   })
 
+  // Recently received amount (temporary field, not stored in database)
+  const [recentlyReceived, setRecentlyReceived] = React.useState<string>("")
+
+  // Function to handle adding recently received amount to current received
+  const handleAddRecentlyReceived = React.useCallback(() => {
+    if (recentlyReceived && !isNaN(parseFloat(recentlyReceived))) {
+      const currentReceived = parseFloat(newProject.received) || 0
+      const recentAmount = parseFloat(recentlyReceived)
+      const newTotalReceived = currentReceived + recentAmount
+      
+      setNewProject({ ...newProject, received: newTotalReceived.toString() })
+      setRecentlyReceived("") // Clear the recently received field
+    }
+  }, [newProject, recentlyReceived])
+
   // Fetch clients on mount
   React.useEffect(() => {
     const fetchClients = async () => {
@@ -1496,6 +1511,7 @@ function FinalProjectsContent() {
           setSelectedClient(null)
           setClientSearchQuery("")
           setDisplayedClientsCount(10)
+          setRecentlyReceived("") // Clear recently received field
         }
       }}>
         <DialogContent className="max-w-2xl" onOpenAutoFocus={(e) => e.preventDefault()}>
@@ -1661,6 +1677,32 @@ function FinalProjectsContent() {
                 />
               </div>
             </div>
+            
+            {/* Recently Received Section */}
+            <div className="grid grid-cols-1 gap-4">
+              <div>
+                <Label htmlFor="edit-project-recently-received">Recently Received</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="edit-project-recently-received"
+                    type="number"
+                    value={recentlyReceived}
+                    onChange={(e) => setRecentlyReceived(e.target.value)}
+                    placeholder="Enter recently received amount"
+                    className="flex-1"
+                  />
+                  <Button 
+                    type="button"
+                    variant="outline"
+                    onClick={handleAddRecentlyReceived}
+                    disabled={!recentlyReceived || isNaN(parseFloat(recentlyReceived))}
+                    className="shrink-0"
+                  >
+                    Add to Received
+                  </Button>
+                </div>
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Start Date</Label>
@@ -1713,6 +1755,7 @@ function FinalProjectsContent() {
           setSelectedClient(null)
           setClientSearchQuery("")
           setDisplayedClientsCount(10)
+          setRecentlyReceived("") // Clear recently received field
           setNewProject({
             name: "",
             client_id: "",
@@ -1889,6 +1932,33 @@ function FinalProjectsContent() {
                 />
               </div>
             </div>
+            
+            {/* Recently Received Section */}
+            <div className="grid grid-cols-1 gap-4">
+              <div>
+                <Label htmlFor="add-project-recently-received">Recently Received</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="add-project-recently-received"
+                    type="number"
+                    value={recentlyReceived}
+                    onChange={(e) => setRecentlyReceived(e.target.value)}
+                    placeholder="Enter recently received amount"
+                    className="flex-1"
+                  />
+                  <Button 
+                    type="button"
+                    variant="outline"
+                    onClick={handleAddRecentlyReceived}
+                    disabled={!recentlyReceived || isNaN(parseFloat(recentlyReceived))}
+                    className="shrink-0"
+                  >
+                    Add to Received
+                  </Button>
+                </div>
+              </div>
+            </div>
+            
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="add-project-start-date">Start Date</Label>
