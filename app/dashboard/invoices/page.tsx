@@ -98,9 +98,9 @@ export default function InvoicesPage() {
       
       try {
         const { error } = await supabase
-          .from('invoices')
-          .delete()
-          .eq('id', invoice.id)
+              .from('invoices')
+              .delete()
+              .eq('id', invoice.id)
 
         if (error) throw error
 
@@ -129,7 +129,7 @@ export default function InvoicesPage() {
                 }
 
                 const { error: restoreError } = await supabase
-                  .from('invoices')
+          .from('invoices')
                   .insert([restoreData])
 
                 if (restoreError) {
@@ -154,8 +154,8 @@ export default function InvoicesPage() {
           },
         })
         invoicesData.refetch()
-      } catch (error) {
-        console.error('Error deleting invoice:', error)
+    } catch (error) {
+      console.error('Error deleting invoice:', error)
         toast.error('Failed to delete invoice')
       }
     },
@@ -223,7 +223,7 @@ export default function InvoicesPage() {
           },
         })
         invoicesData.refetch()
-      } catch (error) {
+    } catch (error) {
         console.error('Error deleting invoices:', error)
         toast.error('Failed to delete invoices')
       }
@@ -251,7 +251,7 @@ export default function InvoicesPage() {
     }
   }
 
-  return (
+    return (
     <GenericTableWrapper
       entityType="invoices"
       pageTitle="Invoices"
@@ -308,9 +308,9 @@ export default function InvoicesPage() {
       }}
       metricsComponent={<InvoiceMetrics metrics={metrics} />}
       addButton={
-                        <Button 
+                      <Button 
           onClick={() => router.push('/dashboard/invoices/generate')}
-                          size="sm"
+                        size="sm"
           className="h-8"
         >
           <Plus className="h-4 w-4 mr-1" />

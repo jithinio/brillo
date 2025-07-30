@@ -242,6 +242,8 @@ export function GenericTableWrapper<T extends GenericEntity>({
       const savedOrder = getTablePreference(TABLE_NAME, "column_order", [])
       const savedVisibility = getTablePreference(TABLE_NAME, "column_visibility", {})
 
+      console.log(`[${TABLE_NAME}] Loading preferences:`, { savedWidths, savedOrder, savedVisibility })
+
       // Always set column widths (either saved or defaults)
       setColumnWidths(savedWidths)
       
@@ -259,6 +261,7 @@ export function GenericTableWrapper<T extends GenericEntity>({
   // Save column widths
   React.useEffect(() => {
     if (preferencesLoaded && Object.keys(columnWidths).length > 0) {
+      console.log(`[${TABLE_NAME}] Saving column widths:`, columnWidths)
       updateTablePreference(TABLE_NAME, "column_widths", columnWidths)
     }
   }, [columnWidths, preferencesLoaded, TABLE_NAME, updateTablePreference])
@@ -266,6 +269,7 @@ export function GenericTableWrapper<T extends GenericEntity>({
   // Save column order
   React.useEffect(() => {
     if (preferencesLoaded && columnOrder.length > 0) {
+      console.log(`[${TABLE_NAME}] Saving column order:`, columnOrder)
       updateTablePreference(TABLE_NAME, "column_order", columnOrder)
     }
   }, [columnOrder, preferencesLoaded, TABLE_NAME, updateTablePreference])
@@ -273,6 +277,7 @@ export function GenericTableWrapper<T extends GenericEntity>({
   // Save column visibility
   React.useEffect(() => {
     if (preferencesLoaded && Object.keys(columnVisibility).length > 0) {
+      console.log(`[${TABLE_NAME}] Saving column visibility:`, columnVisibility)
       updateTablePreference(TABLE_NAME, "column_visibility", columnVisibility)
     }
   }, [columnVisibility, preferencesLoaded, TABLE_NAME, updateTablePreference])
