@@ -1,5 +1,6 @@
 "use client"
 
+import * as React from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 import {
   ArrowUpDown,
@@ -112,6 +113,90 @@ interface ColumnActions {
   onStatusChange: (client: Client, newStatus: string) => void
   onProjectClick?: (projectId: string) => void
   onDateChange: (client: Client, field: 'created_at', date: Date | undefined) => void
+}
+
+// Client status cell component with state management
+function ClientStatusCell({ client, actions }: { client: Client; actions: ColumnActions }) {
+  const status = client.status || 'active'
+  const config = clientStatusConfig[status as keyof typeof clientStatusConfig]
+  const [isOpen, setIsOpen] = React.useState(false)
+
+  if (!config) {
+    return <span className="text-muted-foreground">Unknown</span>
+  }
+
+  const Icon = config.icon
+
+  const handleStatusChange = (newStatus: string) => {
+    const previousStatus = client.status || 'active'
+    const previousConfig = clientStatusConfig[previousStatus as keyof typeof clientStatusConfig]
+    
+    // Execute the status change immediately
+    actions.onStatusChange(client, newStatus)
+    setIsOpen(false) // Close popover after status change
+    
+    // Show toast with undo functionality
+    const newConfig = clientStatusConfig[newStatus as keyof typeof clientStatusConfig]
+    toast.success(`Status changed to ${newConfig.label}`, {
+      description: `${client.name} is now ${newConfig.label.toLowerCase()}`,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          actions.onStatusChange(client, previousStatus)
+          toast.success(`Reverted to ${previousConfig.label}`, {
+            description: `${client.name} status restored`
+          })
+        },
+      },
+    })
+  }
+
+  return (
+    <div className="min-w-[120px]">
+      <Popover open={isOpen} onOpenChange={setIsOpen}>
+        <PopoverTrigger asChild>
+          <Badge variant={config.variant} className="cursor-pointer hover:bg-slate-100 transition-colors font-normal text-sm focus:outline-none focus-visible:outline-none">
+            <Icon className={`mr-1.5 h-3 w-3 ${config.iconClassName}`} />
+            {config.label}
+          </Badge>
+        </PopoverTrigger>
+        <PopoverContent className="w-44 p-1" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
+          <div className="grid gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`justify-start h-8 focus:outline-none focus-visible:outline-none ${client.status === 'active' ? 'bg-accent' : ''}`}
+              onClick={() => handleStatusChange('active')}
+              disabled={client.status === 'active'}
+            >
+              <CheckCircle className="mr-2 h-3 w-3 text-green-500" />
+              Active
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`justify-start h-8 focus:outline-none focus-visible:outline-none ${client.status === 'pipeline' ? 'bg-accent' : ''}`}
+              onClick={() => handleStatusChange('pipeline')}
+              disabled={client.status === 'pipeline'}
+            >
+              <GitBranch className="mr-2 h-3 w-3 text-purple-500" />
+              Pipeline
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`justify-start h-8 focus:outline-none focus-visible:outline-none ${client.status === 'closed' ? 'bg-accent' : ''}`}
+              onClick={() => handleStatusChange('closed')}
+              disabled={client.status === 'closed'}
+            >
+              <Clock className="mr-2 h-3 w-3 text-gray-400" />
+              Closed
+            </Button>
+          </div>
+        </PopoverContent>
+      </Popover>
+    </div>
+  )
 }
 
 export function createColumns(actions: ColumnActions): ColumnDef<Client>[] {
@@ -294,60 +379,8 @@ export function createColumns(actions: ColumnActions): ColumnDef<Client>[] {
       },
       cell: ({ row }) => {
         const client = row.original
-        const status = (row.getValue("status") as string) || 'active'
-        const config = clientStatusConfig[status as keyof typeof clientStatusConfig]
-
-        if (!config) {
-          return <span className="text-muted-foreground">Unknown</span>
-        }
-
-        const Icon = config.icon
-
         return (
-          <div className="min-w-[120px]">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Badge variant={config.variant} className="cursor-pointer hover:bg-slate-100 transition-colors font-normal text-sm focus:outline-none focus-visible:outline-none">
-                  <Icon className={`mr-1.5 h-3 w-3 ${config.iconClassName}`} />
-                  {config.label}
-                </Badge>
-              </PopoverTrigger>
-              <PopoverContent className="w-44 p-1" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
-                <div className="grid gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className={`justify-start h-8 focus:outline-none focus-visible:outline-none ${client.status === 'active' ? 'bg-accent' : ''}`}
-                    onClick={() => actions.onStatusChange(client, 'active')}
-                    disabled={client.status === 'active'}
-                  >
-                    <CheckCircle className="mr-2 h-3 w-3 text-green-500" />
-                    Active
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className={`justify-start h-8 focus:outline-none focus-visible:outline-none ${client.status === 'pipeline' ? 'bg-accent' : ''}`}
-                    onClick={() => actions.onStatusChange(client, 'pipeline')}
-                    disabled={client.status === 'pipeline'}
-                  >
-                    <GitBranch className="mr-2 h-3 w-3 text-purple-500" />
-                    Pipeline
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className={`justify-start h-8 focus:outline-none focus-visible:outline-none ${client.status === 'closed' ? 'bg-accent' : ''}`}
-                    onClick={() => actions.onStatusChange(client, 'closed')}
-                    disabled={client.status === 'closed'}
-                  >
-                    <Clock className="mr-2 h-3 w-3 text-gray-400" />
-                    Closed
-                  </Button>
-                </div>
-              </PopoverContent>
-            </Popover>
-          </div>
+          <ClientStatusCell client={client} actions={actions} />
         )
       },
       size: 120,

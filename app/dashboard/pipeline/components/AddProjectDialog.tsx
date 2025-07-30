@@ -32,11 +32,14 @@ import { createPipelineProject } from "@/lib/project-pipeline"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+import type { PipelineProject } from "@/lib/types/pipeline"
 
 interface AddProjectDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onProjectUpdate: () => void
+  onAddProject?: (newProject: PipelineProject) => void
+  onRevertChanges?: () => void
 }
 
 interface Client {
@@ -56,7 +59,13 @@ interface NewProjectData {
   client_id: string
 }
 
-export function AddProjectDialog({ open, onOpenChange, onProjectUpdate }: AddProjectDialogProps) {
+export function AddProjectDialog({ 
+  open, 
+  onOpenChange, 
+  onProjectUpdate, 
+  onAddProject,
+  onRevertChanges 
+}: AddProjectDialogProps) {
   const [loading, setLoading] = useState(false)
   const [clients, setClients] = useState<Client[]>([])
   const [clientsLoading, setClientsLoading] = useState(true)
@@ -156,8 +165,13 @@ export function AddProjectDialog({ open, onOpenChange, onProjectUpdate }: AddPro
       const result = await createPipelineProject(projectData)
       
       if (result) {
+        // Add project optimistically to UI immediately
+        if (onAddProject) {
+          onAddProject(result)
+        }
+        
         toast.success(`${newProject.name} added to pipeline`)
-        onProjectUpdate()
+        // Don't call onProjectUpdate() - optimistic update already handled UI
         onOpenChange(false)
         // Reset form
         setNewProject({
@@ -172,10 +186,18 @@ export function AddProjectDialog({ open, onOpenChange, onProjectUpdate }: AddPro
         setDisplayedClientsCount(10)
       } else {
         toast.error("Failed to add project")
+        // Revert optimistic changes if any were made
+        if (onRevertChanges) {
+          onRevertChanges()
+        }
       }
     } catch (error) {
       console.error("Error adding project:", error)
       toast.error("Failed to add project")
+      // Revert optimistic changes on error
+      if (onRevertChanges) {
+        onRevertChanges()
+      }
     } finally {
       setLoading(false)
     }

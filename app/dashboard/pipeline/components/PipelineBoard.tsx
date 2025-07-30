@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useCallback, useEffect } from "react"
+import { motion, AnimatePresence } from "framer-motion"
+import { Badge } from "@/components/ui/badge"
 import {
   DndContext,
   DragEndEvent,
@@ -18,12 +20,14 @@ import { updateProjectStage, groupProjectsByStage, convertProjectToActive } from
 import type { PipelineProject, PipelineStage } from "@/lib/types/pipeline"
 import { toast } from "sonner"
 import confetti from 'canvas-confetti'
-import { successConfetti, cannonConfetti, fireworksConfetti, projectConversionConfetti } from '@/lib/confetti-variations'
 
 interface PipelineBoardProps {
   projects: PipelineProject[]
   stages: PipelineStage[]
   onProjectUpdate: () => void
+  onRemoveProject?: (projectId: string) => void
+  onUpdateProject?: (projectId: string, updates: Partial<PipelineProject>) => void
+  onRevertChanges?: () => void
   loading?: boolean
 }
 
@@ -38,10 +42,10 @@ function ClosedColumn({ isDragging }: { isDragging: boolean }) {
   })
 
   return (
-    <div className="w-20 flex-shrink-0 h-full">
+    <div className="w-32 flex-shrink-0 h-full">
       <div 
         ref={setNodeRef}
-        className={`h-full bg-green-50 dark:bg-green-950/20 border border-dashed rounded-lg flex items-center justify-center relative transition-colors ${
+        className={`h-full bg-green-50 dark:bg-green-950/20 border border-dashed rounded-none flex items-center justify-center relative transition-colors ${
           isOver ? 'border-green-500 dark:border-green-400 bg-green-100 dark:bg-green-900/30' : 'border-green-300 dark:border-green-600'
         }`}
       >
@@ -59,103 +63,51 @@ function ClosedColumn({ isDragging }: { isDragging: boolean }) {
   )
 }
 
-// Confetti animation function
-const triggerConfetti = () => {
-  const duration = 3000 // 3 seconds
-  const animationEnd = Date.now() + duration
-  const defaults = { 
-    startVelocity: 30, 
-    spread: 360, 
-    ticks: 60, 
-    zIndex: 9999,
-    colors: ['#10b981', '#059669', '#047857', '#065f46', '#064e3b', '#34d399', '#6ee7b7', '#a7f3d0']
-  }
-
-  function randomInRange(min: number, max: number) {
-    return Math.random() * (max - min) + min
-  }
-
-  // First burst from center
+// Minimal confetti animation function for project completion
+const triggerMinimalConfetti = () => {
+  // Simple success colors - green theme
+  const colors = ['#10b981', '#34d399', '#6ee7b7', '#059669']
+  
+  // Single gentle burst from center
   confetti({
-    ...defaults,
-    particleCount: 150,
+    particleCount: 50,
     spread: 60,
     origin: { x: 0.5, y: 0.6 },
-    shapes: ['circle', 'square'],
-    scalar: 1.4,
+    colors: colors,
+    shapes: ['circle'],
+    scalar: 1.0,
+    gravity: 0.8,
+    startVelocity: 25,
+    ticks: 60,
+    zIndex: 1000
   })
 
-  // Left side burst
+  // Small follow-up burst after a short delay
   setTimeout(() => {
     confetti({
-      ...defaults,
-      particleCount: 80,
-      spread: 80,
-      origin: { x: 0.2, y: 0.7 },
-      drift: 1,
-      gravity: 0.8,
-      shapes: ['star', 'circle'],
-      scalar: 1.2,
+      particleCount: 25,
+      spread: 40,
+      origin: { x: 0.5, y: 0.7 },
+      colors: colors,
+      shapes: ['circle'],
+      scalar: 0.8,
+      gravity: 0.9,
+      startVelocity: 20,
+      ticks: 50,
+      zIndex: 1000
     })
   }, 200)
-
-  // Right side burst
-  setTimeout(() => {
-    confetti({
-      ...defaults,
-      particleCount: 80,
-      spread: 80,
-      origin: { x: 0.8, y: 0.7 },
-      drift: -1,
-      gravity: 0.8,
-      shapes: ['star', 'circle'],
-      scalar: 1.2,
-    })
-  }, 400)
-
-  // Continuous small bursts
-  const interval = setInterval(() => {
-    const timeLeft = animationEnd - Date.now()
-    
-    if (timeLeft <= 0) {
-      clearInterval(interval)
-      return
-    }
-
-    const particleCount = 50 * (timeLeft / duration)
-    
-    // Random positions across the top
-    confetti({
-      ...defaults,
-      particleCount: Math.floor(particleCount),
-      spread: randomInRange(50, 100),
-      origin: { 
-        x: randomInRange(0.1, 0.9), 
-        y: randomInRange(0.4, 0.8) 
-      },
-      drift: randomInRange(-2, 2),
-      gravity: randomInRange(0.6, 1.2),
-      shapes: ['circle', 'square', 'star'],
-      scalar: randomInRange(0.8, 1.6),
-    })
-  }, 250)
-
-  // Final big burst
-  setTimeout(() => {
-    confetti({
-      ...defaults,
-      particleCount: 200,
-      spread: 100,
-      origin: { x: 0.5, y: 0.5 },
-      shapes: ['star', 'circle', 'square'],
-      scalar: 1.8,
-      gravity: 0.9,
-      drift: 0,
-    })
-  }, 1000)
 }
 
-export function PipelineBoard({ projects, stages, onProjectUpdate, loading = false }: PipelineBoardProps) {
+export function PipelineBoard({ 
+  projects, 
+  stages, 
+  onProjectUpdate, 
+  onRemoveProject,
+  onUpdateProject,
+  onRevertChanges,
+  loading = false 
+}: PipelineBoardProps) {
   const [activeProject, setActiveProject] = useState<PipelineProject | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [optimisticProjects, setOptimisticProjects] = useState<PipelineProject[]>(projects)
@@ -201,30 +153,45 @@ export function PipelineBoard({ projects, stages, onProjectUpdate, loading = fal
     // Handle closed column conversion
     if (overStage === 'closed') {
       try {
+        // Optimistically remove project from pipeline
+        if (onRemoveProject) {
+          onRemoveProject(activeProject.id)
+        }
+
         const success = await convertProjectToActive(activeProject.id)
         if (success) {
           toast.success(`${activeProject.name} converted to active project`, {
             description: "Project moved to Projects page and saved to database"
           })
-          // Trigger celebration confetti with random variation
-          const celebrations = [successConfetti, cannonConfetti, fireworksConfetti, projectConversionConfetti]
-          const randomCelebration = celebrations[Math.floor(Math.random() * celebrations.length)]
-          randomCelebration()
-          onProjectUpdate()
+          // Trigger minimal celebration confetti
+          triggerMinimalConfetti()
+          // Don't call onProjectUpdate() - optimistic update already handled UI
         } else {
           toast.error("Failed to convert project to active", {
             description: "Changes not saved - please try again"
           })
+          // Revert optimistic changes on failure
+          if (onRevertChanges) {
+            onRevertChanges()
+          }
         }
       } catch (error) {
         console.error('Error converting project to active:', error)
         toast.error("Failed to convert project to active")
+        // Revert optimistic changes on failure
+        if (onRevertChanges) {
+          onRevertChanges()
+        }
       }
       return
     }
 
     // Don't update if dropped on the same stage
     if (activeProject.pipeline_stage?.toLowerCase() === overStage.toLowerCase()) return
+
+    // Store original stage for undo functionality
+    const originalStage = activeProject.pipeline_stage
+    const originalProbability = activeProject.deal_probability
 
     // Find the stage to get default probability
     const targetStage = stages.find(s => s.name.toLowerCase() === overStage.toLowerCase())
@@ -243,7 +210,41 @@ export function PipelineBoard({ projects, stages, onProjectUpdate, loading = fal
       const success = await updateProjectStage(activeProject.id, overStage, newProbability)
       if (success) {
         toast.success(`Moved ${activeProject.name} to ${overStage}`, {
-          description: "Changes saved to database"
+          description: "Changes saved to database",
+          action: {
+            label: "Undo",
+            onClick: async () => {
+              // Revert optimistically first
+              const revertedOptimisticProjects = optimisticProjects.map(project => 
+                project.id === activeProject.id 
+                  ? { ...project, pipeline_stage: originalStage, deal_probability: originalProbability }
+                  : project
+              )
+              setOptimisticProjects(revertedOptimisticProjects)
+              
+              // Then update database
+              try {
+                const revertSuccess = await updateProjectStage(activeProject.id, originalStage || 'lead', originalProbability || 10)
+                if (revertSuccess) {
+                  toast.success(`Reverted ${activeProject.name} to ${originalStage || 'lead'}`, {
+                    description: "Changes undone successfully"
+                  })
+                } else {
+                  // If revert fails, reload from server
+                  if (onRevertChanges) {
+                    onRevertChanges()
+                  }
+                  toast.error("Failed to undo - reloading current state")
+                }
+              } catch (error) {
+                // If revert fails, reload from server
+                if (onRevertChanges) {
+                  onRevertChanges()
+                }
+                toast.error("Failed to undo - reloading current state")
+              }
+            },
+          },
         })
         // Don't call onProjectUpdate here - let the optimistic update handle the UI
       } else {
@@ -259,7 +260,7 @@ export function PipelineBoard({ projects, stages, onProjectUpdate, loading = fal
       // Revert optimistic update on failure
       setOptimisticProjects(projects)
     }
-  }, [optimisticProjects, projects, stages, onProjectUpdate])
+  }, [optimisticProjects, projects, stages, onProjectUpdate, onRemoveProject, onRevertChanges])
 
   return (
     <div className="h-full max-h-full flex flex-col overflow-hidden">
@@ -269,28 +270,22 @@ export function PipelineBoard({ projects, stages, onProjectUpdate, loading = fal
         onDragEnd={handleDragEnd}
         collisionDetection={closestCenter}
       >
-        <div className="flex gap-6 h-full max-h-full overflow-x-auto overflow-y-hidden">
-          {/* Render stage columns with loading state */}
-          {loading || columns.length === 0 ? (
-            // Show loading placeholders to prevent layout shift
-            Array.from({ length: 3 }, (_, index) => (
-              <div key={`loading-${index}`} className="flex-1 min-w-80 h-full">
-                <div className="h-full bg-transparent border border-border rounded-lg flex flex-col">
-                  {/* Header - simple and clean */}
-                  <div className="p-6 pb-3 border-b border-border">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-gray-200 rounded-full"></div>
-                      <div className="h-4 bg-gray-200 rounded w-16"></div>
-                    </div>
-                  </div>
-                  {/* Content - simple loading state */}
-                  <div className="flex-1 p-6 pt-3 flex items-center justify-center">
-                    <div className="text-muted-foreground text-sm">Loading...</div>
-                  </div>
-                </div>
-              </div>
-            ))
-          ) : (
+        <div className="flex gap-0 h-full max-h-full overflow-x-auto overflow-y-hidden relative">
+          {/* Loading Overlay - Badge loader like tables */}
+          {loading && (
+            <div className="absolute inset-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm z-50 flex items-center justify-center">
+              <Badge 
+                variant="secondary" 
+                className="flex items-center gap-2 text-xs shadow-md border bg-white dark:bg-gray-800 dark:text-gray-200"
+              >
+                <div className="w-3 h-3 border-2 border-gray-400 dark:border-gray-500 border-t-transparent rounded-full animate-spin" />
+                <span>Loading pipeline...</span>
+              </Badge>
+            </div>
+          )}
+
+          {/* Render stage columns */}
+          {columns.length > 0 && (
             columns.map((column) => (
               <PipelineColumn
                 key={column.id}

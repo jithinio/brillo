@@ -3,10 +3,16 @@ import type { PipelineProject, PipelineStage, PipelineMetrics, ProjectStageColum
 
 export async function fetchPipelineStages(): Promise<PipelineStage[]> {
   try {
+    console.log('Fetching pipeline stages...')
     const { data, error } = await supabase
       .from('pipeline_stages')
       .select('*')
       .order('order_index', { ascending: true })
+
+    console.log('Pipeline stages query result:', { data, error })
+    if (data) {
+      console.log('Found stages:', data.map(s => ({ name: s.name, order: s.order_index })))
+    }
 
     if (error) {
       console.error('Error fetching pipeline stages:', error)
@@ -22,6 +28,8 @@ export async function fetchPipelineStages(): Promise<PipelineStage[]> {
 
 export async function fetchPipelineProjects(): Promise<PipelineProject[]> {
   try {
+    console.log('Fetching pipeline projects...')
+    
     const { data, error } = await supabase
       .from('projects')
       .select(`
@@ -37,6 +45,18 @@ export async function fetchPipelineProjects(): Promise<PipelineProject[]> {
       `)
       .eq('status', 'pipeline')
       .order('created_at', { ascending: false })
+
+    console.log('Raw query result:', { data, error })
+    console.log('Pipeline projects found:', data?.length || 0)
+    
+    if (data && data.length > 0) {
+      console.log('Sample project:', data[0])
+      console.log('Projects by pipeline_stage:', data.reduce((acc, p) => {
+        const stage = p.pipeline_stage || 'no_stage'
+        acc[stage] = (acc[stage] || 0) + 1
+        return acc
+      }, {} as Record<string, number>))
+    }
 
     if (error) {
       console.error('Error fetching pipeline projects:', error)
@@ -209,15 +229,34 @@ export function calculateProjectPipelineMetrics(projects: PipelineProject[], sta
 }
 
 export function groupProjectsByStage(projects: PipelineProject[], stages: PipelineStage[]): ProjectStageColumn[] {
-  const stageMap = new Map(stages.map(stage => [stage.name.toLowerCase(), stage]))
+  console.log('=== GROUPING DEBUG ===')
+  console.log('Input projects:', projects.length)
+  console.log('Input stages:', stages.length)
+  console.log('Stages:', stages.map(s => ({ name: s.name, id: s.id, order: s.order_index })))
   
-  return stages.map(stage => ({
-    id: stage.name.toLowerCase().replace(/\s+/g, '-'),
-    title: stage.name,
-    color: stage.color,
-    defaultProbability: stage.default_probability,
-    projects: projects.filter(project => 
-      project.pipeline_stage?.toLowerCase() === stage.name.toLowerCase()
-    )
-  }))
+  const stageMap = new Map(stages.map(stage => [stage.name.toLowerCase(), stage]))
+  console.log('Stage map keys:', Array.from(stageMap.keys()))
+  
+  const result = stages.map(stage => {
+    const filteredProjects = projects.filter(project => {
+      const match = project.pipeline_stage?.toLowerCase() === stage.name.toLowerCase()
+      if (project.pipeline_stage) {
+        console.log(`Project "${project.name}" (stage: "${project.pipeline_stage}") matches "${stage.name}"?`, match)
+      }
+      return match
+    })
+    
+    console.log(`Stage "${stage.name}" has ${filteredProjects.length} projects:`, filteredProjects.map(p => p.name))
+    
+    return {
+      id: stage.name.toLowerCase().replace(/\s+/g, '-'),
+      title: stage.name,
+      color: stage.color,
+      defaultProbability: stage.default_probability,
+      projects: filteredProjects
+    }
+  })
+  
+  console.log('=== END GROUPING DEBUG ===')
+  return result
 } 

@@ -322,7 +322,29 @@ export default function ClientsPage() {
       setIsEditDialogOpen(true)
     },
     onDelete: async (client: any) => {
+      // Store the full client data for potential restoration
+      const deletedClientData = { ...client }
+      
+      // Before deleting, get all associated projects and invoices to restore relationships later
+      let associatedProjects: any[] = []
+      let associatedInvoices: any[] = []
+      
       try {
+        // Get associated projects
+        const { data: projects } = await supabase
+          .from('projects')
+          .select('id')
+          .eq('client_id', client.id)
+        
+        // Get associated invoices
+        const { data: invoices } = await supabase
+          .from('invoices')
+          .select('id')
+          .eq('client_id', client.id)
+        
+        associatedProjects = projects || []
+        associatedInvoices = invoices || []
+        
         const { error } = await supabase
           .from('clients')
           .delete()
@@ -330,24 +352,226 @@ export default function ClientsPage() {
 
         if (error) throw error
 
-        toast.success('Client deleted')
+        // Show success toast with undo functionality
+        const projectCount = associatedProjects.length
+        const invoiceCount = associatedInvoices.length
+        const relationshipInfo = []
+        if (projectCount > 0) relationshipInfo.push(`${projectCount} project${projectCount > 1 ? 's' : ''}`)
+        if (invoiceCount > 0) relationshipInfo.push(`${invoiceCount} invoice${invoiceCount > 1 ? 's' : ''}`)
+        
+        toast.success('Client deleted', {
+          description: `${client.name} has been removed${relationshipInfo.length > 0 ? ` (${relationshipInfo.join(' and ')} unlinked)` : ''}`,
+          action: {
+            label: "Undo",
+            onClick: async () => {
+              try {
+                // Restore the deleted client
+                const restoreData = {
+                  name: deletedClientData.name,
+                  email: deletedClientData.email,
+                  phone: deletedClientData.phone,
+                  company: deletedClientData.company,
+                  address: deletedClientData.address,
+                  city: deletedClientData.city,
+                  state: deletedClientData.state,
+                  zip_code: deletedClientData.zip_code,
+                  country: deletedClientData.country,
+                  notes: deletedClientData.notes,
+                  avatar_url: deletedClientData.avatar_url,
+                  status: deletedClientData.status,
+                  pipeline_stage: deletedClientData.pipeline_stage,
+                  potential_value: deletedClientData.potential_value,
+                  deal_probability: deletedClientData.deal_probability,
+                  pipeline_notes: deletedClientData.pipeline_notes,
+                  client_since: deletedClientData.client_since
+                }
+
+                const { data: restoredClient, error: restoreError } = await supabase
+                  .from('clients')
+                  .insert([restoreData])
+                  .select()
+                  .single()
+
+                if (restoreError) {
+                  console.error('Error restoring client:', restoreError)
+                  toast.error('Failed to restore client', {
+                    description: 'Please check your database connection and try again'
+                  })
+                  return
+                }
+
+                // Use the new client ID for restoring relationships
+                const newClientId = restoredClient.id
+
+                // Restore project relationships
+                if (associatedProjects.length > 0) {
+                  const { error: projectsError } = await supabase
+                    .from('projects')
+                    .update({ client_id: newClientId })
+                    .in('id', associatedProjects.map(p => p.id))
+                  
+                  if (projectsError) {
+                    console.error('Error restoring project relationships:', projectsError)
+                  }
+                }
+
+                // Restore invoice relationships
+                if (associatedInvoices.length > 0) {
+                  const { error: invoicesError } = await supabase
+                    .from('invoices')
+                    .update({ client_id: newClientId })
+                    .in('id', associatedInvoices.map(i => i.id))
+                  
+                  if (invoicesError) {
+                    console.error('Error restoring invoice relationships:', invoicesError)
+                  }
+                }
+
+                toast.success('Client restored successfully', {
+                  description: `${client.name} and all relationships have been recovered`
+                })
+                clientsData.refetch()
+              } catch (error: any) {
+                console.error('Error restoring client:', error)
+                toast.error('Failed to restore client', {
+                  description: error.message
+                })
+              }
+            },
+          },
+        })
         clientsData.refetch()
-      } catch (error) {
+    } catch (error) {
         console.error('Error deleting client:', error)
         toast.error('Failed to delete client')
       }
     },
     onBatchDelete: async (clients: any[]) => {
+      // Store the full client data for potential restoration
+      const deletedClientsData = clients.map(client => ({ ...client }))
+      const clientNames = clients.map(c => c.name).join(', ')
+      
+      // Before deleting, get all associated projects and invoices to restore relationships later
+      let allAssociatedProjects: any[] = []
+      let allAssociatedInvoices: any[] = []
+      
       try {
-        const ids = clients.map(client => client.id)
+        const clientIds = clients.map(client => client.id)
+        
+        // Get all associated projects
+        const { data: projects } = await supabase
+          .from('projects')
+          .select('id, client_id')
+          .in('client_id', clientIds)
+        
+        // Get all associated invoices
+        const { data: invoices } = await supabase
+          .from('invoices')
+          .select('id, client_id')
+          .in('client_id', clientIds)
+        
+        allAssociatedProjects = projects || []
+        allAssociatedInvoices = invoices || []
+        
         const { error } = await supabase
           .from('clients')
           .delete()
-          .in('id', ids)
+          .in('id', clientIds)
 
         if (error) throw error
 
-        toast.success(`Deleted ${ids.length} client${ids.length > 1 ? 's' : ''}`)
+        // Show success toast with undo functionality
+        const projectCount = allAssociatedProjects.length
+        const invoiceCount = allAssociatedInvoices.length
+        const relationshipInfo = []
+        if (projectCount > 0) relationshipInfo.push(`${projectCount} project${projectCount > 1 ? 's' : ''}`)
+        if (invoiceCount > 0) relationshipInfo.push(`${invoiceCount} invoice${invoiceCount > 1 ? 's' : ''}`)
+        
+        toast.success(`Deleted ${clientIds.length} client${clientIds.length > 1 ? 's' : ''}`, {
+          description: `${clientNames.length > 50 ? clientIds.length + ' clients' : clientNames} removed${relationshipInfo.length > 0 ? ` (${relationshipInfo.join(' and ')} unlinked)` : ''}`,
+          action: {
+            label: "Undo",
+            onClick: async () => {
+              try {
+                // Restore the deleted clients
+                const restoreDataArray = deletedClientsData.map(client => ({
+                  name: client.name,
+                  email: client.email,
+                  phone: client.phone,
+                  company: client.company,
+                  address: client.address,
+                  city: client.city,
+                  state: client.state,
+                  zip_code: client.zip_code,
+                  country: client.country,
+                  notes: client.notes,
+                  avatar_url: client.avatar_url,
+                  status: client.status,
+                  pipeline_stage: client.pipeline_stage,
+                  potential_value: client.potential_value,
+                  deal_probability: client.deal_probability,
+                  pipeline_notes: client.pipeline_notes,
+                  client_since: client.client_since
+                }))
+
+                const { data: restoredClients, error: restoreError } = await supabase
+                  .from('clients')
+                  .insert(restoreDataArray)
+                  .select()
+
+                if (restoreError) {
+                  console.error('Error restoring clients:', restoreError)
+                  toast.error('Failed to restore clients', {
+                    description: 'Please check your database connection and try again'
+                  })
+                  return
+                }
+
+                // Create mapping from old client ID to new client ID
+                const clientIdMapping = new Map()
+                deletedClientsData.forEach((oldClient, index) => {
+                  clientIdMapping.set(oldClient.id, restoredClients[index].id)
+                })
+
+                // Restore project relationships
+                if (allAssociatedProjects.length > 0) {
+                  for (const project of allAssociatedProjects) {
+                    const newClientId = clientIdMapping.get(project.client_id)
+                    if (newClientId) {
+                      await supabase
+                        .from('projects')
+                        .update({ client_id: newClientId })
+                        .eq('id', project.id)
+                    }
+                  }
+                }
+
+                // Restore invoice relationships
+                if (allAssociatedInvoices.length > 0) {
+                  for (const invoice of allAssociatedInvoices) {
+                    const newClientId = clientIdMapping.get(invoice.client_id)
+                    if (newClientId) {
+                      await supabase
+                        .from('invoices')
+                        .update({ client_id: newClientId })
+                        .eq('id', invoice.id)
+                    }
+                  }
+                }
+
+                toast.success(`${clientIds.length} client${clientIds.length > 1 ? 's' : ''} restored successfully`, {
+                  description: 'All deleted clients and relationships have been recovered'
+                })
+                clientsData.refetch()
+              } catch (error: any) {
+                console.error('Error restoring clients:', error)
+                toast.error('Failed to restore clients', {
+                  description: error.message
+                })
+              }
+            },
+          },
+        })
         clientsData.refetch()
       } catch (error) {
         console.error('Error deleting clients:', error)
@@ -360,10 +584,10 @@ export default function ClientsPage() {
     // Context menu specific actions
     customActions: {
       'Create Invoice': (client: any) => {
-        // Store client data for invoice creation
+    // Store client data for invoice creation
         const clientData = {
-          clientId: client.id,
-          clientName: client.name,
+      clientId: client.id,
+      clientName: client.name,
           clientCompany: client.company
         }
         
@@ -371,10 +595,10 @@ export default function ClientsPage() {
         router.push('/dashboard/invoices/generate')
       },
       'New Project': (client: any) => {
-        // Store client data for project creation
+    // Store client data for project creation
         const clientData = {
-          clientId: client.id,
-          clientName: client.name,
+      clientId: client.id,
+      clientName: client.name,
           clientCompany: client.company
         }
         
@@ -567,8 +791,8 @@ export default function ClientsPage() {
         } catch (error) {
           // Avatar upload failed, stop the save process
           setIsLoading(false)
-          return
-        }
+        return
+      }
       }
 
       const clientData = {
@@ -587,7 +811,7 @@ export default function ClientsPage() {
         if (error) throw error
         toast.success('Client updated successfully')
         setIsEditDialogOpen(false)
-      } else {
+        } else {
         // Create new client
         const { error } = await supabase
           .from('clients')
@@ -621,8 +845,8 @@ export default function ClientsPage() {
     setFormData(prev => ({ ...prev, [field]: value }))
   }, [])
 
-  return (
-    <>
+    return (
+      <>
       <GenericTableWrapper
         entityType="clients"
         pageTitle="Clients"
@@ -689,7 +913,7 @@ export default function ClientsPage() {
               fileInputRef={fileInputRef}
               getInitials={getInitials}
             />
-          </div>
+              </div>
 
           <DialogFooter className="flex-shrink-0 border-t border-gray-200 dark:border-gray-700 pt-4">
             <div className="flex justify-end gap-3 w-full">
@@ -731,8 +955,8 @@ export default function ClientsPage() {
               handleAvatarUpload={handleAvatarUpload} 
               fileInputRef={fileInputRef}
               getInitials={getInitials}
-            />
-          </div>
+              />
+            </div>
 
           <DialogFooter className="flex-shrink-0 border-t border-gray-200 dark:border-gray-700 pt-4">
             <div className="flex justify-end gap-3 w-full">

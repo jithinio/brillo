@@ -93,6 +93,9 @@ export default function InvoicesPage() {
       router.push('/dashboard/invoices/generate?edit=true')
     },
     onDelete: async (invoice: any) => {
+      // Store the full invoice data for potential restoration
+      const deletedInvoiceData = { ...invoice }
+      
       try {
         const { error } = await supabase
           .from('invoices')
@@ -101,7 +104,55 @@ export default function InvoicesPage() {
 
         if (error) throw error
 
-        toast.success('Invoice deleted')
+        // Show success toast with undo functionality
+        toast.success('Invoice deleted', {
+          description: `${invoice.invoice_number} has been removed`,
+          action: {
+            label: "Undo",
+            onClick: async () => {
+              try {
+                // Restore the deleted invoice
+                const restoreData = {
+                  invoice_number: deletedInvoiceData.invoice_number,
+                  client_id: deletedInvoiceData.client_id,
+                  project_id: deletedInvoiceData.project_id,
+                  amount: deletedInvoiceData.amount,
+                  tax_rate: deletedInvoiceData.tax_rate,
+                  tax_amount: deletedInvoiceData.tax_amount,
+                  total_amount: deletedInvoiceData.total_amount,
+                  status: deletedInvoiceData.status,
+                  issue_date: deletedInvoiceData.issue_date,
+                  due_date: deletedInvoiceData.due_date,
+                  paid_date: deletedInvoiceData.paid_date,
+                  notes: deletedInvoiceData.notes,
+                  terms: deletedInvoiceData.terms
+                }
+
+                const { error: restoreError } = await supabase
+                  .from('invoices')
+                  .insert([restoreData])
+
+                if (restoreError) {
+                  console.error('Error restoring invoice:', restoreError)
+                  toast.error('Failed to restore invoice', {
+                    description: 'Please check your database connection and try again'
+                  })
+                  return
+                }
+
+                toast.success('Invoice restored successfully', {
+                  description: `${invoice.invoice_number} has been recovered`
+                })
+                invoicesData.refetch()
+              } catch (error: any) {
+                console.error('Error restoring invoice:', error)
+                toast.error('Failed to restore invoice', {
+                  description: error.message
+                })
+              }
+            },
+          },
+        })
         invoicesData.refetch()
       } catch (error) {
         console.error('Error deleting invoice:', error)
@@ -109,6 +160,10 @@ export default function InvoicesPage() {
       }
     },
     onBatchDelete: async (invoices: any[]) => {
+      // Store the full invoice data for potential restoration
+      const deletedInvoicesData = invoices.map(invoice => ({ ...invoice }))
+      const invoiceNumbers = invoices.map(inv => inv.invoice_number).join(', ')
+      
       try {
         const ids = invoices.map(inv => inv.id)
         const { error } = await supabase
@@ -118,7 +173,55 @@ export default function InvoicesPage() {
 
         if (error) throw error
 
-        toast.success(`Deleted ${ids.length} invoice${ids.length > 1 ? 's' : ''}`)
+        // Show success toast with undo functionality
+        toast.success(`Deleted ${ids.length} invoice${ids.length > 1 ? 's' : ''}`, {
+          description: `${invoiceNumbers.length > 50 ? ids.length + ' invoices' : invoiceNumbers} removed`,
+          action: {
+            label: "Undo",
+            onClick: async () => {
+              try {
+                // Restore the deleted invoices
+                const restoreDataArray = deletedInvoicesData.map(invoice => ({
+                  invoice_number: invoice.invoice_number,
+                  client_id: invoice.client_id,
+                  project_id: invoice.project_id,
+                  amount: invoice.amount,
+                  tax_rate: invoice.tax_rate,
+                  tax_amount: invoice.tax_amount,
+                  total_amount: invoice.total_amount,
+                  status: invoice.status,
+                  issue_date: invoice.issue_date,
+                  due_date: invoice.due_date,
+                  paid_date: invoice.paid_date,
+                  notes: invoice.notes,
+                  terms: invoice.terms
+                }))
+
+                const { error: restoreError } = await supabase
+                  .from('invoices')
+                  .insert(restoreDataArray)
+
+                if (restoreError) {
+                  console.error('Error restoring invoices:', restoreError)
+                  toast.error('Failed to restore invoices', {
+                    description: 'Please check your database connection and try again'
+                  })
+                  return
+                }
+
+                toast.success(`${ids.length} invoice${ids.length > 1 ? 's' : ''} restored successfully`, {
+                  description: 'All deleted invoices have been recovered'
+                })
+                invoicesData.refetch()
+              } catch (error: any) {
+                console.error('Error restoring invoices:', error)
+                toast.error('Failed to restore invoices', {
+                  description: error.message
+                })
+              }
+            },
+          },
+        })
         invoicesData.refetch()
       } catch (error) {
         console.error('Error deleting invoices:', error)
@@ -155,7 +258,33 @@ export default function InvoicesPage() {
       dataHook={() => invoicesData as DataHookReturn<any>}
       onFiltersChange={setFilters}
       createColumns={(actions: any) => createInvoiceColumns({
-        onStatusChange: (invoice, status) => invoicesData.updateStatus?.(invoice.id, status),
+        onStatusChange: (invoice, newStatus) => {
+          const previousStatus = invoice.status
+          const statusLabels = {
+            draft: 'Draft',
+            sent: 'Sent', 
+            paid: 'Paid',
+            overdue: 'Overdue',
+            cancelled: 'Cancelled'
+          }
+          
+          // Execute status change immediately
+          invoicesData.updateStatus?.(invoice.id, newStatus)
+          
+          // Show toast with undo functionality
+          toast.success(`Status changed to ${statusLabels[newStatus as keyof typeof statusLabels]}`, {
+            description: `${invoice.invoice_number} is now ${statusLabels[newStatus as keyof typeof statusLabels].toLowerCase()}`,
+            action: {
+              label: "Undo",
+              onClick: () => {
+                invoicesData.updateStatus?.(invoice.id, previousStatus)
+                toast.success(`Reverted to ${statusLabels[previousStatus as keyof typeof statusLabels]}`, {
+                  description: `${invoice.invoice_number} status restored`
+                })
+              },
+            },
+          })
+        },
         onInvoiceClick: (invoice) => router.push(`/dashboard/invoices/${invoice.id}/preview`),
       })}
       features={{

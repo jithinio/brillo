@@ -175,9 +175,25 @@ const fetchProjects = async (filters: ProjectFilters = {}): Promise<ProjectsResp
 
 // Update project status with optimistic updates
 const updateProjectStatus = async ({ id, status }: { id: string; status: string }) => {
+  // Prepare update data based on status
+  const updateData: any = { 
+    status, 
+    updated_at: new Date().toISOString() 
+  }
+  
+  // If moving to pipeline, set default pipeline fields
+  if (status === 'pipeline') {
+    updateData.pipeline_stage = 'lead'
+    updateData.deal_probability = 10
+  } else {
+    // If moving away from pipeline, clear pipeline fields
+    updateData.pipeline_stage = null
+    updateData.deal_probability = null
+  }
+
   const { data, error } = await supabase
     .from('projects')
-    .update({ status, updated_at: new Date().toISOString() })
+    .update(updateData)
     .eq('id', id)
     .select()
     .single()
@@ -249,7 +265,7 @@ export function useAdvancedProjects(filters: ProjectFilters = {}) {
       // Return a context object with the snapshotted value
       return { previousProjects }
     },
-    onError: (err, { id }, context) => {
+    onError: (err, { id, status }, context) => {
       // If the mutation fails, use the context returned from onMutate to roll back
       if (context?.previousProjects) {
         queryClient.setQueryData(queryKeys.projectsList(filters), context.previousProjects)

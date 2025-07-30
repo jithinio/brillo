@@ -400,20 +400,32 @@ export function ProjectsTableWrapper({
       if (selectedProject) {
         // Editing existing project
         if (isSupabaseConfigured()) {
+          // Prepare update data
+          const updateData: any = {
+            name: newProject.name,
+            status: newProject.status,
+            start_date: newProject.start_date ? newProject.start_date.toISOString().split('T')[0] : null,
+            due_date: newProject.due_date ? newProject.due_date.toISOString().split('T')[0] : null,
+            budget: budget || null,
+            expenses: expenses,
+            payment_received: received,
+            payment_pending: pending,
+            description: newProject.description || null,
+            client_id: newProject.client_id || null,
+          }
+          
+          // Handle pipeline status change
+          if (newProject.status === 'pipeline') {
+            updateData.pipeline_stage = 'lead'
+            updateData.deal_probability = 10
+          } else {
+            updateData.pipeline_stage = null
+            updateData.deal_probability = null
+          }
+
           const { data, error } = await supabase
             .from('projects')
-            .update({
-              name: newProject.name,
-              status: newProject.status,
-              start_date: newProject.start_date ? newProject.start_date.toISOString().split('T')[0] : null,
-              due_date: newProject.due_date ? newProject.due_date.toISOString().split('T')[0] : null,
-              budget: budget || null,
-              expenses: expenses,
-              payment_received: received,
-              payment_pending: pending,
-              description: newProject.description || null,
-              client_id: newProject.client_id || null,
-            })
+            .update(updateData)
             .eq('id', selectedProject.id)
             .select()
 
@@ -476,6 +488,9 @@ export function ProjectsTableWrapper({
         const confirmed = window.confirm(`Are you sure you want to delete "${project.name}"?`)
         if (!confirmed) return
 
+        // Store the full project data for potential restoration
+        const deletedProjectData = { ...project }
+
         try {
           if (isSupabaseConfigured()) {
             const { error } = await supabase
@@ -485,7 +500,57 @@ export function ProjectsTableWrapper({
 
             if (error) throw error
 
-            toast.success(`Project "${project.name}" deleted successfully`)
+            // Show success toast with undo functionality
+            toast.success(`Project "${project.name}" deleted successfully`, {
+              description: `${project.name} has been removed`,
+              action: {
+                label: "Undo",
+                onClick: async () => {
+                  try {
+                    // Restore the deleted project
+                    const restoreData = {
+                      name: deletedProjectData.name,
+                      description: deletedProjectData.description,
+                      client_id: deletedProjectData.client_id,
+                      status: deletedProjectData.status,
+                      start_date: deletedProjectData.start_date,
+                      due_date: deletedProjectData.due_date,
+                      budget: deletedProjectData.budget,
+                      hourly_rate: deletedProjectData.hourly_rate,
+                      estimated_hours: deletedProjectData.estimated_hours,
+                      actual_hours: deletedProjectData.actual_hours,
+                      progress: deletedProjectData.progress,
+                      notes: deletedProjectData.notes,
+                      pipeline_stage: deletedProjectData.pipeline_stage,
+                      deal_probability: deletedProjectData.deal_probability
+                    }
+
+                    const { error: restoreError } = await supabase
+                      .from('projects')
+                      .insert([restoreData])
+
+                    if (restoreError) {
+                      console.error('Error restoring project:', restoreError)
+                      toast.error('Failed to restore project', {
+                        description: 'Please check your database connection and try again'
+                      })
+                      return
+                    }
+
+                    toast.success(`Project "${project.name}" restored successfully`, {
+                      description: 'The deleted project has been recovered'
+                    })
+                    refetch()
+                    forceRefresh()
+                  } catch (error: any) {
+                    console.error('Error restoring project:', error)
+                    toast.error('Failed to restore project', {
+                      description: error.message
+                    })
+                  }
+                },
+              },
+            })
             refetch()
             forceRefresh()
           }
@@ -700,6 +765,9 @@ export function ProjectsTableWrapper({
     const confirmed = window.confirm(`Are you sure you want to delete ${projects.length} project(s)?\n\n${projectNames}`)
     if (!confirmed) return
 
+    // Store the full project data for potential restoration
+    const deletedProjectsData = projects.map(project => ({ ...project }))
+
     try {
       if (isSupabaseConfigured()) {
         const projectIds = projects.map(p => p.id)
@@ -710,7 +778,57 @@ export function ProjectsTableWrapper({
 
         if (error) throw error
 
-        toast.success(`${projects.length} project(s) deleted successfully`)
+        // Show success toast with undo functionality
+        toast.success(`${projects.length} project(s) deleted successfully`, {
+          description: `${projectNames.length > 50 ? projects.length + ' projects' : projectNames} removed`,
+          action: {
+            label: "Undo",
+            onClick: async () => {
+              try {
+                // Restore the deleted projects
+                const restoreDataArray = deletedProjectsData.map(project => ({
+                  name: project.name,
+                  description: project.description,
+                  client_id: project.client_id,
+                  status: project.status,
+                  start_date: project.start_date,
+                  due_date: project.due_date,
+                  budget: project.budget,
+                  hourly_rate: project.hourly_rate,
+                  estimated_hours: project.estimated_hours,
+                  actual_hours: project.actual_hours,
+                  progress: project.progress,
+                  notes: project.notes,
+                  pipeline_stage: project.pipeline_stage,
+                  deal_probability: project.deal_probability
+                }))
+
+                const { error: restoreError } = await supabase
+                  .from('projects')
+                  .insert(restoreDataArray)
+
+                if (restoreError) {
+                  console.error('Error restoring projects:', restoreError)
+                  toast.error('Failed to restore projects', {
+                    description: 'Please check your database connection and try again'
+                  })
+                  return
+                }
+
+                toast.success(`${projects.length} project(s) restored successfully`, {
+                  description: 'All deleted projects have been recovered'
+                })
+                refetch()
+                forceRefresh()
+              } catch (error: any) {
+                console.error('Error restoring projects:', error)
+                toast.error('Failed to restore projects', {
+                  description: error.message
+                })
+              }
+            },
+          },
+        })
         refetch()
         forceRefresh()
       }

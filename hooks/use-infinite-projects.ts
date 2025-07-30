@@ -220,17 +220,41 @@ const fetchProjectsPage = async (
 
 // Update project status with optimistic updates
 const updateProjectStatus = async ({ id, status }: { id: string; status: string }) => {
+  console.log(`🔄 Updating project ${id} to status: ${status}`)
+  
+  // Prepare update data based on status
+  const updateData: any = { 
+    status, 
+    updated_at: new Date().toISOString() 
+  }
+  
+  // If moving to pipeline, set default pipeline fields
+  if (status === 'pipeline') {
+    updateData.pipeline_stage = 'lead'
+    updateData.deal_probability = 10
+    console.log('✅ Setting pipeline_stage to "lead" and deal_probability to 10')
+  } else {
+    // If moving away from pipeline, clear pipeline fields
+    updateData.pipeline_stage = null
+    updateData.deal_probability = null
+    console.log('🗑️ Clearing pipeline fields')
+  }
+
+  console.log('📝 Update data:', updateData)
+
   const { data, error } = await supabase
     .from('projects')
-    .update({ status, updated_at: new Date().toISOString() })
+    .update(updateData)
     .eq('id', id)
     .select()
     .single()
 
   if (error) {
+    console.error('❌ Update failed:', error)
     throw new Error(`Failed to update project: ${error.message}`)
   }
 
+  console.log('✅ Update successful:', data)
   return data
 }
 
@@ -548,7 +572,7 @@ export function useInfiniteProjects(filters: ProjectFilters = {}, pageSize: numb
       // Return a context object with the snapshotted value
       return { previousPages }
     },
-    onError: (err, { id }, context) => {
+    onError: (err, { id, status }, context) => {
       // If the mutation fails, use the context returned from onMutate to roll back
       if (context?.previousPages) {
         queryClient.setQueryData(queryKeys.projectsInfinite(filters), context.previousPages)

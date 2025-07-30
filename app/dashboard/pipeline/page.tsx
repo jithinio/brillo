@@ -4,13 +4,20 @@ import { useState, useEffect } from "react"
 import { PageHeader, PageContent } from "@/components/page-header"
 import { PipelineMetrics } from "./components/PipelineMetrics"
 import { PipelineBoard } from "./components/PipelineBoard"
+import { AddProjectDialog } from "./components/AddProjectDialog"
 import { fetchPipelineProjects, fetchPipelineStages, calculateProjectPipelineMetrics } from "@/lib/project-pipeline"
 import type { PipelineProject, PipelineStage } from "@/lib/types/pipeline"
+import { Search, X, Plus } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 
 export default function PipelinePage() {
   const [projects, setProjects] = useState<PipelineProject[]>([])
   const [stages, setStages] = useState<PipelineStage[]>([])
   const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [isSearching, setIsSearching] = useState(false)
+  const [showAddDialog, setShowAddDialog] = useState(false)
 
   useEffect(() => {
     loadPipelineData()
@@ -33,11 +40,41 @@ export default function PipelinePage() {
     }
   }
 
-  const metrics = calculateProjectPipelineMetrics(projects, stages)
+  // Optimistic project management functions
+  const addProjectOptimistically = (newProject: PipelineProject) => {
+    setProjects(prevProjects => [...prevProjects, newProject])
+  }
+
+  const removeProjectOptimistically = (projectId: string) => {
+    setProjects(prevProjects => prevProjects.filter(p => p.id !== projectId))
+  }
+
+  const updateProjectOptimistically = (projectId: string, updates: Partial<PipelineProject>) => {
+    setProjects(prevProjects => 
+      prevProjects.map(p => p.id === projectId ? { ...p, ...updates } : p)
+    )
+  }
+
+  const revertOptimisticChanges = () => {
+    // Reload from server if optimistic update fails
+    loadPipelineData()
+  }
 
   const handleProjectUpdate = () => {
     loadPipelineData()
   }
+
+  // Filter projects based on search query
+  const filteredProjects = searchQuery.trim() 
+    ? projects.filter(project => 
+        project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        project.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        project.clients?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        project.clients?.company?.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : projects
+
+  const metrics = calculateProjectPipelineMetrics(filteredProjects, stages)
 
   // Add CSS to constrain the entire layout to viewport height for pipeline page
   useEffect(() => {
@@ -84,22 +121,98 @@ export default function PipelinePage() {
     <div className="h-full max-h-full flex flex-col overflow-hidden" data-pipeline-page>
       <PageHeader title="Pipeline" />
       
-      <div className="flex-1 flex flex-col px-8 pt-4 pb-4 min-h-0 overflow-hidden">
-        {/* Metrics Section */}
-        <div className="flex-shrink-0 mb-6">
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        {/* Metrics Section - styled like other pages */}
+        <div className="flex-shrink-0">
           <PipelineMetrics metrics={metrics} />
         </div>
 
-        {/* Kanban Board - takes remaining height with scroll */}
+        {/* Search Bar Container */}
+        <div className="flex-shrink-0">
+          <div className="p-6">
+            <div className="flex items-center gap-3">
+              {/* Search Input */}
+              <div className="relative w-[200px]">
+                {isSearching ? (
+                  <div className="absolute left-3 top-2 h-4 w-4 border-2 border-gray-300 dark:border-gray-600 border-t-primary rounded-full animate-spin" />
+                ) : (
+                  <Search className="absolute left-3 top-2 h-4 w-4 text-muted-foreground" />
+                )}
+                <Input
+                  placeholder="Search projects..."
+                  className={`h-8 pl-9 pr-8 text-sm font-normal transition-colors ${
+                    isSearching 
+                      ? "border-primary/50 bg-primary/5 text-foreground placeholder:text-muted-foreground/60" 
+                      : "text-muted-foreground placeholder:text-muted-foreground/60"
+                  }`}
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value)
+                    setIsSearching(true)
+                    setTimeout(() => setIsSearching(false), 300)
+                  }}
+                />
+                {searchQuery && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-1 top-0.5 h-6 w-6 p-0 hover:bg-gray-100"
+                    onClick={() => setSearchQuery("")}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
+
+              {/* Clear Search Button */}
+              {searchQuery && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSearchQuery("")}
+                  className="h-8 text-sm font-normal text-muted-foreground hover:text-gray-800 dark:hover:text-gray-200"
+                >
+                  Clear
+                </Button>
+              )}
+
+              {/* New Lead Button */}
+              <div className="ml-auto">
+                <Button
+                  onClick={() => setShowAddDialog(true)}
+                  size="sm"
+                  className="h-8"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  New Lead
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Kanban Board - takes remaining height */}
         <div className="flex-1 min-h-0">
           <PipelineBoard 
-            projects={projects}
+            projects={filteredProjects}
             stages={stages}
             onProjectUpdate={handleProjectUpdate}
+            onRemoveProject={removeProjectOptimistically}
+            onUpdateProject={updateProjectOptimistically}
+            onRevertChanges={revertOptimisticChanges}
             loading={loading}
           />
         </div>
       </div>
+
+      {/* Add Project Dialog */}
+      <AddProjectDialog
+        open={showAddDialog}
+        onOpenChange={setShowAddDialog}
+        onProjectUpdate={handleProjectUpdate}
+        onAddProject={addProjectOptimistically}
+        onRevertChanges={revertOptimisticChanges}
+      />
     </div>
   )
 } 
