@@ -242,8 +242,6 @@ export function GenericTableWrapper<T extends GenericEntity>({
       const savedOrder = getTablePreference(TABLE_NAME, "column_order", [])
       const savedVisibility = getTablePreference(TABLE_NAME, "column_visibility", {})
 
-      console.log(`[${TABLE_NAME}] Loading preferences:`, { savedWidths, savedOrder, savedVisibility })
-
       // Always set column widths (either saved or defaults)
       setColumnWidths(savedWidths)
       
@@ -261,7 +259,6 @@ export function GenericTableWrapper<T extends GenericEntity>({
   // Save column widths
   React.useEffect(() => {
     if (preferencesLoaded && Object.keys(columnWidths).length > 0) {
-      console.log(`[${TABLE_NAME}] Saving column widths:`, columnWidths)
       updateTablePreference(TABLE_NAME, "column_widths", columnWidths)
     }
   }, [columnWidths, preferencesLoaded, TABLE_NAME, updateTablePreference])
@@ -269,21 +266,40 @@ export function GenericTableWrapper<T extends GenericEntity>({
   // Save column order
   React.useEffect(() => {
     if (preferencesLoaded && columnOrder.length > 0) {
-      console.log(`[${TABLE_NAME}] Saving column order:`, columnOrder)
       updateTablePreference(TABLE_NAME, "column_order", columnOrder)
     }
   }, [columnOrder, preferencesLoaded, TABLE_NAME, updateTablePreference])
 
-  // Save column visibility
+  // Save column visibility - Always save when preferencesLoaded, even if empty
   React.useEffect(() => {
-    if (preferencesLoaded && Object.keys(columnVisibility).length > 0) {
-      console.log(`[${TABLE_NAME}] Saving column visibility:`, columnVisibility)
+    if (preferencesLoaded) {
       updateTablePreference(TABLE_NAME, "column_visibility", columnVisibility)
     }
   }, [columnVisibility, preferencesLoaded, TABLE_NAME, updateTablePreference])
 
   // Get all columns
   const allColumns = React.useMemo(() => createColumns(actions), [createColumns, actions])
+
+  // Initialize column order and visibility - only if no saved preferences exist
+  React.useEffect(() => {
+    if (allColumns.length > 0 && columnOrder.length === 0 && preferencesLoaded) {
+      // Check if we have any saved preferences first
+      const savedOrder = getTablePreference(TABLE_NAME, "column_order", [])
+      const savedVisibility = getTablePreference(TABLE_NAME, "column_visibility", {})
+      
+      // Only set defaults if no saved preferences exist
+      if (savedOrder.length === 0 && Object.keys(savedVisibility).length === 0) {
+        const defaultOrder = allColumns.map((col: any) => col.id || col.accessorKey)
+        const defaultVisibility = allColumns.reduce((acc: any, col: any) => {
+          acc[col.id || col.accessorKey] = true
+          return acc
+        }, {})
+        
+        setColumnOrder(defaultOrder)
+        setColumnVisibility(defaultVisibility)
+      }
+    }
+  }, [allColumns, columnOrder.length, preferencesLoaded, TABLE_NAME, getTablePreference])
 
   // Apply column order and visibility
   const columns = React.useMemo(() => {
@@ -329,20 +345,6 @@ export function GenericTableWrapper<T extends GenericEntity>({
     
     return [...orderedColumns, ...newColumns]
   }, [createColumns, actions, columnOrder, columnVisibility, columnWidths, allColumns, createSortingFunctions])
-
-  // Initialize column order and visibility
-  React.useEffect(() => {
-    if (allColumns.length > 0 && columnOrder.length === 0 && preferencesLoaded) {
-      const defaultOrder = allColumns.map((col: any) => col.id || col.accessorKey)
-      const defaultVisibility = allColumns.reduce((acc: any, col: any) => {
-        acc[col.id || col.accessorKey] = true
-        return acc
-      }, {})
-      
-      setColumnOrder(defaultOrder)
-      setColumnVisibility(defaultVisibility)
-    }
-  }, [allColumns, columnOrder.length, preferencesLoaded])
 
   // Column metadata for view filter
   const columnMetadata = React.useMemo(() => {
