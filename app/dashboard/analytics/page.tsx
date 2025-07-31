@@ -170,8 +170,7 @@ export default function AnalyticsPage() {
       
       {/* Sticky Filter Container */}
       <div className="flex-shrink-0 sticky top-16 z-10">
-        <div className="py-4 border-t border-b bg-transparent">
-          <div className="container max-w-7xl mx-auto px-6">
+        <div className="p-6 border-t border-b bg-transparent">
             <AnalyticsFilters
               filters={filters}
               onFiltersChange={handleFiltersChange}
@@ -179,276 +178,275 @@ export default function AnalyticsPage() {
               isLoading={isLoading}
               onRefresh={refreshData}
             />
-          </div>
         </div>
       </div>
 
       {/* Main Content - Scrollable */}
       <div className="flex-1 overflow-hidden relative">
         <div className="h-full overflow-y-auto">
-          <div className="container max-w-7xl mx-auto px-6 py-6">
-        <div className="space-y-8">
-          {/* Filtered Analytics Section */}
-          {hasActiveFilters && (
-            <div className="space-y-6 relative">
-              {/* Badge Loader for Filtered Analytics */}
-              {isLoading && (
-                <div className="absolute inset-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm z-40 flex items-center justify-center">
-                  <Badge 
-                    variant="secondary" 
-                    className="flex items-center gap-2 text-xs shadow-md border bg-white dark:bg-gray-800 dark:text-gray-200"
-                  >
-                    <div className="w-3 h-3 border-2 border-gray-400 dark:border-gray-500 border-t-transparent rounded-full animate-spin" />
-                    <span>Loading filtered analytics...</span>
-                  </Badge>
+          <div className="p-6">
+            <div className="space-y-8">
+              {/* Filtered Analytics Section */}
+              {hasActiveFilters && (
+                <div className="space-y-6 relative">
+                  {/* Badge Loader for Filtered Analytics */}
+                  {isLoading && (
+                    <div className="absolute inset-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm z-40 flex items-center justify-center">
+                      <Badge 
+                        variant="secondary" 
+                        className="flex items-center gap-2 text-xs shadow-md border bg-white dark:bg-gray-800 dark:text-gray-200"
+                      >
+                        <div className="w-3 h-3 border-2 border-gray-400 dark:border-gray-500 border-t-transparent rounded-full animate-spin" />
+                        <span>Loading filtered analytics...</span>
+                      </Badge>
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-semibold">Filtered Analytics</h2>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {/* Filtered Metric Cards without skeletons */}
+                    <MetricCard
+                      title="Revenue"
+                      value={filteredMetrics.revenue.current}
+                      trend={{
+                        direction: filteredMetrics.revenue.trend,
+                        percentage: filteredMetrics.revenue.percentage,
+                        label: "vs previous period"
+                      }}
+                      icon={DollarSign}
+                      variant="currency"
+                      isLoading={false}
+                      error={error}
+                    />
+
+                    <MetricCard
+                      title="Total Projects"
+                      value={filteredMetrics.totalProjects.current}
+                      trend={{
+                        direction: filteredMetrics.totalProjects.trend,
+                        percentage: filteredMetrics.totalProjects.percentage,
+                        label: "vs previous period"
+                      }}
+                      icon={FileText}
+                      variant="number"
+                      isLoading={false}
+                      error={error}
+                    />
+
+                    <TopClientsCard
+                      clients={filteredMetrics.topClients}
+                      isLoading={false}
+                    />
+
+                    <MetricCard
+                      title="Net Profit"
+                      value={filteredMetrics.netProfit.current}
+                      trend={{
+                        direction: filteredMetrics.netProfit.trend,
+                        percentage: filteredMetrics.netProfit.percentage,
+                        label: "vs previous period"
+                      }}
+                      icon={TrendingUp}
+                      variant="currency"
+                      isLoading={false}
+                      error={error}
+                    />
+                  </div>
                 </div>
               )}
 
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-semibold">Filtered Analytics</h2>
-              </div>
+              {/* Divider between filtered and global sections */}
+              {hasActiveFilters && (
+                <Separator className="my-8" />
+              )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {/* Filtered Metric Cards without skeletons */}
-                <MetricCard
-                  title="Revenue"
-                  value={filteredMetrics.revenue.current}
-                  trend={{
-                    direction: filteredMetrics.revenue.trend,
-                    percentage: filteredMetrics.revenue.percentage,
-                    label: "vs previous period"
-                  }}
-                  icon={DollarSign}
-                  variant="currency"
-                  isLoading={false}
-                  error={error}
-                />
+              {/* Unfiltered Global Metrics Section */}
+              <div className="space-y-8 relative">
+                {/* Badge Loader for Global Analytics */}
+                {isLoading && (
+                  <div className="absolute inset-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm z-40 flex items-center justify-center">
+                    <Badge 
+                      variant="secondary" 
+                      className="flex items-center gap-2 text-xs shadow-md border bg-white dark:bg-gray-800 dark:text-gray-200"
+                    >
+                      <div className="w-3 h-3 border-2 border-gray-400 dark:border-gray-500 border-t-transparent rounded-full animate-spin" />
+                      <span>Loading analytics...</span>
+                    </Badge>
+                  </div>
+                )}
 
-                <MetricCard
-                  title="Total Projects"
-                  value={filteredMetrics.totalProjects.current}
-                  trend={{
-                    direction: filteredMetrics.totalProjects.trend,
-                    percentage: filteredMetrics.totalProjects.percentage,
-                    label: "vs previous period"
-                  }}
-                  icon={FileText}
-                  variant="number"
-                  isLoading={false}
-                  error={error}
-                />
-
-                                 <TopClientsCard
-                   clients={filteredMetrics.topClients}
-                   isLoading={false}
-                 />
-
-                <MetricCard
-                  title="Net Profit"
-                  value={filteredMetrics.netProfit.current}
-                  trend={{
-                    direction: filteredMetrics.netProfit.trend,
-                    percentage: filteredMetrics.netProfit.percentage,
-                    label: "vs previous period"
-                  }}
-                  icon={TrendingUp}
-                  variant="currency"
-                  isLoading={false}
-                  error={error}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Divider between filtered and global sections */}
-          {hasActiveFilters && (
-            <Separator className="my-8" />
-          )}
-
-          {/* Unfiltered Global Metrics Section */}
-          <div className="space-y-8 relative">
-            {/* Badge Loader for Global Analytics */}
-            {isLoading && (
-              <div className="absolute inset-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm z-40 flex items-center justify-center">
-                <Badge 
-                  variant="secondary" 
-                  className="flex items-center gap-2 text-xs shadow-md border bg-white dark:bg-gray-800 dark:text-gray-200"
-                >
-                  <div className="w-3 h-3 border-2 border-gray-400 dark:border-gray-500 border-t-transparent rounded-full animate-spin" />
-                  <span>Loading analytics...</span>
-                </Badge>
-              </div>
-            )}
-
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-semibold">
-                {hasActiveFilters ? 'Global Overview' : 'Analytics Overview'}
-              </h2>
-            </div>
-
-            {/* Main Analytics Grid - Bento Layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-4">
-              {/* Core Financial Metrics - Top Row (4 cards) */}
-              <div className="lg:col-span-12">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <MetricCard
-                    title="Overall Revenue"
-                    value={globalMetrics.revenue.current}
-                    trend={{
-                      direction: globalMetrics.revenue.trend,
-                      percentage: globalMetrics.revenue.percentage,
-                      label: "vs previous period"
-                    }}
-                    icon={DollarSign}
-                    variant="currency"
-                    isLoading={false}
-                    error={error}
-                  />
-
-                  <MetricCard
-                    title="Overall Expenses"
-                    value={globalMetrics.expenses.current}
-                    trend={{
-                      direction: globalMetrics.expenses.trend === 'up' ? 'down' : 'up',
-                      percentage: globalMetrics.expenses.percentage,
-                      label: "vs previous period"
-                    }}
-                    icon={Wallet}
-                    variant="currency"
-                    isLoading={false}
-                    error={error}
-                  />
-
-                  <MetricCard
-                    title="Total Projects"
-                    value={globalMetrics.totalProjects.current}
-                    trend={{
-                      direction: globalMetrics.totalProjects.trend,
-                      percentage: globalMetrics.totalProjects.percentage,
-                      label: "vs previous period"
-                    }}
-                    icon={FileText}
-                    variant="number"
-                    isLoading={false}
-                    error={error}
-                  />
-
-                  <MetricCard
-                    title="Net Profit"
-                    value={globalMetrics.netProfit.current}
-                    trend={{
-                      direction: globalMetrics.netProfit.trend,
-                      percentage: globalMetrics.netProfit.percentage,
-                      label: "vs previous period"
-                    }}
-                    icon={TrendingUp}
-                    variant="currency"
-                    isLoading={false}
-                    error={error}
-                  />
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-semibold">
+                    {hasActiveFilters ? 'Global Overview' : 'Analytics Overview'}
+                  </h2>
                 </div>
-              </div>
 
-              {/* Cash Flow Chart - Large Card */}
-              <div className="lg:col-span-8 flex w-full h-fit min-h-[400px] max-h-[450px]">
-                <div className="w-full">
-                  <CashFlowChart
-                    data={globalMetrics.cashFlowData}
-                    period={periods.cashFlow}
-                    onPeriodChange={(value) => handlePeriodChange('cashFlow', value as 'monthly' | 'quarterly')}
-                    isLoading={false}
-                  />
-                </div>
-              </div>
+                {/* Main Analytics Grid - Bento Layout */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-4">
+                  {/* Core Financial Metrics - Top Row (4 cards) */}
+                  <div className="lg:col-span-12">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                      <MetricCard
+                        title="Overall Revenue"
+                        value={globalMetrics.revenue.current}
+                        trend={{
+                          direction: globalMetrics.revenue.trend,
+                          percentage: globalMetrics.revenue.percentage,
+                          label: "vs previous period"
+                        }}
+                        icon={DollarSign}
+                        variant="currency"
+                        isLoading={false}
+                        error={error}
+                      />
 
-              {/* Growth Metrics Column */}
-              <div className="lg:col-span-4 flex flex-col h-fit min-h-[400px] max-h-[450px]">
-                <div className="grid grid-cols-1 gap-4 h-full">
-                  {/* MRR Card */}
-                  <div className="flex-1">
+                      <MetricCard
+                        title="Overall Expenses"
+                        value={globalMetrics.expenses.current}
+                        trend={{
+                          direction: globalMetrics.expenses.trend === 'up' ? 'down' : 'up',
+                          percentage: globalMetrics.expenses.percentage,
+                          label: "vs previous period"
+                        }}
+                        icon={Wallet}
+                        variant="currency"
+                        isLoading={false}
+                        error={error}
+                      />
+
+                      <MetricCard
+                        title="Total Projects"
+                        value={globalMetrics.totalProjects.current}
+                        trend={{
+                          direction: globalMetrics.totalProjects.trend,
+                          percentage: globalMetrics.totalProjects.percentage,
+                          label: "vs previous period"
+                        }}
+                        icon={FileText}
+                        variant="number"
+                        isLoading={false}
+                        error={error}
+                      />
+
+                      <MetricCard
+                        title="Net Profit"
+                        value={globalMetrics.netProfit.current}
+                        trend={{
+                          direction: globalMetrics.netProfit.trend,
+                          percentage: globalMetrics.netProfit.percentage,
+                          label: "vs previous period"
+                        }}
+                        icon={TrendingUp}
+                        variant="currency"
+                        isLoading={false}
+                        error={error}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Cash Flow Chart - Large Card */}
+                  <div className="lg:col-span-8 flex w-full h-fit min-h-[400px] max-h-[450px]">
+                    <div className="w-full">
+                      <CashFlowChart
+                        data={globalMetrics.cashFlowData}
+                        period={periods.cashFlow}
+                        onPeriodChange={(value) => handlePeriodChange('cashFlow', value as 'monthly' | 'quarterly')}
+                        isLoading={false}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Growth Metrics Column */}
+                  <div className="lg:col-span-4 flex flex-col h-fit min-h-[400px] max-h-[450px]">
+                    <div className="grid grid-cols-1 gap-4 h-full">
+                      {/* MRR Card */}
+                      <div className="flex-1">
+                        <MetricCard
+                          title="MRR"
+                          value={globalMetrics.mrr.current}
+                          trend={{
+                            direction: globalMetrics.mrr.trend,
+                            percentage: globalMetrics.mrr.percentage,
+                            label: "vs previous period"
+                          }}
+                          icon={Calendar}
+                          variant="currency"
+                          period={periods.mrr}
+                          onPeriodChange={(value: string) => handlePeriodChange('mrr', value)}
+                          periodOptions={MRR_PERIODS}
+                          sparklineData={globalMetrics.mrrSparklineData}
+                          isLoading={false}
+                          error={error}
+                        />
+                      </div>
+
+                      {/* ARR Card */}
+                      <div className="flex-1">
+                        <MetricCard
+                          title="ARR"
+                          value={globalMetrics.arr.current}
+                          trend={{
+                            direction: globalMetrics.arr.trend,
+                            percentage: globalMetrics.arr.percentage,
+                            label: "vs previous period"
+                          }}
+                          icon={Activity}
+                          variant="currency"
+                          period={periods.arr}
+                          onPeriodChange={(value: string) => handlePeriodChange('arr', value)}
+                          periodOptions={ARR_PERIODS}
+                          sparklineData={globalMetrics.arrSparklineData}
+                          isLoading={false}
+                          error={error}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bottom Row - YoY Growth and CLTV */}
+                  <div className="lg:col-span-6">
                     <MetricCard
-                      title="MRR"
-                      value={globalMetrics.mrr.current}
+                      title="Year-over-Year Growth"
+                      value={globalMetrics.yoyGrowth.percentage}
                       trend={{
-                        direction: globalMetrics.mrr.trend,
-                        percentage: globalMetrics.mrr.percentage,
-                        label: "vs previous period"
+                        direction: globalMetrics.yoyGrowth.trend,
+                        percentage: globalMetrics.yoyGrowth.percentage,
+                        label: "revenue growth"
                       }}
-                      icon={Calendar}
-                      variant="currency"
-                      period={periods.mrr}
-                      onPeriodChange={(value: string) => handlePeriodChange('mrr', value)}
-                      periodOptions={MRR_PERIODS}
-                      sparklineData={globalMetrics.mrrSparklineData}
+                      icon={TrendingUp}
+                      variant="percentage"
+                      size="lg"
                       isLoading={false}
                       error={error}
                     />
                   </div>
 
-                  {/* ARR Card */}
-                  <div className="flex-1">
+                  <div className="lg:col-span-6">
                     <MetricCard
-                      title="ARR"
-                      value={globalMetrics.arr.current}
+                      title="Customer Lifetime Value"
+                      value={globalMetrics.cltv.current}
                       trend={{
-                        direction: globalMetrics.arr.trend,
-                        percentage: globalMetrics.arr.percentage,
+                        direction: globalMetrics.cltv.trend,
+                        percentage: globalMetrics.cltv.percentage,
                         label: "vs previous period"
                       }}
-                      icon={Activity}
+                      icon={Users}
                       variant="currency"
-                      period={periods.arr}
-                      onPeriodChange={(value: string) => handlePeriodChange('arr', value)}
-                      periodOptions={ARR_PERIODS}
-                      sparklineData={globalMetrics.arrSparklineData}
+                      subtitle="Average CLTV per client"
+                      size="lg"
                       isLoading={false}
                       error={error}
                     />
                   </div>
                 </div>
-              </div>
-
-              {/* Bottom Row - YoY Growth and CLTV */}
-              <div className="lg:col-span-6">
-                <MetricCard
-                  title="Year-over-Year Growth"
-                  value={globalMetrics.yoyGrowth.percentage}
-                  trend={{
-                    direction: globalMetrics.yoyGrowth.trend,
-                    percentage: globalMetrics.yoyGrowth.percentage,
-                    label: "revenue growth"
-                  }}
-                  icon={TrendingUp}
-                  variant="percentage"
-                  size="lg"
-                  isLoading={false}
-                  error={error}
-                />
-              </div>
-
-              <div className="lg:col-span-6">
-                <MetricCard
-                  title="Customer Lifetime Value"
-                  value={globalMetrics.cltv.current}
-                  trend={{
-                    direction: globalMetrics.cltv.trend,
-                    percentage: globalMetrics.cltv.percentage,
-                    label: "vs previous period"
-                  }}
-                  icon={Users}
-                  variant="currency"
-                  subtitle="Average CLTV per client"
-                  size="lg"
-                  isLoading={false}
-                  error={error}
-                />
               </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
-  </div>
-)
+  )
 }
