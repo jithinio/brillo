@@ -1,343 +1,454 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState, useEffect, useMemo } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { CalendarDateRangePicker } from "@/components/date-range-picker"
-import { Overview } from "@/components/overview"
-import { TrendingUp, TrendingDown, DollarSign, Users, FileText, Clock } from "lucide-react"
-import { PageHeader, PageContent, PageTitle } from "@/components/page-header"
-import { supabase } from "@/lib/supabase"
-import { formatCurrency } from "@/lib/currency"
+import { Separator } from "@/components/ui/separator"
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
+import type { ChartConfig } from "@/components/ui/chart"
+import { Bar, BarChart, XAxis, YAxis, Line, LineChart } from "recharts"
+import { DollarSign, TrendingUp, TrendingDown, FileText, Users, Calendar, Activity, BarChart3, Wallet } from "lucide-react"
 
-// Types for project data
-interface Project {
-  id: string
-  name: string
-  budget?: number
-  revenue?: number
-  expenses?: number
-  payment_received?: number
-  payment_pending?: number
-  start_date?: string
-  due_date?: string
-  created_at: string
-  status: string
-}
+import { PageHeader } from "@/components/page-header"
+import { useAnalyticsData, type AnalyticsFilters as AnalyticsFiltersType, type DateRange } from "@/hooks/use-analytics-data"
 
-// Data fetching function
-const fetchProjects = async (): Promise<Project[]> => {
-  try {
-    const { data, error } = await supabase
-      .from('projects')
-      .select('*')
-      .order('created_at', { ascending: false })
+import {
+  calculateOverallRevenue,
+  calculateOverallExpenses,
+  calculateTotalProjects,
+  calculateMRR,
+  calculateARR,
+  calculateYoYGrowth,
+  calculateTopPayingClients,
+  calculateCLTV,
+  calculateNetProfit,
+  generateRevenueBarChartData,
+  calculateCashFlow,
+  generateMRRSparklineData,
+  generateARRSparklineData,
+  type Project,
+  type Client
+} from "@/lib/analytics-calculations"
 
-    if (error) {
-      console.error('Error fetching projects:', error)
-      return []
-    }
+import { AnalyticsFilters } from "./components/AnalyticsFilters"
+import MetricCard from "./components/MetricCard"
+import { CashFlowChart } from "./components/CashFlowChart"
+import { TopClientsCard } from "./components/TopClientsCard"
 
-    return data || []
-  } catch (error) {
-    console.error('Error fetching projects:', error)
-    return []
-  }
-}
+import { formatLargeNumber } from "@/lib/utils"
+import { getCurrencySymbol } from "@/lib/currency"
+import { useSettings } from "@/components/settings-provider"
+import { Badge } from "@/components/ui/badge"
 
-// Calculate metrics from real data
-const calculateMetrics = (projects: Project[]) => {
-  // Filter out pipeline projects
-  const activeProjects = projects.filter(project => project.status !== 'pipeline')
-  
-  // Calculate total revenue (using same logic as dashboard)
-  const totalRevenue = activeProjects.reduce((sum, project) => {
-    let amount = 0
-    
-    // For on hold and canceled projects, use received amount as budget
-    if (project.status === 'on hold' || project.status === 'canceled') {
-      amount = project.payment_received || 0
-    } else {
-      // Use budget as primary, revenue as fallback, then 0
-      amount = project.budget || project.revenue || 0
-    }
-    
-    return sum + amount
-  }, 0)
+// Period options for different metrics
+const MRR_PERIODS = [
+  { value: 'current-month', label: 'This Month' },
+  { value: 'last-month', label: 'Last Month' },
+  { value: '3-months', label: 'Last 3 Months' }
+]
 
-  // Count active projects (excluding pipeline, canceled, and on hold)
-  const activeProjectCount = activeProjects.filter(project => 
-    !['canceled', 'on hold'].includes(project.status)
-  ).length
+const ARR_PERIODS = [
+  { value: 'current-year', label: 'This Year' },
+  { value: 'last-year', label: 'Last Year' }
+]
 
-  // Calculate average project time (simplified - using days since creation)
-  const now = new Date()
-  const projectTimes = activeProjects
-    .filter(project => project.status === 'completed')
-    .map(project => {
-      const created = new Date(project.created_at)
-      const completed = project.due_date ? new Date(project.due_date) : now
-      return Math.ceil((completed.getTime() - created.getTime()) / (1000 * 60 * 60 * 24))
-    })
-  
-  const avgProjectTime = projectTimes.length > 0 
-    ? Math.round(projectTimes.reduce((sum, time) => sum + time, 0) / projectTimes.length)
-    : 14
+const CHART_PERIODS = [
+  { value: 'monthly', label: 'Monthly' },
+  { value: 'quarterly', label: 'Quarterly' },
+  { value: 'yearly', label: 'Yearly' }
+]
 
-  // Calculate client satisfaction (simplified - based on completed projects)
-  const completedProjects = activeProjects.filter(project => project.status === 'completed').length
-  const totalProjects = activeProjects.length
-  const satisfactionRate = totalProjects > 0 ? (completedProjects / totalProjects) * 100 : 98.2
-
-  return {
-    totalRevenue,
-    activeProjectCount,
-    satisfactionRate,
-    avgProjectTime
+// Chart configuration
+const revenueChartConfig: ChartConfig = {
+  value: {
+    label: "Revenue",
+    color: "hsl(var(--chart-1))",
   }
 }
 
 export default function AnalyticsPage() {
-  const [projects, setProjects] = useState<Project[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const { formatCurrency } = useSettings()
+  const [filters, setFilters] = useState<AnalyticsFiltersType>({})
+  const [periods, setPeriods] = useState({
+    mrr: 'current-month',
+    arr: 'current-year',
+    revenueChart: 'monthly' as 'monthly' | 'quarterly' | 'yearly',
+    cashFlow: 'monthly' as 'monthly' | 'quarterly'
+  })
 
-  useEffect(() => {
-    const loadProjects = async () => {
-      const data = await fetchProjects()
-      setProjects(data)
-      setIsLoading(false)
+  // Fetch analytics data with filters
+  const {
+    projects,
+    clients,
+    filteredProjects,
+    filteredClients,
+    isLoading,
+    error,
+    refreshData,
+    lastUpdated
+  } = useAnalyticsData(filters)
+
+  // Handler for filter changes
+  const handleFiltersChange = (newFilters: AnalyticsFiltersType) => {
+    setFilters(newFilters)
+  }
+
+  // Calculate filtered metrics (affected by filters)
+  const filteredMetrics = useMemo(() => {
+    if (isLoading || !filteredProjects.length) {
+      return {
+        revenue: { current: 0, previous: 0, trend: 'up' as const, percentage: 0 },
+        expenses: { current: 0, previous: 0, trend: 'up' as const, percentage: 0 },
+        totalProjects: { current: 0, previous: 0, trend: 'up' as const, percentage: 0 },
+        netProfit: { current: 0, previous: 0, trend: 'up' as const, percentage: 0 },
+        topClients: [],
+        revenueChartData: []
+      }
     }
 
-    loadProjects()
-  }, [])
+    return {
+      revenue: calculateOverallRevenue(filteredProjects, filters.dateRange),
+      expenses: calculateOverallExpenses(filteredProjects, filters.dateRange),
+      totalProjects: calculateTotalProjects(filteredProjects, filters.dateRange),
+      netProfit: calculateNetProfit(filteredProjects, filters.dateRange),
+      topClients: calculateTopPayingClients(filteredProjects, 5),
+      revenueChartData: generateRevenueBarChartData(filteredProjects, periods.revenueChart)
+    }
+  }, [filteredProjects, filters.dateRange, periods.revenueChart, isLoading])
 
-  const metrics = calculateMetrics(projects)
+  // Calculate unfiltered metrics (global metrics)
+  const globalMetrics = useMemo(() => {
+    if (isLoading || !projects.length) {
+      return {
+        revenue: { current: 0, previous: 0, trend: 'up' as const, percentage: 0 },
+        expenses: { current: 0, previous: 0, trend: 'up' as const, percentage: 0 },
+        totalProjects: { current: 0, previous: 0, trend: 'up' as const, percentage: 0 },
+        netProfit: { current: 0, previous: 0, trend: 'up' as const, percentage: 0 },
+        mrr: { current: 0, previous: 0, trend: 'up' as const, percentage: 0 },
+        arr: { current: 0, previous: 0, trend: 'up' as const, percentage: 0 },
+        yoyGrowth: { current: 0, previous: 0, trend: 'up' as const, percentage: 0 },
+        cltv: { current: 0, previous: 0, trend: 'up' as const, percentage: 0 },
+        cashFlowData: [],
+        mrrSparklineData: [],
+        arrSparklineData: []
+      }
+    }
 
-  const metricsData = [
-    {
-      title: "Total Revenue",
-      value: formatCurrency(metrics.totalRevenue),
-      change: "+12.5%",
-      trend: "up" as const,
-      icon: DollarSign,
-    },
-    {
-      title: "Active Projects",
-      value: metrics.activeProjectCount.toString(),
-      change: "+3",
-      trend: "up" as const,
-      icon: FileText,
-    },
-    {
-      title: "Client Satisfaction",
-      value: `${metrics.satisfactionRate.toFixed(1)}%`,
-      change: "+2.1%",
-      trend: "up" as const,
-      icon: Users,
-    },
-    {
-      title: "Avg. Project Time",
-      value: `${metrics.avgProjectTime} days`,
-      change: "-2 days",
-      trend: "down" as const,
-      icon: Clock,
-    },
-  ]
+    return {
+      revenue: calculateOverallRevenue(projects),
+      expenses: calculateOverallExpenses(projects),
+      totalProjects: calculateTotalProjects(projects),
+      netProfit: calculateNetProfit(projects),
+      mrr: calculateMRR(projects, periods.mrr),
+      arr: calculateARR(projects, periods.arr),
+      yoyGrowth: calculateYoYGrowth(projects),
+      cltv: calculateCLTV(projects, clients),
+      cashFlowData: calculateCashFlow(projects, periods.cashFlow),
+      mrrSparklineData: generateMRRSparklineData(projects, periods.mrr),
+      arrSparklineData: generateARRSparklineData(projects, periods.arr)
+    }
+  }, [projects, clients, periods.mrr, periods.arr, periods.cashFlow, isLoading])
+
+  // Handle period changes
+  const handlePeriodChange = (metric: string, value: string) => {
+    setPeriods(prev => ({ ...prev, [metric]: value }))
+  }
+
+  // Check if filters are active
+  const hasActiveFilters = Boolean(
+    filters.dateRange || 
+    (filters.clientIds && filters.clientIds.length > 0) || 
+    (filters.projectStatuses && filters.projectStatuses.length > 0)
+  )
 
   return (
-    <>
+    <div className="w-full h-screen flex flex-col bg-gray-50/30 dark:bg-gray-950">
+      {/* Page Header - Not sticky */}
       <PageHeader
         title="Analytics"
-        action={
-          <div className="flex items-center space-x-2">
-            <CalendarDateRangePicker />
-            <Button size="sm">Export Report</Button>
-          </div>
-        }
       />
-      <PageContent>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-          {metricsData.map((metric) => (
-            <Card key={metric.title}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{metric.title}</CardTitle>
-                <metric.icon className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{metric.value}</div>
-                <div className="flex items-center text-xs text-muted-foreground">
-                  {metric.trend === "up" ? (
-                    <TrendingUp className="mr-1 h-3 w-3 text-green-500" />
-                  ) : (
-                    <TrendingDown className="mr-1 h-3 w-3 text-red-500" />
-                  )}
-                  <span className={metric.trend === "up" ? "text-green-500" : "text-red-500"}>{metric.change}</span>
-                  <span className="ml-1">from last month</span>
+      
+      {/* Sticky Filter Container */}
+      <div className="flex-shrink-0 sticky top-16 z-10">
+        <div className="py-4 border-t border-b bg-transparent">
+          <div className="container max-w-7xl mx-auto px-6">
+            <AnalyticsFilters
+              filters={filters}
+              onFiltersChange={handleFiltersChange}
+              clients={clients}
+              isLoading={isLoading}
+              onRefresh={refreshData}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content - Scrollable */}
+      <div className="flex-1 overflow-hidden relative">
+        <div className="h-full overflow-y-auto">
+          <div className="container max-w-7xl mx-auto px-6 py-6">
+        <div className="space-y-8">
+          {/* Filtered Analytics Section */}
+          {hasActiveFilters && (
+            <div className="space-y-6 relative">
+              {/* Badge Loader for Filtered Analytics */}
+              {isLoading && (
+                <div className="absolute inset-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm z-40 flex items-center justify-center">
+                  <Badge 
+                    variant="secondary" 
+                    className="flex items-center gap-2 text-xs shadow-md border bg-white dark:bg-gray-800 dark:text-gray-200"
+                  >
+                    <div className="w-3 h-3 border-2 border-gray-400 dark:border-gray-500 border-t-transparent rounded-full animate-spin" />
+                    <span>Loading filtered analytics...</span>
+                  </Badge>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+              )}
 
-        <div className="grid gap-6 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Revenue Overview</CardTitle>
-              <CardDescription>Monthly revenue for the past year</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Overview />
-            </CardContent>
-          </Card>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-semibold">Filtered Analytics</h2>
+              </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Project Status Distribution</CardTitle>
-              <CardDescription>Current status of all projects</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {(() => {
-                const statusCounts = projects.reduce((acc, project) => {
-                  acc[project.status] = (acc[project.status] || 0) + 1
-                  return acc
-                }, {} as Record<string, number>)
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* Filtered Metric Cards without skeletons */}
+                <MetricCard
+                  title="Revenue"
+                  value={filteredMetrics.revenue.current}
+                  trend={{
+                    direction: filteredMetrics.revenue.trend,
+                    percentage: filteredMetrics.revenue.percentage,
+                    label: "vs previous period"
+                  }}
+                  icon={DollarSign}
+                  variant="currency"
+                  isLoading={false}
+                  error={error}
+                />
 
-                const total = projects.length
-                const statuses = [
-                  { status: 'completed', label: 'Completed', color: 'bg-green-500' },
-                  { status: 'in progress', label: 'In Progress', color: 'bg-blue-500' },
-                  { status: 'planning', label: 'Planning', color: 'bg-orange-500' },
-                  { status: 'on hold', label: 'On Hold', color: 'bg-red-500' },
-                  { status: 'pipeline', label: 'Pipeline', color: 'bg-purple-500' },
-                  { status: 'canceled', label: 'Canceled', color: 'bg-gray-500' },
-                ]
+                <MetricCard
+                  title="Total Projects"
+                  value={filteredMetrics.totalProjects.current}
+                  trend={{
+                    direction: filteredMetrics.totalProjects.trend,
+                    percentage: filteredMetrics.totalProjects.percentage,
+                    label: "vs previous period"
+                  }}
+                  icon={FileText}
+                  variant="number"
+                  isLoading={false}
+                  error={error}
+                />
 
-                return statuses.map(({ status, label, color }) => {
-                  const count = statusCounts[status] || 0
-                  const percentage = total > 0 ? ((count / total) * 100).toFixed(0) : '0'
-                  
-                  return (
-                    <div key={status} className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <div className={`w-3 h-3 ${color} rounded-full`}></div>
-                        <span className="text-sm">{label}</span>
-                      </div>
-                      <span className="text-sm font-medium">{percentage}%</span>
-                    </div>
-                  )
-                })
-              })()}
-            </CardContent>
-          </Card>
+                                 <TopClientsCard
+                   clients={filteredMetrics.topClients}
+                   isLoading={false}
+                 />
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Top Clients</CardTitle>
-              <CardDescription>Clients by revenue contribution</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {(() => {
-                // Group projects by client and calculate revenue
-                const clientRevenue = projects.reduce((acc, project) => {
-                  // For now, using project name as client (you might want to join with clients table)
-                  const clientName = project.name.split(' - ')[0] || 'Unknown Client'
-                  
-                  let amount = 0
-                  if (project.status === 'on hold' || project.status === 'canceled') {
-                    amount = project.payment_received || 0
-                  } else {
-                    amount = project.budget || project.revenue || 0
-                  }
-                  
-                  acc[clientName] = (acc[clientName] || 0) + amount
-                  return acc
-                }, {} as Record<string, number>)
+                <MetricCard
+                  title="Net Profit"
+                  value={filteredMetrics.netProfit.current}
+                  trend={{
+                    direction: filteredMetrics.netProfit.trend,
+                    percentage: filteredMetrics.netProfit.percentage,
+                    label: "vs previous period"
+                  }}
+                  icon={TrendingUp}
+                  variant="currency"
+                  isLoading={false}
+                  error={error}
+                />
+              </div>
+            </div>
+          )}
 
-                // Sort by revenue and take top 4
-                const topClients = Object.entries(clientRevenue)
-                  .sort(([,a], [,b]) => b - a)
-                  .slice(0, 4)
+          {/* Divider between filtered and global sections */}
+          {hasActiveFilters && (
+            <Separator className="my-8" />
+          )}
 
-                return topClients.map(([client, revenue]) => (
-                  <div key={client} className="flex items-center justify-between">
-                    <span className="text-sm font-medium">{client}</span>
-                    <span className="text-sm">{formatCurrency(revenue)}</span>
+          {/* Unfiltered Global Metrics Section */}
+          <div className="space-y-8 relative">
+            {/* Badge Loader for Global Analytics */}
+            {isLoading && (
+              <div className="absolute inset-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm z-40 flex items-center justify-center">
+                <Badge 
+                  variant="secondary" 
+                  className="flex items-center gap-2 text-xs shadow-md border bg-white dark:bg-gray-800 dark:text-gray-200"
+                >
+                  <div className="w-3 h-3 border-2 border-gray-400 dark:border-gray-500 border-t-transparent rounded-full animate-spin" />
+                  <span>Loading analytics...</span>
+                </Badge>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-semibold">
+                {hasActiveFilters ? 'Global Overview' : 'Analytics Overview'}
+              </h2>
+            </div>
+
+            {/* Main Analytics Grid - Bento Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-4">
+              {/* Core Financial Metrics - Top Row (4 cards) */}
+              <div className="lg:col-span-12">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <MetricCard
+                    title="Overall Revenue"
+                    value={globalMetrics.revenue.current}
+                    trend={{
+                      direction: globalMetrics.revenue.trend,
+                      percentage: globalMetrics.revenue.percentage,
+                      label: "vs previous period"
+                    }}
+                    icon={DollarSign}
+                    variant="currency"
+                    isLoading={false}
+                    error={error}
+                  />
+
+                  <MetricCard
+                    title="Overall Expenses"
+                    value={globalMetrics.expenses.current}
+                    trend={{
+                      direction: globalMetrics.expenses.trend === 'up' ? 'down' : 'up',
+                      percentage: globalMetrics.expenses.percentage,
+                      label: "vs previous period"
+                    }}
+                    icon={Wallet}
+                    variant="currency"
+                    isLoading={false}
+                    error={error}
+                  />
+
+                  <MetricCard
+                    title="Total Projects"
+                    value={globalMetrics.totalProjects.current}
+                    trend={{
+                      direction: globalMetrics.totalProjects.trend,
+                      percentage: globalMetrics.totalProjects.percentage,
+                      label: "vs previous period"
+                    }}
+                    icon={FileText}
+                    variant="number"
+                    isLoading={false}
+                    error={error}
+                  />
+
+                  <MetricCard
+                    title="Net Profit"
+                    value={globalMetrics.netProfit.current}
+                    trend={{
+                      direction: globalMetrics.netProfit.trend,
+                      percentage: globalMetrics.netProfit.percentage,
+                      label: "vs previous period"
+                    }}
+                    icon={TrendingUp}
+                    variant="currency"
+                    isLoading={false}
+                    error={error}
+                  />
+                </div>
+              </div>
+
+              {/* Cash Flow Chart - Large Card */}
+              <div className="lg:col-span-8 flex w-full h-fit min-h-[400px] max-h-[450px]">
+                <div className="w-full">
+                  <CashFlowChart
+                    data={globalMetrics.cashFlowData}
+                    period={periods.cashFlow}
+                    onPeriodChange={(value) => handlePeriodChange('cashFlow', value as 'monthly' | 'quarterly')}
+                    isLoading={false}
+                  />
+                </div>
+              </div>
+
+              {/* Growth Metrics Column */}
+              <div className="lg:col-span-4 flex flex-col h-fit min-h-[400px] max-h-[450px]">
+                <div className="grid grid-cols-1 gap-4 h-full">
+                  {/* MRR Card */}
+                  <div className="flex-1">
+                    <MetricCard
+                      title="MRR"
+                      value={globalMetrics.mrr.current}
+                      trend={{
+                        direction: globalMetrics.mrr.trend,
+                        percentage: globalMetrics.mrr.percentage,
+                        label: "vs previous period"
+                      }}
+                      icon={Calendar}
+                      variant="currency"
+                      period={periods.mrr}
+                      onPeriodChange={(value: string) => handlePeriodChange('mrr', value)}
+                      periodOptions={MRR_PERIODS}
+                      sparklineData={globalMetrics.mrrSparklineData}
+                      isLoading={false}
+                      error={error}
+                    />
                   </div>
-                ))
-              })()}
-            </CardContent>
-          </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Milestones</CardTitle>
-              <CardDescription>Key achievements this month</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {(() => {
-                const milestones = []
-                
-                // Check for revenue milestone
-                const totalRevenue = projects.reduce((sum, project) => {
-                  let amount = 0
-                  if (project.status === 'on hold' || project.status === 'canceled') {
-                    amount = project.payment_received || 0
-                  } else {
-                    amount = project.budget || project.revenue || 0
-                  }
-                  return sum + amount
-                }, 0)
-                
-                if (totalRevenue >= 50000) {
-                  milestones.push({
-                    text: `Reached ${formatCurrency(totalRevenue)} revenue milestone`,
-                    date: new Date().toLocaleDateString(),
-                    color: 'bg-green-500'
-                  })
-                }
-
-                // Check for completed projects
-                const completedCount = projects.filter(p => p.status === 'completed').length
-                if (completedCount >= 10) {
-                  milestones.push({
-                    text: `Completed ${completedCount} projects`,
-                    date: new Date().toLocaleDateString(),
-                    color: 'bg-blue-500'
-                  })
-                }
-
-                // Check for new projects this month
-                const thisMonth = new Date().getMonth()
-                const thisYear = new Date().getFullYear()
-                const newProjectsThisMonth = projects.filter(project => {
-                  const created = new Date(project.created_at)
-                  return created.getMonth() === thisMonth && created.getFullYear() === thisYear
-                }).length
-
-                if (newProjectsThisMonth > 0) {
-                  milestones.push({
-                    text: `Added ${newProjectsThisMonth} new projects this month`,
-                    date: new Date().toLocaleDateString(),
-                    color: 'bg-orange-500'
-                  })
-                }
-
-                return milestones.length > 0 ? milestones.map((milestone, index) => (
-                  <div key={index} className="flex items-start space-x-3">
-                    <div className={`w-2 h-2 ${milestone.color} rounded-full mt-2`}></div>
-                    <div>
-                      <p className="text-sm font-medium">{milestone.text}</p>
-                      <p className="text-xs text-muted-foreground">{milestone.date}</p>
-                    </div>
+                  {/* ARR Card */}
+                  <div className="flex-1">
+                    <MetricCard
+                      title="ARR"
+                      value={globalMetrics.arr.current}
+                      trend={{
+                        direction: globalMetrics.arr.trend,
+                        percentage: globalMetrics.arr.percentage,
+                        label: "vs previous period"
+                      }}
+                      icon={Activity}
+                      variant="currency"
+                      period={periods.arr}
+                      onPeriodChange={(value: string) => handlePeriodChange('arr', value)}
+                      periodOptions={ARR_PERIODS}
+                      sparklineData={globalMetrics.arrSparklineData}
+                      isLoading={false}
+                      error={error}
+                    />
                   </div>
-                )) : (
-                  <div className="text-sm text-muted-foreground">No recent milestones</div>
-                )
-              })()}
-            </CardContent>
-          </Card>
+                </div>
+              </div>
+
+              {/* Bottom Row - YoY Growth and CLTV */}
+              <div className="lg:col-span-6">
+                <MetricCard
+                  title="Year-over-Year Growth"
+                  value={globalMetrics.yoyGrowth.percentage}
+                  trend={{
+                    direction: globalMetrics.yoyGrowth.trend,
+                    percentage: globalMetrics.yoyGrowth.percentage,
+                    label: "revenue growth"
+                  }}
+                  icon={TrendingUp}
+                  variant="percentage"
+                  size="lg"
+                  isLoading={false}
+                  error={error}
+                />
+              </div>
+
+              <div className="lg:col-span-6">
+                <MetricCard
+                  title="Customer Lifetime Value"
+                  value={globalMetrics.cltv.current}
+                  trend={{
+                    direction: globalMetrics.cltv.trend,
+                    percentage: globalMetrics.cltv.percentage,
+                    label: "vs previous period"
+                  }}
+                  icon={Users}
+                  variant="currency"
+                  subtitle="Average CLTV per client"
+                  size="lg"
+                  isLoading={false}
+                  error={error}
+                />
+              </div>
+            </div>
+          </div>
         </div>
-      </PageContent>
-    </>
-  )
+      </div>
+    </div>
+  </div>
+  </div>
+)
 }
