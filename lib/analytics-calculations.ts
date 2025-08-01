@@ -13,6 +13,7 @@ export interface Project {
   due_date?: string
   created_at: string
   status: string
+  pipeline_stage?: string
   client_id?: string
   clients?: {
     id: string
@@ -76,7 +77,9 @@ const getProjectExpenses = (project: Project): number => {
 const filterProjectsByDateRange = (projects: Project[], startDate: Date, endDate: Date): Project[] => {
   return projects.filter(project => {
     const projectDate = new Date(project.start_date || project.created_at)
-    return projectDate >= startDate && projectDate <= endDate && project.status !== 'pipeline'
+    const isInDateRange = projectDate >= startDate && projectDate <= endDate
+    const isValidForMetrics = project.status !== 'pipeline' && (project as any).pipeline_stage !== 'lost'
+    return isInDateRange && isValidForMetrics
   })
 }
 
@@ -227,8 +230,13 @@ export const calculateYoYGrowth = (projects: Project[], dateRange?: { start: Dat
 export const calculateTopPayingClients = (projects: Project[], limit: number = 5): TopClient[] => {
   const clientMap = new Map<string, TopClient>()
   
+  // Filter out pipeline and lost projects for client metrics
+  const validProjects = projects.filter(project => 
+    project.status !== 'pipeline' && project.pipeline_stage !== 'lost'
+  )
+  
   // Group projects by client
-  projects.forEach(project => {
+  validProjects.forEach(project => {
     if (!project.clients || !project.client_id) return
     
     const clientId = project.client_id
@@ -259,7 +267,7 @@ export const calculateTopPayingClients = (projects: Project[], limit: number = 5
     client.avgProjectValue = client.totalValue / client.projectCount
     
     // Calculate trend (simplified - could be enhanced with historical data)
-    const clientProjects = projects.filter(p => p.client_id === client.id)
+    const clientProjects = validProjects.filter(p => p.client_id === client.id)
     const recentProjects = clientProjects.filter(p => {
       const projectDate = new Date(p.created_at)
       const sixMonthsAgo = subMonths(new Date(), 6)
@@ -291,9 +299,14 @@ export const calculateTopPayingClients = (projects: Project[], limit: number = 5
 }
 
 export const calculateCLTV = (projects: Project[], clients: Client[]): AnalyticsResult => {
+  // Filter out pipeline and lost projects for CLTV calculation
+  const validProjects = projects.filter(project => 
+    project.status !== 'pipeline' && project.pipeline_stage !== 'lost'
+  )
+  
   // Calculate Customer Lifetime Value
   const clientCLTVs = clients.map(client => {
-    const clientProjects = projects.filter(p => p.client_id === client.id)
+    const clientProjects = validProjects.filter(p => p.client_id === client.id)
     
     if (clientProjects.length === 0) return 0
     

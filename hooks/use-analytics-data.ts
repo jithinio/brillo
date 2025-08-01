@@ -89,6 +89,7 @@ export const useAnalyticsData = (filters?: AnalyticsFilters) => {
         due_date,
         created_at,
         status,
+        pipeline_stage,
         client_id,
         clients (
           id,
@@ -97,17 +98,23 @@ export const useAnalyticsData = (filters?: AnalyticsFilters) => {
           created_at
         )
       `)
+      .not('status', 'is', null) // Exclude lost projects (which have status=null)
       .order('created_at', { ascending: false })
 
     if (error) {
       throw new Error(`Failed to fetch projects: ${error.message}`)
     }
 
-    // Transform the data to match our interface
-    return (data || []).map(project => ({
-      ...project,
-      clients: project.clients && project.clients.length > 0 ? project.clients[0] : undefined
-    }))
+    // Transform the data to match our interface and exclude lost projects
+    return (data || [])
+      .filter(project => 
+        project.status !== null && // Additional check for lost projects
+        (project as any).pipeline_stage !== 'lost' // Exclude lost pipeline stage
+      )
+      .map(project => ({
+        ...project,
+        clients: project.clients && project.clients.length > 0 ? project.clients[0] : undefined
+      }))
   }, [])
 
   // Fetch clients with project count
@@ -297,7 +304,11 @@ export const useQuickAnalytics = () => {
       }
     }
 
-    const activeProjects = projects.filter(p => p.status !== 'pipeline' && p.status !== 'cancelled')
+    const activeProjects = projects.filter(p => 
+      p.status !== 'pipeline' && 
+      p.status !== 'cancelled' && 
+      (p as any).pipeline_stage !== 'lost'
+    )
     
     const totalRevenue = activeProjects.reduce((sum, project) => {
       if (project.status === 'on hold' || project.status === 'cancelled') {

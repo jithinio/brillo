@@ -1,6 +1,7 @@
 "use client"
 
-import { MoreHorizontal, Upload, Download, RotateCcw } from "lucide-react"
+import { useState } from "react"
+import { MoreHorizontal, Upload, Download, RotateCcw, Calculator } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -10,6 +11,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { useRouter } from "next/navigation"
+import { CurrencyConverterWidget } from "@/components/currency-converter-widget"
 
 interface PageActionsMenuProps {
   entityType: 'clients' | 'projects' | 'invoices'
@@ -20,6 +22,7 @@ interface PageActionsMenuProps {
 
 export function PageActionsMenu({ entityType, onExport, onResetColumns, showResetColumns = false }: PageActionsMenuProps) {
   const router = useRouter()
+  const [showCurrencyConverter, setShowCurrencyConverter] = useState(false)
 
   const handleImport = () => {
     router.push(`/dashboard/${entityType}/import`)
@@ -30,6 +33,27 @@ export function PageActionsMenu({ entityType, onExport, onResetColumns, showRese
   }
 
   return (
+    <div className="flex items-center gap-2">
+      {/* Currency Converter for Projects and Invoices */}
+      {(entityType === 'projects' || entityType === 'invoices') && (
+        <>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowCurrencyConverter(true)}
+            className="h-8"
+          >
+            <Calculator className="h-4 w-4 mr-2" />
+            Currency
+          </Button>
+          <CurrencyConverterWidget
+            isOpen={showCurrencyConverter}
+            onClose={() => setShowCurrencyConverter(false)}
+          />
+        </>
+      )}
+      
+      {/* Actions Menu */}
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
@@ -57,5 +81,6 @@ export function PageActionsMenu({ entityType, onExport, onResetColumns, showRese
         )}
       </DropdownMenuContent>
     </DropdownMenu>
+    </div>
   )
 } 

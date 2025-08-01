@@ -18,7 +18,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
-import { formatCurrency } from "@/lib/currency"
+import { formatCurrency, getDefaultCurrency } from "@/lib/currency"
 import { formatCurrencyAbbreviated } from "@/lib/currency-utils"
 import { Invoice } from "@/hooks/use-invoices"
 import { SortableHeader } from "@/components/table/column-utils"
@@ -267,7 +267,7 @@ export function createInvoiceColumns(columnConfig: InvoiceColumnConfig): ColumnD
               <span className="font-medium text-sm">
                 {formatCurrency(amount, invoiceCurrency)}
               </span>
-              {invoiceCurrency && invoiceCurrency !== 'USD' && (
+              {invoiceCurrency && invoiceCurrency !== getDefaultCurrency() && (
                 <Badge variant="outline" className="text-xs shrink-0">
                   {invoiceCurrency}
                 </Badge>

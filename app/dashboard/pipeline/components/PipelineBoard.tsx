@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -16,10 +16,29 @@ import {
 } from "@dnd-kit/core"
 import { PipelineColumn } from "./PipelineColumn"
 import { PipelineCard } from "./PipelineCard"
-import { updateProjectStage, groupProjectsByStage, convertProjectToActive } from "@/lib/project-pipeline"
+import { updateProjectStage, groupProjectsByStage, convertProjectToActive, convertProjectToLost } from "@/lib/project-pipeline"
 import type { PipelineProject, PipelineStage } from "@/lib/types/pipeline"
 import { toast } from "sonner"
 import confetti from 'canvas-confetti'
+import { History, User, DollarSign, MoreVertical, RotateCcw, Trash2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { Input } from "@/components/ui/input"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Card, CardContent } from "@/components/ui/card"
+import { Progress } from "@/components/ui/progress"
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
+
+import { supabase } from "@/lib/supabase"
+import { formatLargeNumber } from "@/lib/utils"
+import { getCurrencySymbol } from "@/lib/currency"
+import { EditProjectDialog } from "./EditProjectDialog"
 
 interface PipelineBoardProps {
   projects: PipelineProject[]
@@ -31,36 +50,218 @@ interface PipelineBoardProps {
   loading?: boolean
 }
 
-// Closed Column Component
-function ClosedColumn({ isDragging }: { isDragging: boolean }) {
-  const { isOver, setNodeRef } = useDroppable({
-    id: 'closed',
+// Combined Closed Column Component
+function ClosedColumn({ isDragging, onShowLostClients }: { isDragging: boolean, onShowLostClients: () => void }) {
+  const { isOver: isOverWon, setNodeRef: setNodeRefWon } = useDroppable({
+    id: 'closed-won',
     data: {
       type: "column",
-      stage: "closed",
+      stage: "closed-won",
+    },
+  })
+
+  const { isOver: isOverLost, setNodeRef: setNodeRefLost } = useDroppable({
+    id: 'closed-lost',
+    data: {
+      type: "column",
+      stage: "closed-lost",
     },
   })
 
   return (
-    <div className="w-32 flex-shrink-0 h-full">
-      <div 
-        ref={setNodeRef}
-        className={`h-full bg-green-50 dark:bg-green-950/20 border border-dashed rounded-none flex items-center justify-center relative transition-colors ${
-          isOver ? 'border-green-500 dark:border-green-400 bg-green-100 dark:bg-green-900/30' : 'border-green-300 dark:border-green-600'
-        }`}
-      >
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="transform -rotate-90 text-green-700 dark:text-green-300 font-medium text-xs whitespace-nowrap text-center px-1">
-            {isDragging && isOver ? (
-              "DRAG HERE TO MARK AS CLOSED"
-            ) : (
-              "CLOSED"
-            )}
+    <div className="w-32 flex-shrink-0 h-full flex flex-col">
+      {/* Closed Won - Top Half */}
+      <div className="flex-1">
+        <div 
+          ref={setNodeRefWon}
+          className={`h-full bg-green-50 dark:bg-green-950/20 border border-dashed rounded-none flex items-center justify-center relative transition-colors ${
+            isOverWon ? 'border-green-500 dark:border-green-400 bg-green-100 dark:bg-green-900/30' : 'border-green-300 dark:border-green-600'
+          }`}
+        >
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="transform -rotate-90 text-green-700 dark:text-green-300 font-medium text-xs whitespace-nowrap text-center px-1">
+              {isDragging && isOverWon ? (
+                "DRAG HERE TO CLOSE AS WON"
+              ) : (
+                "WON"
+              )}
+            </div>
           </div>
+        </div>
+      </div>
+
+      {/* Closed Lost - Bottom Half */}
+      <div className="flex-1 flex flex-col">
+        <div 
+          ref={setNodeRefLost}
+          className={`flex-1 bg-red-50 dark:bg-red-950/20 border border-dashed rounded-none flex items-center justify-center relative transition-colors ${
+            isOverLost ? 'border-red-500 dark:border-red-400 bg-red-100 dark:bg-red-900/30' : 'border-red-300 dark:border-red-600'
+          }`}
+        >
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="transform -rotate-90 text-red-700 dark:text-red-300 font-medium text-xs whitespace-nowrap text-center px-1">
+              {isDragging && isOverLost ? (
+                "DRAG HERE TO MARK AS LOST"
+              ) : (
+                "LOST"
+              )}
+            </div>
+          </div>
+        </div>
+        
+        {/* History Button */}
+        <div className="p-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onShowLostClients}
+            className="w-full h-6 text-xs text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/30 border-none"
+          >
+            <History className="h-3 w-3 mr-1" />
+            History
+          </Button>
         </div>
       </div>
     </div>
   )
+}
+
+// Lost Client Card Component
+function LostClientCard({ project, onRestore, onEdit, onProjectUpdate, onRefreshLostClients }: { 
+  project: PipelineProject, 
+  onRestore: (projectId: string, stage: string) => void,
+  onEdit: (project: PipelineProject) => void,
+  onProjectUpdate: () => void,
+  onRefreshLostClients: () => void
+}) {
+  const [showEditDialog, setShowEditDialog] = useState(false)
+
+  const handleRestore = (stage: string) => {
+    onRestore(project.id, stage)
+  }
+
+  const handleCardClick = () => {
+    setShowEditDialog(true)
+  }
+
+  return (
+    <>
+      <Card className="group transition-all border bg-white dark:bg-gray-800 hover:shadow-md cursor-pointer">
+      <CardContent className="p-4">
+        <div className="space-y-3">
+          {/* Header with Status Badge */}
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <h3 
+                  className="font-medium text-sm truncate cursor-pointer hover:text-blue-600 transition-colors text-gray-900 dark:text-gray-100"
+                  onClick={handleCardClick}
+                >
+                  {project.name}
+                </h3>
+                <Badge variant="destructive" className="text-xs">
+                  Lost
+                </Badge>
+              </div>
+              {project.clients && (
+                <div className="flex items-center text-xs text-gray-600 dark:text-gray-400">
+                  <User className="w-3 h-3 mr-1" />
+                  <span className="truncate">{project.clients.name}</span>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex-shrink-0">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity -mt-1 -mr-1"
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleCardClick}>
+                    <MoreVertical className="mr-2 h-4 w-4" />
+                    Edit Project
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => handleRestore('lead')}>
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    Restore to Lead
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleRestore('pitched')}>
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    Restore to Pitched
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleRestore('in discussion')}>
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    Restore to Discussion
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+
+
+
+          {/* Budget / Value */}
+          {(project.budget || project.value) && (
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center text-gray-600 dark:text-gray-400">
+                <DollarSign className="w-3 h-3 mr-1" />
+                <span>{project.budget ? 'Budget' : 'Value'}</span>
+              </div>
+              <span className="font-medium text-gray-900 dark:text-gray-100">
+                {formatLargeNumber(project.budget || project.value || 0, getCurrencySymbol())}
+              </span>
+            </div>
+          )}
+
+          {/* Deal Probability */}
+          {project.deal_probability !== undefined && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gray-600 dark:text-gray-400">Deal Probability</span>
+                <span className="font-medium text-gray-900 dark:text-gray-100">
+                  {project.deal_probability}%
+                </span>
+              </div>
+              <Progress 
+                value={project.deal_probability} 
+                className="h-2" 
+              />
+            </div>
+          )}
+
+          {/* Notes */}
+          {project.pipeline_notes && (
+                      <div className="text-xs bg-gray-50 dark:bg-gray-800 p-2 rounded border text-gray-600 dark:text-gray-400">
+            {project.pipeline_notes}
+          </div>
+        )}
+
+        {/* Lost Date */}
+        <div className="text-xs text-red-600 dark:text-red-400 border-t pt-2">
+          Lost on: {new Date(project.updated_at).toLocaleDateString()}
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+
+  <EditProjectDialog
+    open={showEditDialog}
+    onOpenChange={setShowEditDialog}
+    onProjectUpdate={() => {
+      onProjectUpdate()
+      onRefreshLostClients() // Refresh lost clients after edit
+    }}
+    project={project}
+  />
+</>
+)
 }
 
 // Minimal confetti animation function for project completion
@@ -110,6 +311,10 @@ export function PipelineBoard({
 }: PipelineBoardProps) {
   const [activeProject, setActiveProject] = useState<PipelineProject | null>(null)
   const [isDragging, setIsDragging] = useState(false)
+  const [showLostClients, setShowLostClients] = useState(false)
+  const [lostClients, setLostClients] = useState<PipelineProject[]>([])
+  const [searchQuery, setSearchQuery] = useState("")
+  const [loadingLostClients, setLoadingLostClients] = useState(false)
   const [optimisticProjects, setOptimisticProjects] = useState<PipelineProject[]>(projects)
 
   const sensors = useSensors(
@@ -126,6 +331,94 @@ export function PipelineBoard({
   }, [projects])
 
   const columns = groupProjectsByStage(optimisticProjects, stages)
+
+  // Fetch lost clients from Supabase
+  const fetchLostClients = useCallback(async () => {
+    setLoadingLostClients(true)
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .select(`
+          *,
+          clients (
+            id,
+            name,
+            email,
+            phone,
+            company,
+            country
+          )
+        `)
+        .eq('pipeline_stage', 'lost')
+        .is('status', null) // Only fetch projects with null status (lost projects)
+        .order('updated_at', { ascending: false })
+
+      if (error) {
+        console.error('Error fetching lost clients:', error)
+        toast.error('Failed to load lost clients')
+        return
+      }
+
+      setLostClients(data || [])
+    } catch (error) {
+      console.error('Error fetching lost clients:', error)
+      toast.error('Failed to load lost clients')
+    } finally {
+      setLoadingLostClients(false)
+    }
+  }, [])
+
+  // Open lost clients sidebar
+  const handleShowLostClients = useCallback(() => {
+    setShowLostClients(true)
+    fetchLostClients()
+  }, [fetchLostClients])
+
+  // Filter lost clients based on search query
+  const filteredLostClients = useMemo(() => {
+    if (!searchQuery.trim()) return lostClients
+    
+    const query = searchQuery.toLowerCase()
+    return lostClients.filter(project => 
+      project.name?.toLowerCase().includes(query) ||
+      project.clients?.name?.toLowerCase().includes(query) ||
+      project.clients?.company?.toLowerCase().includes(query) ||
+      project.clients?.email?.toLowerCase().includes(query)
+    )
+  }, [lostClients, searchQuery])
+
+  // Handle restoring lost clients to pipeline
+  const handleRestoreLostClient = useCallback(async (projectId: string, stage: string) => {
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .update({ 
+          status: 'pipeline', // Set to 'pipeline' so it shows in pipeline view
+          pipeline_stage: stage,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', projectId)
+
+      if (error) {
+        console.error('Error restoring project:', error)
+        toast.error('Failed to restore project')
+        return
+      }
+
+      // Remove from lost clients list
+      setLostClients(prev => prev.filter(p => p.id !== projectId))
+      
+      // Refresh pipeline data
+      onProjectUpdate()
+
+      toast.success(`Project restored to ${stage} successfully`)
+    } catch (error) {
+      console.error('Error restoring project:', error)
+      toast.error('Failed to restore project')
+    }
+  }, [onProjectUpdate])
+
+  // Handle editing lost clients (now handled directly in LostClientCard)
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const { active } = event
@@ -147,11 +440,14 @@ export function PipelineBoard({
 
     const activeProject = active.data.current?.project as PipelineProject
     const overStage = over.data.current?.stage as string
+    const fromLostClients = active.data.current?.fromLostClients as boolean
 
     if (!activeProject || !overStage) return
 
-    // Handle closed column conversion
-    if (overStage === 'closed') {
+    // Skip logic for lost clients since they no longer support drag
+
+    // Handle closed-won column conversion
+    if (overStage === 'closed-won') {
       try {
         // Optimistically remove project from pipeline
         if (onRemoveProject) {
@@ -160,14 +456,13 @@ export function PipelineBoard({
 
         const success = await convertProjectToActive(activeProject.id)
         if (success) {
-          toast.success(`${activeProject.name} converted to active project`, {
-            description: "Project moved to Projects page and saved to database"
+          toast.success(`${activeProject.name} closed as WON! 🎉`, {
+            description: "Project converted to active and moved to Projects page"
           })
           // Trigger minimal celebration confetti
           triggerMinimalConfetti()
-          // Don't call onProjectUpdate() - optimistic update already handled UI
         } else {
-          toast.error("Failed to convert project to active", {
+          toast.error("Failed to close project as won", {
             description: "Changes not saved - please try again"
           })
           // Revert optimistic changes on failure
@@ -176,8 +471,41 @@ export function PipelineBoard({
           }
         }
       } catch (error) {
-        console.error('Error converting project to active:', error)
-        toast.error("Failed to convert project to active")
+        console.error('Error closing project as won:', error)
+        toast.error("Failed to close project as won")
+        // Revert optimistic changes on failure
+        if (onRevertChanges) {
+          onRevertChanges()
+        }
+      }
+      return
+    }
+
+    // Handle closed-lost column conversion
+    if (overStage === 'closed-lost') {
+      try {
+        // Optimistically remove project from pipeline
+        if (onRemoveProject) {
+          onRemoveProject(activeProject.id)
+        }
+
+        const success = await convertProjectToLost(activeProject.id)
+        if (success) {
+          toast.success(`${activeProject.name} marked as lost`, {
+            description: "Project closed as lost opportunity"
+          })
+        } else {
+          toast.error("Failed to mark project as lost", {
+            description: "Changes not saved - please try again"
+          })
+          // Revert optimistic changes on failure
+          if (onRevertChanges) {
+            onRevertChanges()
+          }
+        }
+      } catch (error) {
+        console.error('Error marking project as lost:', error)
+        toast.error("Failed to mark project as lost")
         // Revert optimistic changes on failure
         if (onRevertChanges) {
           onRevertChanges()
@@ -297,12 +625,12 @@ export function PipelineBoard({
           )}
           
           {/* Closed Column - always at the end */}
-          <ClosedColumn isDragging={isDragging} />
+          <ClosedColumn isDragging={isDragging} onShowLostClients={handleShowLostClients} />
         </div>
 
         <DragOverlay dropAnimation={null}>
           {activeProject ? (
-            <div className="transform-gpu">
+            <div className="transform-gpu will-change-transform">
               <PipelineCard 
                 project={activeProject} 
                 onProjectUpdate={onProjectUpdate}
@@ -312,6 +640,59 @@ export function PipelineBoard({
           ) : null}
         </DragOverlay>
       </DndContext>
+
+      {/* Lost Clients Sidebar */}
+      <Sheet open={showLostClients} onOpenChange={setShowLostClients}>
+        <SheetContent side="right" className="w-[400px] sm:w-[500px] transform-gpu will-change-transform">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              <History className="h-5 w-5 text-red-600" />
+              Lost Clients History
+            </SheetTitle>
+          </SheetHeader>
+          
+          {/* Only render content when sidebar is open for better performance */}
+          {showLostClients && (
+            <div className="mt-6 space-y-4">
+              {/* Search Bar */}
+              <Input
+                placeholder="Search lost clients..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full"
+              />
+              
+              {/* Lost Clients List */}
+              <ScrollArea className="h-[calc(100vh-240px)] transform-gpu">
+                {loadingLostClients ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="text-sm text-muted-foreground">Loading lost clients...</div>
+                  </div>
+                ) : filteredLostClients.length === 0 ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="text-sm text-muted-foreground">
+                      {searchQuery ? 'No clients found matching your search.' : 'No lost clients found.'}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {filteredLostClients.map((project) => (
+                      <LostClientCard
+                        key={project.id}
+                        project={project}
+                        onRestore={handleRestoreLostClient}
+                        onEdit={() => {}} // Not used anymore
+                        onProjectUpdate={onProjectUpdate}
+                        onRefreshLostClients={fetchLostClients}
+                      />
+                    ))}
+                  </div>
+                )}
+              </ScrollArea>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   )
 } 

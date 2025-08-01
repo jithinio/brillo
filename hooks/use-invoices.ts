@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useMemo } from "react"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
+import { convertInvoiceAmounts, calculateConvertedTotal } from "@/lib/currency-conversion"
 import { toast } from "sonner"
 import { DataHookReturn } from "@/components/table/types"
 
@@ -106,13 +107,68 @@ async function fetchInvoices(filters: InvoiceFilters = {}): Promise<{
 
     if (error) throw error
 
-    // Calculate metrics
-    const metrics = {
+    // Calculate metrics with optimized currency conversion
+    let metrics = {
       totalInvoices: count || 0,
-      totalAmount: data?.reduce((sum, inv) => sum + (inv.total_amount || 0), 0) || 0,
-      totalPaid: data?.filter(inv => inv.status === 'paid').reduce((sum, inv) => sum + (inv.total_amount || 0), 0) || 0,
-      totalPending: data?.filter(inv => inv.status === 'sent').reduce((sum, inv) => sum + (inv.total_amount || 0), 0) || 0,
-      totalOverdue: data?.filter(inv => inv.status === 'overdue').reduce((sum, inv) => sum + (inv.total_amount || 0), 0) || 0
+      totalAmount: 0,
+      totalPaid: 0,
+      totalPending: 0,
+      totalOverdue: 0
+    }
+
+    if (data && data.length > 0) {
+      try {
+        // PERFORMANCE OPTIMIZATION: Single batch conversion for all invoices
+        const allConversions = await convertInvoiceAmounts(
+          data.map(inv => ({
+            total_amount: inv.total_amount || 0,
+            currency: inv.currency,
+            issue_date: inv.issue_date
+          }))
+        )
+
+        // Client-side filtering of conversion results (much faster than multiple async calls)
+        let totalConverted = 0
+        let paidConverted = 0
+        let pendingConverted = 0
+        let overdueConverted = 0
+
+        data.forEach((invoice, index) => {
+          const convertedAmount = allConversions[index]?.convertedAmount || 0
+          
+          totalConverted += convertedAmount
+          
+          switch (invoice.status) {
+            case 'paid':
+              paidConverted += convertedAmount
+              break
+            case 'sent':
+              pendingConverted += convertedAmount
+              break
+            case 'overdue':
+              overdueConverted += convertedAmount
+              break
+          }
+        })
+
+        metrics = {
+          totalInvoices: count || 0,
+          totalAmount: totalConverted,
+          totalPaid: paidConverted,
+          totalPending: pendingConverted,
+          totalOverdue: overdueConverted
+        }
+      } catch (error) {
+        console.error('Error converting invoice currencies for metrics:', error)
+        // Fallback to simple sum without conversion
+        metrics = {
+          totalInvoices: count || 0,
+          totalAmount: data?.reduce((sum, inv) => sum + (inv.total_amount || 0), 0) || 0,
+          totalPaid: data?.filter(inv => inv.status === 'paid').reduce((sum, inv) => sum + (inv.total_amount || 0), 0) || 0,
+          totalPending: data?.filter(inv => inv.status === 'sent').reduce((sum, inv) => sum + (inv.total_amount || 0), 0) || 0,
+          totalOverdue: data?.filter(inv => inv.status === 'overdue').reduce((sum, inv) => sum + (inv.total_amount || 0), 0) || 0
+        }
+      }
     }
 
     return {

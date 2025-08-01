@@ -37,6 +37,7 @@ import { getCurrencySymbol } from "@/lib/currency"
 import type { PipelineProject } from "@/lib/types/pipeline"
 import { toast } from "sonner"
 import { EditProjectDialog } from "./EditProjectDialog"
+import { supabase } from "@/lib/supabase"
 
 interface PipelineCardProps {
   project: PipelineProject
@@ -187,10 +188,17 @@ export function PipelineCard({ project, onProjectUpdate, isDragging }: PipelineC
                 <span className={`font-medium ${
                   isCardDragging ? 'text-gray-500' : 'text-gray-900'
                 }`}>
-                  {formatLargeNumber(project.budget, getCurrencySymbol())}
+                  {formatLargeNumber(project.budget, getCurrencySymbol(project.currency))}
+                  {project.currency && project.currency !== 'USD' && (
+                    <span className="text-xs text-muted-foreground ml-1">
+                      {project.currency}
+                    </span>
+                  )}
                 </span>
               </div>
             )}
+
+
 
             {/* Deal Probability */}
             <div className="space-y-2">

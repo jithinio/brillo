@@ -311,7 +311,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
                 <span className="font-medium">
                   {formatCurrency(amount, invoiceCurrency)}
                 </span>
-                {invoiceCurrency && invoiceCurrency !== 'USD' && (
+                {invoiceCurrency && invoiceCurrency !== defaultCurrency && (
                   <Badge variant="outline" className="text-xs shrink-0">
                     {invoiceCurrency}
                   </Badge>

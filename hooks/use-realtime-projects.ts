@@ -168,6 +168,9 @@ export function useRealtimeProjects() {
         query = query.or(`name.ilike.%${filters.search}%,description.ilike.%${filters.search}%`)
       }
       
+      // Only fetch projects with actual status values (excludes lost projects which have status=null)
+      query = query.not('status', 'is', null)
+      
       // Order by updated_at for real-time relevance
       query = query.order('updated_at', { ascending: false })
       
@@ -178,7 +181,9 @@ export function useRealtimeProjects() {
       }
       
       // Transform data
-      const transformedProjects = (data || []).map(project => {
+      const transformedProjects = (data || [])
+        .filter(project => project.status !== null) // Only show projects with actual status (excludes lost projects)
+        .map(project => {
         // Handle client data - could be array or single object from Supabase
         let clientData: { name: string; company?: string; avatar_url?: string | null } | undefined = undefined
         if (project.clients) {

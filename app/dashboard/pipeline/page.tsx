@@ -6,7 +6,7 @@ import { PipelineMetrics } from "./components/PipelineMetrics"
 import { PipelineBoard } from "./components/PipelineBoard"
 import { AddProjectDialog } from "./components/AddProjectDialog"
 import { fetchPipelineProjects, fetchPipelineStages, calculateProjectPipelineMetrics } from "@/lib/project-pipeline"
-import type { PipelineProject, PipelineStage } from "@/lib/types/pipeline"
+import type { PipelineProject, PipelineStage, PipelineMetrics } from "@/lib/types/pipeline"
 import { Search, X, Plus } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -18,6 +18,16 @@ export default function PipelinePage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [isSearching, setIsSearching] = useState(false)
   const [showAddDialog, setShowAddDialog] = useState(false)
+  const [metrics, setMetrics] = useState<PipelineMetrics>({
+    totalValue: 0,
+    leadCount: 0,
+    pitchedCount: 0,
+    discussionCount: 0,
+    revenueForeccast: 0,
+    weightedValue: 0,
+    conversionRate: 0,
+    winRate: 0
+  })
 
   useEffect(() => {
     loadPipelineData()
@@ -26,6 +36,7 @@ export default function PipelinePage() {
   const loadPipelineData = async () => {
     try {
       setLoading(true)
+      
       const [projectsData, stagesData] = await Promise.all([
         fetchPipelineProjects(),
         fetchPipelineStages()
@@ -33,6 +44,9 @@ export default function PipelinePage() {
       
       setProjects(projectsData)
       setStages(stagesData)
+      
+      // Calculate metrics after loading data
+      await calculateMetrics(projectsData, stagesData)
     } catch (error) {
       console.error('Error loading pipeline data:', error)
     } finally {
@@ -40,19 +54,41 @@ export default function PipelinePage() {
     }
   }
 
+  const calculateMetrics = async (projectsData: PipelineProject[], stagesData: PipelineStage[]) => {
+    try {
+      const calculatedMetrics = await calculateProjectPipelineMetrics(projectsData, stagesData)
+      setMetrics(calculatedMetrics)
+    } catch (error) {
+      console.error('Error calculating metrics:', error)
+    }
+  }
+
   // Optimistic project management functions
   const addProjectOptimistically = (newProject: PipelineProject) => {
-    setProjects(prevProjects => [...prevProjects, newProject])
+    setProjects(prevProjects => {
+      const updatedProjects = [...prevProjects, newProject]
+      // Recalculate metrics with new project
+      calculateMetrics(updatedProjects, stages)
+      return updatedProjects
+    })
   }
 
   const removeProjectOptimistically = (projectId: string) => {
-    setProjects(prevProjects => prevProjects.filter(p => p.id !== projectId))
+    setProjects(prevProjects => {
+      const updatedProjects = prevProjects.filter(p => p.id !== projectId)
+      // Recalculate metrics after removing project
+      calculateMetrics(updatedProjects, stages)
+      return updatedProjects
+    })
   }
 
   const updateProjectOptimistically = (projectId: string, updates: Partial<PipelineProject>) => {
-    setProjects(prevProjects => 
-      prevProjects.map(p => p.id === projectId ? { ...p, ...updates } : p)
-    )
+    setProjects(prevProjects => {
+      const updatedProjects = prevProjects.map(p => p.id === projectId ? { ...p, ...updates } : p)
+      // Recalculate metrics with updated project
+      calculateMetrics(updatedProjects, stages)
+      return updatedProjects
+    })
   }
 
   const revertOptimisticChanges = () => {
@@ -73,8 +109,6 @@ export default function PipelinePage() {
         project.clients?.company?.toLowerCase().includes(searchQuery.toLowerCase())
       )
     : projects
-
-  const metrics = calculateProjectPipelineMetrics(filteredProjects, stages)
 
   // Add CSS to constrain the entire layout to viewport height for pipeline page
   useEffect(() => {

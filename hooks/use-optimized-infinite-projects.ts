@@ -77,6 +77,9 @@ async function fetchProjectsWithMetrics(
     if (filters.search) {
       query = query.or(`name.ilike.%${filters.search}%,description.ilike.%${filters.search}%`)
     }
+    
+    // Only fetch projects with actual status values (excludes lost projects which have status=null)
+    query = query.not('status', 'is', null)
     if (filters.timePeriod) {
       const { dateFrom, dateTo } = getDateRangeFromTimePeriod(filters.timePeriod)
       if (dateFrom) query = query.gte('start_date', dateFrom)
@@ -116,8 +119,10 @@ async function fetchProjectsWithMetrics(
 
     if (error) throw error
 
-    // Transform projects
-    const transformedProjects = (projects || []).map(project => ({
+    // Transform projects and filter out projects with null status
+    const transformedProjects = (projects || [])
+      .filter(project => project.status !== null) // Only show projects with actual status (excludes lost projects)
+      .map(project => ({
       id: project.id,
       name: project.name,
       status: project.status,

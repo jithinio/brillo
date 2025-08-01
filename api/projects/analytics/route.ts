@@ -89,6 +89,10 @@ export async function GET(request: NextRequest) {
     if (clientId) {
       query = query.eq('client_id', clientId)
     }
+    
+    // Exclude lost projects and pipeline projects from analytics
+    query = query.not('status', 'is', null) // Exclude lost projects (status=null)
+    query = query.neq('status', 'pipeline') // Exclude pipeline projects
 
     const { data: projects, error } = await query
 

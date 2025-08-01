@@ -206,6 +206,9 @@ export function useOptimizedProjects() {
       if (currentFilters.client.length > 0) {
         query = query.in('client_id', currentFilters.client)
       }
+      
+      // Only fetch projects with actual status values (excludes lost projects which have status=null)
+      query = query.not('status', 'is', null)
       // Time period filtering - filter by project start_date, not created_at
       if (currentFilters.timePeriod) {
         const { dateFrom, dateTo } = getDateRangeFromTimePeriod(currentFilters.timePeriod)
@@ -228,7 +231,9 @@ export function useOptimizedProjects() {
       
       if (error) throw error
       
-             const transformedProjects = (data || []).map(project => ({
+             const transformedProjects = (data || [])
+        .filter(project => project.status !== null) // Only show projects with actual status (excludes lost projects)
+        .map(project => ({
          id: project.id,
          name: project.name,
          status: project.status,

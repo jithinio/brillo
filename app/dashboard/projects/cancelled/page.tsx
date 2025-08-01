@@ -15,6 +15,7 @@ export default function CancelledProjectsPage() {
         </div>
       </div>
     }>
+      {/* Note: Lost projects (pipeline_stage='lost') are excluded from this page and only appear in pipeline lost clients sidebar */}
       <ProjectsTableWrapper
         pageTitle="Cancelled Projects"
         defaultFilters={{

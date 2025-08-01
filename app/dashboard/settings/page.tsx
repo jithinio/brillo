@@ -15,7 +15,7 @@ import { PhoneInput } from "@/components/ui/phone-input"
 import { Save, Bell, Shield, CreditCard, Upload, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { PageHeader, PageContent, PageTitle } from "@/components/page-header"
-import { setDefaultCurrency, getDefaultCurrency } from "@/lib/currency"
+import { setDefaultCurrency, getDefaultCurrency, CURRENCIES } from "@/lib/currency"
 import { useSettings } from "@/components/settings-provider"
 import { uploadCompanyLogo } from "@/lib/company-settings"
 import { DATE_FORMAT_OPTIONS, type DateFormat } from "@/lib/date-format"
@@ -333,16 +333,32 @@ export default function SettingsPage() {
                     <SelectTrigger className="text-sm rounded-lg shadow-xs">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="USD">USD ($) - US Dollar</SelectItem>
-                      <SelectItem value="EUR">EUR (€) - Euro</SelectItem>
-                      <SelectItem value="GBP">GBP (£) - British Pound</SelectItem>
-                      <SelectItem value="CAD">CAD (C$) - Canadian Dollar</SelectItem>
-                      <SelectItem value="AUD">AUD (A$) - Australian Dollar</SelectItem>
-                      <SelectItem value="JPY">JPY (¥) - Japanese Yen</SelectItem>
-                      <SelectItem value="CHF">CHF (Fr) - Swiss Franc</SelectItem>
-                      <SelectItem value="CNY">CNY (¥) - Chinese Yuan</SelectItem>
-                      <SelectItem value="INR">INR (₹) - Indian Rupee</SelectItem>
+                    <SelectContent className="max-h-[300px] overflow-y-auto">
+                      {Object.values(CURRENCIES)
+                        .sort((a, b) => {
+                          // Prioritize most common currencies globally
+                          const priority = [
+                            'USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', // Major global currencies
+                            'CNY', 'INR', 'SGD', 'HKD', 'AED', 'SAR', 'NZD' // Major emerging markets & others
+                          ]
+                          
+                          const aIndex = priority.indexOf(a.code)
+                          const bIndex = priority.indexOf(b.code)
+                          
+                          if (aIndex !== -1 && bIndex !== -1) {
+                            return aIndex - bIndex
+                          }
+                          if (aIndex !== -1) return -1
+                          if (bIndex !== -1) return 1
+                          
+                          return a.name.localeCompare(b.name)
+                        })
+                        .map((currency) => (
+                          <SelectItem key={currency.code} value={currency.code}>
+                            {currency.code} ({currency.symbol}) - {currency.name}
+                          </SelectItem>
+                        ))
+                      }
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">

@@ -28,10 +28,12 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { ClientAvatar } from "@/components/ui/client-avatar"
+import { CurrencySelector } from "@/components/ui/currency-selector"
 import { createPipelineProject } from "@/lib/project-pipeline"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+import { getCompanySettings } from "@/lib/company-settings"
 import type { PipelineProject } from "@/lib/types/pipeline"
 
 interface AddProjectDialogProps {
@@ -55,6 +57,7 @@ interface NewProjectData {
   name: string
   description: string
   budget: string
+  currency: string
   pipeline_notes: string
   client_id: string
 }
@@ -78,6 +81,7 @@ export function AddProjectDialog({
     name: "",
     description: "",
     budget: "",
+    currency: "USD", // Default currency, will be updated from company settings
     pipeline_notes: "",
     client_id: "",
   })
@@ -131,12 +135,29 @@ export function AddProjectDialog({
     }
   }
 
-  // Fetch clients when dialog opens
+  // Fetch clients when dialog opens and load default currency
   useEffect(() => {
     if (open) {
       fetchClients()
+      loadDefaultCurrency()
     }
   }, [open])
+
+  // Load default currency from company settings
+  const loadDefaultCurrency = async () => {
+    try {
+      const settings = await getCompanySettings()
+      if (settings?.default_currency) {
+        setNewProject(prev => ({
+          ...prev,
+          currency: settings.default_currency
+        }))
+      }
+    } catch (error) {
+      console.error('Failed to load default currency:', error)
+      // Keep USD as fallback
+    }
+  }
 
   // Reset displayed count when search query changes
   useEffect(() => {
@@ -158,6 +179,7 @@ export function AddProjectDialog({
         name: newProject.name.trim(),
         description: newProject.description.trim() || undefined,
         budget: newProject.budget ? parseFloat(newProject.budget) : undefined,
+        currency: newProject.currency,
         pipeline_notes: newProject.pipeline_notes.trim() || undefined,
         client_id: newProject.client_id || undefined,
       }
@@ -178,6 +200,7 @@ export function AddProjectDialog({
           name: "",
           description: "",
           budget: "",
+          currency: "USD", // Will be updated by loadDefaultCurrency
           pipeline_notes: "",
           client_id: "",
         })
@@ -206,13 +229,14 @@ export function AddProjectDialog({
   const handleClose = () => {
     onOpenChange(false)
     // Reset form when closing
-    setNewProject({
-      name: "",
-      description: "",
-      budget: "",
-      pipeline_notes: "",
-      client_id: "",
-    })
+            setNewProject({
+          name: "",
+          description: "",
+          budget: "",
+          currency: "USD", // Will be updated by loadDefaultCurrency
+          pipeline_notes: "",
+          client_id: "",
+        })
     setSelectedClient(null)
     setClientSearchQuery("")
     setDisplayedClientsCount(10)
@@ -336,16 +360,26 @@ export function AddProjectDialog({
               />
             </div>
             
-            <div className="space-y-2">
-              <Label htmlFor="budget">Budget / Potential Value</Label>
-              <Input
-                id="budget"
-                type="number"
-                step="0.01"
-                value={newProject.budget}
-                onChange={(e) => setNewProject({ ...newProject, budget: e.target.value })}
-                placeholder="0.00"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="budget">Budget / Potential Value</Label>
+                <Input
+                  id="budget"
+                  type="number"
+                  step="0.01"
+                  value={newProject.budget}
+                  onChange={(e) => setNewProject({ ...newProject, budget: e.target.value })}
+                  placeholder="0.00"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="currency">Currency</Label>
+                <CurrencySelector
+                  value={newProject.currency}
+                  onValueChange={(currency) => setNewProject({ ...newProject, currency })}
+                />
+              </div>
             </div>
             
             <div className="space-y-2">

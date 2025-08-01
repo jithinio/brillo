@@ -118,6 +118,9 @@ const fetchProjectsPage = async (
     query = query.in('client_id', filters.client)
   }
 
+  // Only fetch projects with actual status values (excludes lost projects which have status=null)
+  query = query.not('status', 'is', null)
+
   if (filters.search) {
     query = query.or(`name.ilike.%${filters.search}%,description.ilike.%${filters.search}%`)
   }
@@ -177,8 +180,10 @@ const fetchProjectsPage = async (
     throw new Error(`Failed to fetch projects: ${error.message}`)
   }
 
-  // Transform data to match original table structure
-  const transformedProjects = (data || []).map(project => ({
+  // Transform data to match original table structure and filter out projects with null status
+  const transformedProjects = (data || [])
+    .filter(project => project.status !== null) // Only show projects with actual status (excludes lost projects)
+    .map(project => ({
     id: project.id,
     name: project.name,
     status: project.status,
@@ -290,25 +295,31 @@ async function fetchDatabaseMetrics(): Promise<{
     // Get all projects with minimal data for metrics calculation
     const { data: projects, error } = await supabase
       .from('projects')
-      .select('status, budget, expenses, payment_received')
+      .select('status, pipeline_stage, budget, expenses, payment_received')
+      .not('status', 'is', null) // Exclude lost projects (which have status=null)
 
     if (error) throw error
 
-    const totalProjects = projects?.length || 0
-    const activeProjects = projects?.filter(p => p.status === 'active').length || 0
-    const pipelineProjects = projects?.filter(p => p.status === 'pipeline').length || 0
-    const completedProjects = projects?.filter(p => p.status === 'completed').length || 0
-    const onHoldProjects = projects?.filter(p => p.status === 'on_hold').length || 0
-    const cancelledProjects = projects?.filter(p => p.status === 'cancelled').length || 0
+    // Filter out lost projects from all metrics (lost projects have status=null or pipeline_stage='lost')
+    const validProjects = projects?.filter(p => 
+      p.status !== null && (p as any).pipeline_stage !== 'lost'
+    ) || []
+
+    const totalProjects = validProjects.length
+    const activeProjects = validProjects.filter(p => p.status === 'active').length
+    const pipelineProjects = validProjects.filter(p => p.status === 'pipeline').length
+    const completedProjects = validProjects.filter(p => p.status === 'completed').length
+    const onHoldProjects = validProjects.filter(p => p.status === 'on_hold').length
+    const cancelledProjects = validProjects.filter(p => p.status === 'cancelled').length
     
-    const totalBudget = projects?.reduce((sum, p) => sum + (p.budget || 0), 0) || 0
-    const totalExpenses = projects?.reduce((sum, p) => sum + (p.expenses || 0), 0) || 0
-    const totalReceived = projects?.reduce((sum, p) => sum + (p.payment_received || 0), 0) || 0
-    const totalPending = projects?.reduce((sum, p) => {
+    const totalBudget = validProjects.reduce((sum, p) => sum + (p.budget || 0), 0)
+    const totalExpenses = validProjects.reduce((sum, p) => sum + (p.expenses || 0), 0)
+    const totalReceived = validProjects.reduce((sum, p) => sum + (p.payment_received || 0), 0)
+    const totalPending = validProjects.reduce((sum, p) => {
       const budget = p.budget || 0
       const received = p.payment_received || 0
       return sum + Math.max(0, budget - received)
-    }, 0) || 0
+    }, 0)
 
     return {
       totalProjects,

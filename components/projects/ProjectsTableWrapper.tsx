@@ -105,6 +105,7 @@ interface NewProject {
   expenses: string
   received: string
   description: string
+  pipeline_notes: string
 }
 
 // Fixed column widths to prevent layout shift
@@ -246,6 +247,7 @@ export function ProjectsTableWrapper({
     expenses: "",
     received: "",
     description: "",
+    pipeline_notes: "",
   })
 
   // Recently received amount (temporary field, not stored in database)
@@ -411,6 +413,7 @@ export function ProjectsTableWrapper({
             payment_received: received,
             payment_pending: pending,
             description: newProject.description || null,
+            pipeline_notes: newProject.pipeline_notes || null,
             client_id: newProject.client_id || null,
           }
           
@@ -454,6 +457,7 @@ export function ProjectsTableWrapper({
               payment_received: received,
               payment_pending: pending,
               description: newProject.description || null,
+              pipeline_notes: newProject.pipeline_notes || null,
               client_id: newProject.client_id || null,
             }])
             .select()
@@ -727,6 +731,7 @@ export function ProjectsTableWrapper({
       expenses: "",
       received: "",
       description: "",
+      pipeline_notes: "",
     })
     setSelectedClient(null)
     setSelectedProject(null)
@@ -746,6 +751,7 @@ export function ProjectsTableWrapper({
       expenses: project.expenses?.toString() || "",
       received: project.received?.toString() || "",
       description: project.description || "",
+      pipeline_notes: project.pipeline_notes || "",
     })
     
     if (project.clients) {
@@ -1425,6 +1431,20 @@ export function ProjectsTableWrapper({
                 rows={3}
               />
             </div>
+            <div>
+              <Label htmlFor="edit-pipeline-notes">Pipeline Notes</Label>
+              <Textarea
+                id="edit-pipeline-notes"
+                value={newProject.pipeline_notes}
+                onChange={(e) => setNewProject({ ...newProject, pipeline_notes: e.target.value })}
+                placeholder="Pipeline notes and currency conversion history"
+                rows={4}
+                className="text-sm"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Includes pipeline activity and currency conversion details
+              </p>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" size="sm" onClick={() => {
@@ -1460,6 +1480,7 @@ export function ProjectsTableWrapper({
             expenses: "",
             received: "",
             description: "",
+            pipeline_notes: "",
           })
         }
       }}>

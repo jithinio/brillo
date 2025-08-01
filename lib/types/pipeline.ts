@@ -37,6 +37,7 @@ export interface PipelineProject {
   status: 'active' | 'completed' | 'on_hold' | 'cancelled' | 'pipeline'
   pipeline_stage: string
   budget?: number
+  currency?: string
   deal_probability: number
   pipeline_notes?: string
   client_id?: string
@@ -44,6 +45,10 @@ export interface PipelineProject {
   due_date?: string
   created_at: string
   updated_at?: string
+  // Currency conversion fields
+  original_currency?: string
+  conversion_rate?: number
+  conversion_date?: string
   clients?: {
     id: string
     name: string

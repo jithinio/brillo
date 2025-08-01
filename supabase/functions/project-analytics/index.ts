@@ -108,6 +108,10 @@ serve(async (req) => {
     if (requestBody.statusFilter?.length) {
       query = query.in('status', requestBody.statusFilter)
     }
+    
+    // Exclude lost projects and pipeline projects from analytics
+    query = query.not('status', 'is', null) // Exclude lost projects (status=null)
+    query = query.neq('status', 'pipeline') // Exclude pipeline projects
 
     const { data: projects, error } = await query
 

@@ -86,12 +86,12 @@ const calculateMRR = (projects: Project[], period: string): { current: number; p
 
   const currentProjects = projects.filter(project => {
     const projectDate = new Date(project.start_date || project.created_at)
-    return projectDate >= currentStart && projectDate <= currentEnd && project.status !== 'pipeline'
+    return projectDate >= currentStart && projectDate <= currentEnd && project.status !== 'pipeline' && (project as any).pipeline_stage !== 'lost'
   })
 
   const previousProjects = projects.filter(project => {
     const projectDate = new Date(project.start_date || project.created_at)
-    return projectDate >= previousStart && projectDate <= previousEnd && project.status !== 'pipeline'
+    return projectDate >= previousStart && projectDate <= previousEnd && project.status !== 'pipeline' && (project as any).pipeline_stage !== 'lost'
   })
 
   const current = currentProjects.reduce((sum, project) => {
@@ -168,12 +168,12 @@ const calculateQRR = (projects: Project[], period: string): { current: number; p
 
   const currentProjects = projects.filter(project => {
     const projectDate = new Date(project.start_date || project.created_at)
-    return projectDate >= currentStart && projectDate <= currentEnd && project.status !== 'pipeline'
+    return projectDate >= currentStart && projectDate <= currentEnd && project.status !== 'pipeline' && (project as any).pipeline_stage !== 'lost'
   })
 
   const previousProjects = projects.filter(project => {
     const projectDate = new Date(project.start_date || project.created_at)
-    return projectDate >= previousStart && projectDate <= previousEnd && project.status !== 'pipeline'
+    return projectDate >= previousStart && projectDate <= previousEnd && project.status !== 'pipeline' && (project as any).pipeline_stage !== 'lost'
   })
 
   const current = currentProjects.reduce((sum, project) => {
@@ -250,12 +250,12 @@ const calculateARR = (projects: Project[], period: string): { current: number; p
 
   const currentProjects = projects.filter(project => {
     const projectDate = new Date(project.start_date || project.created_at)
-    return projectDate >= currentStart && projectDate <= currentEnd && project.status !== 'pipeline'
+    return projectDate >= currentStart && projectDate <= currentEnd && project.status !== 'pipeline' && (project as any).pipeline_stage !== 'lost'
   })
 
   const previousProjects = projects.filter(project => {
     const projectDate = new Date(project.start_date || project.created_at)
-    return projectDate >= previousStart && projectDate <= previousEnd && project.status !== 'pipeline'
+    return projectDate >= previousStart && projectDate <= previousEnd && project.status !== 'pipeline' && (project as any).pipeline_stage !== 'lost'
   })
 
   const current = currentProjects.reduce((sum, project) => {
@@ -338,12 +338,12 @@ const calculateRevenueData = (projects: Project[], period: string): { current: n
 
   const currentProjects = projects.filter(project => {
     const projectDate = new Date(project.start_date || project.created_at)
-    return projectDate >= currentStart && projectDate <= currentEnd && project.status !== 'pipeline'
+    return projectDate >= currentStart && projectDate <= currentEnd && project.status !== 'pipeline' && (project as any).pipeline_stage !== 'lost'
   })
 
   const previousProjects = projects.filter(project => {
     const projectDate = new Date(project.start_date || project.created_at)
-    return projectDate >= previousStart && projectDate <= previousEnd && project.status !== 'pipeline'
+    return projectDate >= previousStart && projectDate <= previousEnd && project.status !== 'pipeline' && (project as any).pipeline_stage !== 'lost'
   })
 
   const current = currentProjects.reduce((sum, project) => {
@@ -426,12 +426,12 @@ const calculateExpensesData = (projects: Project[], period: string): { current: 
 
   const currentProjects = projects.filter(project => {
     const projectDate = new Date(project.start_date || project.created_at)
-    return projectDate >= currentStart && projectDate <= currentEnd && project.status !== 'pipeline'
+    return projectDate >= currentStart && projectDate <= currentEnd && project.status !== 'pipeline' && (project as any).pipeline_stage !== 'lost'
   })
 
   const previousProjects = projects.filter(project => {
     const projectDate = new Date(project.start_date || project.created_at)
-    return projectDate >= previousStart && projectDate <= previousEnd && project.status !== 'pipeline'
+    return projectDate >= previousStart && projectDate <= previousEnd && project.status !== 'pipeline' && (project as any).pipeline_stage !== 'lost'
   })
 
   const current = currentProjects.reduce((sum, project) => {
@@ -466,7 +466,7 @@ const generateRevenueLineData = (projects: Project[]): Array<{ month: string; re
     
     const monthProjects = projects.filter(project => {
       const projectDate = new Date(project.start_date || project.created_at)
-      return projectDate >= monthStart && projectDate <= monthEnd && project.status !== 'pipeline'
+      return projectDate >= monthStart && projectDate <= monthEnd && project.status !== 'pipeline' && (project as any).pipeline_stage !== 'lost'
     })
     
     const revenue = monthProjects.reduce((sum, project) => {
@@ -519,7 +519,7 @@ const generateYearlyData = (projects: Project[]): Array<{ year: string; revenue:
     
     const yearProjects = projects.filter(project => {
       const projectDate = new Date(project.start_date || project.created_at)
-      return projectDate >= yearStart && projectDate <= yearEnd && project.status !== 'pipeline'
+      return projectDate >= yearStart && projectDate <= yearEnd && project.status !== 'pipeline' && (project as any).pipeline_stage !== 'lost'
     })
     
     const revenue = yearProjects.reduce((sum, project) => {

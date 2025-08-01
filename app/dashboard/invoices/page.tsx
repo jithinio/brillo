@@ -42,31 +42,22 @@ export default function InvoicesPage() {
   
   const invoicesData = useInvoices(processedFilters)
 
-  // Calculate metrics from data
+  // Calculate metrics from data (using converted amounts from the hook)
   const metrics = React.useMemo(() => {
     if (!invoicesData.data || invoicesData.isLoading) return null
     
+    // Use converted metrics from the hook (these are already in default currency)
     const paidInvoices = invoicesData.data.filter(i => i.status === 'paid').length
-    const totalAmount = invoicesData.data.reduce((sum, i) => sum + (i.total_amount || 0), 0)
-    const paidAmount = invoicesData.data
-      .filter(i => i.status === 'paid')
-      .reduce((sum, i) => sum + (i.total_amount || 0), 0)
-    const pendingAmount = invoicesData.data
-      .filter(i => i.status === 'sent')
-      .reduce((sum, i) => sum + (i.total_amount || 0), 0)
-    const overdueAmount = invoicesData.data
-      .filter(i => i.status === 'overdue')
-      .reduce((sum, i) => sum + (i.total_amount || 0), 0)
     
     return {
       totalInvoices: invoicesData.data.length,
       paidInvoices,
-      totalAmount,
-      paidAmount,
-      pendingAmount,
-      overdueAmount
+      totalAmount: invoicesData.metrics?.totalAmount || 0,
+      paidAmount: invoicesData.metrics?.totalPaid || 0,
+      pendingAmount: invoicesData.metrics?.totalPending || 0,
+      overdueAmount: invoicesData.metrics?.totalOverdue || 0
     }
-  }, [invoicesData.data, invoicesData.isLoading])
+  }, [invoicesData.data, invoicesData.isLoading, invoicesData.metrics])
 
   // Entity actions for generic table
   const entityActions: EntityActions<any> = {

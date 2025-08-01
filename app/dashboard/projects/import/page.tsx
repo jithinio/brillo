@@ -122,7 +122,6 @@ const STATUS_MAPPING: { [key: string]: string } = {
   'finished': 'completed',
   'delivered': 'completed',
   'shipped': 'completed',
-  'closed': 'completed',
   'success': 'completed',
   'successful': 'completed',
   'deployed': 'completed',
@@ -130,6 +129,9 @@ const STATUS_MAPPING: { [key: string]: string } = {
   'finalized': 'completed',
   'ended': 'completed',
   'concluded': 'completed',
+  
+  // Closed projects map to active (won deals from pipeline)
+  'closed': 'active',
   
   // On Hold variants
   'on hold': 'on_hold',
@@ -149,7 +151,8 @@ const STATUS_MAPPING: { [key: string]: string } = {
   'stalled': 'on_hold',
   'idle': 'on_hold',
   
-  // Cancelled variants
+  // Lost/cancelled variants - these will be filtered out from project pages
+  'lost': 'cancelled',
   'cancelled': 'cancelled',
   'canceled': 'cancelled',
   'cancel': 'cancelled',

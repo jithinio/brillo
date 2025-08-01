@@ -35,7 +35,7 @@ BEGIN
     ) THEN
         ALTER TABLE invoices 
         ADD CONSTRAINT invoices_currency_check 
-        CHECK (currency IN ('USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'CHF', 'CNY', 'INR'));
+        CHECK (currency IN ('USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CNY', 'CAD', 'AUD', 'NZD', 'INR', 'SGD', 'HKD', 'MYR', 'IDR', 'AED', 'SAR', 'KWD', 'RUB'));
         
         RAISE NOTICE 'Added currency check constraint to invoices table';
     ELSE

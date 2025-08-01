@@ -14,6 +14,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   Command,
   CommandEmpty,
@@ -28,6 +35,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { ClientAvatar } from "@/components/ui/client-avatar"
+import { CurrencySelector } from "@/components/ui/currency-selector"
 import { updatePipelineProject } from "@/lib/project-pipeline"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { cn } from "@/lib/utils"
@@ -54,6 +62,8 @@ interface EditProjectData {
   name: string
   description: string
   budget: string
+  currency: string
+  pipeline_stage: string
   pipeline_notes: string
   client_id: string
 }
@@ -71,6 +81,8 @@ export function EditProjectDialog({ open, onOpenChange, onProjectUpdate, project
     name: "",
     description: "",
     budget: "",
+    currency: "USD",
+    pipeline_stage: "lead",
     pipeline_notes: "",
     client_id: "",
   })
@@ -143,6 +155,8 @@ export function EditProjectDialog({ open, onOpenChange, onProjectUpdate, project
         name: project.name || "",
         description: project.description || "",
         budget: project.budget?.toString() || "",
+        currency: project.currency || "USD",
+        pipeline_stage: project.pipeline_stage || "lead",
         pipeline_notes: project.pipeline_notes || "",
         client_id: project.client_id || "",
       })
@@ -172,6 +186,8 @@ export function EditProjectDialog({ open, onOpenChange, onProjectUpdate, project
         name: editProject.name.trim(),
         description: editProject.description.trim() || undefined,
         budget: editProject.budget ? parseFloat(editProject.budget) : undefined,
+        currency: editProject.currency,
+        pipeline_stage: editProject.pipeline_stage,
         pipeline_notes: editProject.pipeline_notes.trim() || undefined,
         client_id: editProject.client_id || undefined,
       }
@@ -319,16 +335,43 @@ export function EditProjectDialog({ open, onOpenChange, onProjectUpdate, project
               />
             </div>
             
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-budget">Budget / Potential Value</Label>
+                <Input
+                  id="edit-budget"
+                  type="number"
+                  step="0.01"
+                  value={editProject.budget}
+                  onChange={(e) => setEditProject({ ...editProject, budget: e.target.value })}
+                  placeholder="0.00"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="edit-currency">Currency</Label>
+                <CurrencySelector
+                  value={editProject.currency}
+                  onValueChange={(currency) => setEditProject({ ...editProject, currency })}
+                />
+              </div>
+            </div>
+            
             <div className="space-y-2">
-              <Label htmlFor="edit-budget">Budget / Potential Value</Label>
-              <Input
-                id="edit-budget"
-                type="number"
-                step="0.01"
-                value={editProject.budget}
-                onChange={(e) => setEditProject({ ...editProject, budget: e.target.value })}
-                placeholder="0.00"
-              />
+              <Label htmlFor="edit-stage">Pipeline Stage</Label>
+              <Select 
+                value={editProject.pipeline_stage} 
+                onValueChange={(value) => setEditProject({ ...editProject, pipeline_stage: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select pipeline stage" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="lead">Lead</SelectItem>
+                  <SelectItem value="pitched">Pitched</SelectItem>
+                  <SelectItem value="in discussion">In Discussion</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             
             <div className="space-y-2">

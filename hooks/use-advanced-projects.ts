@@ -85,6 +85,9 @@ const fetchProjects = async (filters: ProjectFilters = {}): Promise<ProjectsResp
     query = query.in('client_id', filters.client)
   }
 
+  // Only fetch projects with actual status values (excludes lost projects which have status=null)
+  query = query.not('status', 'is', null)
+
   if (filters.search) {
     query = query.or(`name.ilike.%${filters.search}%,description.ilike.%${filters.search}%`)
   }
@@ -128,7 +131,9 @@ const fetchProjects = async (filters: ProjectFilters = {}): Promise<ProjectsResp
   }
 
   // Transform data
-  const transformedProjects = (data || []).map(project => ({
+  const transformedProjects = (data || [])
+    .filter(project => project.status !== null) // Only show projects with actual status (excludes lost projects)
+    .map(project => ({
     id: project.id,
     name: project.name,
     status: project.status,
