@@ -102,24 +102,36 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         
         if (dbSettings) {
           // Update settings state with database values
-          setSettings(prev => ({
-            ...prev,
-            companyName: dbSettings.company_name || prev.companyName,
-            companyAddress: dbSettings.company_address || prev.companyAddress,
-            companyEmail: dbSettings.company_email || prev.companyEmail,
-            companyPhone: dbSettings.company_phone || prev.companyPhone,
-            companyWebsite: dbSettings.company_website || prev.companyWebsite,
-            companyRegistration: dbSettings.company_registration || prev.companyRegistration,
+          const updatedSettings = {
+            ...loadedSettings,
+            companyName: dbSettings.company_name || loadedSettings.companyName,
+            companyAddress: dbSettings.company_address || loadedSettings.companyAddress,
+            companyEmail: dbSettings.company_email || loadedSettings.companyEmail,
+            companyPhone: dbSettings.company_phone || loadedSettings.companyPhone,
+            companyWebsite: dbSettings.company_website || loadedSettings.companyWebsite,
+            companyRegistration: dbSettings.company_registration || loadedSettings.companyRegistration,
             companyLogo: dbSettings.company_logo || "", // Always use database value for logo
-            defaultCurrency: dbSettings.default_currency || prev.defaultCurrency,
-            taxRate: dbSettings.tax_rate || prev.taxRate,
-            taxName: dbSettings.tax_name || prev.taxName,
-            includeTaxInPrices: dbSettings.include_tax_in_prices || prev.includeTaxInPrices,
-            autoCalculateTax: dbSettings.auto_calculate_tax || prev.autoCalculateTax,
-            invoicePrefix: dbSettings.invoice_prefix || prev.invoicePrefix,
-            invoiceTemplate: dbSettings.invoice_template || prev.invoiceTemplate,
-            dateFormat: (dbSettings.date_format as DateFormat) || prev.dateFormat, // Load date format from database
-          }))
+            defaultCurrency: dbSettings.default_currency || loadedSettings.defaultCurrency,
+            taxRate: dbSettings.tax_rate || loadedSettings.taxRate,
+            taxName: dbSettings.tax_name || loadedSettings.taxName,
+            includeTaxInPrices: dbSettings.include_tax_in_prices || loadedSettings.includeTaxInPrices,
+            autoCalculateTax: dbSettings.auto_calculate_tax || loadedSettings.autoCalculateTax,
+            invoicePrefix: dbSettings.invoice_prefix || loadedSettings.invoicePrefix,
+            invoiceTemplate: dbSettings.invoice_template || loadedSettings.invoiceTemplate,
+            dateFormat: (dbSettings.date_format as DateFormat) || loadedSettings.dateFormat, // Load date format from database
+          }
+          
+          // Sync database currency with localStorage if it's different
+          if (dbSettings.default_currency && dbSettings.default_currency !== getDefaultCurrency()) {
+            setDefaultCurrency(dbSettings.default_currency)
+          }
+          
+          // Sync database date format with localStorage if it's different  
+          if (dbSettings.date_format && dbSettings.date_format !== getDateFormat()) {
+            setDateFormat(dbSettings.date_format as DateFormat)
+          }
+          
+          setSettings(updatedSettings)
           
           console.log('🔍 Database settings loaded:', {
             invoiceTemplate: dbSettings.invoice_template,
@@ -146,24 +158,36 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                 console.log('⚠️ Template mismatch! Using localStorage template and syncing to database...')
                 
                 // Use localStorage template instead of database
-                setSettings(prev => ({
-                  ...prev,
-                  companyName: dbSettings.company_name || prev.companyName,
-                  companyAddress: dbSettings.company_address || prev.companyAddress,
-                  companyEmail: dbSettings.company_email || prev.companyEmail,
-                  companyPhone: dbSettings.company_phone || prev.companyPhone,
-                  companyWebsite: dbSettings.company_website || prev.companyWebsite,
-                  companyRegistration: dbSettings.company_registration || prev.companyRegistration,
+                const updatedSettingsWithLocalTemplate = {
+                  ...loadedSettings,
+                  companyName: dbSettings.company_name || loadedSettings.companyName,
+                  companyAddress: dbSettings.company_address || loadedSettings.companyAddress,
+                  companyEmail: dbSettings.company_email || loadedSettings.companyEmail,
+                  companyPhone: dbSettings.company_phone || loadedSettings.companyPhone,
+                  companyWebsite: dbSettings.company_website || loadedSettings.companyWebsite,
+                  companyRegistration: dbSettings.company_registration || loadedSettings.companyRegistration,
                   companyLogo: dbSettings.company_logo || "",
-                  defaultCurrency: dbSettings.default_currency || prev.defaultCurrency,
-                  taxRate: dbSettings.tax_rate || prev.taxRate,
-                  taxName: dbSettings.tax_name || prev.taxName,
-                  includeTaxInPrices: dbSettings.include_tax_in_prices || prev.includeTaxInPrices,
-                  autoCalculateTax: dbSettings.auto_calculate_tax || prev.autoCalculateTax,
-                  invoicePrefix: dbSettings.invoice_prefix || prev.invoicePrefix,
+                  defaultCurrency: dbSettings.default_currency || loadedSettings.defaultCurrency,
+                  taxRate: dbSettings.tax_rate || loadedSettings.taxRate,
+                  taxName: dbSettings.tax_name || loadedSettings.taxName,
+                  includeTaxInPrices: dbSettings.include_tax_in_prices || loadedSettings.includeTaxInPrices,
+                  autoCalculateTax: dbSettings.auto_calculate_tax || loadedSettings.autoCalculateTax,
+                  invoicePrefix: dbSettings.invoice_prefix || loadedSettings.invoicePrefix,
                   invoiceTemplate: parsedLocalTemplate, // Use localStorage template
-                  dateFormat: (dbSettings.date_format as DateFormat) || prev.dateFormat, // Sync date format
-                }))
+                  dateFormat: (dbSettings.date_format as DateFormat) || loadedSettings.dateFormat, // Sync date format
+                }
+                
+                // Sync database currency with localStorage if it's different
+                if (dbSettings.default_currency && dbSettings.default_currency !== getDefaultCurrency()) {
+                  setDefaultCurrency(dbSettings.default_currency)
+                }
+                
+                // Sync database date format with localStorage if it's different  
+                if (dbSettings.date_format && dbSettings.date_format !== getDateFormat()) {
+                  setDateFormat(dbSettings.date_format as DateFormat)
+                }
+                
+                setSettings(updatedSettingsWithLocalTemplate)
                 
                 // Sync localStorage template to database in background
                 try {

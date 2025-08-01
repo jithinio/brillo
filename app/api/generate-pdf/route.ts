@@ -9,8 +9,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invoice data is required' }, { status: 400 })
     }
 
-    // Generate HTML for the invoice
-    const invoiceHTML = await renderInvoiceHTML(invoice, template)
+    // Generate HTML for the invoice (use default date format for API)
+    const invoiceHTML = await renderInvoiceHTML(invoice, template, 'MM/DD/YYYY')
     
     // Return HTML that will be converted to PDF on the client side
     return NextResponse.json({ 

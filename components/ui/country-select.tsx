@@ -93,16 +93,14 @@ export function CountrySelect({
                       key={country.code}
                       value={`${country.name} ${country.code}`}
                       onSelect={() => handleSelect(country.code)}
-                      className="flex items-center space-x-2"
+                      className="flex items-center justify-between"
                     >
-                      <div className="flex-1">
-                        <div className="font-medium">{country.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {country.code} • {country.phoneCode}
-                        </div>
+                      <div className="flex items-center justify-between w-full pr-2">
+                        <span className="font-medium">{country.name}</span>
+                        <span className="text-sm text-muted-foreground font-mono">{country.code}</span>
                       </div>
                       {selectedCountry?.code === country.code && (
-                        <Check className="h-4 w-4" />
+                        <Check className="h-4 w-4 flex-shrink-0" />
                       )}
                     </CommandItem>
                   ))}

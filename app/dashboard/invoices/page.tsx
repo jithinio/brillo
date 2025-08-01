@@ -14,10 +14,13 @@ import { DataHookReturn } from "@/components/table/types"
 import { toast } from "sonner"
 import { supabase } from "@/lib/supabase"
 import { getDateRangeFromTimePeriod } from "@/lib/project-filters-v2"
+import { useSettings } from "@/components/settings-provider"
 
 export default function InvoicesPage() {
   const router = useRouter()
   const [filters, setFilters] = useState<any>({})
+  const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null)
+  const { formatDate } = useSettings()
   
   // Convert timePeriod filter to dateRange for useInvoices
   const processedFilters = React.useMemo(() => {
@@ -69,28 +72,40 @@ export default function InvoicesPage() {
   const entityActions: EntityActions<any> = {
     onCreate: () => router.push('/dashboard/invoices/generate'),
     onEdit: (invoice: any) => {
+      // Set loading state
+      setEditingInvoiceId(invoice.id)
+      
       // Navigate to edit invoice
-    const editData = {
-      invoiceId: invoice.id,
-      invoiceNumber: invoice.invoice_number,
-      clientId: invoice.clients?.id || null,
-      clientName: invoice.clients?.name,
+      const editData = {
+        invoiceId: invoice.id,
+        invoiceNumber: invoice.invoice_number,
+        clientId: invoice.clients?.id || null,
+        clientName: invoice.clients?.name,
         clientCompany: invoice.clients?.company || undefined,
-      amount: invoice.amount,
-      taxAmount: invoice.tax_amount,
-      totalAmount: invoice.total_amount,
-      currency: invoice.currency,
-      status: invoice.status,
-      issueDate: invoice.issue_date,
-      dueDate: invoice.due_date,
-      notes: invoice.notes,
-      paymentTerms: invoice.terms,
-      items: invoice.items || [],
-      projectName: invoice.projects?.name
-    }
-    
-    sessionStorage.setItem('edit-invoice-data', JSON.stringify(editData))
-      router.push('/dashboard/invoices/generate?edit=true')
+        amount: invoice.amount,
+        taxAmount: invoice.tax_amount,
+        totalAmount: invoice.total_amount,
+        currency: invoice.currency,
+        status: invoice.status,
+        issueDate: invoice.issue_date,
+        dueDate: invoice.due_date,
+        notes: invoice.notes,
+        paymentTerms: invoice.terms,
+        items: invoice.items || [],
+        projectName: invoice.projects?.name
+      }
+      
+      sessionStorage.setItem('edit-invoice-data', JSON.stringify(editData))
+      
+      // Show loading toast
+      toast.loading(`Loading invoice ${invoice.invoice_number} for editing...`, {
+        id: `edit-${invoice.id}`
+      })
+      
+      // Navigate with a small delay to show loading
+      setTimeout(() => {
+        router.push('/dashboard/invoices/generate?edit=true')
+      }, 100)
     },
     onDelete: async (invoice: any) => {
       // Store the full invoice data for potential restoration
@@ -286,6 +301,8 @@ export default function InvoicesPage() {
           })
         },
         onInvoiceClick: (invoice) => router.push(`/dashboard/invoices/${invoice.id}/preview`),
+        editingInvoiceId: editingInvoiceId,
+        formatDate: formatDate,
       })}
       features={{
         search: true,

@@ -75,7 +75,7 @@ export async function GET() {
     }
 
     // Generate HTML for the invoice
-    const invoiceHTML = await renderInvoiceHTML(testInvoice, testTemplate)
+    const invoiceHTML = await renderInvoiceHTML(testInvoice, testTemplate, 'MM/DD/YYYY')
     
     // Return HTML that will be converted to PDF on the client side
     return NextResponse.json({ 

@@ -826,7 +826,21 @@ export default function ClientsPage() {
       resetForm()
     } catch (error: any) {
       console.error('Error saving client:', error)
-      toast.error(error.message || 'Failed to save client')
+      
+      // Handle specific database constraint errors
+      if (error.code === '23505') {
+        if (error.message?.includes('clients_email_unique')) {
+          toast.error('Email address already exists', {
+            description: 'A client with this email address already exists. Please use a different email or find the existing client.'
+          })
+        } else {
+          toast.error('Duplicate entry', {
+            description: 'This information conflicts with an existing record. Please check your input.'
+          })
+        }
+      } else {
+        toast.error(error.message || 'Failed to save client')
+      }
     } finally {
       setIsLoading(false)
     }

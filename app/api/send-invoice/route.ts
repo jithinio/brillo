@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { renderInvoiceHTML } from '@/lib/invoice-renderer'
-import { supabase, isSupabaseConfigured } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
 import { withRateLimit, rateLimitConfigs } from '@/lib/rate-limiter'
 import { validateEmail, validateName, sanitizeText } from '@/lib/input-validation'
 import InvoiceEmail from '@/emails/invoice-email'
@@ -97,63 +97,157 @@ export async function POST(request: NextRequest) {
     // Initialize Resend
     const resend = new Resend(resendApiKey)
 
+    // Create server-side Supabase client with authentication
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return NextResponse.json(
+        { error: 'Database not configured. Email sending requires a database connection.' },
+        { status: 500 }
+      )
+    }
+    
+    // Create supabase client with request context for authentication
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: false,
+      },
+      global: {
+        headers: {
+          Authorization: request.headers.get('Authorization') || '',
+        },
+      },
+    })
+    
     // Fetch invoice data from database with items
     let invoiceData = null
     
-    if (isSupabaseConfigured()) {
-      // Invoice data is automatically filtered by RLS policies for the current user
-      const { data, error } = await supabase
-        .from('invoices')
-        .select(`
-          *,
-          clients (
-            id,
-            name,
-            email,
-            phone,
-            address,
-            city,
-            state,
-            zip_code,
-            country,
-            company
-          ),
-          projects (
-            id,
-            name,
-            description
-          )
-        `)
-        .eq('id', invoiceId)
-        .single()
+    // Get current user for debugging
+    const { data: userData, error: authError } = await supabase.auth.getUser()
+    console.log('Send-invoice API - User authentication:', { 
+      userId: userData?.user?.id,
+      authError: authError?.message,
+      invoiceId,
+      hasAuthHeader: !!request.headers.get('Authorization')
+    })
+    
+    // Invoice data is automatically filtered by RLS policies for the current user
+    const { data, error } = await supabase
+      .from('invoices')
+      .select(`
+        *,
+        clients (
+          id,
+          name,
+          email,
+          phone,
+          address,
+          city,
+          state,
+          zip_code,
+          country,
+          company
+        ),
+        projects (
+          id,
+          name,
+          description
+        )
+      `)
+      .eq('id', invoiceId)
+      .single()
+
+      console.log('Send-invoice API - Database query result:', { 
+        found: !!data, 
+        error: error?.message,
+        errorCode: error?.code,
+        invoiceId 
+      })
 
       if (error) {
         console.error('Error fetching invoice:', error)
+        
+        // Check if this might be a demo/temporary invoice
+        // Demo invoices have timestamp-based IDs like "1704396000000-abc123def"
+        // UUIDs have format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (5 parts, specific lengths)
+        const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+        const isUuid = uuidPattern.test(invoiceId)
+        
+        const isDemoId = !isUuid && (
+          invoiceId.startsWith('temp-') || 
+          invoiceId.startsWith('demo-') ||
+          /^\d{13}-/.test(invoiceId) // Starts with timestamp (13 digits)
+        )
+        
+        if (isDemoId) {
+          return NextResponse.json(
+            { error: 'Demo invoices cannot be emailed. Please save the invoice to the database first.' },
+            { status: 400 }
+          )
+        }
+        
+        // Check if it's an authentication issue
+        if (authError || !userData?.user) {
+          return NextResponse.json(
+            { error: 'Authentication required to send invoices. Please log in and try again.' },
+            { status: 401 }
+          )
+        }
+        
+        // Check for RLS policy issues
+        if (error.code === 'PGRST116' || error.message?.includes('row-level security')) {
+          return NextResponse.json(
+            { error: 'Invoice not found or access denied. This invoice may belong to a different user.' },
+            { status: 403 }
+          )
+        }
+        
         return NextResponse.json(
-          { error: 'Invoice not found' },
+          { error: 'Invoice not found in database. Make sure the invoice is saved before sending.' },
           { status: 404 }
         )
       }
 
-      invoiceData = data
+    invoiceData = data
 
-      // Fetch invoice items
-      const { data: itemsData, error: itemsError } = await supabase
-        .from('invoice_items')
-        .select('*')
-        .eq('invoice_id', invoiceId)
+    // Fetch invoice items
+    const { data: itemsData, error: itemsError } = await supabase
+      .from('invoice_items')
+      .select('*')
+      .eq('invoice_id', invoiceId)
 
-      if (itemsError) {
-        console.error('Error fetching invoice items:', itemsError)
-      } else {
-        invoiceData.items = itemsData || []
-      }
+    if (itemsError) {
+      console.error('Error fetching invoice items:', itemsError)
     } else {
-      return NextResponse.json(
-        { error: 'Database not configured' },
-        { status: 500 }
-      )
+      invoiceData.items = itemsData || []
     }
+
+    // Get user's company settings for currency fallback
+    let defaultCurrency = 'USD'
+    if (userData.user?.id) {
+      try {
+        const { data: companySettings } = await supabase
+          .from('company_settings')
+          .select('default_currency, date_format')
+          .eq('user_id', userData.user.id)
+          .single()
+        
+        if (companySettings?.default_currency) {
+          defaultCurrency = companySettings.default_currency
+        }
+      } catch (error) {
+        console.warn('Could not fetch company settings for currency, using USD as fallback')
+      }
+    }
+
+    // Determine final currency: invoice currency > user's default > system default (USD)
+    const finalCurrency = invoiceData.currency || defaultCurrency || 'USD'
+    console.log('Currency resolution:', {
+      invoiceCurrency: invoiceData.currency,
+      userDefaultCurrency: defaultCurrency,
+      finalCurrency
+    })
 
     // Get template settings (try both sources)
     const templateSettings = {
@@ -170,7 +264,7 @@ export async function POST(request: NextRequest) {
       accentColor: '#0066FF',
       backgroundColor: '#FFFFFF',
       borderColor: '#E5E5E5',
-      currency: invoiceData.currency || 'USD',
+      currency: finalCurrency,
       showLogo: true,
       showInvoiceNumber: true,
       showDates: true,
@@ -185,8 +279,24 @@ export async function POST(request: NextRequest) {
       logoUrl: ''
     }
 
-    // Generate invoice HTML for PDF
-    const invoiceHTML = await renderInvoiceHTML(invoiceData, templateSettings)
+    // Generate invoice HTML for PDF (use user's date format from company settings)
+    let userDateFormat = 'MM/DD/YYYY'
+    if (userData.user?.id) {
+      try {
+        const { data: settingsForDate } = await supabase
+          .from('company_settings')
+          .select('date_format')
+          .eq('user_id', userData.user.id)
+          .single()
+        
+        if (settingsForDate?.date_format) {
+          userDateFormat = settingsForDate.date_format
+        }
+      } catch (error) {
+        console.warn('Could not fetch date format, using default')
+      }
+    }
+    const invoiceHTML = await renderInvoiceHTML(invoiceData, templateSettings, userDateFormat)
 
     // Prepare email data with full invoice details
     const emailData = {
@@ -194,7 +304,7 @@ export async function POST(request: NextRequest) {
       clientName: clientName || invoiceData.clients?.name || 'Valued Client',
       companyName: templateSettings.companyName,
       invoiceAmount: invoiceData.total_amount,
-      currency: invoiceData.currency || 'USD',
+      currency: finalCurrency, // Use the resolved currency
       dueDate: new Date(invoiceData.due_date).toLocaleDateString(),
       customMessage: customMessage || `Thank you for your business! Please find your invoice ${invoiceData.invoice_number} attached.`,
       invoiceHTML: invoiceHTML,
@@ -243,15 +353,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Update invoice status to indicate it was sent
-    if (isSupabaseConfigured()) {
-      await supabase
-        .from('invoices')
-        .update({ 
-          status: 'sent',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', invoiceId)
-    }
+    await supabase
+      .from('invoices')
+      .update({ 
+        status: 'sent',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', invoiceId)
 
     return NextResponse.json({
       success: true,

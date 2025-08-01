@@ -9,7 +9,7 @@ export interface CurrencyConfig {
 
 export const CURRENCIES: Record<string, CurrencyConfig> = {
   USD: { code: "USD", symbol: "$", name: "US Dollar", position: "before", decimals: 2 },
-  EUR: { code: "EUR", symbol: "€", name: "Euro", position: "after", decimals: 2 },
+  EUR: { code: "EUR", symbol: "€", name: "Euro", position: "before", decimals: 2 },
   GBP: { code: "GBP", symbol: "£", name: "British Pound", position: "before", decimals: 2 },
   CAD: { code: "CAD", symbol: "C$", name: "Canadian Dollar", position: "before", decimals: 2 },
   AUD: { code: "AUD", symbol: "A$", name: "Australian Dollar", position: "before", decimals: 2 },
@@ -101,4 +101,72 @@ export function formatCurrencyWithConversion(
   const convertedFormatted = formatCurrency(convertedAmount, targetCurrency)
   
   return `${convertedFormatted} (${originalFormatted})`
+}
+
+// Phone number formatting utility
+export function formatPhoneNumber(phoneNumber: string): string {
+  if (!phoneNumber) return phoneNumber
+
+  // Handle different input formats
+  let cleaned = phoneNumber.trim()
+  
+  // If it doesn't start with +, try to detect the pattern
+  if (!cleaned.startsWith('+')) {
+    // If it's just digits, assume it needs a country code
+    if (/^\d+$/.test(cleaned)) {
+      return phoneNumber
+    }
+  }
+
+  // Remove all non-numeric characters except +
+  cleaned = cleaned.replace(/[^\d+]/g, '')
+  
+  // Validate that we have a properly formatted international number
+  if (!cleaned.startsWith('+') || cleaned.length < 8) {
+    return phoneNumber
+  }
+  
+  // Handle different phone number formats with priority on +91
+  if (cleaned.startsWith('+91')) {
+    // India number format: +91 98765 43210
+    const number = cleaned.slice(3) // Remove +91
+    if (number.length === 10) {
+      return `+91 ${number.slice(0, 5)} ${number.slice(5)}`
+    } else {
+      return phoneNumber
+    }
+  } else if (cleaned.startsWith('+1')) {
+    // US/Canada number format: +1 (234) 567-8901
+    const number = cleaned.slice(2) // Remove +1
+    if (number.length === 10) {
+      return `+1 (${number.slice(0, 3)}) ${number.slice(3, 6)}-${number.slice(6)}`
+    }
+  } else if (cleaned.startsWith('+44')) {
+    // UK number format: +44 20 1234 5678
+    const number = cleaned.slice(3) // Remove +44
+    if (number.length >= 10) {
+      return `+44 ${number.slice(0, 2)} ${number.slice(2, 6)} ${number.slice(6)}`
+    }
+  } else if (cleaned.startsWith('+49')) {
+    // Germany number format: +49 30 12345678
+    const number = cleaned.slice(3) // Remove +49
+    if (number.length >= 10) {
+      return `+49 ${number.slice(0, 2)} ${number.slice(2)}`
+    }
+  } else if (cleaned.startsWith('+33')) {
+    // France number format: +33 1 23 45 67 89
+    const number = cleaned.slice(3) // Remove +33
+    if (number.length === 9) {
+      return `+33 ${number.slice(0, 1)} ${number.slice(1, 3)} ${number.slice(3, 5)} ${number.slice(5, 7)} ${number.slice(7)}`
+    }
+  } else if (cleaned.startsWith('+61')) {
+    // Australia number format: +61 4 1234 5678
+    const number = cleaned.slice(3) // Remove +61
+    if (number.length === 9) {
+      return `+61 ${number.slice(0, 1)} ${number.slice(1, 5)} ${number.slice(5)}`
+    }
+  }
+  
+  // For other formats or if formatting fails, return the original
+  return phoneNumber
 }

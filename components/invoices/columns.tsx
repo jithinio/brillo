@@ -306,12 +306,23 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
         
         return (
           <div className="min-w-[120px] max-w-[180px]">
-            <span className="font-medium">
-              {invoiceCurrency !== defaultCurrency 
-                ? formatCurrencyWithConversion(amount, invoiceCurrency, defaultCurrency)
-                : formatCurrency(amount, invoiceCurrency)
-              }
-            </span>
+            <div className="flex flex-col space-y-1">
+              <div className="flex items-center space-x-2">
+                <span className="font-medium">
+                  {formatCurrency(amount, invoiceCurrency)}
+                </span>
+                {invoiceCurrency && invoiceCurrency !== 'USD' && (
+                  <Badge variant="outline" className="text-xs shrink-0">
+                    {invoiceCurrency}
+                  </Badge>
+                )}
+              </div>
+              {invoiceCurrency !== defaultCurrency && (
+                <span className="text-xs text-muted-foreground">
+                  {formatCurrencyWithConversion(amount, invoiceCurrency, defaultCurrency)}
+                </span>
+              )}
+            </div>
           </div>
         )
       },

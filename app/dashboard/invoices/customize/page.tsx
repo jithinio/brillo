@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { getDefaultCurrency, getCurrencySymbol } from '@/lib/currency'
+import { getDefaultCurrency, getCurrencySymbol, formatPhoneNumber } from '@/lib/currency'
 import { Save, Palette, Settings2, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageHeader, PageContent } from '@/components/page-header'
@@ -706,7 +706,7 @@ export default function CustomizeInvoicePage() {
               </div>
               {companyInfo.email && (
                 <div style={{ color: template.secondaryColor, fontSize: '14px', marginTop: '2px' }}>
-                  {companyInfo.email} • {companyInfo.phone}
+                  {companyInfo.email} • {formatPhoneNumber(companyInfo.phone)}
                 </div>
               )}
             </div>
@@ -752,7 +752,7 @@ export default function CustomizeInvoicePage() {
               </div>
               <div style={{ color: template.secondaryColor, marginTop: '4px' }}>
                 {companyInfo.email}<br />
-                {companyInfo.phone}
+                {formatPhoneNumber(companyInfo.phone)}
               </div>
             </div>
           </div>
@@ -1019,7 +1019,7 @@ export default function CustomizeInvoicePage() {
             {companyInfo.email && (
               <div style={{ fontSize: '14px', color: template.secondaryColor, marginTop: '8px' }}>
                 {companyInfo.email}<br />
-                {companyInfo.phone}
+                {formatPhoneNumber(companyInfo.phone)}
                           </div>
             )}
             {template.showTaxId && companyInfo.taxId && (
@@ -1245,7 +1245,7 @@ export default function CustomizeInvoicePage() {
                 {companyInfo.address}
               </div>
               {companyInfo.phone && (
-                <div style={{ color: template.secondaryColor }}>{companyInfo.phone}</div>
+                <div style={{ color: template.secondaryColor }}>{formatPhoneNumber(companyInfo.phone)}</div>
               )}
               {template.showTaxId && companyInfo.taxId && (
                 <div style={{ color: template.secondaryColor, marginTop: '8px' }}>

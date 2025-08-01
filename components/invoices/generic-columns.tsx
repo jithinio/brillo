@@ -67,6 +67,8 @@ interface InvoiceColumnConfig {
   onStatusChange?: (invoice: Invoice, newStatus: string) => void
   refetch?: () => void
   onInvoiceClick?: (invoice: Invoice) => void
+  editingInvoiceId?: string | null
+  formatDate?: (date: Date) => string
 }
 
 // Footer cell components
@@ -110,6 +112,7 @@ const createFooterFunctions = () => ({
 export function createInvoiceColumns(columnConfig: InvoiceColumnConfig): ColumnDef<Invoice>[] {
   
   const footerFunctions = createFooterFunctions()
+  const formatDate = columnConfig.formatDate || ((date: Date) => date.toLocaleDateString())
   
   const columns: ColumnDef<Invoice>[] = [
     {
@@ -255,14 +258,26 @@ export function createInvoiceColumns(columnConfig: InvoiceColumnConfig): ColumnD
       ),
       cell: ({ row }) => {
         const amount = row.getValue("total_amount") as number
+        const invoice = row.original
+        const invoiceCurrency = invoice.currency || 'USD'
+        
         return (
-          <span className="font-medium text-sm">
-            {formatCurrency(amount)}
-          </span>
+          <div className="min-w-[120px] max-w-[180px]">
+            <div className="flex items-center space-x-2">
+              <span className="font-medium text-sm">
+                {formatCurrency(amount, invoiceCurrency)}
+              </span>
+              {invoiceCurrency && invoiceCurrency !== 'USD' && (
+                <Badge variant="outline" className="text-xs shrink-0">
+                  {invoiceCurrency}
+                </Badge>
+              )}
+            </div>
+          </div>
         )
       },
       footer: footerFunctions.totalAmount,
-      size: 150,
+      size: 180,
     },
     {
       accessorKey: "issue_date",
@@ -275,7 +290,7 @@ export function createInvoiceColumns(columnConfig: InvoiceColumnConfig): ColumnD
         const date = row.getValue("issue_date") as string
         return (
           <span className="text-sm text-muted-foreground">
-            {new Date(date).toLocaleDateString()}
+            {formatDate(new Date(date))}
           </span>
         )
       },
@@ -292,7 +307,7 @@ export function createInvoiceColumns(columnConfig: InvoiceColumnConfig): ColumnD
         const date = row.getValue("due_date") as string
         return (
           <span className="text-sm text-muted-foreground">
-            {new Date(date).toLocaleDateString()}
+            {formatDate(new Date(date))}
           </span>
         )
       },

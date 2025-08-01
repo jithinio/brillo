@@ -432,12 +432,10 @@ export function createClientColumns(columnConfig: ClientColumnConfig): ColumnDef
       cell: ({ row }) => {
         const client = row.original
         const countryName = getCountryName(client.country || "")
-        const parts = [client.city, client.state, countryName].filter(Boolean)
-        const location = parts.join(", ")
         
-        return location ? (
-          <span className="text-sm text-muted-foreground truncate" title={location}>
-            {location}
+        return countryName ? (
+          <span className="text-sm text-muted-foreground truncate" title={countryName}>
+            {countryName}
           </span>
         ) : (
           <span className="text-sm text-muted-foreground">—</span>

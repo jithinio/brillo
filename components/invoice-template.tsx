@@ -69,7 +69,7 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
                 {currentTemplate.companyAddress}
               </div>
               <div className="text-sm text-gray-600 mt-2">
-                {currentTemplate.companyEmail} • {currentTemplate.companyPhone}
+                {currentTemplate.companyEmail} • {formatPhoneNumber(currentTemplate.companyPhone)}
               </div>
             </div>
           </div>

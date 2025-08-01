@@ -84,15 +84,17 @@ export async function upsertCompanySettings(settings: Partial<CompanySettings>):
       return null
     }
 
-    // Check if settings already exist (get the most recent one)
+    // Check if settings already exist and get the current default currency
     const { data: existingArray } = await supabase
       .from('company_settings')
-      .select('id')
+      .select('id, default_currency')
       .eq('user_id', user.id)
       .order('updated_at', { ascending: false })
       .limit(1)
     
     const existingSettings = existingArray && existingArray.length > 0 ? existingArray[0] : null
+    const oldDefaultCurrency = existingSettings?.default_currency || 'USD'
+    const newDefaultCurrency = settings.default_currency
 
     const settingsData = {
       ...settings,
@@ -118,6 +120,10 @@ export async function upsertCompanySettings(settings: Partial<CompanySettings>):
         const sortedData = result.data.sort((a, b) => 
           new Date(b.updated_at || 0).getTime() - new Date(a.updated_at || 0).getTime()
         )
+        
+        // Update invoices if default currency changed
+        await updateInvoicesDefaultCurrency(user.id, oldDefaultCurrency, newDefaultCurrency)
+        
         return sortedData[0]
       }
     } else {
@@ -136,6 +142,9 @@ export async function upsertCompanySettings(settings: Partial<CompanySettings>):
         return null
       }
       
+      // Update invoices if default currency changed (for new settings)
+      await updateInvoicesDefaultCurrency(user.id, oldDefaultCurrency, newDefaultCurrency)
+      
       return result.data
     }
 
@@ -151,6 +160,53 @@ export async function upsertCompanySettings(settings: Partial<CompanySettings>):
   } catch (err) {
     console.error('Unexpected error in upsertCompanySettings:', err)
     return null
+  }
+}
+
+// Helper function to update invoice currencies when default currency changes
+async function updateInvoicesDefaultCurrency(
+  userId: string, 
+  oldDefaultCurrency: string, 
+  newDefaultCurrency?: string
+): Promise<void> {
+  try {
+    // Only update if the currency actually changed and we have a new currency
+    if (!newDefaultCurrency || oldDefaultCurrency === newDefaultCurrency) {
+      return
+    }
+
+    console.log('Updating invoices default currency:', {
+      userId,
+      oldDefaultCurrency,
+      newDefaultCurrency
+    })
+
+    // Update all invoices that are using the old default currency
+    // This affects only invoices that weren't manually overridden
+    const { data, error } = await supabase
+      .from('invoices')
+      .update({ 
+        currency: newDefaultCurrency,
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', userId)
+      .eq('currency', oldDefaultCurrency) // Only update invoices with the old default currency
+      .select('id, invoice_number')
+
+    if (error) {
+      console.error('Error updating invoice currencies:', error)
+      return
+    }
+
+    if (data && data.length > 0) {
+      console.log(`Updated ${data.length} invoices to use new default currency (${newDefaultCurrency}):`, 
+        data.map(inv => inv.invoice_number))
+    } else {
+      console.log('No invoices needed currency update')
+    }
+
+  } catch (error) {
+    console.error('Unexpected error updating invoice currencies:', error)
   }
 }
 

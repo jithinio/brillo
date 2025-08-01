@@ -1,6 +1,5 @@
 import {
   Body,
-  Button,
   Container,
   Head,
   Heading,
@@ -13,6 +12,7 @@ import {
   Hr,
 } from '@react-email/components'
 import * as React from 'react'
+import { CURRENCIES } from '@/lib/currency'
 
 interface InvoiceEmailProps {
   invoiceNumber: string
@@ -57,23 +57,34 @@ const InvoiceEmail = ({
   invoiceData
 }: InvoiceEmailProps) => {
   const getCurrencySymbol = (curr: string) => {
-    const symbols: { [key: string]: string } = {
-      'USD': '$',
-      'EUR': '€',
-      'GBP': '£',
-      'JPY': '¥',
-      'CAD': 'C$',
-      'AUD': 'A$'
-    }
-    return symbols[curr] || '$'
+    const currencyConfig = CURRENCIES[curr]
+    return currencyConfig?.symbol || '$'
   }
 
   const formatCurrency = (amount: number, curr: string) => {
-    return `${getCurrencySymbol(curr)}${amount.toFixed(2)}`
+    const currencyConfig = CURRENCIES[curr]
+    if (!currencyConfig) {
+      return `$${amount.toFixed(2)}` // Fallback to USD
+    }
+    
+    const decimals = currencyConfig.decimals
+    const symbol = currencyConfig.symbol
+    const formattedAmount = amount.toFixed(decimals)
+    
+    // Handle position (before/after)
+    return currencyConfig.position === 'before' 
+      ? `${symbol}${formattedAmount}`
+      : `${formattedAmount}${symbol}`
   }
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString()
+    // Use ISO date format for emails for consistency
+    // This will be standardized format that works across all email clients
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    })
   }
 
   const previewText = `Invoice ${invoiceNumber} from ${companyName} - ${getCurrencySymbol(currency)}${invoiceAmount.toFixed(2)}`
@@ -227,13 +238,6 @@ const InvoiceEmail = ({
                   </tr>
                 </table>
               </Section>
-            </Section>
-
-            {/* Call to Action */}
-            <Section style={buttonSection}>
-              <Button style={button} href={`${process.env.NEXT_PUBLIC_APP_URL || 'https://yourdomain.com'}/payment/${invoiceNumber}`}>
-                Pay Invoice
-              </Button>
             </Section>
 
             <Text style={paragraph}>
@@ -646,25 +650,6 @@ const totalValue = {
   fontWeight: '700',
   margin: '0',
   fontFamily: 'monospace',
-}
-
-const buttonSection = {
-  textAlign: 'center' as const,
-  margin: '32px 0',
-}
-
-const button = {
-  backgroundColor: '#3b82f6',
-  borderRadius: '6px',
-  color: '#ffffff',
-  fontSize: '16px',
-  fontWeight: '600',
-  textDecoration: 'none',
-  textAlign: 'center' as const,
-  display: 'inline-block',
-  padding: '12px 24px',
-  border: 'none',
-  cursor: 'pointer',
 }
 
 const divider = {

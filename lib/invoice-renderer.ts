@@ -1,4 +1,6 @@
-export async function renderInvoiceHTML(invoice: any, template: any): Promise<string> {
+import { formatPhoneNumber } from './currency'
+
+export async function renderInvoiceHTML(invoice: any, template: any, userDateFormat?: string): Promise<string> {
   // Get currency symbol
   const getCurrencySymbol = (currency: string) => {
     const symbols: { [key: string]: string } = {
@@ -13,6 +15,53 @@ export async function renderInvoiceHTML(invoice: any, template: any): Promise<st
       INR: '₹',
     }
     return symbols[currency] || '$'
+  }
+
+  // Format date according to user preference
+  const formatDateForUser = (date: Date) => {
+    if (!userDateFormat) {
+      return date.toLocaleDateString()
+    }
+    
+    // Convert user date format to options for toLocaleDateString
+    const formatOptions: Intl.DateTimeFormatOptions = {}
+    
+    switch (userDateFormat) {
+      case 'MM/DD/YYYY':
+        formatOptions.year = 'numeric'
+        formatOptions.month = '2-digit'
+        formatOptions.day = '2-digit'
+        return date.toLocaleDateString('en-US', formatOptions)
+      case 'DD/MM/YYYY':
+        formatOptions.year = 'numeric'
+        formatOptions.month = '2-digit'
+        formatOptions.day = '2-digit'
+        return date.toLocaleDateString('en-GB', formatOptions)
+      case 'YYYY-MM-DD':
+        return date.toISOString().split('T')[0]
+      case 'MM-DD-YYYY':
+        formatOptions.year = 'numeric'
+        formatOptions.month = '2-digit'
+        formatOptions.day = '2-digit'
+        return date.toLocaleDateString('en-US', formatOptions).replace(/\//g, '-')
+      case 'DD-MM-YYYY':
+        formatOptions.year = 'numeric'
+        formatOptions.month = '2-digit'
+        formatOptions.day = '2-digit'
+        return date.toLocaleDateString('en-GB', formatOptions).replace(/\//g, '-')
+      case 'MMM DD, YYYY':
+        formatOptions.year = 'numeric'
+        formatOptions.month = 'short'
+        formatOptions.day = 'numeric'
+        return date.toLocaleDateString('en-US', formatOptions)
+      case 'DD MMM YYYY':
+        formatOptions.year = 'numeric'
+        formatOptions.month = 'short'
+        formatOptions.day = 'numeric'
+        return date.toLocaleDateString('en-GB', formatOptions)
+      default:
+        return date.toLocaleDateString()
+    }
   }
 
   // Get font family
@@ -58,7 +107,7 @@ export async function renderInvoiceHTML(invoice: any, template: any): Promise<st
     name: template.companyName || 'Your Company',
     address: template.companyAddress || '123 Business St\nCity, State 12345',
     email: template.companyEmail || 'contact@yourcompany.com',
-    phone: template.companyPhone || '+1 (555) 123-4567',
+    phone: formatPhoneNumber(template.companyPhone || '+1 (555) 123-4567'),
     taxId: template.companyTaxId || template.taxId || '',
     logoUrl: template.logoUrl || ''
   }
@@ -86,7 +135,7 @@ export async function renderInvoiceHTML(invoice: any, template: any): Promise<st
     total: invoice.total_amount || 0,
     paymentTerms: invoice.terms || 'Net 30',
     notes: invoice.notes || template.notes || '',
-    currency: template.currency || 'USD'
+    currency: invoice.currency || template.currency || 'USD' // Use invoice currency first
   }
 
   // Format client address
@@ -369,11 +418,11 @@ export async function renderInvoiceHTML(invoice: any, template: any): Promise<st
               <div class="space-y-2">
                 <div>
                   <span style="color: ${template.secondaryColor}; font-size: 14px;">Invoice Date: </span>
-                  <span style="font-weight: 500;">${invoiceData.date.toLocaleDateString()}</span>
+                  <span style="font-weight: 500;">${formatDateForUser(invoiceData.date)}</span>
                 </div>
                 <div>
                   <span style="color: ${template.secondaryColor}; font-size: 14px;">Due Date: </span>
-                  <span style="font-weight: 500;">${invoiceData.dueDate.toLocaleDateString()}</span>
+                  <span style="font-weight: 500;">${formatDateForUser(invoiceData.dueDate)}</span>
                 </div>
               </div>
             </div>
@@ -475,11 +524,11 @@ export async function renderInvoiceHTML(invoice: any, template: any): Promise<st
             ${template.showDates ? `
               <div>
                 <div style="color: ${template.secondaryColor}; margin-bottom: 4px;">Issue Date</div>
-                <div style="font-weight: 600;">${invoiceData.date.toLocaleDateString()}</div>
+                <div style="font-weight: 600;">${formatDateForUser(invoiceData.date)}</div>
               </div>
               <div>
                 <div style="color: ${template.secondaryColor}; margin-bottom: 4px;">Due Date</div>
-                <div style="font-weight: 600;">${invoiceData.dueDate.toLocaleDateString()}</div>
+                <div style="font-weight: 600;">${formatDateForUser(invoiceData.dueDate)}</div>
               </div>
             ` : ''}
           </div>
@@ -660,11 +709,11 @@ export async function renderInvoiceHTML(invoice: any, template: any): Promise<st
               <div style="font-size: 14px; line-height: 1.8;">
                 <div>
                   <span style="color: ${template.secondaryColor};">Date: </span>
-                  <span style="font-weight: 500;">${invoiceData.date.toLocaleDateString()}</span>
+                  <span style="font-weight: 500;">${formatDateForUser(invoiceData.date)}</span>
                 </div>
                 <div>
                   <span style="color: ${template.secondaryColor};">Due: </span>
-                  <span style="font-weight: 500;">${invoiceData.dueDate.toLocaleDateString()}</span>
+                  <span style="font-weight: 500;">${formatDateForUser(invoiceData.dueDate)}</span>
                 </div>
                 ${template.showPaymentTerms ? `
                   <div>
@@ -785,10 +834,10 @@ export async function renderInvoiceHTML(invoice: any, template: any): Promise<st
                 ${template.showDates ? `
                   <div style="text-align: right; font-size: 13px; color: ${template.secondaryColor};">
                     <div style="margin-bottom: 4px;">
-                      <span style="font-weight: 500;">Issue Date:</span> ${invoiceData.date.toLocaleDateString()}
+                      <span style="font-weight: 500;">Issue Date:</span> ${formatDateForUser(invoiceData.date)}
                     </div>
                     <div>
-                      <span style="font-weight: 500;">Due Date:</span> ${invoiceData.dueDate.toLocaleDateString()}
+                      <span style="font-weight: 500;">Due Date:</span> ${formatDateForUser(invoiceData.dueDate)}
                     </div>
                   </div>
                 ` : ''}
@@ -1009,11 +1058,11 @@ export async function renderInvoiceHTML(invoice: any, template: any): Promise<st
                   ${template.showDates ? `
                     <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                       <span style="color: ${template.secondaryColor};">Issue date</span>
-                      <span style="color: ${template.primaryColor}; font-weight: 500;">${invoiceData.date.toLocaleDateString()}</span>
+                      <span style="color: ${template.primaryColor}; font-weight: 500;">${formatDateForUser(invoiceData.date)}</span>
                     </div>
                     <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                       <span style="color: ${template.secondaryColor};">Due date</span>
-                      <span style="color: ${template.primaryColor}; font-weight: 500;">${invoiceData.dueDate.toLocaleDateString()}</span>
+                      <span style="color: ${template.primaryColor}; font-weight: 500;">${formatDateForUser(invoiceData.dueDate)}</span>
                     </div>
                   ` : ''}
                 </div>

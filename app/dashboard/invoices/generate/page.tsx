@@ -37,7 +37,7 @@ interface InvoiceItem {
 
 export default function GenerateInvoicePage() {
   const router = useRouter()
-  const { settings, isLoading: settingsLoading } = useSettings()
+  const { settings, isLoading: settingsLoading, formatDate } = useSettings()
   const queryClient = useQueryClient()
   
   // Check if we're in edit mode
@@ -48,7 +48,7 @@ export default function GenerateInvoicePage() {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
   const [invoiceDate, setInvoiceDate] = useState<Date>(new Date())
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined)
-  const [clientCurrency, setClientCurrency] = useState(getDefaultCurrency())
+  const [clientCurrency, setClientCurrency] = useState(settings.defaultCurrency)
   const [notes, setNotes] = useState("")
   const [paymentTerms, setPaymentTerms] = useState("Net 30")
   const [items, setItems] = useState<InvoiceItem[]>([{ id: "1", description: "", quantity: 1, rate: 0 }])
@@ -103,7 +103,12 @@ export default function GenerateInvoicePage() {
     
     // Preview the next invoice number without actually generating it
     const previewInvoiceNumber = async () => {
+      // Don't generate new numbers if we're in edit mode or if edit data is available
       if (isEditMode) return
+      
+      // Check if there's edit data waiting to be loaded
+      const storedEditData = sessionStorage.getItem('edit-invoice-data')
+      if (storedEditData) return
       
       const now = new Date()
       const year = now.getFullYear()
@@ -172,11 +177,15 @@ export default function GenerateInvoicePage() {
     previewInvoiceNumber()
   }, [isEditMode, settings.invoicePrefix])
 
-  // Update tax settings when settings change
+  // Update tax and currency settings when settings change (but not in edit mode)
   useEffect(() => {
-    setTaxEnabled(settings.autoCalculateTax)
-    setCustomTaxRate(settings.taxRate.toString())
-  }, [settings.autoCalculateTax, settings.taxRate])
+    // Only apply global settings when not editing an invoice
+    if (!isEditMode && !editInvoiceId) {
+      setTaxEnabled(settings.autoCalculateTax)
+      setCustomTaxRate(settings.taxRate.toString())
+      setClientCurrency(settings.defaultCurrency)
+    }
+  }, [settings.autoCalculateTax, settings.taxRate, settings.defaultCurrency, isEditMode, editInvoiceId])
 
   // Load project or client data from sessionStorage when component mounts
   useEffect(() => {
@@ -250,6 +259,57 @@ export default function GenerateInvoicePage() {
     }
   }, [clients, toast])
 
+  // Fallback invoice number generation that maintains sequence
+  const generateFallbackInvoiceNumber = async (prefix: string, year: number, userId?: string) => {
+    try {
+      if (!userId) {
+        console.error('No user ID for fallback number generation')
+        return `${prefix}-${year}-001`
+      }
+
+      // Query existing invoices to find the highest number
+      const { data: existingInvoices, error } = await supabase
+        .from('invoices')
+        .select('invoice_number')
+        .eq('user_id', userId)
+        .like('invoice_number', `${prefix}-${year}-%`)
+        .order('invoice_number', { ascending: false })
+
+      if (error) {
+        console.error('Error querying existing invoices for fallback:', error)
+        return `${prefix}-${year}-001`
+      }
+
+      // Find the highest number from actual invoices
+      let maxInvoiceNumber = 0
+      if (existingInvoices && existingInvoices.length > 0) {
+        existingInvoices.forEach(invoice => {
+          if (invoice.invoice_number) {
+            // Extract number from format like "INV-2024-003"
+            const match = invoice.invoice_number.match(/-(\d+)$/)
+            if (match) {
+              const num = parseInt(match[1], 10)
+              if (num > maxInvoiceNumber) {
+                maxInvoiceNumber = num
+              }
+            }
+          }
+        })
+      }
+
+      // The next number should be maxInvoiceNumber + 1
+      const nextNumber = maxInvoiceNumber + 1
+      const fallbackNumber = `${prefix}-${year}-${String(nextNumber).padStart(3, '0')}`
+      
+      console.log(`Generated fallback invoice number: ${fallbackNumber} (max was ${maxInvoiceNumber})`)
+      return fallbackNumber
+      
+    } catch (error) {
+      console.error('Error in fallback number generation:', error)
+      return `${prefix}-${year}-001`
+    }
+  }
+
   // Handle edit mode data loading when clients are available
   useEffect(() => {
     const storedEditData = sessionStorage.getItem('edit-invoice-data')
@@ -259,9 +319,10 @@ export default function GenerateInvoicePage() {
       try {
         const editInfo = JSON.parse(storedEditData)
         
-        // Set invoice ID for updating
+        // Set invoice ID for updating and enable edit mode
         if (editInfo.invoiceId) {
           setEditInvoiceId(editInfo.invoiceId)
+          setIsEditMode(true)
         }
         
         // Set invoice number (don't auto-generate for editing)
@@ -302,10 +363,22 @@ export default function GenerateInvoicePage() {
         }
         
         // Set tax information
-        if (editInfo.taxAmount > 0 && editInfo.amount > 0) {
-          const taxRate = (editInfo.taxAmount / editInfo.amount) * 100
-          setTaxEnabled(true)
+        if (editInfo.taxRate !== undefined) {
+          // Use the stored tax rate directly if available
+          setTaxEnabled(editInfo.taxRate > 0)
+          setCustomTaxRate(editInfo.taxRate.toString())
+        } else if (editInfo.taxAmount !== undefined && editInfo.amount > 0) {
+          // Fallback: calculate tax rate from amounts
+          const taxRate = editInfo.taxAmount > 0 ? (editInfo.taxAmount / editInfo.amount) * 100 : 0
+          setTaxEnabled(editInfo.taxAmount > 0)
           setCustomTaxRate(taxRate.toFixed(2))
+        } else {
+          // If no tax information available, check if tax amount exists
+          setTaxEnabled(editInfo.taxAmount > 0)
+          if (editInfo.taxAmount > 0 && editInfo.amount > 0) {
+            const taxRate = (editInfo.taxAmount / editInfo.amount) * 100
+            setCustomTaxRate(taxRate.toFixed(2))
+          }
         }
         
         // Find and select the client if we have client data
@@ -348,6 +421,9 @@ export default function GenerateInvoicePage() {
         // Clear the session storage after loading
         sessionStorage.removeItem('edit-invoice-data')
         
+        // Clear any loading toasts
+        toast.dismiss(`edit-${editInfo.invoiceId}`)
+        
         // Show success notification
         toast.success(`Invoice ${editInfo.invoiceNumber} loaded for editing`)
       } catch (error) {
@@ -357,11 +433,13 @@ export default function GenerateInvoicePage() {
     }
   }, [clients, toast])
 
-  // Check for edit mode from URL parameters
+  // Check for edit mode from URL parameters and session data early
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search)
     const editParam = urlParams.get('edit')
-    if (editParam === 'true') {
+    const storedEditData = sessionStorage.getItem('edit-invoice-data')
+    
+    if (editParam === 'true' || storedEditData) {
       setIsEditMode(true)
     }
   }, [])
@@ -602,16 +680,14 @@ export default function GenerateInvoicePage() {
 
             if (error) {
               console.error('Error generating invoice number:', error)
-              const timestamp = Date.now().toString().slice(-6)
-              finalInvoiceNumber = `${prefix}-${year}-${timestamp}`
+              finalInvoiceNumber = await generateFallbackInvoiceNumber(prefix, year, userData.user?.id)
             } else {
               finalInvoiceNumber = data
               setIsPreviewNumber(false)
             }
           } catch (error) {
             console.error('Error generating invoice number:', error)
-            const timestamp = Date.now().toString().slice(-6)
-            finalInvoiceNumber = `${prefix}-${year}-${timestamp}`
+            finalInvoiceNumber = await generateFallbackInvoiceNumber(prefix, year, userData.user?.id)
           }
         } else {
           const existingInvoices = JSON.parse(sessionStorage.getItem('demo-invoices') || '[]')
@@ -631,6 +707,12 @@ export default function GenerateInvoicePage() {
       if (isSupabaseConfigured()) {
         console.log('Saving draft to Supabase...')
         
+        // Get current user for user_id
+        const { data: userData, error: userError } = await supabase.auth.getUser()
+        if (userError || !userData.user) {
+          throw new Error('User authentication required to save drafts')
+        }
+        
         // Calculate tax rate as percentage
         const taxRatePercent = taxEnabled ? parseFloat(customTaxRate) : 0
         
@@ -639,10 +721,12 @@ export default function GenerateInvoicePage() {
           invoice_number: finalInvoiceNumber,
           client_id: selectedClient.id,
           project_id: selectedProject?.id || null,
+          user_id: userData.user.id, // Required for user-specific invoice numbering
           amount: subtotal,
           tax_rate: taxRatePercent,
           tax_amount: tax,
           total_amount: total,
+          currency: clientCurrency, // Include the selected currency for this invoice
           status: 'draft', // Save as draft
           issue_date: invoiceDate.toISOString().split('T')[0],
           due_date: (dueDate?.toISOString() || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()).split('T')[0],
@@ -661,7 +745,37 @@ export default function GenerateInvoicePage() {
 
         if (invoiceError) {
           console.error('Failed to insert draft invoice:', invoiceError)
-          throw new Error(`Failed to save draft: ${invoiceError.message}`)
+          console.error('Error details:', {
+            message: invoiceError.message,
+            details: invoiceError.details,
+            hint: invoiceError.hint,
+            code: invoiceError.code
+          })
+          
+          // Handle specific database constraint errors
+          let errorMessage = 'Failed to save draft'
+          
+          if (invoiceError.code === '23505') {
+            if (invoiceError.message?.includes('invoice_number')) {
+              errorMessage = 'Invoice number already exists. Please use a different invoice number.'
+            } else {
+              errorMessage = 'Duplicate entry detected. Please check your invoice data.'
+            }
+          } else if (invoiceError.code === '23503') {
+            if (invoiceError.message?.includes('client_id')) {
+              errorMessage = 'Selected client not found. Please select a valid client.'
+            } else if (invoiceError.message?.includes('project_id')) {
+              errorMessage = 'Selected project not found. Please select a valid project.'
+            } else {
+              errorMessage = 'Invalid reference in invoice data. Please check all selections.'
+            }
+          } else if (invoiceError.code === '23514') {
+            errorMessage = 'Invoice data validation failed. Please check all field values.'
+          } else if (invoiceError.message) {
+            errorMessage += `: ${invoiceError.message}`
+          }
+          
+          throw new Error(errorMessage)
         }
 
         console.log('Draft invoice saved successfully:', invoiceData)
@@ -795,9 +909,8 @@ export default function GenerateInvoicePage() {
 
             if (error) {
               console.error('Error generating invoice number:', error)
-              // Fallback to timestamp-based generation
-              const timestamp = Date.now().toString().slice(-6)
-              finalInvoiceNumber = `${prefix}-${year}-${timestamp}`
+              // Fallback to manual sequence generation
+              finalInvoiceNumber = await generateFallbackInvoiceNumber(prefix, year, userData.user?.id)
             } else {
               console.log(`Generated invoice number: ${data}`)
               finalInvoiceNumber = data
@@ -805,9 +918,8 @@ export default function GenerateInvoicePage() {
             }
           } catch (error) {
             console.error('Error generating invoice number:', error)
-            // Ultimate fallback - use timestamp
-            const timestamp = Date.now().toString().slice(-6)
-            finalInvoiceNumber = `${prefix}-${year}-${timestamp}`
+            // Ultimate fallback - use manual sequence generation
+            finalInvoiceNumber = await generateFallbackInvoiceNumber(prefix, year, userData.user?.id)
           }
         } else {
           // Demo mode: count from session storage per user
@@ -863,6 +975,12 @@ export default function GenerateInvoicePage() {
           throw new Error('Invoice amount must be greater than zero')
         }
         
+        // Get current user for user_id
+        const { data: userData, error: userError } = await supabase.auth.getUser()
+        if (userError || !userData.user) {
+          throw new Error('User authentication required to create invoices')
+        }
+        
         // Calculate tax rate as percentage
         const taxRatePercent = taxEnabled ? parseFloat(customTaxRate) : 0
         
@@ -871,10 +989,12 @@ export default function GenerateInvoicePage() {
           invoice_number: finalInvoiceNumber,
           client_id: selectedClient.id,
           project_id: selectedProject?.id || null, // Include selected project if any
+          user_id: userData.user.id, // Required for user-specific invoice numbering
           amount: subtotal,
           tax_rate: taxRatePercent,
           tax_amount: tax,
           total_amount: total,
+          currency: clientCurrency, // Include the selected currency for this invoice
           status: 'sent', // Start as sent, can be changed to 'draft' later
           issue_date: invoiceDate.toISOString().split('T')[0], // DATE format (YYYY-MM-DD)
           due_date: (dueDate?.toISOString() || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()).split('T')[0], // DATE format
@@ -923,15 +1043,35 @@ export default function GenerateInvoicePage() {
             code: invoiceError.code
           })
           
+          // Handle specific database constraint errors
           let errorMessage = `Failed to ${isEditMode ? 'update' : 'save'} invoice`
-          if (invoiceError.message) {
-            errorMessage += `: ${invoiceError.message}`
-          }
-          if (invoiceError.details) {
-            errorMessage += ` (${invoiceError.details})`
-          }
-          if (invoiceError.hint) {
-            errorMessage += ` - ${invoiceError.hint}`
+          
+          if (invoiceError.code === '23505') {
+            if (invoiceError.message?.includes('invoice_number')) {
+              errorMessage = 'Invoice number already exists. Please use a different invoice number.'
+            } else {
+              errorMessage = 'Duplicate entry detected. Please check your invoice data.'
+            }
+          } else if (invoiceError.code === '23503') {
+            if (invoiceError.message?.includes('client_id')) {
+              errorMessage = 'Selected client not found. Please select a valid client.'
+            } else if (invoiceError.message?.includes('project_id')) {
+              errorMessage = 'Selected project not found. Please select a valid project.'
+            } else {
+              errorMessage = 'Invalid reference in invoice data. Please check all selections.'
+            }
+          } else if (invoiceError.code === '23514') {
+            errorMessage = 'Invoice data validation failed. Please check all field values.'
+          } else {
+            if (invoiceError.message) {
+              errorMessage += `: ${invoiceError.message}`
+            }
+            if (invoiceError.details) {
+              errorMessage += ` (${invoiceError.details})`
+            }
+            if (invoiceError.hint) {
+              errorMessage += ` - ${invoiceError.hint}`
+            }
           }
           
           throw new Error(errorMessage)
@@ -1730,12 +1870,12 @@ export default function GenerateInvoicePage() {
                 <div className="flex justify-between items-start text-sm">
                   <div>
                     <p className="text-gray-500">Issue date</p>
-                    <p className="text-gray-900 font-medium">{invoiceDate.toLocaleDateString()}</p>
+                    <p className="text-gray-900 font-medium">{formatDate(invoiceDate)}</p>
                   </div>
                   {dueDate && (
                     <div>
                       <p className="text-gray-500">Due date</p>
-                      <p className="text-gray-900 font-medium">{dueDate.toLocaleDateString()}</p>
+                      <p className="text-gray-900 font-medium">{formatDate(dueDate)}</p>
                     </div>
                   )}
                 </div>
@@ -1996,12 +2136,12 @@ export default function GenerateInvoicePage() {
                   <div className="flex justify-between items-start text-sm">
                     <div>
                       <p className="text-gray-500">Issue date</p>
-                      <p className="text-gray-900 font-medium">{new Date(generatedInvoiceData.invoiceDate).toLocaleDateString()}</p>
+                      <p className="text-gray-900 font-medium">{formatDate(new Date(generatedInvoiceData.invoiceDate))}</p>
                     </div>
                     {generatedInvoiceData.dueDate && (
                       <div>
                         <p className="text-gray-500">Due date</p>
-                        <p className="text-gray-900 font-medium">{new Date(generatedInvoiceData.dueDate).toLocaleDateString()}</p>
+                        <p className="text-gray-900 font-medium">{formatDate(new Date(generatedInvoiceData.dueDate))}</p>
                       </div>
                     )}
                   </div>

@@ -241,6 +241,7 @@ export function GenericTableWrapper<T extends GenericEntity>({
       const savedWidths = getTablePreference(TABLE_NAME, "column_widths", defaultColumnWidths)
       const savedOrder = getTablePreference(TABLE_NAME, "column_order", [])
       const savedVisibility = getTablePreference(TABLE_NAME, "column_visibility", {})
+      const savedSorting = getTablePreference(TABLE_NAME, "sorting", { sortBy: null, sortDirection: null })
 
       // Always set column widths (either saved or defaults)
       setColumnWidths(savedWidths)
@@ -250,6 +251,12 @@ export function GenericTableWrapper<T extends GenericEntity>({
       }
       if (Object.keys(savedVisibility).length > 0) {
         setColumnVisibility(savedVisibility)
+      }
+      
+      // Load sorting preferences
+      if (savedSorting.sortBy && savedSorting.sortDirection) {
+        setSortBy(savedSorting.sortBy)
+        setSortDirection(savedSorting.sortDirection)
       }
 
       setPreferencesLoaded(true)
@@ -276,6 +283,13 @@ export function GenericTableWrapper<T extends GenericEntity>({
       updateTablePreference(TABLE_NAME, "column_visibility", columnVisibility)
     }
   }, [columnVisibility, preferencesLoaded, TABLE_NAME, updateTablePreference])
+
+  // Save sorting preferences
+  React.useEffect(() => {
+    if (preferencesLoaded) {
+      updateTablePreference(TABLE_NAME, "sorting", { sortBy, sortDirection })
+    }
+  }, [sortBy, sortDirection, preferencesLoaded, TABLE_NAME, updateTablePreference])
 
   // Get all columns
   const allColumns = React.useMemo(() => createColumns(actions), [createColumns, actions])

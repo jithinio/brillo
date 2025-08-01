@@ -15,6 +15,7 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import { PageHeader, PageContent, PageTitle } from '@/components/page-header'
 import { renderInvoiceHTML } from '@/lib/invoice-renderer'
 import { useQueryClient } from '@tanstack/react-query'
+import { CURRENCIES } from '@/lib/currency'
 
 interface Invoice {
   id: string
@@ -64,6 +65,7 @@ export default function InvoicePreviewPage() {
   const [downloadingPDF, setDownloadingPDF] = useState(false)
   const [sendingEmail, setSendingEmail] = useState(false)
   const [invoiceHTML, setInvoiceHTML] = useState<string>('')
+  const [isDemoInvoice, setIsDemoInvoice] = useState(false)
   
   // Send email dialog state
   const [sendEmailOpen, setSendEmailOpen] = useState(false)
@@ -99,6 +101,23 @@ export default function InvoicePreviewPage() {
   
   // Use database template if available, otherwise use localStorage fallback
   const finalTemplateSettings = Object.keys(templateSettings).length > 0 ? templateSettings : localTemplateSettings
+
+  // Currency formatting helper function
+  const formatCurrency = (amount: number, currencyCode: string) => {
+    const currencyConfig = CURRENCIES[currencyCode]
+    if (!currencyConfig) {
+      return `$${amount.toFixed(2)}` // Fallback to USD
+    }
+    
+    const decimals = currencyConfig.decimals
+    const symbol = currencyConfig.symbol
+    const formattedAmount = amount.toFixed(decimals)
+    
+    // Handle position (before/after)
+    return currencyConfig.position === 'before' 
+      ? `${symbol}${formattedAmount}`
+      : `${formattedAmount}${symbol}`
+  }
 
   useEffect(() => {
     loadInvoice()
@@ -195,7 +214,7 @@ export default function InvoicePreviewPage() {
       items: invoice.items || []
     }
     
-    const html = await renderInvoiceHTML(formattedInvoice, fullTemplate)
+    const html = await renderInvoiceHTML(formattedInvoice, fullTemplate, settings.dateFormat)
     return html
   }
 
@@ -247,6 +266,7 @@ export default function InvoicePreviewPage() {
         }
         console.log('Loaded invoice from Supabase:', invoiceWithItems)
         setInvoice(invoiceWithItems)
+        setIsDemoInvoice(false)
       } else {
         // Load from sessionStorage for demo mode
         const demoInvoices = JSON.parse(sessionStorage.getItem('demo-invoices') || '[]')
@@ -265,6 +285,7 @@ export default function InvoicePreviewPage() {
         }
         console.log('Loaded invoice from demo:', formattedInvoice)
         setInvoice(formattedInvoice)
+        setIsDemoInvoice(true)
       }
     } catch (error) {
       console.error('Error loading invoice:', error)
@@ -353,6 +374,14 @@ export default function InvoicePreviewPage() {
   async function handleSendEmail() {
     if (!invoice) return
     
+    // Check if this is a demo invoice
+    if (isDemoInvoice) {
+      toast.error('Cannot send demo invoice', {
+        description: 'Demo invoices cannot be emailed. Please save the invoice to the database first by creating it through the invoice generation process.'
+      })
+      return
+    }
+    
     // Check if client has email
     if (!invoice.clients?.email) {
       toast.error('Client email not found', {
@@ -364,11 +393,15 @@ export default function InvoicePreviewPage() {
     // Use the client's actual email address since domain is verified
     const emailToUse = invoice.clients.email
     
+    // Get the correct currency for this invoice
+    const invoiceCurrency = invoice.currency || settings.defaultCurrency || 'USD'
+    const formattedAmount = invoice.total_amount ? formatCurrency(invoice.total_amount, invoiceCurrency) : 'the requested amount'
+    
     // Set up the form and open dialog
     setSendForm({
       to: emailToUse,
       subject: `Invoice ${invoice.invoice_number} from ${settings.companyName || 'Your Company'}`,
-      message: `Dear ${invoice.clients.name || 'Client'},\n\nPlease find attached your invoice ${invoice.invoice_number} for ${invoice.total_amount ? `$${invoice.total_amount.toFixed(2)}` : 'the requested amount'}.\n\nDue date: ${new Date(invoice.due_date).toLocaleDateString()}\n\nThank you for your business!\n\nBest regards,\n${settings.companyName || 'Your Company'}`
+      message: `Dear ${invoice.clients.name || 'Client'},\n\nPlease find attached your invoice ${invoice.invoice_number} for ${formattedAmount}.\n\nDue date: ${settings.formatDate ? settings.formatDate(new Date(invoice.due_date)) : new Date(invoice.due_date).toLocaleDateString()}\n\nThank you for your business!\n\nBest regards,\n${settings.companyName || 'Your Company'}`
     })
     setSendEmailOpen(true)
   }
@@ -378,10 +411,24 @@ export default function InvoicePreviewPage() {
     
     setSendingEmail(true)
     try {
+      console.log('Sending email for invoice:', {
+        invoiceId: invoice.id,
+        isDemoInvoice,
+        clientEmail: sendForm.to,
+        invoiceNumber: invoice.invoice_number
+      })
+      
+      // Get the current session token for API authentication
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      if (sessionError || !session) {
+        throw new Error('Authentication required. Please log in and try again.')
+      }
+      
       const response = await fetch('/api/send-invoice', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           invoiceId: invoice.id,
@@ -539,11 +586,12 @@ export default function InvoicePreviewPage() {
               variant="outline"
               size="sm"
               onClick={handleSendEmail}
-              disabled={sendingEmail}
+              disabled={sendingEmail || isDemoInvoice}
               className="gap-2"
+              title={isDemoInvoice ? 'Demo invoices cannot be emailed' : ''}
             >
               <Mail className="h-4 w-4" />
-              {sendingEmail ? 'Sending...' : 'Send Email'}
+              {sendingEmail ? 'Sending...' : isDemoInvoice ? 'Demo Mode' : 'Send Email'}
             </Button>
             
             <Button
