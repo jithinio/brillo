@@ -322,7 +322,7 @@ export default function SettingsPage() {
                   <Label htmlFor="defaultCurrency">Default Currency</Label>
                   <div className="flex items-center gap-2">
                     <Select value={generalSettings.defaultCurrency} onValueChange={(value) => setGeneralSettings({...generalSettings, defaultCurrency: value})}>
-                      <SelectTrigger className="text-sm rounded-lg shadow-xs">
+                      <SelectTrigger id="defaultCurrency" className="text-sm rounded-lg shadow-xs">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="max-h-[300px] overflow-y-auto">
@@ -397,7 +397,7 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <Label htmlFor="dateFormat">Date Format</Label>
                   <Select value={generalSettings.dateFormat} onValueChange={(value) => setGeneralSettings({...generalSettings, dateFormat: value as DateFormat})}>
-                    <SelectTrigger className="text-sm rounded-lg shadow-xs">
+                    <SelectTrigger id="dateFormat" className="text-sm rounded-lg shadow-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
