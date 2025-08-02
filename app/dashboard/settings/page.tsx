@@ -36,6 +36,7 @@ export default function SettingsPage() {
   const [originalCurrency, setOriginalCurrency] = useState("USD") // Track original currency for change detection
   const [showCurrencyWarning, setShowCurrencyWarning] = useState(false) // Control currency change warning dialog
   const [activeTab, setActiveTab] = useState("general")
+  const [hasUserChanges, setHasUserChanges] = useState(false) // Track if user has made changes
   
   // General settings state
   const [generalSettings, setGeneralSettings] = useState({
@@ -103,11 +104,12 @@ export default function SettingsPage() {
     // Load company info from settings provider (database) first, then localStorage as override
     const savedCompany = localStorage.getItem('company-info')
     
-    // Only update if settings are loaded
-    if (!isLoading) {
+    // Only update if settings are loaded and user hasn't made changes
+    if (!isLoading && !hasUserChanges) {
       console.log('📞 Settings provider data:', {
         companyPhone: settings.companyPhone,
         isLoading,
+        hasUserChanges,
         hasData: !!settings.companyName
       })
       
@@ -156,7 +158,7 @@ export default function SettingsPage() {
     if (settings.defaultCurrency) {
       setOriginalCurrency(settings.defaultCurrency)
     }
-  }, [settings, isLoading]) // Add settings and isLoading as dependencies
+  }, [settings, isLoading, hasUserChanges]) // Add settings, isLoading, and hasUserChanges as dependencies
 
   const handleSaveSettings = async () => {
     // Check if currency has changed and show warning dialog
@@ -231,6 +233,9 @@ export default function SettingsPage() {
       
       // Update the original currency reference after successful save
       setOriginalCurrency(generalSettings.defaultCurrency)
+      
+      // Reset user changes flag after successful save
+      setHasUserChanges(false)
     } catch (error) {
       console.error("Error saving settings:", error)
       toast.error("Failed to save settings. Please try again.")
@@ -485,7 +490,10 @@ export default function SettingsPage() {
                     <Input 
                       id="companyName" 
                       value={companyInfo.companyName} 
-                      onChange={(e) => setCompanyInfo({...companyInfo, companyName: e.target.value})}
+                      onChange={(e) => {
+                        setCompanyInfo({...companyInfo, companyName: e.target.value})
+                        setHasUserChanges(true)
+                      }}
                     />
                   </div>
 
@@ -494,7 +502,10 @@ export default function SettingsPage() {
                     <Textarea 
                       id="companyAddress" 
                       value={companyInfo.companyAddress} 
-                      onChange={(e) => setCompanyInfo({...companyInfo, companyAddress: e.target.value})}
+                      onChange={(e) => {
+                        setCompanyInfo({...companyInfo, companyAddress: e.target.value})
+                        setHasUserChanges(true)
+                      }}
                       rows={3} 
                     />
                   </div>
@@ -508,6 +519,7 @@ export default function SettingsPage() {
                         onChange={(value) => {
                           console.log('📞 Phone changed:', value)
                           setCompanyInfo({...companyInfo, companyPhone: value})
+                          setHasUserChanges(true)
                         }}
                         placeholder="Enter company phone"
                       />
@@ -517,7 +529,10 @@ export default function SettingsPage() {
                       <Input 
                         id="companyWebsite" 
                         value={companyInfo.companyWebsite} 
-                        onChange={(e) => setCompanyInfo({...companyInfo, companyWebsite: e.target.value})}
+                        onChange={(e) => {
+                          setCompanyInfo({...companyInfo, companyWebsite: e.target.value})
+                          setHasUserChanges(true)
+                        }}
                       />
                     </div>
                   </div>
@@ -529,7 +544,10 @@ export default function SettingsPage() {
                         id="companyEmail" 
                         type="email" 
                         value={companyInfo.companyEmail} 
-                        onChange={(e) => setCompanyInfo({...companyInfo, companyEmail: e.target.value})}
+                        onChange={(e) => {
+                          setCompanyInfo({...companyInfo, companyEmail: e.target.value})
+                          setHasUserChanges(true)
+                        }}
                       />
                     </div>
                     <div className="space-y-2">
@@ -537,7 +555,10 @@ export default function SettingsPage() {
                       <Input 
                         id="companyRegistration" 
                         value={companyInfo.companyRegistration} 
-                        onChange={(e) => setCompanyInfo({...companyInfo, companyRegistration: e.target.value})}
+                        onChange={(e) => {
+                          setCompanyInfo({...companyInfo, companyRegistration: e.target.value})
+                          setHasUserChanges(true)
+                        }}
                         placeholder="e.g., 123456789" 
                       />
                     </div>
