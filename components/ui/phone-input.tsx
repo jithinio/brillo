@@ -27,6 +27,7 @@ interface PhoneInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElemen
   selectedCountry?: Country
   placeholder?: string
   className?: string
+  id?: string
 }
 
 export function PhoneInput({
@@ -36,6 +37,7 @@ export function PhoneInput({
   selectedCountry,
   placeholder = "Enter phone number",
   className,
+  id,
   ...props
 }: PhoneInputProps) {
   const [open, setOpen] = React.useState(false)
@@ -82,10 +84,12 @@ export function PhoneInput({
     return phoneValue
   }, [])
 
-  // Initialize phone number from value prop
+  // Initialize phone number from value prop - simplified logic
   React.useEffect(() => {
-    // Only process if value has actually changed
-    if (value !== prevValueRef.current) {
+    // Only process if value has actually changed and is different from what we expect
+    const expectedValue = `${currentCountry.phoneCode} ${phoneNumber}`.trim()
+    
+    if (value !== prevValueRef.current && value !== expectedValue) {
       if (value) {
         // Detect country from phone number
         const detectedCountry = detectCountryFromPhone(value)
@@ -106,7 +110,7 @@ export function PhoneInput({
       
       prevValueRef.current = value
     }
-  }, [value, detectCountryFromPhone, extractPhoneNumber])
+  }, [value, currentCountry, phoneNumber, detectCountryFromPhone, extractPhoneNumber])
 
   React.useEffect(() => {
     if (selectedCountry) {
@@ -195,7 +199,7 @@ export function PhoneInput({
       <Input
         {...props}
         type="tel"
-        id={props.id}
+        id={id}
         value={phoneNumber}
         onChange={handlePhoneChange}
         placeholder={placeholder}

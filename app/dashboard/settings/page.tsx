@@ -103,29 +103,29 @@ export default function SettingsPage() {
     // Load company info from settings provider (database) first, then localStorage as override
     const savedCompany = localStorage.getItem('company-info')
     
-    // Only update if we have actual data from settings provider or localStorage
-    if (!isLoading && (savedCompany || settings.companyName)) {
+    // Only update if settings are loaded and we have actual data
+    if (!isLoading) {
+      const newCompanyInfo = {
+        companyName: settings.companyName || "Suitebase",
+        companyAddress: settings.companyAddress || "123 Business St, City, State 12345",
+        companyPhone: settings.companyPhone || "+1 (555) 123-4567",
+        companyWebsite: settings.companyWebsite || "https://suitebase.com",
+        companyEmail: settings.companyEmail || "contact@suitebase.com",
+        companyRegistration: settings.companyRegistration || "",
+      }
+      
+      // Override with localStorage if available
       if (savedCompany) {
         const parsed = JSON.parse(savedCompany)
-        setCompanyInfo(prev => ({
-          companyName: parsed.companyName || settings.companyName || prev.companyName,
-          companyAddress: parsed.companyAddress || settings.companyAddress || prev.companyAddress,
-          companyPhone: parsed.companyPhone || settings.companyPhone || prev.companyPhone,
-          companyWebsite: parsed.companyWebsite || settings.companyWebsite || prev.companyWebsite,
-          companyEmail: parsed.companyEmail || settings.companyEmail || prev.companyEmail,
-          companyRegistration: parsed.companyRegistration || settings.companyRegistration || prev.companyRegistration,
-        }))
-      } else {
-        // Use settings provider values (from database) as primary source
-        setCompanyInfo(prev => ({
-          companyName: settings.companyName || prev.companyName,
-          companyAddress: settings.companyAddress || prev.companyAddress,
-          companyPhone: settings.companyPhone || prev.companyPhone,
-          companyWebsite: settings.companyWebsite || prev.companyWebsite,
-          companyEmail: settings.companyEmail || prev.companyEmail,
-          companyRegistration: settings.companyRegistration || prev.companyRegistration,
-        }))
+        Object.keys(newCompanyInfo).forEach(key => {
+          if (parsed[key]) {
+            newCompanyInfo[key] = parsed[key]
+          }
+        })
       }
+      
+      console.log('🔄 Loading company info:', newCompanyInfo)
+      setCompanyInfo(newCompanyInfo)
     }
     
     // Load tax info 
