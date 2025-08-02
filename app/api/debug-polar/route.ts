@@ -52,10 +52,29 @@ export async function GET(request: NextRequest) {
 
     console.log('🔍 Testing token with products list...')
     
-    // Test token by listing products
-    const products = await polar.products.list({
-      limit: 5
-    })
+    // Test token by listing products for the specific organization
+    let products;
+    const orgId = process.env.NEXT_PUBLIC_POLAR_ORGANIZATION_ID;
+    
+    try {
+      // Try listing products for the specific organization
+      if (orgId) {
+        console.log('🔍 Listing products for organization:', orgId)
+        products = await polar.products.list({
+          organizationId: orgId,
+          limit: 10
+        })
+        console.log('✅ Products API response:', products.items?.length || 0)
+      } else {
+        // Fallback to general list
+        products = await polar.products.list({
+          limit: 10
+        })
+      }
+    } catch (productError: any) {
+      console.log('❌ Products list failed:', productError.message)
+      throw productError
+    }
 
     console.log('✅ Token is valid! Products found:', products.items?.length || 0)
 
@@ -82,6 +101,12 @@ export async function GET(request: NextRequest) {
         monthlyProductId: monthlyProductId ? 'configured' : 'missing',
         yearlyProductId: yearlyProductId ? 'configured' : 'missing',
         organizationId: process.env.NEXT_PUBLIC_POLAR_ORGANIZATION_ID ? 'configured' : 'missing'
+      },
+      debug: {
+        organizationIdUsed: orgId,
+        productsListCall: 'organizationId specified',
+        tokenPermissions: 'Check if token has products:read permission',
+        suggestion: 'If products=0 but you see them in dashboard, token may lack permissions'
       }
     })
 
