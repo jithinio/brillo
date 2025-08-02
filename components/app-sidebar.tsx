@@ -5,6 +5,7 @@ import { Bot, Gauge, GalleryVerticalEnd, PieChart, ReceiptText, TrendingUp } fro
 
 import { NavMain } from "@/components/nav-main"
 import { NavUser } from "@/components/nav-user"
+import { SidebarUsageOverview } from "@/components/sidebar-usage-overview"
 import {
   Sidebar,
   SidebarContent,
@@ -113,6 +114,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavMain items={data.navMain} />
       </SidebarContent>
       <SidebarFooter>
+        <SidebarUsageOverview />
         <NavUser />
       </SidebarFooter>
       <SidebarRail />

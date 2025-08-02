@@ -6,11 +6,12 @@ import { PipelineMetrics } from "./components/PipelineMetrics"
 import { PipelineBoard } from "./components/PipelineBoard"
 import { AddProjectDialog } from "./components/AddProjectDialog"
 import { fetchPipelineProjects, fetchPipelineStages, calculateProjectPipelineMetrics } from "@/lib/project-pipeline"
-import type { PipelineProject, PipelineStage, PipelineMetrics } from "@/lib/types/pipeline"
-import { Search, X, Plus } from "lucide-react"
+import type { PipelineProject, PipelineStage, PipelineMetrics as PipelineMetricsType } from "@/lib/types/pipeline"
+import { Search, X, Plus, Crown } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { useCanPerformAction } from "@/components/over-limit-alert"
+import Link from "next/link"
 
 export default function PipelinePage() {
   const [projects, setProjects] = useState<PipelineProject[]>([])
@@ -22,7 +23,7 @@ export default function PipelinePage() {
 
   // Over-limit validation
   const { canCreateResource, getActionBlockedReason } = useCanPerformAction()
-  const [metrics, setMetrics] = useState<PipelineMetrics>({
+  const [metrics, setMetrics] = useState<PipelineMetricsType>({
     totalValue: 0,
     leadCount: 0,
     pitchedCount: 0,
@@ -215,13 +216,20 @@ export default function PipelinePage() {
               )}
 
               {/* New Lead Button */}
-              <div className="ml-auto">
+              <div className="ml-auto flex items-center gap-2">
+                {!canCreateResource('projects') && (
+                  <Button asChild variant="outline" size="sm" className="h-8">
+                    <Link href="/pricing">
+                      <Crown className="h-3 w-3 mr-1" />
+                      Upgrade to Pro
+                    </Link>
+                  </Button>
+                )}
                 <Button
                   onClick={() => setShowAddDialog(true)}
                   size="sm"
                   className="h-8"
                   disabled={!canCreateResource('projects')}
-                  title={!canCreateResource('projects') ? getActionBlockedReason('projects') || "Project limit reached" : undefined}
                 >
                   <Plus className="h-4 w-4 mr-1" />
                   New Lead

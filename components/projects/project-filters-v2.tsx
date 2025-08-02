@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Filter, ChevronDown, Search, Plus, Calendar, Settings, CheckCircle, Users, X } from "lucide-react"
+import { Filter, ChevronDown, Search, Plus, Calendar, Settings, CheckCircle, Users, X, Crown } from "lucide-react"
 import { ColumnViewFilter } from "./column-view-filter"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -25,6 +25,7 @@ import { useProjectFiltersV2 } from "@/hooks/use-project-filters-v2"
 import { hasActiveFilters, countActiveFilters, getTimePeriodLabel } from "@/lib/project-filters-v2"
 import { cn } from "@/lib/utils"
 import { useCanPerformAction } from "@/components/over-limit-alert"
+import Link from "next/link"
 
 interface Client {
   id: string
@@ -353,15 +354,24 @@ export function ProjectFiltersV2({
         <div className="flex items-center ml-auto" style={{ gap: '0.3rem' }}>
           {/* Add Project Button */}
           {onAddProject && (
-            <Button 
-              onClick={onAddProject} 
-              className="h-8 text-sm font-normal"
-              disabled={!canCreateResource('projects')}
-              title={!canCreateResource('projects') ? getActionBlockedReason('projects') || "Project limit reached" : undefined}
-            >
-              <Plus className="mr-1 h-3 w-3" />
-              Add
-            </Button>
+            <div className="flex items-center gap-2">
+              {!canCreateResource('projects') && (
+                <Button asChild variant="outline" size="sm" className="h-8 text-sm font-normal">
+                  <Link href="/pricing">
+                    <Crown className="mr-1 h-3 w-3" />
+                    Upgrade to Pro
+                  </Link>
+                </Button>
+              )}
+              <Button 
+                onClick={onAddProject} 
+                className="h-8 text-sm font-normal"
+                disabled={!canCreateResource('projects')}
+              >
+                <Plus className="mr-1 h-3 w-3" />
+                Add
+              </Button>
+            </div>
           )}
         </div>
       </div>

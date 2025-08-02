@@ -80,6 +80,7 @@ import { FinalDataTable } from "./FinalDataTable"
 import { TableErrorBoundary } from "./ErrorBoundary"
 import { formatCurrencyAbbreviated } from "@/lib/currency-utils"
 import { useCanPerformAction } from "@/components/over-limit-alert"
+import { useSubscription } from "@/components/providers/subscription-provider"
 
 // Types
 interface Client {
@@ -153,6 +154,9 @@ export function ProjectsTableWrapper({
   
   // Over-limit validation
   const { canCreateResource, getActionBlockedReason } = useCanPerformAction()
+  
+  // Subscription management for refreshing usage after creation/deletion
+  const { refetchSubscription } = useSubscription()
   
   // Initialize filters on mount
   React.useEffect(() => {
@@ -447,6 +451,8 @@ export function ProjectsTableWrapper({
           toast.success(`Project "${newProject.name}" has been updated successfully`)
           refetch()
           forceRefresh()
+          // Refresh usage limits after updating a project (in case status changed)
+          refetchSubscription(true)
         }
       } else {
         // Check if user can create more projects
@@ -486,6 +492,8 @@ export function ProjectsTableWrapper({
           toast.success(`Project "${newProject.name}" has been added successfully`)
           refetch()
           forceRefresh()
+          // Refresh usage limits immediately after creating a project
+          refetchSubscription(true)
         }
       }
     } catch (error: any) {
@@ -561,6 +569,8 @@ export function ProjectsTableWrapper({
                     })
                     refetch()
                     forceRefresh()
+                    // Refresh usage limits since project was restored
+                    refetchSubscription(true)
                   } catch (error: any) {
                     console.error('Error restoring project:', error)
                     toast.error('Failed to restore project', {
@@ -572,6 +582,8 @@ export function ProjectsTableWrapper({
             })
             refetch()
             forceRefresh()
+            // Refresh usage limits immediately after successful deletion
+            refetchSubscription(true)
           }
         } catch (error: any) {
           console.error('Error deleting project:', error)
@@ -841,6 +853,8 @@ export function ProjectsTableWrapper({
                 })
                 refetch()
                 forceRefresh()
+                // Refresh usage limits since projects were restored
+                refetchSubscription(true)
               } catch (error: any) {
                 console.error('Error restoring projects:', error)
                 toast.error('Failed to restore projects', {
@@ -852,6 +866,8 @@ export function ProjectsTableWrapper({
         })
         refetch()
         forceRefresh()
+        // Refresh usage limits immediately after successful batch deletion
+        refetchSubscription(true)
       }
     } catch (error: any) {
       console.error('Error deleting projects:', error)

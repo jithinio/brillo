@@ -19,7 +19,8 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Upload, User } from "lucide-react"
+import { Plus, Upload, User, Crown } from "lucide-react"
+import Link from "next/link"
 import { ClientMetrics } from "@/components/clients/ClientMetrics"
 import { DataHookReturn, EntityActions } from "@/components/table/types"
 import { toast } from "sonner"
@@ -29,6 +30,7 @@ import { CountrySelect } from "@/components/ui/country-select"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 import { useCanPerformAction } from "@/components/over-limit-alert"
+import { useSubscription } from "@/components/providers/subscription-provider"
 import { countries } from "@/lib/countries"
 
 interface ClientFormData {
@@ -297,6 +299,9 @@ export default function ClientsPage() {
 
   // Over-limit validation
   const { canCreateResource, getActionBlockedReason } = useCanPerformAction()
+  
+  // Subscription management for refreshing usage after deletions
+  const { refetchSubscription } = useSubscription()
 
   // Entity actions for generic table  
   const entityActions: EntityActions<any> = {
@@ -435,6 +440,8 @@ export default function ClientsPage() {
                   description: `${client.name} and all relationships have been recovered`
                 })
                 clientsData.refetch()
+                // Refresh usage limits since client was restored
+                refetchSubscription(true)
               } catch (error: any) {
                 console.error('Error restoring client:', error)
                 toast.error('Failed to restore client', {
@@ -445,6 +452,8 @@ export default function ClientsPage() {
           },
         })
         clientsData.refetch()
+        // Refresh usage limits immediately after successful deletion
+        refetchSubscription(true)
     } catch (error) {
         console.error('Error deleting client:', error)
         toast.error('Failed to delete client')
@@ -567,6 +576,8 @@ export default function ClientsPage() {
                   description: 'All deleted clients and relationships have been recovered'
                 })
                 clientsData.refetch()
+                // Refresh usage limits since clients were restored
+                refetchSubscription(true)
               } catch (error: any) {
                 console.error('Error restoring clients:', error)
                 toast.error('Failed to restore clients', {
@@ -577,6 +588,8 @@ export default function ClientsPage() {
           },
         })
         clientsData.refetch()
+        // Refresh usage limits immediately after successful batch deletion
+        refetchSubscription(true)
       } catch (error) {
         console.error('Error deleting clients:', error)
         toast.error('Failed to delete clients')
@@ -836,6 +849,8 @@ export default function ClientsPage() {
       }
 
       clientsData.refetch()
+      // Refresh usage limits immediately after creating/updating a client
+      refetchSubscription(true)
       resetForm()
     } catch (error: any) {
       console.error('Error saving client:', error)
@@ -906,19 +921,28 @@ export default function ClientsPage() {
         }}
         metricsComponent={<ClientMetrics metrics={metrics} />}
         addButton={
-          <Button
-            onClick={() => {
-              resetForm()
-              setIsAddDialogOpen(true)
-            }}
-            size="sm"
-            className="h-8"
-            disabled={!canCreateResource('clients')}
-            title={!canCreateResource('clients') ? getActionBlockedReason('clients') || "Client limit reached" : undefined}
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Add Client
-          </Button>
+          <div className="flex items-center gap-2">
+            {!canCreateResource('clients') && (
+              <Button asChild variant="outline" size="sm" className="h-8">
+                <Link href="/pricing">
+                  <Crown className="h-3 w-3 mr-1" />
+                  Upgrade to Pro
+                </Link>
+              </Button>
+            )}
+            <Button
+              onClick={() => {
+                resetForm()
+                setIsAddDialogOpen(true)
+              }}
+              size="sm"
+              className="h-8"
+              disabled={!canCreateResource('clients')}
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Add Client
+            </Button>
+          </div>
         }
       />
 
