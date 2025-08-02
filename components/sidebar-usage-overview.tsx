@@ -2,7 +2,6 @@
 
 import { Crown, Users, FolderOpen } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Progress } from "@/components/ui/progress"
 import { Card, CardContent } from "@/components/ui/card"
 import { useSubscription } from "@/components/providers/subscription-provider"
 import Link from "next/link"
@@ -15,13 +14,13 @@ export function SidebarUsageOverview() {
     return null
   }
 
-  const clientsUsed = usage.clients.current
-  const clientsLimit = usage.clients.limit as number
-  const projectsUsed = usage.projects.current  
-  const projectsLimit = usage.projects.limit as number
+  const clientsUsed = usage.clients.current || 0
+  const clientsLimit = (usage.clients.limit as number) || 10
+  const projectsUsed = usage.projects.current || 0
+  const projectsLimit = (usage.projects.limit as number) || 20
 
-  const clientsPercentage = (clientsUsed / clientsLimit) * 100
-  const projectsPercentage = (projectsUsed / projectsLimit) * 100
+  const clientsPercentage = clientsLimit > 0 ? (clientsUsed / clientsLimit) * 100 : 0
+  const projectsPercentage = projectsLimit > 0 ? (projectsUsed / projectsLimit) * 100 : 0
 
   return (
     <Card className="mb-2">
@@ -39,7 +38,12 @@ export function SidebarUsageOverview() {
             </div>
             <span className="font-medium">{clientsUsed}/{clientsLimit}</span>
           </div>
-          <Progress value={clientsPercentage} className="h-1.5 rounded-full [&>div]:bg-gray-400 dark:[&>div]:bg-gray-300 [&>div]:rounded-full" />
+          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+            <div 
+              className="bg-gray-400 dark:bg-gray-300 h-1.5 rounded-full transition-all duration-300"
+              style={{ width: `${Math.min(clientsPercentage, 100)}%` }}
+            />
+          </div>
         </div>
 
         {/* Projects Usage */}
@@ -51,7 +55,12 @@ export function SidebarUsageOverview() {
             </div>
             <span className="font-medium">{projectsUsed}/{projectsLimit}</span>
           </div>
-          <Progress value={projectsPercentage} className="h-1.5 rounded-full [&>div]:bg-gray-400 dark:[&>div]:bg-gray-300 [&>div]:rounded-full" />
+          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+            <div 
+              className="bg-gray-400 dark:bg-gray-300 h-1.5 rounded-full transition-all duration-300"
+              style={{ width: `${Math.min(projectsPercentage, 100)}%` }}
+            />
+          </div>
         </div>
 
         {/* Upgrade Button */}
