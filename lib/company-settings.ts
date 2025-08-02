@@ -56,7 +56,12 @@ export async function getCompanySettings(): Promise<CompanySettings | null> {
       return null
     }
 
-    // console.log('📞 Loaded company settings from database:', data)
+    console.log('📞 Database: Loaded company settings:', {
+      id: data?.id,
+      phone: data?.company_phone,
+      name: data?.company_name,
+      hasData: !!data
+    })
     
     return data
   } catch (err) {
@@ -67,7 +72,11 @@ export async function getCompanySettings(): Promise<CompanySettings | null> {
 
 export async function upsertCompanySettings(settings: Partial<CompanySettings>): Promise<CompanySettings | null> {
   try {
-    // console.log('📞 upsertCompanySettings called with:', settings)
+    console.log('📞 Database: Saving company settings:', {
+      phone: settings.company_phone,
+      name: settings.company_name,
+      hasPhone: !!settings.company_phone
+    })
     
     if (!isSupabaseConfigured()) {
       console.log('Supabase not configured, cannot save settings')
