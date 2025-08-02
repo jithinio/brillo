@@ -102,23 +102,6 @@ export default function SettingsPage() {
       }))
     }
     
-    // Load company info - only on initial load, not on tab switches
-    if (!isLoading && settings.companyName && !initialLoadComplete) {
-      console.log('📞 Initial load - Loading phone from database:', settings.companyPhone)
-      setCompanyInfo({
-        companyName: settings.companyName || "Suitebase",
-        companyAddress: settings.companyAddress || "123 Business St, City, State 12345",
-        companyPhone: settings.companyPhone || "+1 (555) 123-4567",
-        companyWebsite: settings.companyWebsite || "https://suitebase.com",
-        companyEmail: settings.companyEmail || "contact@suitebase.com",
-        companyRegistration: settings.companyRegistration || "",
-      })
-      
-      // Mark initial load as complete and reset user changes flag
-      setInitialLoadComplete(true)
-      setHasUserChanges(false)
-    }
-    
     // Load tax info 
     if (savedTax) {
       const parsed = JSON.parse(savedTax)
@@ -149,7 +132,29 @@ export default function SettingsPage() {
     if (settings.defaultCurrency) {
       setOriginalCurrency(settings.defaultCurrency)
     }
-  }, [settings, isLoading, initialLoadComplete]) // Load when settings change but only on initial load
+  }, [settings, isLoading]) // Load when settings change
+
+  // Separate effect for company info - only runs once on mount
+  useEffect(() => {
+    if (!isLoading && settings.companyName && !initialLoadComplete) {
+      console.log('📞 One-time load from database:', settings.companyPhone)
+      setCompanyInfo({
+        companyName: settings.companyName || "Suitebase",
+        companyAddress: settings.companyAddress || "123 Business St, City, State 12345",
+        companyPhone: settings.companyPhone || "+1 (555) 123-4567",
+        companyWebsite: settings.companyWebsite || "https://suitebase.com",
+        companyEmail: settings.companyEmail || "contact@suitebase.com",
+        companyRegistration: settings.companyRegistration || "",
+      })
+      setInitialLoadComplete(true)
+      setHasUserChanges(false)
+    }
+  }, [settings.companyName, settings.companyPhone, isLoading, initialLoadComplete])
+
+  // Debug effect to track when companyInfo changes
+  useEffect(() => {
+    console.log('📞 CompanyInfo state changed:', companyInfo.companyPhone)
+  }, [companyInfo.companyPhone])
 
   const handleSaveSettings = async () => {
     // Check if currency has changed and show warning dialog
