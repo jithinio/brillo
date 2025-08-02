@@ -24,6 +24,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { useProjectFiltersV2 } from "@/hooks/use-project-filters-v2"
 import { hasActiveFilters, countActiveFilters, getTimePeriodLabel } from "@/lib/project-filters-v2"
 import { cn } from "@/lib/utils"
+import { useCanPerformAction } from "@/components/over-limit-alert"
 
 interface Client {
   id: string
@@ -76,6 +77,9 @@ export function ProjectFiltersV2({
   onColumnReorder,
   onColumnVisibilityChange
 }: ProjectFiltersV2Props) {
+  // Over-limit validation
+  const { canCreateResource, getActionBlockedReason } = useCanPerformAction()
+  
   const {
     filters,
     loading,
@@ -349,7 +353,12 @@ export function ProjectFiltersV2({
         <div className="flex items-center ml-auto" style={{ gap: '0.3rem' }}>
           {/* Add Project Button */}
           {onAddProject && (
-            <Button onClick={onAddProject} className="h-8 text-sm font-normal">
+            <Button 
+              onClick={onAddProject} 
+              className="h-8 text-sm font-normal"
+              disabled={!canCreateResource('projects')}
+              title={!canCreateResource('projects') ? getActionBlockedReason('projects') || "Project limit reached" : undefined}
+            >
               <Plus className="mr-1 h-3 w-3" />
               Add
             </Button>

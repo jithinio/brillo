@@ -79,6 +79,7 @@ import {
 import { FinalDataTable } from "./FinalDataTable"
 import { TableErrorBoundary } from "./ErrorBoundary"
 import { formatCurrencyAbbreviated } from "@/lib/currency-utils"
+import { useCanPerformAction } from "@/components/over-limit-alert"
 
 // Types
 interface Client {
@@ -149,6 +150,9 @@ export function ProjectsTableWrapper({
 }: ProjectsTableWrapperProps) {
   // Apply default filters to the filter hook
   const { filters, updateFilter } = useProjectFiltersV2()
+  
+  // Over-limit validation
+  const { canCreateResource, getActionBlockedReason } = useCanPerformAction()
   
   // Initialize filters on mount
   React.useEffect(() => {
@@ -445,6 +449,15 @@ export function ProjectsTableWrapper({
           forceRefresh()
         }
       } else {
+        // Check if user can create more projects
+        if (!canCreateResource('projects')) {
+          const reason = getActionBlockedReason('projects')
+          toast.error("Cannot create project", {
+            description: reason || "You've reached your project limit for your current plan. Please upgrade to Pro for unlimited projects."
+          })
+          return
+        }
+
         // Adding new project
         if (isSupabaseConfigured()) {
           const { data, error } = await supabase
