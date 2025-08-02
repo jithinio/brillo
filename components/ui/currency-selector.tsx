@@ -25,6 +25,7 @@ interface CurrencySelectorProps {
   placeholder?: string
   disabled?: boolean
   className?: string
+  compact?: boolean // For narrow containers
 }
 
 export function CurrencySelector({
@@ -32,7 +33,8 @@ export function CurrencySelector({
   onValueChange,
   placeholder = "Select currency...",
   disabled = false,
-  className
+  className,
+  compact = false
 }: CurrencySelectorProps) {
   const [open, setOpen] = useState(false)
 
@@ -71,17 +73,24 @@ export function CurrencySelector({
           )}
           disabled={disabled}
         >
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 min-w-0">
             {selectedCurrency ? (
-              <>
-                <span className="font-medium">{selectedCurrency.symbol}</span>
-                <span>{selectedCurrency.code}</span>
-                <span className="text-muted-foreground">({selectedCurrency.name})</span>
-              </>
+              compact ? (
+                <>
+                  <span className="font-medium text-sm">{selectedCurrency.symbol}</span>
+                  <span className="font-medium text-sm truncate">{selectedCurrency.code}</span>
+                </>
+              ) : (
+                <>
+                  <span className="font-medium">{selectedCurrency.symbol}</span>
+                  <span>{selectedCurrency.code}</span>
+                  <span className="text-muted-foreground truncate">({selectedCurrency.name})</span>
+                </>
+              )
             ) : (
               <>
-                <DollarSign className="h-4 w-4" />
-                {placeholder}
+                <DollarSign className="h-4 w-4 shrink-0" />
+                <span className="truncate">{compact ? "Currency" : placeholder}</span>
               </>
             )}
           </div>

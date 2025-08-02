@@ -23,6 +23,7 @@ export default function OnHoldProjectsPage() {
         lockedFilters={{
           status: true
         }}
+        defaultStatus="on_hold"
         showSummaryCards={true}
               showStatusFilter={false}
             />

@@ -23,6 +23,7 @@ export default function CompletedProjectsPage() {
         lockedFilters={{
           status: true
         }}
+        defaultStatus="completed"
         showSummaryCards={true}
               showStatusFilter={false}
             />

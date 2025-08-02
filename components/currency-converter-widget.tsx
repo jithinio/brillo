@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
-import { X, ArrowUpDown, Copy, GripHorizontal } from "lucide-react"
+import { X, ArrowUpDown, Copy, Move } from "lucide-react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -25,7 +25,6 @@ interface Position {
 }
 
 const POSITION_KEY = 'currency-converter-position'
-const RECENT_CURRENCIES_KEY = 'currency-converter-recent'
 
 export function CurrencyConverterWidget({
   isOpen,
@@ -39,7 +38,6 @@ export function CurrencyConverterWidget({
   const [convertedAmount, setConvertedAmount] = useState<number | null>(null)
   const [isConverting, setIsConverting] = useState(false)
   const [exchangeRate, setExchangeRate] = useState<number | null>(null)
-  const [recentCurrencies, setRecentCurrencies] = useState<string[]>([])
   const [isDragging, setIsDragging] = useState(false)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const widgetRef = useRef<HTMLDivElement>(null)
@@ -54,14 +52,9 @@ export function CurrencyConverterWidget({
           setPosition(parsed)
         } else {
           // Default position: center-right of screen
-          const defaultX = Math.max(50, window.innerWidth - 450)
-          const defaultY = Math.max(50, (window.innerHeight - 400) / 2)
+          const defaultX = Math.max(50, window.innerWidth - 400)
+          const defaultY = Math.max(50, (window.innerHeight - 280) / 2)
           setPosition({ x: defaultX, y: defaultY })
-        }
-
-        const savedRecent = localStorage.getItem(RECENT_CURRENCIES_KEY)
-        if (savedRecent) {
-          setRecentCurrencies(JSON.parse(savedRecent))
         }
       } catch {
         // Failed to load saved position
@@ -100,18 +93,7 @@ export function CurrencyConverterWidget({
     }
   }, [])
 
-  // Update recent currencies
-  const updateRecentCurrencies = useCallback((currency: string) => {
-    setRecentCurrencies(prev => {
-      const updated = [currency, ...prev.filter(c => c !== currency)].slice(0, 5)
-      try {
-        localStorage.setItem(RECENT_CURRENCIES_KEY, JSON.stringify(updated))
-      } catch {
-        // Failed to save recent currencies
-      }
-      return updated
-    })
-  }, [])
+
 
   // Handle conversion
   const handleConvert = useCallback(async () => {
@@ -130,17 +112,13 @@ export function CurrencyConverterWidget({
       console.log(`💱 Currency Widget: Conversion result:`, result)
       setConvertedAmount(result.convertedAmount)
       setExchangeRate(result.rate)
-      
-      // Update recent currencies
-      updateRecentCurrencies(fromCurrency)
-      updateRecentCurrencies(toCurrency)
     } catch (error) {
       console.error('❌ Currency Widget: Conversion failed:', error)
       toast.error('Failed to convert currency')
     } finally {
       setIsConverting(false)
     }
-  }, [fromAmount, fromCurrency, toCurrency, updateRecentCurrencies])
+  }, [fromAmount, fromCurrency, toCurrency])
 
   // Auto-convert when inputs change
   useEffect(() => {
@@ -198,9 +176,9 @@ export function CurrencyConverterWidget({
       y: e.clientY - dragOffset.y
     }
     
-    // Constrain to viewport
-    const maxX = window.innerWidth - 320 // widget width
-    const maxY = window.innerHeight - 400 // widget height
+    // Constrain to viewport - allow full screen usage
+    const maxX = window.innerWidth - 380 // widget width (updated for wider currency selectors)
+    const maxY = window.innerHeight - 280 // widget height (reduced for better screen usage)
     
     newPosition.x = Math.max(0, Math.min(maxX, newPosition.x))
     newPosition.y = Math.max(0, Math.min(maxY, newPosition.y))
@@ -240,31 +218,31 @@ export function CurrencyConverterWidget({
         cursor: isDragging ? 'grabbing' : 'default'
       }}
     >
-      <Card className="w-80 shadow-lg border-2 bg-background">
-        <CardHeader className="pb-3">
+      <Card className="w-[360px] shadow-xl border bg-background/95 backdrop-blur-sm rounded-xl overflow-hidden">
+        <CardHeader 
+          className="py-3 px-3 cursor-grab active:cursor-grabbing border-b bg-gradient-to-r from-background to-muted/30"
+          onMouseDown={handleMouseDown}
+        >
           <div className="flex items-center justify-between">
-            <div 
-              className="flex items-center gap-2 cursor-grab active:cursor-grabbing"
-              onMouseDown={handleMouseDown}
-            >
-              <GripHorizontal className="h-4 w-4 text-muted-foreground" />
-              <h3 className="font-semibold text-sm">Currency Converter</h3>
+            <div className="flex items-center gap-2">
+              <Move className="h-4 w-4 text-muted-foreground/60" />
+              <h3 className="font-medium text-sm text-foreground/90">Currency Converter</h3>
             </div>
             <Button
               variant="ghost"
               size="sm"
-              className="h-6 w-6 p-0"
+              className="h-7 w-7 p-0 rounded-md hover:bg-destructive/10 hover:text-destructive transition-colors"
               onClick={onClose}
             >
-              <X className="h-4 w-4" />
+              <X className="h-3.5 w-3.5" />
             </Button>
           </div>
         </CardHeader>
           
-          <CardContent className="space-y-4">
+          <CardContent className="p-4 space-y-3">
             {/* From Currency */}
-            <div className="space-y-2">
-              <Label htmlFor="from-amount">From</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="from-amount" className="text-xs font-medium text-muted-foreground">From</Label>
               <div className="flex gap-2">
                 <Input
                   id="from-amount"
@@ -272,31 +250,32 @@ export function CurrencyConverterWidget({
                   placeholder="0.00"
                   value={fromAmount}
                   onChange={(e) => setFromAmount(e.target.value)}
-                  className="flex-1"
+                  className="flex-1 h-9 rounded-lg border-muted-foreground/20 focus:border-primary"
                 />
                 <CurrencySelector
                   value={fromCurrency}
                   onValueChange={setFromCurrency}
-                  className="w-32"
+                  className="w-[120px] h-9"
+                  compact
                 />
               </div>
             </div>
 
             {/* Swap Button */}
-            <div className="flex justify-center">
+            <div className="flex justify-center -mb-1">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleSwapCurrencies}
-                className="h-8 w-8 p-0 rounded-full"
+                className="h-6 w-6 p-0 rounded-full border-muted-foreground/20 hover:border-primary hover:bg-primary/5 transition-colors"
               >
-                <ArrowUpDown className="h-4 w-4" />
+                <ArrowUpDown className="h-3 w-3" />
               </Button>
             </div>
 
             {/* To Currency */}
-            <div className="space-y-2">
-              <Label htmlFor="to-amount">To</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="to-amount" className="text-xs font-medium text-muted-foreground">To</Label>
               <div className="flex gap-2">
                 <div className="flex-1 relative">
                   <Input
@@ -305,15 +284,15 @@ export function CurrencyConverterWidget({
                     readOnly
                     placeholder={isConverting ? "Converting..." : "0.00"}
                     className={cn(
-                      "pr-8",
-                      convertedAmount && "font-medium text-green-600"
+                      "pr-8 h-9 rounded-lg border-muted-foreground/20",
+                      convertedAmount && "font-medium text-green-600 bg-green-50/50"
                     )}
                   />
                   {convertedAmount && (
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="absolute right-1 top-1 h-6 w-6 p-0"
+                      className="absolute right-1 top-0.5 h-7 w-7 p-0 hover:bg-green-100 rounded-md"
                       onClick={handleCopyAmount}
                     >
                       <Copy className="h-3 w-3" />
@@ -323,35 +302,16 @@ export function CurrencyConverterWidget({
                 <CurrencySelector
                   value={toCurrency}
                   onValueChange={setToCurrency}
-                  className="w-32"
+                  className="w-[120px] h-9"
+                  compact
                 />
               </div>
             </div>
 
             {/* Exchange Rate */}
             {exchangeRate && (
-              <div className="text-xs text-muted-foreground text-center">
+              <div className="text-xs text-muted-foreground text-center py-1 bg-muted/30 rounded-md">
                 1 {fromCurrency} = {exchangeRate.toFixed(6)} {toCurrency}
-              </div>
-            )}
-
-            {/* Recent Currencies */}
-            {recentCurrencies.length > 0 && (
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Recent</Label>
-                <div className="flex gap-1 flex-wrap">
-                  {recentCurrencies.map((currency) => (
-                    <Button
-                      key={currency}
-                      variant="outline"
-                      size="sm"
-                      className="h-6 px-2 text-xs"
-                      onClick={() => setFromCurrency(currency)}
-                    >
-                      {currency}
-                    </Button>
-                  ))}
-                </div>
               </div>
             )}
           </CardContent>

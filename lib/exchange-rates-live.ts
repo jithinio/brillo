@@ -151,6 +151,8 @@ async function fetchLiveRates(baseCurrency: string = 'USD'): Promise<Record<stri
 
 /**
  * Fetch historical exchange rates for a specific date
+ * IMPORTANT: UniRateAPI free tier may not support historical data.
+ * This function will fallback to live rates if historical data is unavailable.
  */
 async function fetchHistoricalRates(
   date: string, 
@@ -167,14 +169,14 @@ async function fetchHistoricalRates(
   // Format date to YYYY-MM-DD
   const formattedDate = new Date(date).toISOString().split('T')[0]
   
-  // Check if the date is in the future - if so, return fallback rates
+  // Check if the date is in the future - if so, use live rates
   const targetDate = new Date(formattedDate)
   const today = new Date()
   today.setHours(0, 0, 0, 0) // Reset to start of day for comparison
   
   if (targetDate > today) {
-    console.log(`⚠️ Future date detected in fetchHistoricalRates (${formattedDate}), using fallback rates`)
-    return getFallbackRates(baseCurrency)
+    console.log(`⚠️ Future date detected in fetchHistoricalRates (${formattedDate}), using live rates`)
+    return await fetchLiveRates(baseCurrency)
   }
   
   const cacheKey = `historical_${baseCurrency}_${formattedDate}`
@@ -182,32 +184,58 @@ async function fetchHistoricalRates(
   // Check cache first (historical rates don't change)
   const cached = historicalRateCache.get(cacheKey)
   if (cached) {
-    console.log(`Cache hit for historical rates: ${baseCurrency} on ${formattedDate}`)
-    return JSON.parse(localStorage.getItem(`rates_${cacheKey}`) || '{}')
+    console.log(`✅ Cache hit for historical rates: ${baseCurrency} on ${formattedDate}`)
+    const cachedRates = JSON.parse(localStorage.getItem(`rates_${cacheKey}`) || '{}')
+    return Object.keys(cachedRates).length > 0 ? cachedRates : getFallbackRates(baseCurrency)
   }
 
   try {
     await respectRateLimit()
     
-    const response = await fetch(
-      `${UNIRATEAPI_BASE_URL}/api/historical/rates?api_key=${apiKey}&date=${formattedDate}&base=${baseCurrency}`,
-      {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'User-Agent': 'SuiteBase-Invoice-App/1.0'
-        }
+    const url = `${UNIRATEAPI_BASE_URL}/api/historical/rates?api_key=${apiKey}&date=${formattedDate}&base=${baseCurrency}`
+    console.log(`📞 Calling historical rates API: ${url.replace(apiKey, 'API_KEY_HIDDEN')}`)
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'SuiteBase-Invoice-App/1.0'
       }
-    )
+    })
+
+    console.log(`📡 Historical API Response status: ${response.status}`)
 
     if (!response.ok) {
-      throw new Error(`UniRateAPI responded with status: ${response.status}`)
+      const errorText = await response.text()
+      console.log(`⚠️ Historical rates not available for ${formattedDate}: ${errorText}`)
+      
+      // Check if it's a "no data available" error (common for free tiers)
+      if (response.status === 404 || errorText.includes('No exchange rates available')) {
+        console.log(`🔄 Historical data not available, falling back to live rates for ${formattedDate}`)
+        const liveRates = await fetchLiveRates(baseCurrency)
+        
+        // Cache the live rates as "historical" for this date to avoid repeated attempts
+        historicalRateCache.set(cacheKey, {
+          rate: 1,
+          timestamp: Date.now(),
+          date: formattedDate
+        })
+        
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(`rates_${cacheKey}`, JSON.stringify(liveRates))
+          localStorage.setItem(`rates_${cacheKey}_fallback`, 'live_rates')
+        }
+        
+        return liveRates
+      }
+      
+      throw new Error(`UniRateAPI historical rates error: ${response.status} - ${errorText}`)
     }
 
     const data: LiveExchangeRateResponse = await response.json()
     
     if (!data.rates) {
-      throw new Error('Invalid response format from UniRateAPI')
+      throw new Error('Invalid response format from UniRateAPI historical endpoint')
     }
 
     // Cache the results (historical rates never change)
@@ -224,11 +252,28 @@ async function fetchHistoricalRates(
     }
 
     console.log(`✅ Historical rates fetched successfully for ${baseCurrency} on ${formattedDate}`)
-    return data.rates
+    return { [baseCurrency]: 1, ...data.rates }
 
   } catch (error) {
-    console.error(`Error fetching historical rates from UniRateAPI for ${formattedDate}:`, error)
-    return getFallbackRates(baseCurrency)
+    console.error(`💥 Error fetching historical rates from UniRateAPI for ${formattedDate}:`, error)
+    
+    // Fallback strategy: try live rates first, then mock rates
+    try {
+      console.log(`🔄 Attempting fallback to live rates for ${formattedDate}`)
+      const liveRates = await fetchLiveRates(baseCurrency)
+      
+      // Cache the fallback rates
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`rates_${cacheKey}`, JSON.stringify(liveRates))
+        localStorage.setItem(`rates_${cacheKey}_fallback`, 'live_rates_error')
+      }
+      
+      return liveRates
+    } catch (liveError) {
+      console.error(`💥 Live rates fallback also failed:`, liveError)
+      console.log(`🔄 Using mock rates as final fallback for ${formattedDate}`)
+      return getFallbackRates(baseCurrency)
+    }
   }
 }
 
@@ -290,6 +335,7 @@ export async function getLiveExchangeRate(from: string, to: string): Promise<num
 
 /**
  * Get historical exchange rate for a specific date
+ * Automatically falls back to live rates if historical data is unavailable
  */
 export async function getHistoricalExchangeRate(
   from: string, 
@@ -319,22 +365,34 @@ export async function getHistoricalExchangeRate(
     const usdRates = await fetchHistoricalRates(date, 'USD')
     console.log(`📊 Available historical USD rates for ${date}:`, Object.keys(usdRates).slice(0, 5), `(${Object.keys(usdRates).length} total)`)
     
+    // If we got empty rates, fall back to live rates
+    if (!usdRates || Object.keys(usdRates).length === 0) {
+      console.log(`⚠️ No historical rates returned, falling back to live rates`)
+      return await getLiveExchangeRate(from, to)
+    }
+    
     // If converting from USD to another currency, use rate directly
     if (from === 'USD') {
       const rate = usdRates[to]
-      if (rate) {
+      if (rate && rate > 0) {
         console.log(`✅ Historical USD to ${to} on ${date}: 1 USD = ${rate} ${to}`)
         return rate
+      } else {
+        console.log(`⚠️ No rate found for USD → ${to} on ${date}, using live rate`)
+        return await getLiveExchangeRate(from, to)
       }
     }
     
     // If converting to USD from another currency, use inverse of the rate
     if (to === 'USD') {
       const fromRate = usdRates[from]
-      if (fromRate) {
+      if (fromRate && fromRate > 0) {
         const rate = 1 / fromRate
         console.log(`✅ Historical ${from} to USD on ${date}: 1 ${from} = ${rate} USD (inverse of ${fromRate})`)
         return rate
+      } else {
+        console.log(`⚠️ No rate found for ${from} → USD on ${date}, using live rate`)
+        return await getLiveExchangeRate(from, to)
       }
     }
     
@@ -342,7 +400,7 @@ export async function getHistoricalExchangeRate(
     const fromRate = usdRates[from] // 1 USD = X fromCurrency
     const toRate = usdRates[to]     // 1 USD = Y toCurrency
     
-    if (fromRate && toRate) {
+    if (fromRate && toRate && fromRate > 0 && toRate > 0) {
       // To convert from fromCurrency to toCurrency:
       // 1 fromCurrency = (1/fromRate) USD = (1/fromRate) * toRate toCurrency
       const rate = toRate / fromRate
@@ -350,10 +408,11 @@ export async function getHistoricalExchangeRate(
       return rate
     }
     
-    console.error(`❌ No historical rates found for ${from} and/or ${to} on ${date}`)
-    return 1
+    console.log(`⚠️ Insufficient historical rates for ${from} and/or ${to} on ${date}, falling back to live rates`)
+    return await getLiveExchangeRate(from, to)
+    
   } catch (error) {
-    console.error(`❌ Error getting historical exchange rate ${from} to ${to} on ${date}:`, error)
+    console.error(`💥 Error getting historical exchange rate ${from} to ${to} on ${date}:`, error)
     console.log(`🔄 Falling back to live rate for ${from} → ${to}`)
     return await getLiveExchangeRate(from, to)
   }

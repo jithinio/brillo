@@ -136,6 +136,7 @@ interface ProjectsTableWrapperProps {
     client?: boolean
     timePeriod?: boolean
   }
+  defaultStatus?: string
 }
 
 export function ProjectsTableWrapper({
@@ -144,6 +145,7 @@ export function ProjectsTableWrapper({
   showSummaryCards = true,
   showStatusFilter = true,
   lockedFilters = {},
+  defaultStatus = "active",
 }: ProjectsTableWrapperProps) {
   // Apply default filters to the filter hook
   const { filters, updateFilter } = useProjectFiltersV2()
@@ -724,7 +726,7 @@ export function ProjectsTableWrapper({
     setNewProject({
       name: "",
       client_id: "",
-      status: "active",
+      status: defaultStatus,
       start_date: undefined,
       due_date: undefined,
       budget: "",
@@ -1473,7 +1475,7 @@ export function ProjectsTableWrapper({
           setNewProject({
             name: "",
             client_id: "",
-            status: "active",
+            status: defaultStatus,
             start_date: undefined,
             due_date: undefined,
             budget: "",

@@ -3,7 +3,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useMemo } from "react"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
-import { convertInvoiceAmounts, calculateConvertedTotal } from "@/lib/currency-conversion"
+import { convertInvoiceAmountsOptimized, getCurrencyConversionStats } from "@/lib/currency-conversion-cache"
+import { calculateConvertedTotal } from "@/lib/currency-conversion"
 import { toast } from "sonner"
 import { DataHookReturn } from "@/components/table/types"
 
@@ -118,14 +119,21 @@ async function fetchInvoices(filters: InvoiceFilters = {}): Promise<{
 
     if (data && data.length > 0) {
       try {
-        // PERFORMANCE OPTIMIZATION: Single batch conversion for all invoices
-        const allConversions = await convertInvoiceAmounts(
+        // PERFORMANCE OPTIMIZATION: Intelligent cached conversion - only converts new/changed invoices
+        console.time('💰 Currency conversion with cache')
+        const allConversions = await convertInvoiceAmountsOptimized(
           data.map(inv => ({
+            id: inv.id,
             total_amount: inv.total_amount || 0,
             currency: inv.currency,
             issue_date: inv.issue_date
           }))
         )
+        console.timeEnd('💰 Currency conversion with cache')
+        
+        // Log cache performance stats
+        const cacheStats = getCurrencyConversionStats()
+        console.log(`📊 Conversion cache performance:`, cacheStats)
 
         // Client-side filtering of conversion results (much faster than multiple async calls)
         let totalConverted = 0
@@ -189,8 +197,9 @@ export function useInvoices(filters: InvoiceFilters = {}): DataHookReturn<Invoic
   const invoicesQuery = useQuery({
     queryKey: ['invoices', filters],
     queryFn: () => fetchInvoices(filters),
-    staleTime: 30 * 1000,
-    gcTime: 5 * 60 * 1000,
+    staleTime: 2 * 60 * 1000, // 2 minutes - longer since conversions are cached
+    gcTime: 10 * 60 * 1000, // 10 minutes - keep data longer for better UX
+    refetchOnWindowFocus: false, // Avoid unnecessary refetches
   })
 
   // Update status mutation

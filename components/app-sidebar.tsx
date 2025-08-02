@@ -1,10 +1,9 @@
 "use client"
 
 import type * as React from "react"
-import { Bot, Gauge, GalleryVerticalEnd, PieChart, ReceiptText, Settings2, TrendingUp } from "lucide-react"
+import { Bot, Gauge, GalleryVerticalEnd, PieChart, ReceiptText, TrendingUp } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
-import { NavSecondary } from "@/components/nav-secondary"
 import { NavUser } from "@/components/nav-user"
 import {
   Sidebar,
@@ -40,10 +39,6 @@ const data = {
       icon: GalleryVerticalEnd,
       items: [
         {
-          title: "All Projects",
-          url: "/dashboard/projects",
-        },
-        {
           title: "Active",
           url: "/dashboard/projects/active",
         },
@@ -58,6 +53,10 @@ const data = {
         {
           title: "Cancelled",
           url: "/dashboard/projects/cancelled",
+        },
+        {
+          title: "All Projects",
+          url: "/dashboard/projects",
         },
       ],
     },
@@ -86,18 +85,6 @@ const data = {
       icon: PieChart,
     },
   ],
-  navSecondary: [
-    {
-      title: "Settings",
-      url: "/dashboard/settings",
-      icon: Settings2,
-    },
-    {
-      title: "Profile",
-      url: "/dashboard/profile",
-      icon: Bot,
-    },
-  ],
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -122,7 +109,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
         <NavUser />

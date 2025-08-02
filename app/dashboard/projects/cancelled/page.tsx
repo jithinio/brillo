@@ -24,6 +24,7 @@ export default function CancelledProjectsPage() {
         lockedFilters={{
           status: true
         }}
+        defaultStatus="cancelled"
         showSummaryCards={true}
               showStatusFilter={false}
             />

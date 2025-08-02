@@ -3,6 +3,8 @@
 import { ChevronRight, type LucideIcon } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { motion, AnimatePresence } from "framer-motion"
+import * as React from "react"
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import {
@@ -15,6 +17,126 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar"
+
+// Separate component for collapsible items to avoid conditional hooks
+function NavItemWithCollapse({
+  item,
+  isActive,
+  isRouteActive,
+}: {
+  item: {
+    title: string
+    url: string
+    icon?: LucideIcon
+    items?: { title: string; url: string }[]
+  }
+  isActive: boolean
+  isRouteActive: (url: string) => boolean
+}) {
+  const [isOpen, setIsOpen] = React.useState(isActive)
+  
+  // Update open state when route changes
+  React.useEffect(() => {
+    setIsOpen(isActive)
+  }, [isActive])
+  
+  return (
+    <Collapsible 
+      asChild 
+      open={isOpen} 
+      onOpenChange={setIsOpen}
+      className="group/collapsible"
+    >
+      <SidebarMenuItem>
+        <CollapsibleTrigger asChild>
+          <SidebarMenuButton tooltip={item.title} isActive={isActive}>
+            {item.icon && <item.icon />}
+            <span>{item.title}</span>
+            <motion.div
+              animate={{ rotate: isOpen ? 90 : 0 }}
+              transition={{ 
+                type: "spring", 
+                stiffness: 800, 
+                damping: 35,
+                duration: 0.1
+              }}
+              className="ml-auto"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </motion.div>
+          </SidebarMenuButton>
+        </CollapsibleTrigger>
+        <AnimatePresence initial={false}>
+          {isOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ 
+                opacity: 1, 
+                height: "auto",
+                transition: {
+                  height: { type: "tween", ease: "easeOut", duration: 0.15 },
+                  opacity: { duration: 0.1, delay: 0.02 },
+                  staggerChildren: 0.02,
+                  delayChildren: 0.05
+                }
+              }}
+              exit={{ 
+                opacity: 0, 
+                height: 0,
+                transition: {
+                  height: { type: "tween", ease: "easeIn", duration: 0.12 },
+                  opacity: { duration: 0.05 },
+                  staggerChildren: 0.015,
+                  staggerDirection: -1
+                }
+              }}
+              style={{ 
+                overflow: "hidden",
+                willChange: "height, opacity"
+              }}
+            >
+              <SidebarMenuSub>
+                {item.items?.map((subItem, index) => (
+                  <motion.div
+                    key={subItem.title}
+                    initial={{ opacity: 0, y: -2 }}
+                    animate={{ 
+                      opacity: 1, 
+                      y: 0,
+                      transition: { 
+                        type: "spring", 
+                        stiffness: 800, 
+                        damping: 35 
+                      }
+                    }}
+                    exit={{ 
+                      opacity: 0, 
+                      y: -2,
+                      transition: { 
+                        type: "spring", 
+                        stiffness: 800, 
+                        damping: 35,
+                        duration: 0.05
+                      }
+                    }}
+                  >
+                    <SidebarMenuSubItem>
+                      <SidebarMenuSubButton asChild isActive={isRouteActive(subItem.url)}>
+                        <Link href={subItem.url}>
+                          <span>{subItem.title}</span>
+                        </Link>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                  </motion.div>
+                ))}
+              </SidebarMenuSub>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </SidebarMenuItem>
+    </Collapsible>
+  )
+}
 
 export function NavMain({
   items,
@@ -37,6 +159,10 @@ export function NavMain({
     if (url === "/dashboard") {
       return pathname === "/dashboard"
     }
+    // Special case for main pages with sub-pages - only match exact path
+    if (url === "/dashboard/projects" || url === "/dashboard/invoices") {
+      return pathname === url
+    }
     return pathname.startsWith(url)
   }
 
@@ -56,43 +182,29 @@ export function NavMain({
         {items.map((item) => {
           const isActive = isParentActive(item)
           
-          return (
-            <Collapsible key={item.title} asChild defaultOpen={isActive} className="group/collapsible">
-              <SidebarMenuItem>
-                {item.items?.length ? (
-                  <CollapsibleTrigger asChild>
-                    <SidebarMenuButton tooltip={item.title} isActive={isActive}>
-                      {item.icon && <item.icon />}
-                      <span>{item.title}</span>
-                      <ChevronRight className="ml-auto transition-transform duration-150 group-data-[state=open]/collapsible:rotate-90" />
-                    </SidebarMenuButton>
-                  </CollapsibleTrigger>
-                ) : (
-                  <SidebarMenuButton tooltip={item.title} isActive={isRouteActive(item.url)} asChild>
-                    <Link href={item.url}>
-                      {item.icon && <item.icon />}
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                )}
-                {item.items?.length ? (
-                  <CollapsibleContent>
-                    <SidebarMenuSub>
-                      {item.items?.map((subItem) => (
-                        <SidebarMenuSubItem key={subItem.title}>
-                          <SidebarMenuSubButton asChild isActive={isRouteActive(subItem.url)}>
-                            <Link href={subItem.url}>
-                              <span>{subItem.title}</span>
-                            </Link>
-                          </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
-                      ))}
-                    </SidebarMenuSub>
-                  </CollapsibleContent>
-                ) : null}
+          // Only use collapsible behavior for items with sub-items
+          if (item.items?.length) {
+            return (
+              <NavItemWithCollapse
+                key={item.title}
+                item={item}
+                isActive={isActive}
+                isRouteActive={isRouteActive}
+              />
+            )
+          } else {
+            // Simple menu item without collapsible behavior
+            return (
+              <SidebarMenuItem key={item.title}>
+                <SidebarMenuButton tooltip={item.title} isActive={isRouteActive(item.url)} asChild>
+                  <Link href={item.url}>
+                    {item.icon && <item.icon />}
+                    <span>{item.title}</span>
+                  </Link>
+                </SidebarMenuButton>
               </SidebarMenuItem>
-            </Collapsible>
-          )
+            )
+          }
         })}
       </SidebarMenu>
     </SidebarGroup>

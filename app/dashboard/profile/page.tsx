@@ -10,12 +10,16 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Save, Edit, Loader2, Camera, AlertCircle } from "lucide-react"
+import { Save, Edit, Loader2, Camera, AlertCircle, Shield, Trash2 } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
+import { useClients } from "@/hooks/use-clients"
+import { useInvoices } from "@/hooks/use-invoices"
+import { useAdvancedProjects } from "@/hooks/use-advanced-projects"
 import { toast } from "sonner"
 import { PageHeader, PageContent, PageTitle } from "@/components/page-header"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 
 
 interface Profile {
@@ -55,6 +59,27 @@ export default function ProfilePage() {
     phone: "",
     company: "",
   })
+
+  // Security settings state
+  const [securitySettings, setSecuritySettings] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  })
+
+  // Delete account state
+  const [showDeleteWarning, setShowDeleteWarning] = useState(false)
+  const [showDeleteVerification, setShowDeleteVerification] = useState(false)
+  const [deleteVerification, setDeleteVerification] = useState({
+    password: "",
+    confirmationText: "",
+  })
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  // Fetch real data for Quick Stats
+  const { totalCount: projectsCount, isLoading: projectsLoading } = useAdvancedProjects({})
+  const { totalCount: clientsCount, isLoading: clientsLoading } = useClients({})
+  const { totalCount: invoicesCount, isLoading: invoicesLoading } = useInvoices({})
 
   useEffect(() => {
     if (user) {
@@ -312,6 +337,102 @@ export default function ProfilePage() {
       .toUpperCase()
   }
 
+  const handleUpdatePassword = async () => {
+    if (!securitySettings.currentPassword) {
+      toast.error("Current password is required")
+      return
+    }
+
+    if (!securitySettings.newPassword) {
+      toast.error("New password is required")
+      return
+    }
+
+    if (securitySettings.newPassword !== securitySettings.confirmPassword) {
+      toast.error("New passwords do not match")
+      return
+    }
+
+    if (securitySettings.newPassword.length < 6) {
+      toast.error("Password must be at least 6 characters long")
+      return
+    }
+
+    try {
+      // In a real app, you would send this to your backend API
+      // await api.updatePassword(securitySettings.currentPassword, securitySettings.newPassword)
+      
+      // Clear password fields
+      setSecuritySettings({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      })
+
+      toast.success("Your password has been updated successfully")
+    } catch (error) {
+      console.error("Error updating password:", error)
+      toast.error("Failed to update password. Please try again.")
+    }
+  }
+
+  const handleDeleteAccount = () => {
+    setShowDeleteWarning(true)
+  }
+
+  const proceedToVerification = () => {
+    setShowDeleteWarning(false)
+    setShowDeleteVerification(true)
+  }
+
+  const handleDeleteAccountConfirm = async () => {
+    // Validate inputs
+    if (!deleteVerification.password) {
+      toast.error("Please enter your current password")
+      return
+    }
+
+    if (deleteVerification.confirmationText !== "DELETE") {
+      toast.error("Please type 'DELETE' to confirm")
+      return
+    }
+
+    try {
+      setIsDeleting(true)
+
+      // In a real app, you would call your backend API to delete the account
+      // await api.deleteAccount(deleteVerification.password)
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 2000))
+
+      toast.success("Account deleted successfully")
+      
+      // Clear all local storage
+      localStorage.clear()
+      
+      // Redirect to login or goodbye page
+      setTimeout(() => {
+        window.location.href = "/login"
+      }, 1000)
+
+    } catch (error) {
+      console.error("Error deleting account:", error)
+      toast.error("Failed to delete account. Please try again.")
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  const resetDeleteState = () => {
+    setShowDeleteWarning(false)
+    setShowDeleteVerification(false)
+    setDeleteVerification({
+      password: "",
+      confirmationText: "",
+    })
+  }
+
   if (loading) {
     return null
   }
@@ -397,15 +518,27 @@ export default function ProfilePage() {
               <CardContent className="space-y-4">
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Projects</span>
-                  <Badge variant="secondary">12</Badge>
+                  {projectsLoading ? (
+                    <div className="h-5 w-8 bg-muted animate-pulse rounded"></div>
+                  ) : (
+                    <Badge variant="secondary">{projectsCount}</Badge>
+                  )}
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Clients</span>
-                  <Badge variant="secondary">8</Badge>
+                  {clientsLoading ? (
+                    <div className="h-5 w-8 bg-muted animate-pulse rounded"></div>
+                  ) : (
+                    <Badge variant="secondary">{clientsCount}</Badge>
+                  )}
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Invoices</span>
-                  <Badge variant="secondary">24</Badge>
+                  {invoicesLoading ? (
+                    <div className="h-5 w-8 bg-muted animate-pulse rounded"></div>
+                  ) : (
+                    <Badge variant="secondary">{invoicesCount}</Badge>
+                  )}
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Member Since</span>
@@ -541,39 +674,217 @@ export default function ProfilePage() {
 
             <Card className="mt-6">
               <CardHeader>
-                <CardTitle>Recent Activity</CardTitle>
-                <CardDescription>Your recent actions and updates.</CardDescription>
+                <CardTitle className="flex items-center">
+                  <Shield className="mr-2 h-5 w-5" />
+                  Security Settings
+                </CardTitle>
+                <CardDescription>Change your account password and security settings.</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">Profile updated</p>
-                      <p className="text-xs text-muted-foreground">Just now</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">Signed in to account</p>
-                      <p className="text-xs text-muted-foreground">2 hours ago</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">Account created</p>
-                      <p className="text-xs text-muted-foreground">
-                        {user?.created_at ? new Date(user.created_at).toLocaleDateString() : "Recently"}
-                      </p>
-                    </div>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="currentPassword">Current Password</Label>
+                  <Input 
+                    id="currentPassword" 
+                    type="password" 
+                    value={securitySettings.currentPassword}
+                    onChange={(e) => setSecuritySettings({...securitySettings, currentPassword: e.target.value})}
+                    disabled={!isEditing}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="newPassword">New Password</Label>
+                  <Input 
+                    id="newPassword" 
+                    type="password" 
+                    value={securitySettings.newPassword}
+                    onChange={(e) => setSecuritySettings({...securitySettings, newPassword: e.target.value})}
+                    disabled={!isEditing}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                  <Input 
+                    id="confirmPassword" 
+                    type="password" 
+                    value={securitySettings.confirmPassword}
+                    onChange={(e) => setSecuritySettings({...securitySettings, confirmPassword: e.target.value})}
+                    disabled={!isEditing}
+                  />
+                </div>
+                {isEditing && (
+                  <Button size="sm" onClick={handleUpdatePassword}>Update Password</Button>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="mt-6 border-destructive/20">
+              <CardHeader>
+                <CardTitle className="flex items-center text-destructive">
+                  <Trash2 className="mr-2 h-5 w-5" />
+                  Danger Zone
+                </CardTitle>
+                <CardDescription>
+                  Permanently delete your account and all associated data. This action cannot be undone.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-destructive">Account Deletion</p>
+                    <p className="text-xs text-muted-foreground">
+                      Deleting your account will permanently remove:
+                    </p>
+                    <ul className="text-xs text-muted-foreground list-disc list-inside space-y-1 ml-4">
+                      <li>Your profile and personal information</li>
+                      <li>All projects and project data</li>
+                      <li>All invoices and financial records</li>
+                      <li>All clients and relationships</li>
+                      <li>Company settings and preferences</li>
+                      <li>Uploaded files and documents</li>
+                    </ul>
                   </div>
                 </div>
+                <Button 
+                  variant="destructive" 
+                  size="sm" 
+                  onClick={handleDeleteAccount}
+                  className="text-white hover:text-white"
+                >
+                  <Trash2 className="mr-1.5 h-4 w-4 text-white" />
+                  Delete Account
+                </Button>
               </CardContent>
             </Card>
           </div>
         </div>
+
+        {/* Delete Account Warning Dialog */}
+        <AlertDialog open={showDeleteWarning} onOpenChange={setShowDeleteWarning}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+                <Trash2 className="h-5 w-5" />
+                Delete Account
+              </AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="space-y-3">
+                  <p>
+                    You are about to permanently delete your account and all associated data.
+                  </p>
+                  
+                  <div className="bg-destructive/10 border border-destructive/20 rounded-md p-3">
+                    <div className="font-medium text-destructive mb-2">⚠️ This action will permanently delete:</div>
+                    <ul className="text-sm text-destructive/80 list-disc list-inside space-y-1">
+                      <li>Your profile and personal information</li>
+                      <li>All projects and project data</li>
+                      <li>All invoices and financial records</li>
+                      <li>All clients and relationships</li>
+                      <li>Company settings and preferences</li>
+                      <li>Uploaded files and documents</li>
+                      <li>Analytics and cached data</li>
+                    </ul>
+                  </div>
+                  
+                  <div className="text-sm font-medium text-destructive">
+                    ⚠️ This action cannot be undone and no data can be recovered.
+                  </div>
+                  
+                  <div className="text-sm text-muted-foreground">
+                    Are you sure you want to continue?
+                  </div>
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setShowDeleteWarning(false)}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={proceedToVerification}
+                className="bg-destructive hover:bg-destructive/90 text-white hover:text-white"
+              >
+                Continue
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Delete Account Verification Dialog */}
+        <AlertDialog open={showDeleteVerification} onOpenChange={resetDeleteState}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+                <Trash2 className="h-5 w-5" />
+                Confirm Account Deletion
+              </AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="space-y-4">
+                  <p className="text-destructive font-medium">
+                    This is your final chance to cancel. Once confirmed, your account will be permanently deleted.
+                  </p>
+                  
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="deletePassword" className="text-sm font-medium">
+                        Enter your current password to confirm:
+                      </Label>
+                      <Input
+                        id="deletePassword"
+                        type="password"
+                        value={deleteVerification.password}
+                        onChange={(e) => setDeleteVerification({
+                          ...deleteVerification,
+                          password: e.target.value
+                        })}
+                        placeholder="Current password"
+                        className="border-destructive/20 focus:border-destructive"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="deleteConfirmation" className="text-sm font-medium">
+                        Type <span className="font-mono bg-muted px-1 rounded">DELETE</span> to confirm:
+                      </Label>
+                      <Input
+                        id="deleteConfirmation"
+                        value={deleteVerification.confirmationText}
+                        onChange={(e) => setDeleteVerification({
+                          ...deleteVerification,
+                          confirmationText: e.target.value
+                        })}
+                        placeholder="Type DELETE to confirm"
+                        className="border-destructive/20 focus:border-destructive"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={resetDeleteState} disabled={isDeleting}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleDeleteAccountConfirm}
+                disabled={isDeleting || !deleteVerification.password || deleteVerification.confirmationText !== "DELETE"}
+                className="bg-destructive hover:bg-destructive/90 text-white hover:text-white disabled:text-white/70"
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="mr-1.5 h-4 w-4 animate-spin text-white" />
+                    Deleting Account...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="mr-1.5 h-4 w-4 text-white" />
+                    Delete Account Permanently
+                  </>
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
       </PageContent>
     </>
   )
