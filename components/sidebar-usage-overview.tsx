@@ -7,7 +7,12 @@ import { useSubscription } from "@/components/providers/subscription-provider"
 import Link from "next/link"
 
 export function SidebarUsageOverview() {
-  const { subscription, usage, plan } = useSubscription()
+  const { subscription, usage, plan, isLoading } = useSubscription()
+  
+  // Don't render anything while loading to prevent flash
+  if (isLoading) {
+    return null
+  }
   
   // Only show for free plan users
   if (subscription.planId !== 'free') {
