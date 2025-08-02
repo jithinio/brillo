@@ -90,6 +90,7 @@ export function PhoneInput({
     const expectedValue = `${currentCountry.phoneCode} ${phoneNumber}`.trim()
     
     if (value !== prevValueRef.current && value !== expectedValue) {
+      console.log('📞 PhoneInput loading value:', value)
       if (value) {
         // Detect country from phone number
         const detectedCountry = detectCountryFromPhone(value)
@@ -98,14 +99,17 @@ export function PhoneInput({
           setCurrentCountry(detectedCountry)
           const phoneWithoutCode = extractPhoneNumber(value, detectedCountry)
           setPhoneNumber(phoneWithoutCode)
+          console.log('📞 PhoneInput set to:', {country: detectedCountry.code, phone: phoneWithoutCode})
         } else {
           // Fallback: try to extract phone number from any format
           const phoneWithoutCode = value.replace(/^\+\d+\s*/, "")
           setPhoneNumber(phoneWithoutCode)
+          console.log('📞 PhoneInput fallback to:', phoneWithoutCode)
         }
       } else {
         // Reset to empty state
         setPhoneNumber("")
+        console.log('📞 PhoneInput reset to empty')
       }
       
       prevValueRef.current = value

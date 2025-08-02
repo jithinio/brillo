@@ -101,25 +101,20 @@ export default function SettingsPage() {
       }))
     }
     
-    // Load company info from settings provider (database) first, then localStorage as override
-    const savedCompany = localStorage.getItem('company-info')
-    
-    // Only update if settings are loaded and user hasn't made changes
-    if (!isLoading && !hasUserChanges) {
-      // console.log('📞 Settings provider data:', settings)
-      
-      setCompanyInfo(prev => {
-        const newInfo = {
-          companyName: settings.companyName || prev.companyName,
-          companyAddress: settings.companyAddress || prev.companyAddress, 
-          companyPhone: settings.companyPhone || prev.companyPhone,
-          companyWebsite: settings.companyWebsite || prev.companyWebsite,
-          companyEmail: settings.companyEmail || prev.companyEmail,
-          companyRegistration: settings.companyRegistration || prev.companyRegistration,
-        }
-        
-        return newInfo
+    // Load company info - prioritize database over localStorage
+    if (!isLoading && settings.companyName) {
+      console.log('📞 Loading phone from database:', settings.companyPhone)
+      setCompanyInfo({
+        companyName: settings.companyName || "Suitebase",
+        companyAddress: settings.companyAddress || "123 Business St, City, State 12345",
+        companyPhone: settings.companyPhone || "+1 (555) 123-4567",
+        companyWebsite: settings.companyWebsite || "https://suitebase.com",
+        companyEmail: settings.companyEmail || "contact@suitebase.com",
+        companyRegistration: settings.companyRegistration || "",
       })
+      
+      // Reset user changes flag when loading from database
+      setHasUserChanges(false)
     }
     
     // Load tax info 
@@ -152,7 +147,7 @@ export default function SettingsPage() {
     if (settings.defaultCurrency) {
       setOriginalCurrency(settings.defaultCurrency)
     }
-  }, [settings, isLoading, hasUserChanges]) // Add settings, isLoading, and hasUserChanges as dependencies
+  }, [settings, isLoading]) // Load when settings or loading state changes
 
   const handleSaveSettings = async () => {
     // Check if currency has changed and show warning dialog
