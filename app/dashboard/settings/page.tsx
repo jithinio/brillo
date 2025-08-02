@@ -103,29 +103,27 @@ export default function SettingsPage() {
     // Load company info from settings provider (database) first, then localStorage as override
     const savedCompany = localStorage.getItem('company-info')
     
-    // Only update if settings are loaded and we have actual data
+    // Only update if settings are loaded
     if (!isLoading) {
-      const newCompanyInfo = {
-        companyName: settings.companyName || "Suitebase",
-        companyAddress: settings.companyAddress || "123 Business St, City, State 12345",
-        companyPhone: settings.companyPhone || "+1 (555) 123-4567",
-        companyWebsite: settings.companyWebsite || "https://suitebase.com",
-        companyEmail: settings.companyEmail || "contact@suitebase.com",
-        companyRegistration: settings.companyRegistration || "",
-      }
+      console.log('📞 Settings provider data:', {
+        companyPhone: settings.companyPhone,
+        isLoading,
+        hasData: !!settings.companyName
+      })
       
-      // Override with localStorage if available
-      if (savedCompany) {
-        const parsed = JSON.parse(savedCompany)
-        Object.keys(newCompanyInfo).forEach(key => {
-          if (parsed[key]) {
-            newCompanyInfo[key] = parsed[key]
-          }
-        })
-      }
-      
-      console.log('🔄 Loading company info:', newCompanyInfo)
-      setCompanyInfo(newCompanyInfo)
+      setCompanyInfo(prev => {
+        const newInfo = {
+          companyName: settings.companyName || prev.companyName,
+          companyAddress: settings.companyAddress || prev.companyAddress, 
+          companyPhone: settings.companyPhone || prev.companyPhone,
+          companyWebsite: settings.companyWebsite || prev.companyWebsite,
+          companyEmail: settings.companyEmail || prev.companyEmail,
+          companyRegistration: settings.companyRegistration || prev.companyRegistration,
+        }
+        
+        console.log('📞 Setting company info to:', newInfo)
+        return newInfo
+      })
     }
     
     // Load tax info 

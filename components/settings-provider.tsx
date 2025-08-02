@@ -104,6 +104,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         
         if (dbSettings && isMounted) {
           // Update settings state with database values
+          console.log('📞 Mapping database settings to local settings')
+          console.log('📞 Database phone:', dbSettings.company_phone)
+          console.log('📞 Loaded settings phone:', loadedSettings.companyPhone)
+          
           const updatedSettings = {
             ...loadedSettings,
             companyName: dbSettings.company_name || loadedSettings.companyName,
@@ -271,6 +275,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           dbSettingsUpdate.company_email = value
           break
         case 'companyPhone':
+          console.log('📞 Updating phone in database:', value)
           dbSettingsUpdate.company_phone = value
           break
         case 'companyWebsite':
