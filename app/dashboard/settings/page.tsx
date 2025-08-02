@@ -37,6 +37,7 @@ export default function SettingsPage() {
   const [showCurrencyWarning, setShowCurrencyWarning] = useState(false) // Control currency change warning dialog
   const [activeTab, setActiveTab] = useState("general")
   const [hasUserChanges, setHasUserChanges] = useState(false) // Track if user has made changes
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false) // Track if initial load from DB is complete
   
   // General settings state
   const [generalSettings, setGeneralSettings] = useState({
@@ -101,9 +102,9 @@ export default function SettingsPage() {
       }))
     }
     
-    // Load company info - prioritize database over localStorage
-    if (!isLoading && settings.companyName) {
-      console.log('📞 Loading phone from database:', settings.companyPhone)
+    // Load company info - only on initial load, not on tab switches
+    if (!isLoading && settings.companyName && !initialLoadComplete) {
+      console.log('📞 Initial load - Loading phone from database:', settings.companyPhone)
       setCompanyInfo({
         companyName: settings.companyName || "Suitebase",
         companyAddress: settings.companyAddress || "123 Business St, City, State 12345",
@@ -113,7 +114,8 @@ export default function SettingsPage() {
         companyRegistration: settings.companyRegistration || "",
       })
       
-      // Reset user changes flag when loading from database
+      // Mark initial load as complete and reset user changes flag
+      setInitialLoadComplete(true)
       setHasUserChanges(false)
     }
     
@@ -147,7 +149,7 @@ export default function SettingsPage() {
     if (settings.defaultCurrency) {
       setOriginalCurrency(settings.defaultCurrency)
     }
-  }, [settings, isLoading]) // Load when settings or loading state changes
+  }, [settings, isLoading, initialLoadComplete]) // Load when settings change but only on initial load
 
   const handleSaveSettings = async () => {
     // Check if currency has changed and show warning dialog
