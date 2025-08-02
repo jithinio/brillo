@@ -22,10 +22,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Create Polar client
+    // Create Polar client with correct server mode
+    const serverMode = process.env.NODE_ENV === 'production' ? "production" : "sandbox";
     const polar = new Polar({
       accessToken: process.env.POLAR_ACCESS_TOKEN!,
-      server: "sandbox"
+      server: serverMode
     });
 
     // Create checkout session
