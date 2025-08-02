@@ -84,33 +84,37 @@ export function PhoneInput({
     return phoneValue
   }, [])
 
-  // Initialize phone number from value prop - simplified logic
+  // Initialize phone number from value prop - remove circular dependency
   React.useEffect(() => {
-    // Only process if value has actually changed and is different from what we expect
-    const expectedValue = `${currentCountry.phoneCode} ${phoneNumber}`.trim()
+    console.log('📞 PhoneInput value changed:', value, 'previous:', prevValueRef.current)
     
-    if (value !== prevValueRef.current && value !== expectedValue) {
+    // Only process if value has actually changed
+    if (value !== prevValueRef.current) {
       if (value) {
         // Detect country from phone number
         const detectedCountry = detectCountryFromPhone(value)
         
         if (detectedCountry) {
+          console.log('📞 Setting country to:', detectedCountry.code)
           setCurrentCountry(detectedCountry)
           const phoneWithoutCode = extractPhoneNumber(value, detectedCountry)
+          console.log('📞 Setting phone to:', phoneWithoutCode)
           setPhoneNumber(phoneWithoutCode)
         } else {
           // Fallback: try to extract phone number from any format
           const phoneWithoutCode = value.replace(/^\+\d+\s*/, "")
+          console.log('📞 Fallback phone to:', phoneWithoutCode)
           setPhoneNumber(phoneWithoutCode)
         }
       } else {
         // Reset to empty state
+        console.log('📞 Resetting phone to empty')
         setPhoneNumber("")
       }
       
       prevValueRef.current = value
     }
-  }, [value, currentCountry, phoneNumber, detectCountryFromPhone, extractPhoneNumber])
+  }, [value, detectCountryFromPhone, extractPhoneNumber]) // Removed phoneNumber and currentCountry dependencies
 
   React.useEffect(() => {
     if (selectedCountry) {
@@ -121,6 +125,7 @@ export function PhoneInput({
   React.useEffect(() => {
     const fullNumber = `${currentCountry.phoneCode} ${phoneNumber}`.trim()
     if (onChange && fullNumber !== prevValueRef.current) {
+      console.log('📞 PhoneInput onChange calling parent with:', fullNumber)
       onChange(fullNumber)
       prevValueRef.current = fullNumber
     }

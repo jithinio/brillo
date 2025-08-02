@@ -507,11 +507,15 @@ export default function SettingsPage() {
                         id="companyPhone" 
                         value={companyInfo.companyPhone} 
                         onChange={(value) => {
+                          console.log('📞 Settings page received onChange:', value)
                           setCompanyInfo({...companyInfo, companyPhone: value})
                           setHasUserChanges(true)
                         }}
                         placeholder="Enter company phone"
                       />
+                      <div className="text-xs text-gray-500 mt-1">
+                        Debug: Current value = {companyInfo.companyPhone}
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="companyWebsite">Website</Label>
