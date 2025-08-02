@@ -34,6 +34,37 @@ interface SubscriptionProviderProps {
   children: ReactNode
 }
 
+// Helper function to clear stale subscription data
+async function clearStaleSubscriptionData(userId: string) {
+  try {
+    const { supabase } = await import('@/lib/supabase')
+    
+    console.log('🧹 Clearing stale subscription data for user:', userId)
+    
+    // Reset user to free plan and clear Polar references
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        subscription_status: 'free',
+        subscription_plan_id: 'free',
+        polar_customer_id: null,
+        polar_subscription_id: null,
+        subscription_current_period_start: null,
+        subscription_current_period_end: null
+      })
+      .eq('id', userId)
+    
+    if (error) {
+      console.error('Error clearing stale subscription data:', error)
+    } else {
+      console.log('✅ Successfully cleared stale subscription data')
+      return true // Indicate successful cleanup
+    }
+  } catch (error) {
+    console.error('Error in clearStaleSubscriptionData:', error)
+  }
+}
+
 export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
   const { user } = useAuth()
   const [subscription, setSubscription] = useState<UserSubscription>({
@@ -224,9 +255,25 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
                 subscriptionId = data.subscriptionId
                 console.log('✅ Found subscription ID from Polar:', subscriptionId)
               }
+            } else if (response.status === 401) {
+              console.warn('🧹 401 Unauthorized from Polar API - clearing stale subscription data')
+              const cleared = await clearStaleSubscriptionData(user.id)
+              if (cleared) {
+                // Refetch profile data after clearing stale data
+                return loadSubscriptionData(true)
+              }
             }
           } catch (error) {
             console.warn('Could not fetch subscription from Polar:', error)
+            // If we get a 401 error, clear stale subscription data
+            if (error instanceof Error && error.message.includes('401')) {
+              console.warn('🧹 Clearing stale subscription data due to 401 error')
+              const cleared = await clearStaleSubscriptionData(user.id)
+              if (cleared) {
+                // Refetch profile data after clearing stale data
+                return loadSubscriptionData(true)
+              }
+            }
           }
         }
 
@@ -255,9 +302,27 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
                 status: subscriptionDetails?.status,
                 cancelAtPeriodEnd: subscriptionDetails?.cancelAtPeriodEnd
               })
+            } else if (response.status === 401) {
+              console.warn('🧹 401 Unauthorized from Polar subscription details - clearing stale data')
+              const cleared = await clearStaleSubscriptionData(user.id)
+              if (cleared) {
+                // Refetch profile data after clearing stale data
+                return loadSubscriptionData(true)
+              }
+              subscriptionId = null // Reset subscription ID to prevent further attempts
             }
           } catch (error) {
             console.warn('Could not fetch subscription details from Polar:', error)
+            // If we get a 401 error, clear stale subscription data
+            if (error instanceof Error && error.message.includes('401')) {
+              console.warn('🧹 Clearing stale subscription data due to 401 error')
+              const cleared = await clearStaleSubscriptionData(user.id)
+              if (cleared) {
+                // Refetch profile data after clearing stale data
+                return loadSubscriptionData(true)
+              }
+              subscriptionId = null // Reset subscription ID to prevent further attempts
+            }
           }
         }
 
