@@ -86,8 +86,6 @@ export function PhoneInput({
 
   // Initialize phone number from value prop - remove circular dependency
   React.useEffect(() => {
-    console.log('📞 PhoneInput value changed:', value, 'previous:', prevValueRef.current)
-    
     // Only process if value has actually changed
     if (value !== prevValueRef.current) {
       if (value) {
@@ -95,20 +93,16 @@ export function PhoneInput({
         const detectedCountry = detectCountryFromPhone(value)
         
         if (detectedCountry) {
-          console.log('📞 Setting country to:', detectedCountry.code)
           setCurrentCountry(detectedCountry)
           const phoneWithoutCode = extractPhoneNumber(value, detectedCountry)
-          console.log('📞 Setting phone to:', phoneWithoutCode)
           setPhoneNumber(phoneWithoutCode)
         } else {
           // Fallback: try to extract phone number from any format
           const phoneWithoutCode = value.replace(/^\+\d+\s*/, "")
-          console.log('📞 Fallback phone to:', phoneWithoutCode)
           setPhoneNumber(phoneWithoutCode)
         }
       } else {
         // Reset to empty state
-        console.log('📞 Resetting phone to empty')
         setPhoneNumber("")
       }
       
@@ -125,7 +119,6 @@ export function PhoneInput({
   React.useEffect(() => {
     const fullNumber = `${currentCountry.phoneCode} ${phoneNumber}`.trim()
     if (onChange && fullNumber !== prevValueRef.current) {
-      console.log('📞 PhoneInput onChange calling parent with:', fullNumber)
       onChange(fullNumber)
       prevValueRef.current = fullNumber
     }

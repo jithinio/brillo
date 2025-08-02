@@ -32,6 +32,8 @@ export default function SettingsPage() {
   const searchParams = useSearchParams()
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [savingGeneral, setSavingGeneral] = useState(false)
+  const [savingCompany, setSavingCompany] = useState(false)
   const [companyLogo, setCompanyLogo] = useState("") // Always start empty, will be set by settings provider
   const [originalCurrency, setOriginalCurrency] = useState("USD") // Track original currency for change detection
   const [showCurrencyWarning, setShowCurrencyWarning] = useState(false) // Control currency change warning dialog
@@ -137,7 +139,6 @@ export default function SettingsPage() {
   // Separate effect for company info - only runs once on mount
   useEffect(() => {
     if (!isLoading && settings.companyName && !initialLoadComplete) {
-      console.log('📞 One-time load from database:', settings.companyPhone)
       setCompanyInfo({
         companyName: settings.companyName || "Suitebase",
         companyAddress: settings.companyAddress || "123 Business St, City, State 12345",
@@ -151,10 +152,67 @@ export default function SettingsPage() {
     }
   }, [settings.companyName, settings.companyPhone, isLoading, initialLoadComplete])
 
-  // Debug effect to track when companyInfo changes
-  useEffect(() => {
-    console.log('📞 CompanyInfo state changed:', companyInfo.companyPhone)
-  }, [companyInfo.companyPhone])
+  // Removed debug effects - using individual save buttons now
+
+  const handleSaveGeneral = async () => {
+    try {
+      setSavingGeneral(true)
+      
+      // Save general settings to localStorage
+      localStorage.setItem('general-settings', JSON.stringify(generalSettings))
+      
+      // Update global settings provider
+      updateSetting('defaultCurrency', generalSettings.defaultCurrency)
+      updateSetting('invoicePrefix', generalSettings.invoicePrefix)
+      updateSetting('dateFormat', generalSettings.dateFormat)
+      
+      // Clear currency conversion cache if currency changed
+      if (generalSettings.defaultCurrency !== originalCurrency) {
+        console.log('💱 Currency changed, clearing conversion cache')
+        clearCurrencyConversionCache()
+        setOriginalCurrency(generalSettings.defaultCurrency)
+        
+        toast.success("General settings saved - Currency changed!", {
+          description: "Currency conversions have been cleared."
+        })
+      } else {
+        toast.success("General settings saved successfully!")
+      }
+    } catch (error) {
+      console.error('Error saving general settings:', error)
+      toast.error("Failed to save general settings. Please try again.")
+    } finally {
+      setSavingGeneral(false)
+    }
+  }
+
+  const handleSaveCompany = async () => {
+    try {
+      setSavingCompany(true)
+      
+      // Save company info to localStorage
+      localStorage.setItem('company-info', JSON.stringify(companyInfo))
+      
+      // Update global settings provider
+      updateSetting('companyName', companyInfo.companyName)
+      updateSetting('companyAddress', companyInfo.companyAddress)
+      updateSetting('companyEmail', companyInfo.companyEmail)
+      updateSetting('companyPhone', companyInfo.companyPhone)
+      updateSetting('companyWebsite', companyInfo.companyWebsite)
+      updateSetting('companyRegistration', companyInfo.companyRegistration)
+      updateSetting('companyLogo', companyLogo)
+      
+      // Reset user changes flag after successful save
+      setHasUserChanges(false)
+      
+      toast.success("Company information saved successfully!")
+    } catch (error) {
+      console.error('Error saving company information:', error)
+      toast.error("Failed to save company information. Please try again.")
+    } finally {
+      setSavingCompany(false)
+    }
+  }
 
   const handleSaveSettings = async () => {
     // Check if currency has changed and show warning dialog
@@ -290,18 +348,6 @@ export default function SettingsPage() {
     <>
       <PageHeader
         title="Settings"
-        action={
-          activeTab !== 'subscription' ? (
-            <Button size="sm" onClick={handleSaveSettings} disabled={saving}>
-              {saving ? (
-                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-              ) : (
-                <Save className="mr-1.5 h-4 w-4" />
-              )}
-              {saving ? "Saving..." : "Save Changes"}
-            </Button>
-          ) : null
-        }
       />
       <PageContent>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -314,8 +360,20 @@ export default function SettingsPage() {
           <TabsContent value="general" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>General Preferences</CardTitle>
-                <CardDescription>Update your general application preferences.</CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>General Preferences</CardTitle>
+                    <CardDescription>Update your general application preferences.</CardDescription>
+                  </div>
+                  <Button size="sm" onClick={handleSaveGeneral} disabled={savingGeneral}>
+                    {savingGeneral ? (
+                      <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="mr-1.5 h-4 w-4" />
+                    )}
+                    {savingGeneral ? "Saving..." : "Save"}
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
@@ -419,8 +477,20 @@ export default function SettingsPage() {
           <TabsContent value="company" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Company Information</CardTitle>
-                <CardDescription>Update your company details for invoices and contracts.</CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Company Information</CardTitle>
+                    <CardDescription>Update your company details for invoices and contracts.</CardDescription>
+                  </div>
+                  <Button size="sm" onClick={handleSaveCompany} disabled={savingCompany}>
+                    {savingCompany ? (
+                      <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="mr-1.5 h-4 w-4" />
+                    )}
+                    {savingCompany ? "Saving..." : "Save"}
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-4">
@@ -512,15 +582,11 @@ export default function SettingsPage() {
                         id="companyPhone" 
                         value={companyInfo.companyPhone} 
                         onChange={(value) => {
-                          console.log('📞 Settings page received onChange:', value)
                           setCompanyInfo({...companyInfo, companyPhone: value})
                           setHasUserChanges(true)
                         }}
                         placeholder="Enter company phone"
                       />
-                      <div className="text-xs text-gray-500 mt-1">
-                        Debug: Current value = {companyInfo.companyPhone}
-                      </div>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="companyWebsite">Website</Label>
