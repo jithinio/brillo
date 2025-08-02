@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/components/auth-provider"
+import { SubscriptionProvider } from "@/components/providers/subscription-provider"
 import { SettingsProvider } from "@/components/settings-provider"
 import { QueryProvider } from "@/components/query-provider"
 import { Toaster } from "@/components/ui/sonner"
@@ -16,13 +17,15 @@ export function ClientProviders({ children }: { children: React.ReactNode }) {
 
   if (!mounted) {
     return (
-      <QueryProvider>
-        <AuthProvider>
-          <SettingsProvider>
-            {children}
-          </SettingsProvider>
-        </AuthProvider>
-      </QueryProvider>
+              <QueryProvider>
+          <AuthProvider>
+            <SubscriptionProvider>
+              <SettingsProvider>
+                {children}
+              </SettingsProvider>
+            </SubscriptionProvider>
+          </AuthProvider>
+        </QueryProvider>
     )
   }
 
@@ -30,10 +33,12 @@ export function ClientProviders({ children }: { children: React.ReactNode }) {
     <QueryProvider>
       <ThemeProvider>
         <AuthProvider>
-          <SettingsProvider>
-            {children}
-            <Toaster />
-          </SettingsProvider>
+          <SubscriptionProvider>
+            <SettingsProvider>
+              {children}
+              <Toaster />
+            </SettingsProvider>
+          </SubscriptionProvider>
         </AuthProvider>
       </ThemeProvider>
     </QueryProvider>

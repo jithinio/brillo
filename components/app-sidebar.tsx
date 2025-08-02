@@ -64,6 +64,7 @@ const data = {
       title: "Invoices",
       url: "/dashboard/invoices",
       icon: ReceiptText,
+      proFeature: "invoicing",
       items: [
         {
           title: "All Invoices",
@@ -83,6 +84,7 @@ const data = {
       title: "Analytics",
       url: "/dashboard/analytics",
       icon: PieChart,
+      proFeature: "advanced_analytics",
     },
   ],
 }

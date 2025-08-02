@@ -17,6 +17,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar"
+import { ProBadge } from "@/components/gates/pro-badge"
 
 // Separate component for collapsible items to avoid conditional hooks
 function NavItemWithCollapse({
@@ -28,7 +29,8 @@ function NavItemWithCollapse({
     title: string
     url: string
     icon?: LucideIcon
-    items?: { title: string; url: string }[]
+    proFeature?: string
+    items?: { title: string; url: string; proFeature?: string }[]
   }
   isActive: boolean
   isRouteActive: (url: string) => boolean
@@ -52,6 +54,14 @@ function NavItemWithCollapse({
           <SidebarMenuButton tooltip={item.title} isActive={isActive}>
             {item.icon && <item.icon />}
             <span>{item.title}</span>
+            {item.proFeature && (
+              <ProBadge 
+                feature={item.proFeature as any} 
+                size="sm" 
+                variant="minimal"
+                className="ml-1"
+              />
+            )}
             <motion.div
               animate={{ rotate: isOpen ? 90 : 0 }}
               transition={{ 
@@ -124,6 +134,14 @@ function NavItemWithCollapse({
                       <SidebarMenuSubButton asChild isActive={isRouteActive(subItem.url)}>
                         <Link href={subItem.url}>
                           <span>{subItem.title}</span>
+                          {subItem.proFeature && (
+                            <ProBadge 
+                              feature={subItem.proFeature as any} 
+                              size="sm" 
+                              variant="minimal"
+                              className="ml-1"
+                            />
+                          )}
                         </Link>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
@@ -146,9 +164,11 @@ export function NavMain({
     url: string
     icon?: LucideIcon
     isActive?: boolean
+    proFeature?: string
     items?: {
       title: string
       url: string
+      proFeature?: string
     }[]
   }[]
 }) {
@@ -200,6 +220,14 @@ export function NavMain({
                   <Link href={item.url}>
                     {item.icon && <item.icon />}
                     <span>{item.title}</span>
+                    {item.proFeature && (
+                      <ProBadge 
+                        feature={item.proFeature as any} 
+                        size="sm" 
+                        variant="minimal"
+                        className="ml-1"
+                      />
+                    )}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

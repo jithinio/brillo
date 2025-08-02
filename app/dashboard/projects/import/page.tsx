@@ -18,6 +18,7 @@ import { toast } from "sonner"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { parseFormattedDate, type DateFormat } from "@/lib/date-format"
 import { useSettings } from "@/components/settings-provider"
+import { useSubscription } from "@/components/providers/subscription-provider"
 
 interface CsvData {
   headers: string[]
@@ -256,6 +257,7 @@ const CLIENT_FIELDS = [
 export default function ProjectImportPage() {
   const router = useRouter()
   const { settings } = useSettings()
+  const { usage, canCreate, getOverLimitStatus } = useSubscription()
   const fileInputRef = useRef<HTMLInputElement>(null)
   
   const [step, setStep] = useState<'upload' | 'mapping' | 'client-confirm' | 'importing' | 'complete'>('upload')
@@ -618,6 +620,33 @@ export default function ProjectImportPage() {
       console.log(`Column ${index}: "${header}" = "${rows[0]?.[index] || 'N/A'}"`)
     })
     console.log('=== END DEBUG ===\n')
+
+    // Check subscription limits before importing
+    const importCount = rows.length
+    const currentCount = usage.projects.current
+    const limit = usage.projects.limit
+    
+    if (limit !== 'unlimited') {
+      const totalAfterImport = currentCount + importCount
+      if (totalAfterImport > limit) {
+        const overAmount = totalAfterImport - limit
+        toast.error(
+          `Import would exceed your project limit. You have ${currentCount}/${limit} projects. ` +
+          `This import would add ${importCount} projects (${overAmount} over limit). ` +
+          `Please upgrade to Pro for unlimited projects or reduce the import size.`
+        )
+        return
+      }
+      
+      // Warn if getting close to limit
+      const remainingSlots = limit - currentCount
+      if (importCount > remainingSlots * 0.8) {
+        toast.warning(
+          `This import will use ${importCount} of your remaining ${remainingSlots} project slots. ` +
+          `Consider upgrading to Pro for unlimited projects.`
+        )
+      }
+    }
 
     setCsvData({ headers, rows })
     

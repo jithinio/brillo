@@ -16,6 +16,7 @@ import { supabase } from "@/lib/supabase"
 import { getDateRangeFromTimePeriod } from "@/lib/project-filters-v2"
 import { useSettings } from "@/components/settings-provider"
 import { useCurrencyCache } from "@/hooks/use-currency-cache"
+import { InvoicingGate } from "@/components/gates/pro-feature-gate"
 
 export default function InvoicesPage() {
   const router = useRouter()
@@ -262,73 +263,75 @@ export default function InvoicesPage() {
   }
 
   return (
-    <GenericTableWrapper
-        entityType="invoices"
-        pageTitle="Invoices"
-        dataHook={() => invoicesData as DataHookReturn<any>}
-        onFiltersChange={setFilters}
-        createColumns={(actions: any) => createInvoiceColumns({
-          onStatusChange: (invoice, newStatus) => {
-            const previousStatus = invoice.status
-            const statusLabels = {
-              draft: 'Draft',
-              sent: 'Sent', 
-              paid: 'Paid',
-              overdue: 'Overdue',
-              cancelled: 'Cancelled'
-            }
-            
-            // Execute status change immediately
-            invoicesData.updateStatus?.(invoice.id, newStatus)
-            
-            // Show toast with undo functionality
-            toast.success(`Status changed to ${statusLabels[newStatus as keyof typeof statusLabels]}`, {
-              description: `${invoice.invoice_number} is now ${statusLabels[newStatus as keyof typeof statusLabels].toLowerCase()}`,
-              action: {
-                label: "Undo",
-                onClick: () => {
-                  invoicesData.updateStatus?.(invoice.id, previousStatus)
-                  toast.success(`Reverted to ${statusLabels[previousStatus as keyof typeof statusLabels]}`, {
-                    description: `${invoice.invoice_number} status restored`
-                  })
+    <InvoicingGate>
+      <GenericTableWrapper
+          entityType="invoices"
+          pageTitle="Invoices"
+          dataHook={() => invoicesData as DataHookReturn<any>}
+          onFiltersChange={setFilters}
+          createColumns={(actions: any) => createInvoiceColumns({
+            onStatusChange: (invoice, newStatus) => {
+              const previousStatus = invoice.status
+              const statusLabels = {
+                draft: 'Draft',
+                sent: 'Sent', 
+                paid: 'Paid',
+                overdue: 'Overdue',
+                cancelled: 'Cancelled'
+              }
+              
+              // Execute status change immediately
+              invoicesData.updateStatus?.(invoice.id, newStatus)
+              
+              // Show toast with undo functionality
+              toast.success(`Status changed to ${statusLabels[newStatus as keyof typeof statusLabels]}`, {
+                description: `${invoice.invoice_number} is now ${statusLabels[newStatus as keyof typeof statusLabels].toLowerCase()}`,
+                action: {
+                  label: "Undo",
+                  onClick: () => {
+                    invoicesData.updateStatus?.(invoice.id, previousStatus)
+                    toast.success(`Reverted to ${statusLabels[previousStatus as keyof typeof statusLabels]}`, {
+                      description: `${invoice.invoice_number} status restored`
+                    })
+                  },
                 },
-              },
-            })
-          },
-          onInvoiceClick: (invoice) => router.push(`/dashboard/invoices/${invoice.id}/preview`),
-          editingInvoiceId: editingInvoiceId,
-          formatDate: formatDate,
-        })}
-        features={{
-          search: true,
-          batchOperations: true,
-          contextMenu: true,
-          infiniteScroll: false,
-          footerAggregations: true,
-          columnResizing: true,
-        }}
-        actions={entityActions}
-        defaultColumnWidths={{
-          select: 50,
-          invoice_number: 150,
-          client: 200,
-          project: 200,
-          status: 120,
-          total_amount: 150,
-          issue_date: 120,
-          due_date: 120,
-        }}
-        metricsComponent={<InvoiceMetrics metrics={metrics} />}
-        addButton={
-                        <Button 
-            onClick={() => router.push('/dashboard/invoices/generate')}
-                          size="sm"
-            className="h-8"
-          >
-            <Plus className="h-4 w-4 mr-1" />
-                          Create Invoice
-                        </Button>
-        }
-      />
+              })
+            },
+            onInvoiceClick: (invoice) => router.push(`/dashboard/invoices/${invoice.id}/preview`),
+            editingInvoiceId: editingInvoiceId,
+            formatDate: formatDate,
+          })}
+          features={{
+            search: true,
+            batchOperations: true,
+            contextMenu: true,
+            infiniteScroll: false,
+            footerAggregations: true,
+            columnResizing: true,
+          }}
+          actions={entityActions}
+          defaultColumnWidths={{
+            select: 50,
+            invoice_number: 150,
+            client: 200,
+            project: 200,
+            status: 120,
+            total_amount: 150,
+            issue_date: 120,
+            due_date: 120,
+          }}
+          metricsComponent={<InvoiceMetrics metrics={metrics} />}
+          addButton={
+                          <Button 
+              onClick={() => router.push('/dashboard/invoices/generate')}
+                            size="sm"
+              className="h-8"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+                            Create Invoice
+                          </Button>
+          }
+        />
+    </InvoicingGate>
   )
 }

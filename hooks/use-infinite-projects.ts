@@ -468,9 +468,9 @@ export function useInfiniteProjects(filters: ProjectFilters = {}, pageSize: numb
     queryFn: ({ pageParam }) => fetchProjectsPage(filters, pageParam, pageSize),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.hasMore ? lastPage.nextCursor : undefined,
-    staleTime: 30 * 1000, // Consider data stale after 30 seconds
-    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
-    refetchOnWindowFocus: true,
+    staleTime: 2 * 60 * 1000, // Consider data stale after 2 minutes
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    refetchOnWindowFocus: false, // Disable window focus refetch
     refetchOnReconnect: true,
     retry: 3,
   })
@@ -489,9 +489,9 @@ export function useInfiniteProjects(filters: ProjectFilters = {}, pageSize: numb
   const filteredMetricsQuery = useQuery({
     queryKey: ['filtered-metrics', filters],
     queryFn: () => fetchFilteredMetrics(filters),
-    staleTime: 30 * 1000, // Consider stale after 30 seconds
-    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
-    refetchOnWindowFocus: true,
+    staleTime: 2 * 60 * 1000, // Consider stale after 2 minutes
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    refetchOnWindowFocus: false, // Disable window focus refetch
     retry: 2,
     // Only fetch if we have active filters
     enabled: !!(filters.status?.length || filters.client?.length || filters.search || filters.timePeriod)

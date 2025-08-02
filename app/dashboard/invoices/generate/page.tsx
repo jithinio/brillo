@@ -24,6 +24,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useRouter } from "next/navigation"
 import { ClientAvatar } from "@/components/ui/client-avatar"
+import { InvoicingGate } from "@/components/gates/pro-feature-gate"
 
 
 interface InvoiceItem {
@@ -1459,7 +1460,7 @@ export default function GenerateInvoicePage() {
 
 
   return (
-    <>
+    <InvoicingGate>
       <PageHeader
         title={isEditMode ? "Edit Invoice" : "Generate Invoice"}
         action={
@@ -2238,7 +2239,7 @@ export default function GenerateInvoicePage() {
       </Dialog>
 
 
-    </>
+    </InvoicingGate>
   )
 }
 

@@ -16,6 +16,7 @@ import { toast } from 'sonner'
 import { PageHeader, PageContent } from '@/components/page-header'
 import { cn } from '@/lib/utils'
 import { useSettings } from '@/components/settings-provider'
+import { InvoiceCustomizationGate } from '@/components/gates/pro-feature-gate'
 
 interface InvoiceTemplate {
   id: string
@@ -1512,7 +1513,7 @@ export default function CustomizeInvoicePage() {
   }
 
   return (
-    <>
+    <InvoiceCustomizationGate>
       <PageHeader
         title="Customize Invoice Template"
         action={
@@ -1956,6 +1957,6 @@ export default function CustomizeInvoicePage() {
           </div>
         </div>
       </PageContent>
-    </>
+    </InvoiceCustomizationGate>
   )
 }

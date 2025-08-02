@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,20 +16,26 @@ import { PhoneInput } from "@/components/ui/phone-input"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Save, Upload, Loader2, AlertTriangle } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "sonner"
 import { PageHeader, PageContent, PageTitle } from "@/components/page-header"
 import { setDefaultCurrency, getDefaultCurrency, CURRENCIES } from "@/lib/currency"
 import { useSettings } from "@/components/settings-provider"
+import { useSubscription } from "@/components/providers/subscription-provider"
 import { uploadCompanyLogo } from "@/lib/company-settings"
 import { DATE_FORMAT_OPTIONS, type DateFormat } from "@/lib/date-format"
 import { clearCurrencyConversionCache } from "@/lib/currency-conversion-cache"
+import { SubscriptionManagement } from "@/components/pricing/subscription-management"
 
 export default function SettingsPage() {
+  const searchParams = useSearchParams()
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [companyLogo, setCompanyLogo] = useState("") // Always start empty, will be set by settings provider
   const [originalCurrency, setOriginalCurrency] = useState("USD") // Track original currency for change detection
   const [showCurrencyWarning, setShowCurrencyWarning] = useState(false) // Control currency change warning dialog
+  const [activeTab, setActiveTab] = useState("general")
   
   // General settings state
   const [generalSettings, setGeneralSettings] = useState({
@@ -59,6 +66,15 @@ export default function SettingsPage() {
   })
 
   const { updateSetting, settings, isLoading } = useSettings()
+  const { isLoading: subscriptionLoading } = useSubscription()
+
+  // Handle URL tab parameter
+  useEffect(() => {
+    const tab = searchParams.get('tab')
+    if (tab && ['general', 'company', 'subscription'].includes(tab)) {
+      setActiveTab(tab)
+    }
+  }, [searchParams])
 
   // Load settings from localStorage and settings provider on component mount
   useEffect(() => {
@@ -272,18 +288,20 @@ export default function SettingsPage() {
       <PageHeader
         title="Settings"
         action={
-          <Button size="sm" onClick={handleSaveSettings} disabled={saving}>
-                          {saving ? (
+          activeTab !== 'subscription' ? (
+            <Button size="sm" onClick={handleSaveSettings} disabled={saving}>
+              {saving ? (
                 <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
               ) : (
                 <Save className="mr-1.5 h-4 w-4" />
               )}
-            {saving ? "Saving..." : "Save Changes"}
-          </Button>
+              {saving ? "Saving..." : "Save Changes"}
+            </Button>
+          ) : null
         }
       />
       <PageContent>
-        <Tabs defaultValue="general" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList>
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="company">Company</TabsTrigger>
@@ -610,43 +628,71 @@ export default function SettingsPage() {
           </TabsContent>
 
           <TabsContent value="subscription" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Subscription</CardTitle>
-                <CardDescription>Manage your subscription and billing information.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <p className="font-medium">Current Plan</p>
-                    <p className="text-sm text-muted-foreground">Enterprise - $99/month</p>
-                  </div>
-                  <Button variant="outline" size="sm">Manage Subscription</Button>
-                </div>
-
-                <div className="space-y-4">
-                  <h4 className="font-medium">Features Included</h4>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span className="text-sm">Unlimited Projects</span>
+            {subscriptionLoading ? (
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="flex items-center gap-2">
+                          <Skeleton className="h-5 w-5 rounded" />
+                          <Skeleton className="h-6 w-32" />
+                        </CardTitle>
+                        <CardDescription>
+                          <Skeleton className="h-4 w-48 mt-2" />
+                        </CardDescription>
+                      </div>
+                      <Skeleton className="h-6 w-20 rounded-full" />
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span className="text-sm">Advanced Analytics</span>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <Skeleton className="h-4 w-8 mb-1" />
+                        <Skeleton className="h-6 w-16" />
+                      </div>
+                      <div>
+                        <Skeleton className="h-4 w-10 mb-1" />
+                        <Skeleton className="h-6 w-20" />
+                      </div>
+                      <div>
+                        <Skeleton className="h-4 w-16 mb-1" />
+                        <Skeleton className="h-6 w-24" />
+                      </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span className="text-sm">Priority Support</span>
+                    <div className="pt-4 border-t">
+                      <Skeleton className="h-9 w-32" />
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span className="text-sm">Custom Integrations</span>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Skeleton className="h-5 w-5 rounded" />
+                      <Skeleton className="h-6 w-32" />
+                    </CardTitle>
+                    <CardDescription>
+                      <Skeleton className="h-4 w-56" />
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <Skeleton className="h-4 w-16" />
+                            <Skeleton className="h-4 w-12" />
+                          </div>
+                          <Skeleton className="h-2 w-full rounded-full" />
+                        </div>
+                      ))}
                     </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                  </CardContent>
+                </Card>
+              </div>
+            ) : (
+              <SubscriptionManagement />
+            )}
           </TabsContent>
         </Tabs>
 

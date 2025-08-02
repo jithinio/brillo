@@ -63,15 +63,17 @@ const SettingsContext = createContext<SettingsContextType>({
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<AppSettings>(defaultSettings)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(false) // Start with false to prevent flash
 
 
 
   useEffect(() => {
+    let isMounted = true // Track if component is still mounted
+    
     async function loadSettings() {
       if (!USE_DATABASE_SETTINGS) {
         console.log('Database settings disabled')
-        setIsLoading(false)
+        if (isMounted) setIsLoading(false)
         return
       }
 
@@ -94,13 +96,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         }
       })
       
-      setSettings(loadedSettings)
+      if (isMounted) setSettings(loadedSettings)
       
       // Then try to load from database immediately (don't wait)
       try {
         const dbSettings = await getCompanySettings()
         
-        if (dbSettings) {
+        if (dbSettings && isMounted) {
           // Update settings state with database values
           const updatedSettings = {
             ...loadedSettings,
@@ -131,7 +133,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             setDateFormat(dbSettings.date_format as DateFormat)
           }
           
-          setSettings(updatedSettings)
+          if (isMounted) setSettings(updatedSettings)
           
           console.log('🔍 Database settings loaded:', {
             invoiceTemplate: dbSettings.invoice_template,
@@ -187,7 +189,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                   setDateFormat(dbSettings.date_format as DateFormat)
                 }
                 
-                setSettings(updatedSettingsWithLocalTemplate)
+                if (isMounted) setSettings(updatedSettingsWithLocalTemplate)
                 
                 // Sync localStorage template to database in background
                 try {
@@ -222,11 +224,16 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         console.error('Failed to load settings from database:', error)
         // Continue with localStorage/default settings - don't break the app
       } finally {
-        setIsLoading(false)
+        if (isMounted) setIsLoading(false)
       }
     }
     
     loadSettings()
+    
+    // Cleanup function
+    return () => {
+      isMounted = false
+    }
   }, [])
 
   const updateSetting = async (key: keyof AppSettings, value: any) => {

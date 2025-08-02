@@ -281,8 +281,8 @@ function GenericDataTableComponent<T extends GenericEntity>({
 
       {/* Table Container */}
       <div ref={tableRef} className="flex-1 overflow-auto relative border-l border-gray-200/80 dark:border-gray-700/80 custom-scrollbar table-container">
-        {/* Loading Overlay */}
-        {(preferencesLoading || !preferencesLoaded || isLoading || (!hasLoadedOnce && isFetching)) && (
+        {/* Loading Overlay - Only show for initial loads, not refetches */}
+        {(preferencesLoading || !preferencesLoaded || (isLoading && (!hasLoadedOnce || data.length === 0))) && (
           <div className="absolute inset-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm z-50 flex items-center justify-center">
             <Badge 
               variant="secondary" 

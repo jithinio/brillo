@@ -214,14 +214,14 @@ const updateProjectStatus = async ({ id, status }: { id: string; status: string 
 export function useAdvancedProjects(filters: ProjectFilters = {}) {
   const queryClient = useQueryClient()
 
-  // Main projects query with background refetching
+  // Main projects query with optimized refetching
   const projectsQuery = useQuery({
     queryKey: queryKeys.projectsList(filters),
     queryFn: () => fetchProjects(filters),
-    staleTime: 30 * 1000, // Consider data stale after 30 seconds
-    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
-    refetchInterval: 60 * 1000, // Background refetch every minute
-    refetchOnWindowFocus: true,
+    staleTime: 2 * 60 * 1000, // Consider data stale after 2 minutes
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    refetchInterval: false, // Disable automatic background refetching
+    refetchOnWindowFocus: false, // Disable window focus refetch
     refetchOnReconnect: true,
     retry: 3,
     select: (data) => ({

@@ -12,14 +12,17 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { BadgeCheck, ChevronsUpDown, LogOut, Sparkles, Moon, Sun, Monitor, Palette, Settings2, User } from "lucide-react"
+import { BadgeCheck, ChevronsUpDown, LogOut, Sparkles, Moon, Sun, Monitor, Palette, Settings2, User, CreditCard, Crown } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
+import { useSubscription } from "@/components/providers/subscription-provider"
+import { isProPlan } from "@/lib/subscription-plans"
 import { useTheme } from "next-themes"
 
 export function NavUser() {
   const { user, signOut } = useAuth()
   const { isMobile } = useSidebar()
   const { theme, setTheme } = useTheme()
+  const { subscription, isLoading } = useSubscription()
 
   // Fallback user data if no user is available
   const currentUser = user
@@ -112,10 +115,23 @@ export function NavUser() {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem className="cursor-pointer">
-                <Sparkles className="mr-2 h-4 w-4" />
-                Upgrade to Pro
-              </DropdownMenuItem>
+              {!isLoading && (
+                isProPlan(subscription.planId) ? (
+                  <DropdownMenuItem asChild>
+                    <a href="/dashboard/settings?tab=subscription" className="cursor-pointer">
+                      <CreditCard className="mr-2 h-4 w-4" />
+                      Manage Subscription
+                    </a>
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem asChild>
+                    <a href="/pricing" className="cursor-pointer">
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      Upgrade to Pro
+                    </a>
+                  </DropdownMenuItem>
+                )
+              )}
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>

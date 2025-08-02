@@ -228,18 +228,27 @@ export const useAnalyticsData = (filters?: AnalyticsFilters) => {
 
   // Real-time updates using Supabase subscriptions
   useEffect(() => {
+    let debounceTimer: NodeJS.Timeout | null = null
+
+    const handleDataChange = () => {
+      // Clear existing timer
+      if (debounceTimer) clearTimeout(debounceTimer)
+      
+      // Only update if page is visible and we have initial data
+      debounceTimer = setTimeout(() => {
+        if (document.visibilityState === 'visible' && !analyticsData.isLoading) {
+          fetchAnalyticsData(false)
+        }
+      }, 2000) // Increased debounce to 2 seconds
+    }
+
     const projectsSubscription = supabase
       .channel('projects-changes')
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 
         table: 'projects' 
-      }, () => {
-        // Debounce rapid updates
-        setTimeout(() => {
-          fetchAnalyticsData(false)
-        }, 1000)
-      })
+      }, handleDataChange)
       .subscribe()
 
     const clientsSubscription = supabase
@@ -248,25 +257,24 @@ export const useAnalyticsData = (filters?: AnalyticsFilters) => {
         event: '*', 
         schema: 'public', 
         table: 'clients' 
-      }, () => {
-        // Debounce rapid updates
-        setTimeout(() => {
-          fetchAnalyticsData(false)
-        }, 1000)
-      })
+      }, handleDataChange)
       .subscribe()
 
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer)
       projectsSubscription.unsubscribe()
       clientsSubscription.unsubscribe()
     }
-  }, [fetchAnalyticsData])
+  }, [fetchAnalyticsData, analyticsData.isLoading])
 
-  // Periodic refresh (every 5 minutes as fallback)
+  // Periodic refresh (every 10 minutes as fallback) - reduced frequency
   useEffect(() => {
     const interval = setInterval(() => {
-      fetchAnalyticsData(false)
-    }, 5 * 60 * 1000)
+      // Only refresh if the page is visible to avoid unnecessary requests
+      if (document.visibilityState === 'visible') {
+        fetchAnalyticsData(false)
+      }
+    }, 10 * 60 * 1000) // Increased from 5 to 10 minutes
 
     return () => clearInterval(interval)
   }, [fetchAnalyticsData])

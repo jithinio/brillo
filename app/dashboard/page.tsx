@@ -15,6 +15,7 @@ import { formatCurrency, getCurrencySymbol } from "@/lib/currency"
 import { formatLargeNumber } from "@/lib/utils"
 import { useSettings } from "@/components/settings-provider"
 import { supabase } from "@/lib/supabase"
+import { UpgradeSuccessHandler } from "@/components/upgrade-success-handler"
 
 // Types for project data
 interface Project {
@@ -1005,6 +1006,7 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-4 px-8 pb-4 pt-8 max-w-full overflow-hidden">
+      <UpgradeSuccessHandler />
       {/* Dynamic Greeting */}
       <div className="mb-8">
         <h1 className="text-3xl font-normal text-foreground mb-2">

@@ -116,8 +116,9 @@ export function useClients(filters: ClientFilters = {}): DataHookReturn<Client> 
   const clientsQuery = useQuery({
     queryKey: ['clients', filters],
     queryFn: () => fetchClients(filters),
-    staleTime: 30 * 1000,
-    gcTime: 5 * 60 * 1000,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnWindowFocus: false, // Explicitly disable window focus refetch
   })
 
   // Update client status

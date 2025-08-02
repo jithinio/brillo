@@ -216,9 +216,9 @@ export function useOptimizedInfiniteProjects(filters: any = {}, pageSize: number
     queryFn: ({ pageParam }) => fetchProjectsWithMetrics(filters, pageParam, pageSize),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.hasMore ? lastPage.nextCursor : undefined,
-    staleTime: 30 * 1000,
-    gcTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: true,
+    staleTime: 2 * 60 * 1000, // Consider stale after 2 minutes
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    refetchOnWindowFocus: false, // Disable window focus refetch
     refetchOnReconnect: true,
   })
 

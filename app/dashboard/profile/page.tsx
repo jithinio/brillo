@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Save, Edit, Loader2, Camera, AlertCircle, Shield, Trash2 } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
@@ -519,7 +520,7 @@ export default function ProfilePage() {
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Projects</span>
                   {projectsLoading ? (
-                    <div className="h-5 w-8 bg-muted animate-pulse rounded"></div>
+                    <Skeleton className="h-5 w-8 rounded-full" />
                   ) : (
                     <Badge variant="secondary">{projectsCount}</Badge>
                   )}
@@ -527,7 +528,7 @@ export default function ProfilePage() {
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Clients</span>
                   {clientsLoading ? (
-                    <div className="h-5 w-8 bg-muted animate-pulse rounded"></div>
+                    <Skeleton className="h-5 w-8 rounded-full" />
                   ) : (
                     <Badge variant="secondary">{clientsCount}</Badge>
                   )}
@@ -535,7 +536,7 @@ export default function ProfilePage() {
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Invoices</span>
                   {invoicesLoading ? (
-                    <div className="h-5 w-8 bg-muted animate-pulse rounded"></div>
+                    <Skeleton className="h-5 w-8 rounded-full" />
                   ) : (
                     <Badge variant="secondary">{invoicesCount}</Badge>
                   )}

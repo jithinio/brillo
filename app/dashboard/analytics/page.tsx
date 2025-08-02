@@ -39,6 +39,7 @@ import { formatLargeNumber } from "@/lib/utils"
 import { getCurrencySymbol } from "@/lib/currency"
 import { useSettings } from "@/components/settings-provider"
 import { Badge } from "@/components/ui/badge"
+import { AdvancedAnalyticsGate } from "@/components/gates/pro-feature-gate"
 
 // Period options for different metrics
 const MRR_PERIODS = [
@@ -162,7 +163,8 @@ export default function AnalyticsPage() {
   )
 
   return (
-    <div className="w-full h-screen flex flex-col bg-gray-50/30 dark:bg-gray-950">
+    <AdvancedAnalyticsGate>
+      <div className="w-full h-screen flex flex-col bg-gray-50/30 dark:bg-gray-950">
       {/* Page Header - Not sticky */}
       <PageHeader
         title="Analytics"
@@ -189,8 +191,8 @@ export default function AnalyticsPage() {
               {/* Filtered Analytics Section */}
               {hasActiveFilters && (
                 <div className="space-y-6 relative">
-                  {/* Badge Loader for Filtered Analytics */}
-                  {isLoading && (
+                  {/* Badge Loader for Filtered Analytics - Only show for initial loads */}
+                  {isLoading && (!filteredProjects.length && !filteredClients.length) && (
                     <div className="absolute inset-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm z-40 flex items-center justify-center">
                       <Badge 
                         variant="secondary" 
@@ -265,8 +267,8 @@ export default function AnalyticsPage() {
 
               {/* Unfiltered Global Metrics Section */}
               <div className="space-y-8 relative">
-                {/* Badge Loader for Global Analytics */}
-                {isLoading && (
+                {/* Badge Loader for Global Analytics - Only show for initial loads */}
+                {isLoading && (!projects.length && !clients.length) && (
                   <div className="absolute inset-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm z-40 flex items-center justify-center">
                     <Badge 
                       variant="secondary" 
@@ -448,5 +450,6 @@ export default function AnalyticsPage() {
         </div>
       </div>
     </div>
+    </AdvancedAnalyticsGate>
   )
 }

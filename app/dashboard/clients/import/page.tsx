@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { PageHeader, PageContent } from "@/components/page-header"
 import { validateCSVFile } from "@/lib/input-validation"
 import { toast } from "sonner"
+import { useSubscription } from "@/components/providers/subscription-provider"
 
 interface CsvData {
   headers: string[]
@@ -47,6 +48,7 @@ Jane Doe,jane@example.com,+1 (555) 987-6543,Tech Inc,456 Oak Ave,San Francisco,C
 export default function ClientImportPage() {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const { usage, canCreate, getOverLimitStatus } = useSubscription()
   
   const [step, setStep] = useState<'upload' | 'mapping' | 'importing' | 'complete'>('upload')
   const [csvData, setCsvData] = useState<CsvData | null>(null)
@@ -97,6 +99,33 @@ export default function ClientImportPage() {
     const rows = lines.slice(1).map(line => 
       line.split(',').map(cell => cell.trim().replace(/"/g, ''))
     )
+
+    // Check subscription limits before importing
+    const importCount = rows.length
+    const currentCount = usage.clients.current
+    const limit = usage.clients.limit
+    
+    if (limit !== 'unlimited') {
+      const totalAfterImport = currentCount + importCount
+      if (totalAfterImport > limit) {
+        const overAmount = totalAfterImport - limit
+        toast.error(
+          `Import would exceed your client limit. You have ${currentCount}/${limit} clients. ` +
+          `This import would add ${importCount} clients (${overAmount} over limit). ` +
+          `Please upgrade to Pro for unlimited clients or reduce the import size.`
+        )
+        return
+      }
+      
+      // Warn if getting close to limit
+      const remainingSlots = limit - currentCount
+      if (importCount > remainingSlots * 0.8) {
+        toast.warning(
+          `This import will use ${importCount} of your remaining ${remainingSlots} client slots. ` +
+          `Consider upgrading to Pro for unlimited clients.`
+        )
+      }
+    }
 
     setCsvData({ headers, rows })
     
