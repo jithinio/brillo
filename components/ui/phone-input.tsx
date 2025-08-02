@@ -195,6 +195,7 @@ export function PhoneInput({
       <Input
         {...props}
         type="tel"
+        id={props.id}
         value={phoneNumber}
         onChange={handlePhoneChange}
         placeholder={placeholder}

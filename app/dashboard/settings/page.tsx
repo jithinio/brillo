@@ -188,6 +188,7 @@ export default function SettingsPage() {
       updateSetting('dateFormat', generalSettings.dateFormat)
       
       // Update company information
+      console.log('💾 Saving company info:', companyInfo)
       updateSetting('companyName', companyInfo.companyName)
       updateSetting('companyAddress', companyInfo.companyAddress)
       updateSetting('companyEmail', companyInfo.companyEmail)
@@ -506,7 +507,10 @@ export default function SettingsPage() {
                       <PhoneInput 
                         id="companyPhone" 
                         value={companyInfo.companyPhone} 
-                        onChange={(value) => setCompanyInfo({...companyInfo, companyPhone: value})}
+                        onChange={(value) => {
+                          console.log('📞 Phone changed:', value)
+                          setCompanyInfo({...companyInfo, companyPhone: value})
+                        }}
                         placeholder="Enter company phone"
                       />
                     </div>
