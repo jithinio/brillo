@@ -35,6 +35,7 @@ import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { getCompanySettings } from "@/lib/company-settings"
 import type { PipelineProject } from "@/lib/types/pipeline"
+import { useCanPerformAction } from "@/components/over-limit-alert"
 
 interface AddProjectDialogProps {
   open: boolean
@@ -85,6 +86,9 @@ export function AddProjectDialog({
     pipeline_notes: "",
     client_id: "",
   })
+
+  // Over-limit validation
+  const { canCreateResource, getActionBlockedReason } = useCanPerformAction()
 
   // Filter and limit clients based on search query
   const filteredClients = clients.filter(client =>
@@ -169,6 +173,15 @@ export function AddProjectDialog({
     
     if (!newProject.name.trim()) {
       toast.error("Project name is required")
+      return
+    }
+
+    // Check if user can create more projects
+    if (!canCreateResource('projects')) {
+      const reason = getActionBlockedReason('projects')
+      toast.error("Cannot create project", {
+        description: reason || "You've reached your project limit for your current plan. Please upgrade to Pro for unlimited projects."
+      })
       return
     }
 

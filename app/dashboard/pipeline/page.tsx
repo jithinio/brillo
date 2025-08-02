@@ -10,6 +10,7 @@ import type { PipelineProject, PipelineStage, PipelineMetrics } from "@/lib/type
 import { Search, X, Plus } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { useCanPerformAction } from "@/components/over-limit-alert"
 
 export default function PipelinePage() {
   const [projects, setProjects] = useState<PipelineProject[]>([])
@@ -18,6 +19,9 @@ export default function PipelinePage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [isSearching, setIsSearching] = useState(false)
   const [showAddDialog, setShowAddDialog] = useState(false)
+
+  // Over-limit validation
+  const { canCreateResource, getActionBlockedReason } = useCanPerformAction()
   const [metrics, setMetrics] = useState<PipelineMetrics>({
     totalValue: 0,
     leadCount: 0,
@@ -216,6 +220,8 @@ export default function PipelinePage() {
                   onClick={() => setShowAddDialog(true)}
                   size="sm"
                   className="h-8"
+                  disabled={!canCreateResource('projects')}
+                  title={!canCreateResource('projects') ? getActionBlockedReason('projects') || "Project limit reached" : undefined}
                 >
                   <Plus className="h-4 w-4 mr-1" />
                   New Lead

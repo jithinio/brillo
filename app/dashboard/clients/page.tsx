@@ -28,6 +28,7 @@ import { PhoneInput } from "@/components/ui/phone-input"
 import { CountrySelect } from "@/components/ui/country-select"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
+import { useCanPerformAction } from "@/components/over-limit-alert"
 import { countries } from "@/lib/countries"
 
 interface ClientFormData {
@@ -293,6 +294,9 @@ export default function ClientsPage() {
 
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [avatarPreview, setAvatarPreview] = useState<string>("")
+
+  // Over-limit validation
+  const { canCreateResource, getActionBlockedReason } = useCanPerformAction()
 
   // Entity actions for generic table  
   const entityActions: EntityActions<any> = {
@@ -780,6 +784,15 @@ export default function ClientsPage() {
         return
       }
 
+    // Check if user can create more clients (only for new clients, not updates)
+    if (!selectedClient && !canCreateResource('clients')) {
+      const reason = getActionBlockedReason('clients')
+      toast.error("Cannot create client", {
+        description: reason || "You've reached your client limit for your current plan. Please upgrade to Pro for unlimited clients."
+      })
+      return
+    }
+
     setIsLoading(true)
     try {
       let avatarUrl = formData.avatar_url
@@ -900,6 +913,8 @@ export default function ClientsPage() {
             }}
             size="sm"
             className="h-8"
+            disabled={!canCreateResource('clients')}
+            title={!canCreateResource('clients') ? getActionBlockedReason('clients') || "Client limit reached" : undefined}
           >
             <Plus className="h-4 w-4 mr-1" />
             Add Client
