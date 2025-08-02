@@ -23,15 +23,16 @@ export function ProBadge({
   showTooltip = true,
   tooltipContent
 }: ProBadgeProps) {
-  const { hasAccess, isLoading } = useSubscription()
+  const { hasAccess, isLoading, subscription } = useSubscription()
 
   const checkFeatureAccess = () => {
     if (!feature) return true // No specific feature, assume access
     return hasAccess(feature)
   }
 
-  // Don't show badge if user has access or if still loading
-  if (isLoading || checkFeatureAccess()) {
+  // Don't show badge if user has access
+  // Only hide during loading if we have no subscription data at all (initial load)
+  if (checkFeatureAccess() || (isLoading && !subscription.planId)) {
     return null
   }
 

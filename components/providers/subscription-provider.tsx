@@ -206,8 +206,8 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     }
 
     try {
-      // Only set loading if we don't have subscription data yet
-      if (subscription.planId === 'free' && !subscription.customerId) {
+      // Only set loading if this is the very first load (no cached data exists)
+      if (!cachedSubscriptionData) {
         setIsLoading(true)
       }
       
