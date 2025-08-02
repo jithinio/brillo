@@ -41,11 +41,11 @@ export const SUBSCRIPTION_PLANS: Record<string, SubscriptionPlan> = {
       'API access'
     ],
     proFeatures: [
-      '💳 Create & send invoices',
-      '🎨 Customize invoice templates', 
-      '📊 Advanced analytics',
-      '📈 Revenue tracking',
-      '📋 Financial reports'
+      'Create & send invoices',
+      'Customize invoice templates', 
+      'Advanced analytics',
+      'Revenue tracking',
+      'Financial reports'
     ],
     limits: { 
       projects: 'unlimited', 
@@ -70,11 +70,11 @@ export const SUBSCRIPTION_PLANS: Record<string, SubscriptionPlan> = {
       'Dedicated account manager'
     ],
     proFeatures: [
-      '💳 Full invoicing suite',
-      '🎨 Advanced customization', 
-      '📊 Premium analytics',
-      '📈 Advanced reporting',
-      '🔗 API & integrations'
+      'Full invoicing suite',
+      'Advanced customization', 
+      'Premium analytics',
+      'Advanced reporting',
+      'API & integrations'
     ],
     limits: { 
       projects: 'unlimited', 
