@@ -102,26 +102,30 @@ export default function SettingsPage() {
     
     // Load company info from settings provider (database) first, then localStorage as override
     const savedCompany = localStorage.getItem('company-info')
-    if (savedCompany) {
-      const parsed = JSON.parse(savedCompany)
-      setCompanyInfo(prev => ({
-        companyName: parsed.companyName || settings.companyName || prev.companyName,
-        companyAddress: parsed.companyAddress || settings.companyAddress || prev.companyAddress,
-        companyPhone: parsed.companyPhone || settings.companyPhone || prev.companyPhone,
-        companyWebsite: parsed.companyWebsite || settings.companyWebsite || prev.companyWebsite,
-        companyEmail: parsed.companyEmail || settings.companyEmail || prev.companyEmail,
-        companyRegistration: parsed.companyRegistration || settings.companyRegistration || prev.companyRegistration,
-      }))
-    } else {
-      // Use settings provider values (from database) as primary source
-      setCompanyInfo(prev => ({
-        companyName: settings.companyName || prev.companyName,
-        companyAddress: settings.companyAddress || prev.companyAddress,
-        companyPhone: settings.companyPhone || prev.companyPhone,
-        companyWebsite: settings.companyWebsite || prev.companyWebsite,
-        companyEmail: settings.companyEmail || prev.companyEmail,
-        companyRegistration: settings.companyRegistration || prev.companyRegistration,
-      }))
+    
+    // Only update if we have actual data from settings provider or localStorage
+    if (!isLoading && (savedCompany || settings.companyName)) {
+      if (savedCompany) {
+        const parsed = JSON.parse(savedCompany)
+        setCompanyInfo(prev => ({
+          companyName: parsed.companyName || settings.companyName || prev.companyName,
+          companyAddress: parsed.companyAddress || settings.companyAddress || prev.companyAddress,
+          companyPhone: parsed.companyPhone || settings.companyPhone || prev.companyPhone,
+          companyWebsite: parsed.companyWebsite || settings.companyWebsite || prev.companyWebsite,
+          companyEmail: parsed.companyEmail || settings.companyEmail || prev.companyEmail,
+          companyRegistration: parsed.companyRegistration || settings.companyRegistration || prev.companyRegistration,
+        }))
+      } else {
+        // Use settings provider values (from database) as primary source
+        setCompanyInfo(prev => ({
+          companyName: settings.companyName || prev.companyName,
+          companyAddress: settings.companyAddress || prev.companyAddress,
+          companyPhone: settings.companyPhone || prev.companyPhone,
+          companyWebsite: settings.companyWebsite || prev.companyWebsite,
+          companyEmail: settings.companyEmail || prev.companyEmail,
+          companyRegistration: settings.companyRegistration || prev.companyRegistration,
+        }))
+      }
     }
     
     // Load tax info 
@@ -154,7 +158,7 @@ export default function SettingsPage() {
     if (settings.defaultCurrency) {
       setOriginalCurrency(settings.defaultCurrency)
     }
-  }, [settings]) // Add settings as dependency so it updates when database values load
+  }, [settings, isLoading]) // Add settings and isLoading as dependencies
 
   const handleSaveSettings = async () => {
     // Check if currency has changed and show warning dialog

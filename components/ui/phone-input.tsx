@@ -84,26 +84,29 @@ export function PhoneInput({
 
   // Initialize phone number from value prop
   React.useEffect(() => {
-    if (value && value !== prevValueRef.current) {
-      // Detect country from phone number
-      const detectedCountry = detectCountryFromPhone(value)
-      
-      if (detectedCountry) {
-        setCurrentCountry(detectedCountry)
-        const phoneWithoutCode = extractPhoneNumber(value, detectedCountry)
-        setPhoneNumber(phoneWithoutCode)
+    // Only process if value has actually changed
+    if (value !== prevValueRef.current) {
+      if (value) {
+        // Detect country from phone number
+        const detectedCountry = detectCountryFromPhone(value)
+        
+        if (detectedCountry) {
+          setCurrentCountry(detectedCountry)
+          const phoneWithoutCode = extractPhoneNumber(value, detectedCountry)
+          setPhoneNumber(phoneWithoutCode)
+        } else {
+          // Fallback: try to extract phone number from any format
+          const phoneWithoutCode = value.replace(/^\+\d+\s*/, "")
+          setPhoneNumber(phoneWithoutCode)
+        }
       } else {
-        // Fallback to simple regex if detection fails
-        const phoneWithoutCode = value.replace(/^\+\d+\s*/, "")
-        setPhoneNumber(phoneWithoutCode)
+        // Reset to empty state
+        setPhoneNumber("")
       }
       
       prevValueRef.current = value
-    } else if (!value && phoneNumber === "") {
-      // Initialize with empty state
-      prevValueRef.current = ""
     }
-  }, [value, phoneNumber, detectCountryFromPhone, extractPhoneNumber])
+  }, [value, detectCountryFromPhone, extractPhoneNumber])
 
   React.useEffect(() => {
     if (selectedCountry) {
