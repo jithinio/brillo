@@ -157,12 +157,26 @@ async function fetchHistoricalRates(
   baseCurrency: string = 'USD'
 ): Promise<Record<string, number>> {
   const apiKey = getApiKey()
+  console.log(`🔧 Fetching historical rates for ${baseCurrency} on ${date}, API key present: ${!!apiKey}`)
+  
   if (!apiKey) {
+    console.log('❌ No API key, using fallback rates for historical data')
     return getFallbackRates(baseCurrency)
   }
 
   // Format date to YYYY-MM-DD
   const formattedDate = new Date(date).toISOString().split('T')[0]
+  
+  // Check if the date is in the future - if so, return fallback rates
+  const targetDate = new Date(formattedDate)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0) // Reset to start of day for comparison
+  
+  if (targetDate > today) {
+    console.log(`⚠️ Future date detected in fetchHistoricalRates (${formattedDate}), using fallback rates`)
+    return getFallbackRates(baseCurrency)
+  }
+  
   const cacheKey = `historical_${baseCurrency}_${formattedDate}`
   
   // Check cache first (historical rates don't change)
@@ -282,23 +296,66 @@ export async function getHistoricalExchangeRate(
   to: string, 
   date: string
 ): Promise<number> {
-  if (from === to) return 1
+  console.log(`🔄 Getting historical exchange rate: ${from} → ${to} on ${date}`)
+  
+  if (from === to) {
+    console.log(`✅ Same currency, rate = 1`)
+    return 1
+  }
+
+  // Check if the date is in the future - if so, use live rates instead
+  const targetDate = new Date(date)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0) // Reset to start of day for comparison
+  
+  if (targetDate > today) {
+    console.log(`⚠️ Future date detected (${date}), using live rates instead of historical`)
+    return await getLiveExchangeRate(from, to)
+  }
 
   try {
-    const rates = await fetchHistoricalRates(date, from)
-    const rate = rates[to]
+    // Always use USD as base currency for historical rates (same as live rates)
+    console.log(`📡 Fetching historical USD-based rates for ${date}`)
+    const usdRates = await fetchHistoricalRates(date, 'USD')
+    console.log(`📊 Available historical USD rates for ${date}:`, Object.keys(usdRates).slice(0, 5), `(${Object.keys(usdRates).length} total)`)
     
-    if (!rate) {
-      console.warn(`Historical rate not found for ${from} to ${to} on ${date}, trying reverse`)
-      const reverseRates = await fetchHistoricalRates(date, to)
-      const reverseRate = reverseRates[from]
-      return reverseRate ? 1 / reverseRate : 1
+    // If converting from USD to another currency, use rate directly
+    if (from === 'USD') {
+      const rate = usdRates[to]
+      if (rate) {
+        console.log(`✅ Historical USD to ${to} on ${date}: 1 USD = ${rate} ${to}`)
+        return rate
+      }
     }
     
-    return rate
-  } catch (error) {
-    console.error(`Error getting historical exchange rate ${from} to ${to} on ${date}:`, error)
+    // If converting to USD from another currency, use inverse of the rate
+    if (to === 'USD') {
+      const fromRate = usdRates[from]
+      if (fromRate) {
+        const rate = 1 / fromRate
+        console.log(`✅ Historical ${from} to USD on ${date}: 1 ${from} = ${rate} USD (inverse of ${fromRate})`)
+        return rate
+      }
+    }
+    
+    // For cross-currency conversion (neither is USD), calculate via USD
+    const fromRate = usdRates[from] // 1 USD = X fromCurrency
+    const toRate = usdRates[to]     // 1 USD = Y toCurrency
+    
+    if (fromRate && toRate) {
+      // To convert from fromCurrency to toCurrency:
+      // 1 fromCurrency = (1/fromRate) USD = (1/fromRate) * toRate toCurrency
+      const rate = toRate / fromRate
+      console.log(`✅ Historical cross-rate ${from} to ${to} on ${date}: 1 ${from} = ${rate} ${to} (via USD: ${fromRate}, ${toRate})`)
+      return rate
+    }
+    
+    console.error(`❌ No historical rates found for ${from} and/or ${to} on ${date}`)
     return 1
+  } catch (error) {
+    console.error(`❌ Error getting historical exchange rate ${from} to ${to} on ${date}:`, error)
+    console.log(`🔄 Falling back to live rate for ${from} → ${to}`)
+    return await getLiveExchangeRate(from, to)
   }
 }
 

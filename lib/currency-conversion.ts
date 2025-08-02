@@ -56,8 +56,19 @@ export async function convertInvoiceAmount(
 
   try {
     // 🚀 NEW: Get actual historical exchange rate for the invoice issue date
+    console.log(`💰 Converting invoice: ${amount} ${invoiceCurrency} → ${defaultCurrency} (date: ${issueDate})`)
+    
+    // Validate the issue date
+    const issueDateTime = new Date(issueDate)
+    const today = new Date()
+    if (issueDateTime > today) {
+      console.warn(`⚠️ Future invoice date detected: ${issueDate}. This will use live rates instead of historical.`)
+    }
+    
     const exchangeRate = await getHistoricalExchangeRate(invoiceCurrency, defaultCurrency, issueDate)
     const convertedAmount = amount * exchangeRate
+    
+    console.log(`✅ Conversion result: ${amount} ${invoiceCurrency} = ${convertedAmount} ${defaultCurrency} (rate: ${exchangeRate})`)
 
     return {
       originalAmount: amount,
