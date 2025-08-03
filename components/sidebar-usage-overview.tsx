@@ -9,39 +9,9 @@ import Link from "next/link"
 export function SidebarUsageOverview() {
   const { subscription, usage, plan, isLoading } = useSubscription()
   
-  // Handle loading state intelligently
+  // Don't show anything during loading to prevent incorrect display for pro users
   if (isLoading) {
-    // If we already know the user has a pro plan, don't show anything
-    if (subscription.planId && subscription.planId !== 'free') {
-      return null
-    }
-    
-    // If we don't have subscription data or it's free, show loading skeleton to prevent flash
-    return (
-      <Card className="mb-2">
-        <CardContent className="p-3 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="h-4 w-20 bg-gray-200 rounded animate-pulse" />
-            <div className="h-5 w-12 bg-gray-200 rounded-full animate-pulse" />
-          </div>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <div className="h-3 w-16 bg-gray-200 rounded animate-pulse" />
-              <div className="h-3 w-8 bg-gray-200 rounded animate-pulse" />
-            </div>
-            <div className="h-2 w-full bg-gray-200 rounded animate-pulse" />
-          </div>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <div className="h-3 w-16 bg-gray-200 rounded animate-pulse" />
-              <div className="h-3 w-8 bg-gray-200 rounded animate-pulse" />
-            </div>
-            <div className="h-2 w-full bg-gray-200 rounded animate-pulse" />
-          </div>
-          <div className="h-8 w-full bg-gray-200 rounded animate-pulse" />
-        </CardContent>
-      </Card>
-    )
+    return null
   }
   
   // Only show for free plan users
