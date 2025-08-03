@@ -53,11 +53,8 @@ export function PhoneInput({
   const detectCountryFromPhone = React.useCallback((phoneValue: string): Country | null => {
     if (!phoneValue) return null
     
-    console.log('🔍 PhoneInput: Detecting country for:', phoneValue)
-    
     // Remove any non-digit characters except +
     const cleanPhone = phoneValue.replace(/[^\d+]/g, '')
-    console.log('🔍 PhoneInput: Clean phone:', cleanPhone)
     
     // Handle different phone number formats
     let phoneToCheck = cleanPhone
@@ -75,12 +72,10 @@ export function PhoneInput({
       if (phoneToCheck.startsWith(`+${phoneCode}`) || 
           cleanPhone.startsWith(phoneCode) ||
           cleanPhone.startsWith(`+${phoneCode}`)) {
-        console.log('✅ PhoneInput: Country matched:', country.name)
         return country
       }
     }
     
-    console.log('❌ PhoneInput: No country matched')
     return null
   }, [])
 
@@ -88,12 +83,8 @@ export function PhoneInput({
   const extractPhoneNumber = React.useCallback((phoneValue: string, country: Country): string => {
     if (!phoneValue || !country) return phoneValue || ""
     
-    console.log('🔧 PhoneInput: Extracting phone number from:', phoneValue, 'for country:', country.name)
-    
     const cleanPhone = phoneValue.replace(/[^\d+]/g, '')
     const phoneCode = country.phoneCode.replace(/[^\d]/g, '')
-    
-    console.log('🔧 PhoneInput: Clean phone:', cleanPhone, 'Phone code:', phoneCode)
     
     let result = phoneValue
     
@@ -108,30 +99,23 @@ export function PhoneInput({
       result = withoutCode || phoneValue
     }
     
-    console.log('🔧 PhoneInput: Extracted number:', result)
     return result
   }, [])
 
   // Initialize phone number from value prop on mount
   React.useEffect(() => {
     if (!isInitialized) {
-      console.log('📞 PhoneInput: Initial mount with value:', value)
-      
       if (value) {
         const detectedCountry = detectCountryFromPhone(value)
-        console.log('📞 PhoneInput: Detected country on mount:', detectedCountry?.name, detectedCountry?.phoneCode)
         
         if (detectedCountry) {
           setCurrentCountry(detectedCountry)
           const phoneWithoutCode = extractPhoneNumber(value, detectedCountry)
-          console.log('📞 PhoneInput: Phone without code on mount:', phoneWithoutCode)
           setPhoneNumber(phoneWithoutCode)
         } else {
-          console.log('📞 PhoneInput: No country detected on mount, using value as-is:', value)
           setPhoneNumber(value)
         }
       } else {
-        console.log('📞 PhoneInput: Mounting with empty value')
         setPhoneNumber("")
       }
       
@@ -143,23 +127,17 @@ export function PhoneInput({
   // Handle value changes after initialization
   React.useEffect(() => {
     if (isInitialized && value !== prevValueRef.current) {
-      console.log('📞 PhoneInput: Value changed from', prevValueRef.current, 'to', value)
-      
       if (value) {
         const detectedCountry = detectCountryFromPhone(value)
-        console.log('📞 PhoneInput: Detected country:', detectedCountry?.name, detectedCountry?.phoneCode)
         
         if (detectedCountry) {
           setCurrentCountry(detectedCountry)
           const phoneWithoutCode = extractPhoneNumber(value, detectedCountry)
-          console.log('📞 PhoneInput: Phone without code:', phoneWithoutCode)
           setPhoneNumber(phoneWithoutCode)
         } else {
-          console.log('📞 PhoneInput: No country detected, using value as-is:', value)
           setPhoneNumber(value)
         }
       } else {
-        console.log('📞 PhoneInput: Resetting to empty state')
         setPhoneNumber("")
       }
       
@@ -179,7 +157,6 @@ export function PhoneInput({
       const fullNumber = `${currentCountry.phoneCode} ${phoneNumber}`.trim()
       // Don't call onChange if this matches the current value (avoid loops)
       if (fullNumber !== value && fullNumber !== prevValueRef.current) {
-        console.log('📞 PhoneInput: Calling onChange with:', fullNumber)
         onChange(fullNumber)
       }
     }
@@ -207,7 +184,7 @@ export function PhoneInput({
   }, [searchQuery])
 
   return (
-    <div className={cn("flex relative", className)}>
+    <div className={cn("flex", className)}>
       <Popover open={open} onOpenChange={setOpen} modal={true}>
         <PopoverTrigger asChild>
           <Button
@@ -264,10 +241,6 @@ export function PhoneInput({
         placeholder={placeholder}
         className="flex-1 h-9 rounded-l-none"
       />
-      {/* Debug info */}
-      <div className="absolute -bottom-6 left-0 text-xs text-muted-foreground">
-        Input: {phoneNumber} | Country: {currentCountry.phoneCode} | Initialized: {isInitialized ? 'Yes' : 'No'}
-      </div>
     </div>
   )
 } 

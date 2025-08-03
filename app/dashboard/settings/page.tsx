@@ -138,21 +138,7 @@ export default function SettingsPage() {
 
   // Separate effect for company info - only runs once on mount
   useEffect(() => {
-    console.log('🔍 Company loading effect:', {
-      isLoading,
-      hasCompanyName: !!settings.companyName,
-      initialLoadComplete,
-      settingsPhone: settings.companyPhone,
-      settingsPhoneType: typeof settings.companyPhone,
-      settingsPhoneLength: settings.companyPhone?.length
-    })
-    
     if (!isLoading && !initialLoadComplete) {
-      console.log('📞 Loading company info from settings provider:')
-      console.log('   - Phone from settings:', settings.companyPhone)
-      console.log('   - Company name:', settings.companyName)
-      console.log('   - All settings:', settings)
-      
       const newCompanyInfo = {
         companyName: settings.companyName || "Suitebase",
         companyAddress: settings.companyAddress || "123 Business St, City, State 12345",
@@ -162,12 +148,9 @@ export default function SettingsPage() {
         companyRegistration: settings.companyRegistration || "",
       }
       
-      console.log('📞 Setting company info to:', newCompanyInfo)
       setCompanyInfo(newCompanyInfo)
       setInitialLoadComplete(true)
       setHasUserChanges(false)
-      
-      console.log('✅ Company info loaded successfully')
     }
   }, [settings, isLoading, initialLoadComplete])
 
@@ -209,14 +192,10 @@ export default function SettingsPage() {
     try {
       setSavingCompany(true)
       
-      console.log('🔄 Saving company info:', companyInfo)
-      console.log('📞 Phone number being saved:', companyInfo.companyPhone)
-      
       // Save company info to localStorage
       localStorage.setItem('company-info', JSON.stringify(companyInfo))
       
       // Update global settings provider (this should save to database)
-      console.log('📞 Updating phone in settings provider:', companyInfo.companyPhone)
       updateSetting('companyName', companyInfo.companyName)
       updateSetting('companyAddress', companyInfo.companyAddress)
       updateSetting('companyEmail', companyInfo.companyEmail)
@@ -605,15 +584,11 @@ export default function SettingsPage() {
                         id="companyPhone" 
                         value={companyInfo.companyPhone} 
                         onChange={(value) => {
-                          console.log('📞 PhoneInput onChange:', value)
                           setCompanyInfo({...companyInfo, companyPhone: value})
                           setHasUserChanges(true)
                         }}
                         placeholder="Enter company phone"
                       />
-                      <div className="text-xs text-muted-foreground">
-                        Current value: {companyInfo.companyPhone}
-                      </div>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="companyWebsite">Website</Label>
