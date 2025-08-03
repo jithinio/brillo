@@ -9,8 +9,14 @@ import Link from "next/link"
 export function SidebarUsageOverview() {
   const { subscription, usage, plan, isLoading } = useSubscription()
   
-  // Show loading skeleton during loading to prevent flash
+  // Handle loading state intelligently
   if (isLoading) {
+    // If we already know the user has a pro plan, don't show anything
+    if (subscription.planId && subscription.planId !== 'free') {
+      return null
+    }
+    
+    // If we don't have subscription data or it's free, show loading skeleton to prevent flash
     return (
       <Card className="mb-2">
         <CardContent className="p-3 space-y-4">
