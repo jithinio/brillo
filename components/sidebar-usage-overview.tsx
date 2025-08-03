@@ -367,10 +367,15 @@ export function SidebarUsageOverview() {
     }
   }, [displayUsage?.projects?.current, displayUsage?.clients?.current, previousCounts, isOnRelevantPage, cachedUsage])
   
-  // Handle loading states - show cached data if available, otherwise show skeleton
-  const shouldShowForFreeUser = subscription.planId === 'free' || (isLoading && cachedUsage)
+  // Handle loading states - be conservative, only show when we're certain it's a free user
+  // Never show for pro users, even during loading
+  if (subscription.planId === 'pro') {
+    return null
+  }
   
-  if (!shouldShowForFreeUser) {
+  // Only show when we're certain the user is on free plan
+  if (subscription.planId !== 'free') {
+    // During loading, don't show anything to prevent flashing
     return null
   }
 
