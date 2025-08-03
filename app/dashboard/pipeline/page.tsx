@@ -28,7 +28,6 @@ export default function PipelinePage() {
     leadCount: 0,
     pitchedCount: 0,
     discussionCount: 0,
-    revenueForeccast: 0,
     weightedValue: 0,
     conversionRate: 0,
     winRate: 0

@@ -60,6 +60,9 @@ export default function ProfilePage() {
     phone: "",
     company: "",
   })
+  
+  // Track the last user ID to prevent unnecessary re-initialization
+  const [lastUserId, setLastUserId] = useState<string | null>(null)
 
   // Security settings state
   const [securitySettings, setSecuritySettings] = useState({
@@ -83,14 +86,20 @@ export default function ProfilePage() {
   const { totalCount: invoicesCount, isLoading: invoicesLoading } = useInvoices({})
 
   useEffect(() => {
-    if (user) {
+    if (user && user.id !== lastUserId) {
+      setLastUserId(user.id)
       initializeProfile()
     }
-  }, [user])
+  }, [user?.id, lastUserId]) // Only re-run when user ID actually changes
+
+
 
   const initializeProfile = async () => {
     try {
-      setLoading(true)
+      // Only set loading to true if we don't already have profile data
+      if (!profile.id || profile.id === "") {
+        setLoading(true)
+      }
       setError(null)
 
       // Check if Supabase is configured
@@ -109,7 +118,10 @@ export default function ProfilePage() {
       setError("Failed to load profile data")
       loadLocalProfile()
     } finally {
-      setLoading(false)
+      // Only set loading to false if we were actually loading
+      if (!profile.id || profile.id === "" || loading) {
+        setLoading(false)
+      }
     }
   }
 
@@ -435,7 +447,93 @@ export default function ProfilePage() {
   }
 
   if (loading) {
-    return null
+    return (
+      <>
+        <PageHeader
+          title="Profile"
+          action={
+            <div className="flex space-x-2">
+              <Skeleton className="h-9 w-24" />
+            </div>
+          }
+        />
+        <PageContent>
+          <div className="grid gap-6 md:grid-cols-3">
+            <div className="md:col-span-1">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Profile Picture</CardTitle>
+                  <CardDescription>Update your profile picture and avatar.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex flex-col items-center space-y-4">
+                    <Skeleton className="w-24 h-24 rounded-full" />
+                    <div className="text-center">
+                      <Skeleton className="h-4 w-48 mx-auto" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle>Quick Stats</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="flex justify-between">
+                      <Skeleton className="h-4 w-16" />
+                      <Skeleton className="h-5 w-8 rounded-full" />
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="md:col-span-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Personal Information</CardTitle>
+                  <CardDescription>
+                    <Skeleton className="h-4 w-80" />
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-20" />
+                      <Skeleton className="h-10 w-full" />
+                    </div>
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-20" />
+                      <Skeleton className="h-10 w-full" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-20" />
+                      <Skeleton className="h-10 w-full" />
+                    </div>
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-20" />
+                      <Skeleton className="h-10 w-full" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </PageContent>
+      </>
+    )
   }
 
   return (

@@ -27,12 +27,16 @@ export function ProBadge({
 
   const checkFeatureAccess = () => {
     if (!feature) return true // No specific feature, assume access
+    
+    // During loading, assume no access to show the badge and prevent flash
+    if (isLoading) return false
+    
+    // After loading is complete, check actual access
     return hasAccess(feature)
   }
 
-  // Don't show badge if user has access
-  // Only hide during loading if we have no subscription data at all (initial load)
-  if (checkFeatureAccess() || (isLoading && !subscription.planId)) {
+  // Only hide if user actually has access (not during loading)
+  if (checkFeatureAccess()) {
     return null
   }
 

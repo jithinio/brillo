@@ -1,7 +1,7 @@
 // Modern Polar integration using official Next.js adapter
 'use client'
 
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import React, { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react'
 import { useAuth } from '@/components/auth-provider'
 import { SubscriptionPlan, UserSubscription, UsageLimits, FeatureAccess } from '@/lib/types/subscription'
 import { getPlan, checkLimits, canAccessFeature } from '@/lib/subscription-plans'
@@ -129,7 +129,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
   }
 
   // Helper function to update usage limits based on plan and current usage
-  const updateUsageLimits = async (planId: string, currentUsage?: any) => {
+  const updateUsageLimits = useCallback(async (planId: string, currentUsage?: any) => {
     console.log('🔄 Updating usage limits for plan:', planId)
     
     const plan = getPlan(planId)
@@ -182,8 +182,20 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     }
     
     console.log('🎯 Setting new usage limits:', newUsage)
-    setUsage(newUsage)
-  }
+    
+    // Only update usage if it actually changed to prevent unnecessary re-renders
+    setUsage(prevUsage => {
+      const hasUsageChanged = 
+        prevUsage.projects.current !== newUsage.projects.current ||
+        prevUsage.clients.current !== newUsage.clients.current ||
+        prevUsage.invoices.current !== newUsage.invoices.current ||
+        prevUsage.projects.limit !== newUsage.projects.limit ||
+        prevUsage.clients.limit !== newUsage.clients.limit ||
+        prevUsage.invoices.limit !== newUsage.invoices.limit
+      
+      return hasUsageChanged ? newUsage : prevUsage
+    })
+  }, []) // Empty dependency array since this function doesn't depend on any props or state
 
   const loadSubscriptionData = async (force: boolean = false) => {
     if (!user) {
@@ -348,10 +360,11 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
           setSubscription(subscriptionData)
           setCachedSubscriptionData(subscriptionData)
           
-          // Update usage limits immediately after subscription change
-          setTimeout(() => {
+          // Update usage limits conditionally to prevent loops
+          // Only update if the plan actually changed, not on every subscription update
+          if (subscription.planId !== subscriptionData.planId) {
             updateUsageLimits(subscriptionData.planId)
-          }, 100)
+          }
         } else {
           console.log('✅ No subscription changes detected')
         }
@@ -369,10 +382,10 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
   const checkUsage = async (force: boolean = false) => {
     if (!user) return
 
-    // Debounce usage checks - only check every 2 minutes unless forced
+    // Debounce usage checks - only check every 5 minutes unless forced
     const now = Date.now()
     const timeSinceLastCheck = now - lastUsageCheck
-    const debounceThreshold = 2 * 60 * 1000 // 2 minutes
+    const debounceThreshold = 5 * 60 * 1000 // 5 minutes to reduce API load
 
     if (!force && timeSinceLastCheck < debounceThreshold) {
       console.log('🔄 Skipping usage check - too soon since last check')
@@ -435,33 +448,52 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
 
   // Initialize subscription data (only on user change)
   useEffect(() => {
-    if (user) {
+    if (user && user.id) {
       // Load subscription data first, then usage will be updated automatically
       loadSubscriptionData(true) // Force initial load
     }
-  }, [user])
+  }, [user?.id]) // Only depend on user ID to prevent re-runs when user object reference changes
 
   // Check usage when subscription plan changes (but not too frequently)
   useEffect(() => {
-    if (user && subscription.planId && subscription.planId !== 'free') {
-      // Only check usage if we haven't checked recently
+    if (user?.id && subscription.planId && subscription.planId !== 'free') {
+      // Only check usage if we haven't checked recently - increased threshold to 5 minutes
       const timeSinceLastCheck = Date.now() - lastUsageCheck
-      if (timeSinceLastCheck > 60 * 1000) { // 1 minute minimum
-        checkUsage()
+      if (timeSinceLastCheck > 5 * 60 * 1000) { // 5 minute minimum to reduce API calls
+        // Don't auto-check usage on profile or settings pages, or during loading
+        const isProfilePage = window.location.pathname.includes('/profile')
+        const isSettingsPage = window.location.pathname.includes('/settings')
+        const isDashboardHome = window.location.pathname === '/dashboard'
+        
+        // Only check usage on dashboard home page to minimize API calls
+        if (isDashboardHome && !isProfilePage && !isSettingsPage) {
+          checkUsage()
+        }
       }
     }
-  }, [subscription.planId, user])
+  }, [subscription.planId, user?.id]) // Only depend on user ID
 
   const refetchSubscription = (forceUsageCheck: boolean = false) => {
     if (user && document.visibilityState === 'visible') {
+      // Check if we're on pages that shouldn't auto-refresh
+      const isProfilePage = window.location.pathname.includes('/profile')
+      const isSettingsPage = window.location.pathname.includes('/settings')
+      
       // Add a small delay to prevent immediate refetch on tab return
       setTimeout(() => {
+        // Skip auto-refresh on profile and settings pages unless explicitly forced
+        if ((isProfilePage || isSettingsPage) && !forceUsageCheck) {
+          return
+        }
+        
         // Only force subscription data reload if usage needs to be forced
         loadSubscriptionData(forceUsageCheck)
+        
+        // Only check usage if explicitly requested to reduce API calls
         if (forceUsageCheck) {
           checkUsage(true) // Force usage check only when explicitly requested
         }
-      }, 200)
+      }, 500) // Increased delay to prevent rapid successive calls
     }
   }
 

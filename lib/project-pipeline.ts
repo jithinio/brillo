@@ -322,8 +322,7 @@ export async function calculateProjectPipelineMetrics(projects: PipelineProject[
     return sum + (potential * probability)
   }, 0)
   
-  // Revenue forecast (same as weighted value for now)
-  const revenueForeccast = weightedValue
+
   
   // Calculate real metrics from historical data
   let conversionRate = 0
@@ -359,7 +358,6 @@ export async function calculateProjectPipelineMetrics(projects: PipelineProject[
     leadCount,
     pitchedCount,
     discussionCount,
-    revenueForeccast,
     weightedValue,
     conversionRate,
     winRate

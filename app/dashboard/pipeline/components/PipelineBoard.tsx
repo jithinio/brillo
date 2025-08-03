@@ -207,15 +207,15 @@ function LostClientCard({ project, onRestore, onEdit, onProjectUpdate, onRefresh
 
 
 
-          {/* Budget / Value */}
-          {(project.budget || project.value) && (
+          {/* Budget */}
+          {project.budget && (
             <div className="flex items-center justify-between text-sm">
               <div className="flex items-center text-gray-600 dark:text-gray-400">
                 <DollarSign className="w-3 h-3 mr-1" />
-                <span>{project.budget ? 'Budget' : 'Value'}</span>
+                <span>Budget</span>
               </div>
               <span className="font-medium text-gray-900 dark:text-gray-100">
-                {formatLargeNumber(project.budget || project.value || 0, getCurrencySymbol())}
+                {formatLargeNumber(project.budget || 0, getCurrencySymbol())}
               </span>
             </div>
           )}

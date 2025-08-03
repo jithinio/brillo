@@ -19,12 +19,30 @@ import { isProPlan } from "@/lib/subscription-plans"
 import { useTheme } from "next-themes"
 
 export function NavUser() {
-  const { user, signOut } = useAuth()
+  const { user, signOut, loading: authLoading } = useAuth()
   const { isMobile } = useSidebar()
   const { theme, setTheme } = useTheme()
   const { subscription, isLoading } = useSubscription()
 
-  // Fallback user data if no user is available
+  // Show loading state during auth loading to prevent "Demo User" flash
+  if (authLoading) {
+    return (
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton size="lg" className="border border-border opacity-60">
+            <div className="h-8 w-8 rounded-lg bg-gray-200 animate-pulse" />
+            <div className="grid flex-1 text-left text-sm leading-tight">
+              <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
+              <div className="h-3 w-32 bg-gray-200 rounded animate-pulse mt-1" />
+            </div>
+            <div className="ml-auto h-4 w-4 bg-gray-200 rounded animate-pulse" />
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
+    )
+  }
+
+  // Fallback user data if no user is available after loading
   const currentUser = user
     ? {
         name: user.user_metadata?.full_name || user.email?.split("@")[0] || "User",

@@ -64,7 +64,6 @@ export interface PipelineMetrics {
   leadCount: number
   pitchedCount: number
   discussionCount: number
-  revenueForeccast: number
   weightedValue: number
   conversionRate: number
   winRate: number

@@ -167,8 +167,7 @@ export function calculatePipelineMetrics(clients: PipelineClient[], stages: Pipe
     return sum + (potential * probability)
   }, 0)
   
-  // Revenue forecast (same as weighted value for now)
-  const revenueForeccast = weightedValue
+
   
   // Conversion rate (placeholder - would need historical data)
   const conversionRate = 68 // Default placeholder
@@ -181,7 +180,6 @@ export function calculatePipelineMetrics(clients: PipelineClient[], stages: Pipe
     leadCount,
     pitchedCount,
     discussionCount,
-    revenueForeccast,
     weightedValue,
     conversionRate,
     winRate

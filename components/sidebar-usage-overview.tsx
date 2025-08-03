@@ -9,9 +9,33 @@ import Link from "next/link"
 export function SidebarUsageOverview() {
   const { subscription, usage, plan, isLoading } = useSubscription()
   
-  // Don't render anything while loading to prevent flash
+  // Show loading skeleton during loading to prevent flash
   if (isLoading) {
-    return null
+    return (
+      <Card className="mb-2">
+        <CardContent className="p-3 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="h-4 w-20 bg-gray-200 rounded animate-pulse" />
+            <div className="h-5 w-12 bg-gray-200 rounded-full animate-pulse" />
+          </div>
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <div className="h-3 w-16 bg-gray-200 rounded animate-pulse" />
+              <div className="h-3 w-8 bg-gray-200 rounded animate-pulse" />
+            </div>
+            <div className="h-2 w-full bg-gray-200 rounded animate-pulse" />
+          </div>
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <div className="h-3 w-16 bg-gray-200 rounded animate-pulse" />
+              <div className="h-3 w-8 bg-gray-200 rounded animate-pulse" />
+            </div>
+            <div className="h-2 w-full bg-gray-200 rounded animate-pulse" />
+          </div>
+          <div className="h-8 w-full bg-gray-200 rounded animate-pulse" />
+        </CardContent>
+      </Card>
+    )
   }
   
   // Only show for free plan users
