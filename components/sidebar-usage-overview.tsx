@@ -367,15 +367,14 @@ export function SidebarUsageOverview() {
     }
   }, [displayUsage?.projects?.current, displayUsage?.clients?.current, previousCounts, isOnRelevantPage, cachedUsage])
   
-  // Handle loading states - be conservative, only show when we're certain it's a free user
-  // Never show for pro users, even during loading
-  if (subscription.planId === 'pro') {
+  // COMPLETELY HIDE FOR PRO USERS - only show when we're 100% certain it's a free user
+  // Don't show anything during loading to prevent any flashing
+  if (isLoading) {
     return null
   }
   
-  // Only show when we're certain the user is on free plan
+  // Only show for explicitly free users after loading is complete
   if (subscription.planId !== 'free') {
-    // During loading, don't show anything to prevent flashing
     return null
   }
 
