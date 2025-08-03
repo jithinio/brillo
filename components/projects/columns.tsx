@@ -116,6 +116,7 @@ interface ColumnActions {
   onEditProject: (project: Project) => void
   onCreateInvoice: (project: Project) => void
   onDeleteProject: (project: Project) => void
+  onDuplicateProject: (project: Project) => void
   onStatusChange: (project: Project, newStatus: string) => void
   onDateChange: (project: Project, field: 'start_date' | 'due_date', date: Date | undefined) => void
   onClientChange?: (project: Project, clientId: string | null, onUpdate?: () => void) => void

@@ -640,6 +640,68 @@ export function ProjectsTableWrapper({
           toast.error(`Failed to update client: ${error.message}`)
         }
       },
+      onDuplicateProject: async (project: any) => {
+        try {
+          // Check if user can create more projects
+          if (!canCreateResource('projects')) {
+            const reason = getActionBlockedReason('projects')
+            toast.error("Cannot duplicate project", {
+              description: reason || "You've reached your project limit for your current plan. Please upgrade to Pro for unlimited projects."
+            })
+            return
+          }
+
+                  if (isSupabaseConfigured()) {
+          // Create a copy of the project data, excluding id, created_at, and updated_at
+          const duplicateData = {
+            name: `${project.name} (Copy)`,
+            description: project.description,
+            client_id: project.clients?.id || project.client_id || null, // Handle both nested and direct client_id
+            status: project.status, // Carry forward the original status
+            start_date: project.start_date,
+            due_date: project.due_date,
+            budget: project.budget,
+            expenses: project.expenses || 0,
+            revenue: project.revenue || 0,
+            profit_margin: project.profit_margin || 0,
+            currency: project.currency || 'USD',
+            payment_status: project.payment_status || 'pending',
+            invoice_amount: project.invoice_amount || 0,
+            payment_received: project.received || project.payment_received || 0, // Carry over received amount
+            payment_pending: project.pending || project.payment_pending || 0, // Carry over pending amount
+            hourly_rate: project.hourly_rate,
+            estimated_hours: project.estimated_hours,
+            actual_hours: 0, // Reset actual hours for duplicate
+            progress: 0, // Reset progress for duplicate
+            notes: project.notes,
+            pipeline_stage: project.pipeline_stage,
+            pipeline_notes: project.pipeline_notes,
+            deal_probability: project.deal_probability
+          }
+
+            const { data, error } = await supabase
+              .from('projects')
+              .insert([duplicateData])
+              .select()
+
+            if (error) {
+              console.error('Error duplicating project:', error)
+              throw new Error(error.message)
+            }
+
+            toast.success(`Project "${duplicateData.name}" created successfully`, {
+              description: `Duplicated from "${project.name}"`
+            })
+            refetch()
+            forceRefresh()
+            // Refresh usage limits immediately after creating a project
+            refetchSubscription(true)
+          }
+        } catch (error: any) {
+          console.error('Error duplicating project:', error)
+          toast.error(`Failed to duplicate project: ${error.message}`)
+        }
+      },
       availableClients: clients,
     })
 
@@ -789,6 +851,69 @@ export function ProjectsTableWrapper({
     }
     
     setIsEditDialogOpen(true)
+  }
+  
+  const handleDuplicateProject = async (project: any) => {
+    try {
+      // Check if user can create more projects
+      if (!canCreateResource('projects')) {
+        const reason = getActionBlockedReason('projects')
+        toast.error("Cannot duplicate project", {
+          description: reason || "You've reached your project limit for your current plan. Please upgrade to Pro for unlimited projects."
+        })
+        return
+      }
+
+      if (isSupabaseConfigured()) {
+        // Create a copy of the project data, excluding id, created_at, and updated_at
+        const duplicateData = {
+          name: `${project.name} (Copy)`,
+          description: project.description,
+          client_id: project.clients?.id || project.client_id || null, // Handle both nested and direct client_id
+          status: project.status, // Carry forward the original status
+          start_date: project.start_date,
+          due_date: project.due_date,
+          budget: project.budget,
+          expenses: project.expenses || 0,
+          revenue: project.revenue || 0,
+          profit_margin: project.profit_margin || 0,
+          currency: project.currency || 'USD',
+          payment_status: project.payment_status || 'pending',
+          invoice_amount: project.invoice_amount || 0,
+          payment_received: project.received || project.payment_received || 0, // Carry over received amount
+          payment_pending: project.pending || project.payment_pending || 0, // Carry over pending amount
+          hourly_rate: project.hourly_rate,
+          estimated_hours: project.estimated_hours,
+          actual_hours: 0, // Reset actual hours for duplicate
+          progress: 0, // Reset progress for duplicate
+          notes: project.notes,
+          pipeline_stage: project.pipeline_stage,
+          pipeline_notes: project.pipeline_notes,
+          deal_probability: project.deal_probability
+        }
+
+        const { data, error } = await supabase
+          .from('projects')
+          .insert([duplicateData])
+          .select()
+
+        if (error) {
+          console.error('Error duplicating project:', error)
+          throw new Error(error.message)
+        }
+
+        toast.success(`Project "${duplicateData.name}" created successfully`, {
+          description: `Duplicated from "${project.name}"`
+        })
+        refetch()
+        forceRefresh()
+        // Refresh usage limits immediately after creating a project
+        refetchSubscription(true)
+      }
+    } catch (error: any) {
+      console.error('Error duplicating project:', error)
+      toast.error(`Failed to duplicate project: ${error.message}`)
+    }
   }
   
   const handleBatchDelete = async (projects: any[]) => {
@@ -1225,6 +1350,7 @@ export function ProjectsTableWrapper({
             refetch={refetch}
             forceRefresh={forceRefresh}
             onEditProject={handleEditProject}
+            onDuplicateProject={handleDuplicateProject}
             onBatchDelete={handleBatchDelete}
             onResizeStart={handleResizeStart}
             createSortingFunctions={createSortingFunctions}

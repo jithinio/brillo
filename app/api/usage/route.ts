@@ -37,7 +37,12 @@ export async function GET(request: NextRequest) {
     const now = new Date()
     const cacheThreshold = 5 * 60 * 1000 // 5 minutes cache for usage data
     const lastUpdated = cachedUsage?.last_updated ? new Date(cachedUsage.last_updated) : null
-    const isCacheValid = lastUpdated && (now.getTime() - lastUpdated.getTime()) < cacheThreshold
+    
+    // Check if force refresh is requested via query parameter
+    const url = new URL(request.url)
+    const forceRefresh = url.searchParams.get('force') === 'true'
+    
+    const isCacheValid = !forceRefresh && lastUpdated && (now.getTime() - lastUpdated.getTime()) < cacheThreshold
 
     let usage: { projects: number; clients: number; invoices: number }
 

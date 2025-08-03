@@ -142,7 +142,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
         const { data: { session } } = await supabase.auth.getSession()
         if (!session) return
         
-        const response = await fetch('/api/usage', {
+        const response = await fetch('/api/usage?force=true', {
           headers: {
             'Authorization': `Bearer ${session.access_token}`,
             'Content-Type': 'application/json'
@@ -192,6 +192,17 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
         prevUsage.projects.limit !== newUsage.projects.limit ||
         prevUsage.clients.limit !== newUsage.clients.limit ||
         prevUsage.invoices.limit !== newUsage.invoices.limit
+      
+      console.log('🔄 Usage change check:', {
+        hasUsageChanged,
+        prevUsage,
+        newUsage,
+        changes: {
+          projectsCurrent: prevUsage.projects.current !== newUsage.projects.current,
+          clientsCurrent: prevUsage.clients.current !== newUsage.clients.current,
+          invoicesCurrent: prevUsage.invoices.current !== newUsage.invoices.current
+        }
+      })
       
       return hasUsageChanged ? newUsage : prevUsage
     })
@@ -382,13 +393,19 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
   const checkUsage = async (force: boolean = false) => {
     if (!user) return
 
-    // Debounce usage checks - only check every 5 minutes unless forced
+    // Smart debouncing: shorter interval for forced checks (like from sidebar), longer for automatic checks
     const now = Date.now()
     const timeSinceLastCheck = now - lastUsageCheck
-    const debounceThreshold = 5 * 60 * 1000 // 5 minutes to reduce API load
+    const debounceThreshold = force ? 15 * 1000 : 5 * 60 * 1000 // 15 seconds for forced, 5 minutes for automatic
 
     if (!force && timeSinceLastCheck < debounceThreshold) {
       console.log('🔄 Skipping usage check - too soon since last check')
+      return
+    }
+
+    // For forced checks, use a shorter debounce to allow more frequent updates while preventing spam
+    if (force && timeSinceLastCheck < 15 * 1000) {
+      console.log('🔄 Skipping forced usage check - too soon since last check (15s minimum)')
       return
     }
 
@@ -402,7 +419,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
         return
       }
 
-      const response = await fetch('/api/usage', {
+      const response = await fetch(`/api/usage${force ? '?force=true' : ''}`, {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json'

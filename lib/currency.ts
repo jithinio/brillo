@@ -29,7 +29,7 @@ export const CURRENCIES: Record<string, CurrencyConfig> = {
   IDR: { code: "IDR", symbol: "Rp", name: "Indonesian Rupiah", position: "before", decimals: 0 },
   
   // Middle East & Africa
-  AED: { code: "AED", symbol: "د.إ", name: "UAE Dirham", position: "before", decimals: 2 },
+  AED: { code: "AED", symbol: "AED", name: "UAE Dirham", position: "before", decimals: 2 },
   SAR: { code: "SAR", symbol: "﷼", name: "Saudi Riyal", position: "before", decimals: 2 },
   KWD: { code: "KWD", symbol: "د.ك", name: "Kuwaiti Dinar", position: "before", decimals: 3 },
   

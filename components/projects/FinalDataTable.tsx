@@ -23,7 +23,8 @@ import {
   Pause, 
   XCircle, 
   GitBranch,
-  Check 
+  Check,
+  Copy
 } from "lucide-react"
 import { toast } from "sonner"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
@@ -148,6 +149,7 @@ interface FinalDataTableProps {
   refetch: any
   forceRefresh: () => void
   onEditProject: (project: any) => void
+  onDuplicateProject: (project: any) => void
   onBatchDelete: (projects: any[]) => void
   onResizeStart: (columnId: string, startX: number, event: React.MouseEvent) => void
   createSortingFunctions: (columnId: string) => {
@@ -173,6 +175,7 @@ function FinalDataTableComponent({
   refetch,
   forceRefresh,
   onEditProject,
+  onDuplicateProject,
   onBatchDelete,
   onResizeStart,
   createSortingFunctions,
@@ -187,12 +190,22 @@ function FinalDataTableComponent({
   // Track if we've ever loaded data to show initial skeletons
   const [hasLoadedOnce, setHasLoadedOnce] = React.useState(false)
   
+  // Track if we've ever loaded more than the first page
+  const [hasLoadedNextPage, setHasLoadedNextPage] = React.useState(false)
+  
   // Mark as loaded when we get data
   React.useEffect(() => {
     if (projects && projects.length > 0) {
       setHasLoadedOnce(true)
     }
   }, [projects])
+  
+  // Track when we've loaded additional pages
+  React.useEffect(() => {
+    if (isFetchingNextPage) {
+      setHasLoadedNextPage(true)
+    }
+  }, [isFetchingNextPage])
   
   // Selected rows for batch operations
   const selectedProjects = React.useMemo(() => {
@@ -439,6 +452,10 @@ function FinalDataTableComponent({
                           <Edit className="mr-2 h-4 w-4" />
                           Edit Project
                         </ContextMenuItem>
+                        <ContextMenuItem onClick={() => onDuplicateProject(project)}>
+                          <Copy className="mr-2 h-4 w-4" />
+                          Duplicate Project
+                        </ContextMenuItem>
                         <ContextMenuItem onClick={() => {
                           toast.info(`Creating invoice for ${project.name}`, {
                             description: "This feature will be available soon"
@@ -541,8 +558,8 @@ function FinalDataTableComponent({
                     )}
                   </AnimatePresence>
                   
-                  {/* Subtle end indicator without layout shift */}
-                  {!hasNextPage && projects.length > 0 && !isFetchingNextPage && (
+                  {/* Subtle end indicator without layout shift - only show after pagination */}
+                  {!hasNextPage && projects.length > 0 && !isFetchingNextPage && hasLoadedNextPage && (
                     <div className="h-0 relative">
                       <div className="absolute left-1/2 transform -translate-x-1/2 z-10" style={{ top: '6px' }}>
                         <Badge 
@@ -556,8 +573,10 @@ function FinalDataTableComponent({
                     </div>
                   )}
 
-                  {/* Invisible spacer for proper scrolling detection */}
-                  <div className="h-8 w-full" data-table-body />
+                  {/* Invisible spacer for proper scrolling detection - only when needed */}
+                  {(hasNextPage || isFetchingNextPage || hasLoadedNextPage) && (
+                    <div className="h-8 w-full" data-table-body />
+                  )}
                 </>
               )}
             </div>
@@ -581,8 +600,10 @@ function FinalDataTableComponent({
               </div>
             </div>
 
-            {/* Spacer to ensure footer has proper positioning space */}
-            <div style={{ height: '1px', minHeight: '1px' }} />
+            {/* Spacer to ensure footer has proper positioning space - only when needed */}
+            {(hasNextPage || isFetchingNextPage || hasLoadedNextPage) && (
+              <div style={{ height: '1px', minHeight: '1px' }} />
+            )}
           </div>
         </div>
       </div>

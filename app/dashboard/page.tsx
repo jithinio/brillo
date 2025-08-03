@@ -16,6 +16,7 @@ import { formatLargeNumber } from "@/lib/utils"
 import { useSettings } from "@/components/settings-provider"
 import { supabase } from "@/lib/supabase"
 import { UpgradeSuccessHandler } from "@/components/upgrade-success-handler"
+import { useAuth } from "@/components/auth-provider"
 
 // Types for project data
 interface Project {
@@ -954,6 +955,7 @@ const YearlyBarChart = ({
 
 export default function DashboardPage() {
   const { settings, formatCurrency: settingsFormatCurrency } = useSettings()
+  const { user } = useAuth()
   const [mrrPeriod, setMrrPeriod] = useState("current-month")
   const [qrrPeriod, setQrrPeriod] = useState("current-quarter")
   const [arrPeriod, setArrPeriod] = useState("current-year")
@@ -961,9 +963,13 @@ export default function DashboardPage() {
   const [revenuePeriod, setRevenuePeriod] = useState("this-year")
   const [yearlyType, setYearlyType] = useState<'revenue' | 'expenses'>('revenue')
   const [greeting, setGreeting] = useState("")
-  const [userName] = useState("Jithin") // Replace with actual user name from context/auth
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
+
+  // Get user name from auth context
+  const userName = user 
+    ? user.user_metadata?.full_name || user.email?.split("@")[0] || "User"
+    : "User"
 
   // Fetch projects on component mount
   useEffect(() => {
