@@ -34,10 +34,18 @@ export function SidebarUsageOverview() {
           // Check if cache is less than 10 minutes old
           const cacheAge = Date.now() - parsedCache.timestamp
           if (cacheAge < 10 * 60 * 1000) { // 10 minutes
-            console.log('📦 Loaded valid cached usage from localStorage:', parsedCache.data)
+            if (process.env.NODE_ENV === 'development') {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('📦 Loaded valid cached usage from localStorage:', parsedCache.data)
+        }
+      }
             return parsedCache.data
           } else {
-            console.log('🗑️ Cache expired, removing...')
+            if (process.env.NODE_ENV === 'development') {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('🗑️ Cache expired, removing...')
+        }
+      }
             localStorage.removeItem(cacheKey)
           }
         }
@@ -56,7 +64,11 @@ export function SidebarUsageOverview() {
           const parsedCache = JSON.parse(cached)
           const cacheAge = Date.now() - parsedCache.timestamp
           if (cacheAge < 10 * 60 * 1000) { // Still valid
-            console.log('📦 Using fallback cache from:', key, parsedCache.data)
+            if (process.env.NODE_ENV === 'development') {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('📦 Using fallback cache from:', key, parsedCache.data)
+        }
+      }
             return parsedCache.data
           }
         }
@@ -79,7 +91,11 @@ export function SidebarUsageOverview() {
         timestamp: Date.now()
       }
       localStorage.setItem(cacheKey, JSON.stringify(cacheData))
-      console.log('💾 Saved usage data to localStorage:', data)
+      if (process.env.NODE_ENV === 'development') {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('💾 Saved usage data to localStorage:', data)
+      }
+    }
     } catch (error) {
       console.error('Error saving cached data:', error)
     }
@@ -92,7 +108,11 @@ export function SidebarUsageOverview() {
       const cached = loadCachedData()
       if (cached) {
         setCachedUsage(cached)
-        console.log('🚀 Loaded cache immediately on mount:', cached)
+        if (process.env.NODE_ENV === 'development') {
+              if (process.env.NODE_ENV === 'development') {
+          console.log('🚀 Loaded cache immediately on mount:', cached)
+        }
+    }
       }
       setIsInitialized(true)
     }
@@ -104,7 +124,11 @@ export function SidebarUsageOverview() {
       const cached = loadCachedData()
       if (cached) {
         setCachedUsage(cached)
-        console.log('🔄 Loaded cache after user available:', cached)
+        if (process.env.NODE_ENV === 'development') {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('🔄 Loaded cache after user available:', cached)
+        }
+      }
       }
     }
   }, [user?.id, cachedUsage])
@@ -125,23 +149,25 @@ export function SidebarUsageOverview() {
 
   const shouldUseRealtimeUpdates = isOnRelevantPage() && subscription.planId === 'free' && !isLoading && user
   
-  // Debug logging to track updates
-  console.log('📊 SidebarUsageOverview render:', { 
-    isLoading, 
-    planId: subscription.planId, 
-    pathname,
-    isOnRelevantPage: isOnRelevantPage(),
-    shouldUseRealtimeUpdates,
-    usage: usage,
-    cachedUsage,
-    usageStructure: {
-      hasUsage: !!usage,
-      hasClients: !!usage?.clients,
-      hasProjects: !!usage?.projects,
-      clientsData: usage?.clients,
-      projectsData: usage?.projects
-    }
-  })
+  // Debug logging to track updates (development only)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('📊 SidebarUsageOverview render:', { 
+      isLoading, 
+      planId: subscription.planId, 
+      pathname,
+      isOnRelevantPage: isOnRelevantPage(),
+      shouldUseRealtimeUpdates,
+      usage: usage,
+      cachedUsage,
+      usageStructure: {
+        hasUsage: !!usage,
+        hasClients: !!usage?.clients,
+        hasProjects: !!usage?.projects,
+        clientsData: usage?.clients,
+        projectsData: usage?.projects
+      }
+    })
+  }
 
   // Enhanced cache management - always try to get fresh data and persist it
   useEffect(() => {
@@ -158,11 +184,13 @@ export function SidebarUsageOverview() {
           cachedUsage.projects.limit !== usage.projects.limit
 
         if (isDifferent) {
-          console.log('🔄 Updating cache with fresh usage data:', {
-            previous: cachedUsage,
-            new: usage,
-            onRelevantPage: isOnRelevantPage()
-          })
+          if (process.env.NODE_ENV === 'development') {
+            console.log('🔄 Updating cache with fresh usage data:', {
+              previous: cachedUsage,
+              new: usage,
+              onRelevantPage: isOnRelevantPage()
+            })
+          }
           setCachedUsage(usage)
           saveCachedData(usage) // Persist to localStorage
         }
@@ -180,12 +208,13 @@ export function SidebarUsageOverview() {
         (!usage?.clients || !usage?.projects || usage.clients.current === undefined)
 
       if (needsDataFetch) {
-        console.log('🔍 Forcing data fetch - no valid data available:', {
-          hasCache: !!cachedUsage,
-          hasUsage: !!usage,
-          usageComplete: usage?.clients?.current !== undefined
-        })
-        
+        if (process.env.NODE_ENV === 'development') {
+          console.log('🔍 Forcing data fetch - no valid data available:', {
+            hasCache: !!cachedUsage,
+            hasUsage: !!usage,
+            usageComplete: usage?.clients?.current !== undefined
+          })
+        }
         // Immediate fetch
         refetchSubscription(true)
         
@@ -203,7 +232,9 @@ export function SidebarUsageOverview() {
   useEffect(() => {
     // Only run once on mount - always ensure fresh data
     if (isInitialized) {
-      console.log('🔄 Component mounted, ensuring data is fresh...')
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔄 Component mounted, ensuring data is fresh...')
+      }
       // Small delay to allow subscription provider to initialize
       const timeoutId = setTimeout(() => {
         refetchSubscription(true)
@@ -217,11 +248,13 @@ export function SidebarUsageOverview() {
   useEffect(() => {
     // Only set up realtime subscriptions when on relevant pages
     if (!shouldUseRealtimeUpdates) {
-      console.log('🚫 Skipping realtime setup - not on relevant page or wrong conditions:', {
-        shouldUseRealtimeUpdates,
-        pathname,
-        isOnRelevantPage: isOnRelevantPage()
-      })
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🚫 Skipping realtime setup - not on relevant page or wrong conditions:', {
+          shouldUseRealtimeUpdates,
+          pathname,
+          isOnRelevantPage: isOnRelevantPage()
+        })
+      }
       return
     }
 
@@ -229,7 +262,9 @@ export function SidebarUsageOverview() {
       try {
         const { supabase } = await import('@/lib/supabase')
         
-        console.log('🔄 Setting up realtime subscriptions for usage updates on relevant page:', pathname)
+        if (process.env.NODE_ENV === 'development') {
+          console.log('🔄 Setting up realtime subscriptions for usage updates on relevant page:', pathname)
+        }
         
         // Subscribe to projects table changes
         const projectsSubscription = supabase
@@ -243,7 +278,9 @@ export function SidebarUsageOverview() {
               filter: `user_id=eq.${user.id}`
             },
             (payload) => {
-              console.log('📊 Projects table changed:', payload.eventType, 'on page:', pathname)
+              if (process.env.NODE_ENV === 'development') {
+          console.log('📊 Projects table changed:', payload.eventType, 'on page:', pathname)
+        }
               handleDataChange('projects')
             }
           )
@@ -261,7 +298,9 @@ export function SidebarUsageOverview() {
               filter: `user_id=eq.${user.id}`
             },
             (payload) => {
-              console.log('👥 Clients table changed:', payload.eventType, 'on page:', pathname)
+              if (process.env.NODE_ENV === 'development') {
+          console.log('👥 Clients table changed:', payload.eventType, 'on page:', pathname)
+        }
               handleDataChange('clients')
             }
           )
@@ -281,7 +320,9 @@ export function SidebarUsageOverview() {
     const handleDataChange = (type: 'projects' | 'clients') => {
       // Add a small delay to allow database consistency
       setTimeout(() => {
+        if (process.env.NODE_ENV === 'development') {
         console.log(`🔄 ${type} data changed, updating usage and cache`)
+      }
         refetchSubscription(true)
       }, 500)
     }
@@ -290,7 +331,9 @@ export function SidebarUsageOverview() {
 
     // Cleanup function
     return () => {
-      console.log('🧹 Cleaning up realtime subscriptions for page:', pathname)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🧹 Cleaning up realtime subscriptions for page:', pathname)
+      }
       subscriptionsRef.current.forEach(({ subscription, supabase }) => {
         if (subscription && supabase) {
           try {
@@ -313,40 +356,50 @@ export function SidebarUsageOverview() {
                             usage?.projects?.limit !== undefined
 
     if (hasValidLiveData) {
-      console.log('📊 Using live usage data (valid and complete):', usage)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('📊 Using live usage data (valid and complete):', usage)
+      }
       return usage
     }
     
     // Fall back to cached data if live data is incomplete
     if (cachedUsage?.clients?.current !== undefined && cachedUsage?.projects?.current !== undefined) {
-      console.log('📦 Using cached data (live data incomplete):', { 
-        liveData: usage, 
-        cachedData: cachedUsage,
-        pathname 
-      })
+      if (process.env.NODE_ENV === 'development') {
+        console.log('📦 Using cached data (live data incomplete):', { 
+          liveData: usage, 
+          cachedData: cachedUsage,
+          pathname 
+        })
+      }
       return cachedUsage
     }
 
     // Last resort: return live data even if incomplete
-    console.log('⚠️ Using incomplete live data (no valid cache):', usage)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('⚠️ Using incomplete live data (no valid cache):', usage)
+    }
     return usage
   }
 
   const displayUsage = getDisplayUsage()
   
-  // Additional safety logging
-  console.log('🎯 Final displayUsage:', {
-    displayUsage,
-    hasClients: !!displayUsage?.clients,
-    hasProjects: !!displayUsage?.projects,
-    clientsCurrent: displayUsage?.clients?.current,
-    projectsCurrent: displayUsage?.projects?.current
-  })
+  // Additional safety logging (development only)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🎯 Final displayUsage:', {
+      displayUsage,
+      hasClients: !!displayUsage?.clients,
+      hasProjects: !!displayUsage?.projects,
+      clientsCurrent: displayUsage?.clients?.current,
+      projectsCurrent: displayUsage?.projects?.current
+    })
+  }
 
   // Track previous counts to detect actual changes (with safety checks)
   useEffect(() => {
     if (!displayUsage?.projects || !displayUsage?.clients) {
-      console.log('⚠️ displayUsage missing expected structure:', displayUsage)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('⚠️ displayUsage missing expected structure:', displayUsage)
+      }
       return
     }
 
@@ -358,11 +411,13 @@ export function SidebarUsageOverview() {
     // Only log if there's an actual change in numbers
     if (currentCounts.projects !== previousCounts.projects || 
         currentCounts.clients !== previousCounts.clients) {
-      console.log('📈 Display usage counts changed:', {
-        previous: previousCounts,
-        current: currentCounts,
-        usingCache: !isOnRelevantPage() && cachedUsage !== null
-      })
+      if (process.env.NODE_ENV === 'development') {
+        console.log('📈 Display usage counts changed:', {
+          previous: previousCounts,
+          current: currentCounts,
+          usingCache: !isOnRelevantPage() && cachedUsage !== null
+        })
+      }
       setPreviousCounts(currentCounts)
     }
   }, [displayUsage?.projects?.current, displayUsage?.clients?.current, previousCounts, isOnRelevantPage, cachedUsage])
@@ -389,7 +444,9 @@ export function SidebarUsageOverview() {
                      clientsUsed !== undefined || projectsUsed !== undefined || cachedUsage
 
   if (!hasAnyData && isLoading) {
-    console.log('⏳ Showing loading skeleton...')
+    if (process.env.NODE_ENV === 'development') {
+      console.log('⏳ Showing loading skeleton...')
+    }
     return (
       <Card className="mb-2">
         <CardContent className="p-3 space-y-4">
@@ -432,12 +489,14 @@ export function SidebarUsageOverview() {
     )
   }
 
-  console.log('📋 Final extracted values:', {
-    clientsUsed,
-    clientsLimit, 
-    projectsUsed,
-    projectsLimit
-  })
+  if (process.env.NODE_ENV === 'development') {
+    console.log('📋 Final extracted values:', {
+      clientsUsed,
+      clientsLimit, 
+      projectsUsed,
+      projectsLimit
+    })
+  }
 
   const clientsPercentage = clientsLimit > 0 ? (clientsUsed / clientsLimit) * 100 : 0
   const projectsPercentage = projectsLimit > 0 ? (projectsUsed / projectsLimit) * 100 : 0

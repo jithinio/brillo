@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { BadgeCheck, ChevronsUpDown, LogOut, Sparkles, Moon, Sun, Monitor, Palette, Settings2, User, CreditCard, Crown } from "lucide-react"
+import { BadgeCheck, ChevronsUpDown, LogOut, Sparkles, Moon, Sun, Monitor, Palette, Settings2, User, CreditCard, Crown, MessageSquare } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { useSubscription } from "@/components/providers/subscription-provider"
 import { isProPlan } from "@/lib/subscription-plans"
@@ -163,6 +163,12 @@ export function NavUser() {
                 <a href="/dashboard/settings" className="cursor-pointer">
                   <Settings2 className="mr-2 h-4 w-4" />
                   Settings
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <a href="/dashboard/feedback" className="cursor-pointer">
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                  Feedback
                 </a>
               </DropdownMenuItem>
             </DropdownMenuGroup>
