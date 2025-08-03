@@ -105,7 +105,7 @@ async function fetchLiveRates(baseCurrency: string = 'USD'): Promise<Record<stri
       method: 'GET',
       headers: {
         'Accept': 'application/json',
-        'User-Agent': 'SuiteBase-Invoice-App/1.0'
+        'User-Agent': 'Brillo-Invoice-App/1.0'
       }
     })
 
@@ -199,7 +199,7 @@ async function fetchHistoricalRates(
       method: 'GET',
       headers: {
         'Accept': 'application/json',
-        'User-Agent': 'SuiteBase-Invoice-App/1.0'
+        'User-Agent': 'Brillo-Invoice-App/1.0'
       }
     })
 

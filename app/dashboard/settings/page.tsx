@@ -51,11 +51,11 @@ export default function SettingsPage() {
 
   // Company information state
   const [companyInfo, setCompanyInfo] = useState({
-    companyName: "Suitebase",
+    companyName: "Brillo",
     companyAddress: "123 Business St, City, State 12345",
     companyPhone: "+1 (555) 123-4567",
-    companyWebsite: "https://suitebase.com",
-    companyEmail: "contact@suitebase.com",
+    companyWebsite: "https://app.brillo.so",
+    companyEmail: "contact@brillo.so",
     companyRegistration: "",
   })
 
@@ -169,11 +169,11 @@ export default function SettingsPage() {
   useEffect(() => {
     if (!isLoading && initialLoadComplete) {
       const newCompanyInfo = {
-        companyName: settings.companyName || "Suitebase",
+        companyName: settings.companyName || "Brillo",
         companyAddress: settings.companyAddress || "123 Business St, City, State 12345",
         companyPhone: settings.companyPhone || "+1 (555) 123-4567",
-        companyWebsite: settings.companyWebsite || "https://suitebase.com",
-        companyEmail: settings.companyEmail || "contact@suitebase.com",
+        companyWebsite: settings.companyWebsite || "https://app.brillo.so",
+        companyEmail: settings.companyEmail || "contact@brillo.so",
         companyRegistration: settings.companyRegistration || "",
       }
       

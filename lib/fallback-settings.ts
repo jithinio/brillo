@@ -13,7 +13,7 @@ interface FallbackSettings {
 }
 
 const FALLBACK_DEFAULTS: FallbackSettings = {
-  companyName: "Suitebase",
+  companyName: "Brillo",
   companyLogo: "",
   defaultCurrency: "USD",
   taxRate: 8.0,

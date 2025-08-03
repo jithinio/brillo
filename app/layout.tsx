@@ -80,7 +80,7 @@ const inconsolata = Inconsolata({
 })
 
 export const metadata: Metadata = {
-  title: "Suitebase - Business Management Platform",
+  title: "Brillo - Business Management Platform",
   description: "Manage your clients, projects, and invoices with ease",
     generator: 'v0.dev'
 }

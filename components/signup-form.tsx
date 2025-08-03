@@ -99,7 +99,7 @@ export function SignupForm({ className, ...props }: React.ComponentProps<"div">)
             <div className="flex flex-col gap-6">
               <div className="flex flex-col items-center text-center">
                 <h1 className="text-2xl font-bold">Create your account</h1>
-                <p className="text-balance text-muted-foreground">Join Suitebase and streamline your business</p>
+                <p className="text-balance text-muted-foreground">Join Brillo and streamline your business</p>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-3">

@@ -38,11 +38,11 @@ interface SettingsContextType {
 
 const defaultSettings: AppSettings = {
   defaultCurrency: "USD",
-  companyName: "Suitebase",
+  companyName: "Brillo",
   companyAddress: "123 Business St, City, State 12345",
-  companyEmail: "contact@suitebase.com",
+  companyEmail: "contact@brillo.so",
   companyPhone: "+1 (555) 123-4567",
-  companyWebsite: "https://suitebase.com",
+  companyWebsite: "https://app.brillo.so",
   companyRegistration: "",
   companyLogo: "",
   taxRate: 8.0,

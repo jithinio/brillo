@@ -100,7 +100,7 @@ export default function PricingPage() {
             <div className="w-8 h-8 bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg flex items-center justify-center">
               <Crown className="w-5 h-5 text-white" />
             </div>
-            <span className="font-semibold text-lg">Suitebase</span>
+                            <span className="font-semibold text-lg">Brillo</span>
           </div>
           
           <div className="flex items-center gap-3">
@@ -111,7 +111,7 @@ export default function PricingPage() {
               </Link>
             </Button>
             <Button asChild variant="outline" size="sm">
-              <Link href="mailto:support@suitebase.com" className="flex items-center gap-2">
+              <Link href="mailto:support@brillo.so" className="flex items-center gap-2">
                 <Mail className="w-4 h-4" />
                 Contact
               </Link>
