@@ -142,28 +142,34 @@ export default function SettingsPage() {
       isLoading,
       hasCompanyName: !!settings.companyName,
       initialLoadComplete,
-      settingsPhone: settings.companyPhone
+      settingsPhone: settings.companyPhone,
+      settingsPhoneType: typeof settings.companyPhone,
+      settingsPhoneLength: settings.companyPhone?.length
     })
     
-    if (!isLoading && settings.companyName && !initialLoadComplete) {
+    if (!isLoading && !initialLoadComplete) {
       console.log('📞 Loading company info from settings provider:')
       console.log('   - Phone from settings:', settings.companyPhone)
       console.log('   - Company name:', settings.companyName)
+      console.log('   - All settings:', settings)
       
-      setCompanyInfo({
+      const newCompanyInfo = {
         companyName: settings.companyName || "Suitebase",
         companyAddress: settings.companyAddress || "123 Business St, City, State 12345",
         companyPhone: settings.companyPhone || "+1 (555) 123-4567",
         companyWebsite: settings.companyWebsite || "https://suitebase.com",
         companyEmail: settings.companyEmail || "contact@suitebase.com",
         companyRegistration: settings.companyRegistration || "",
-      })
+      }
+      
+      console.log('📞 Setting company info to:', newCompanyInfo)
+      setCompanyInfo(newCompanyInfo)
       setInitialLoadComplete(true)
       setHasUserChanges(false)
       
       console.log('✅ Company info loaded successfully')
     }
-  }, [settings.companyName, settings.companyPhone, isLoading, initialLoadComplete])
+  }, [settings, isLoading, initialLoadComplete])
 
   // Removed debug effects - using individual save buttons now
 
@@ -599,11 +605,15 @@ export default function SettingsPage() {
                         id="companyPhone" 
                         value={companyInfo.companyPhone} 
                         onChange={(value) => {
+                          console.log('📞 PhoneInput onChange:', value)
                           setCompanyInfo({...companyInfo, companyPhone: value})
                           setHasUserChanges(true)
                         }}
                         placeholder="Enter company phone"
                       />
+                      <div className="text-xs text-muted-foreground">
+                        Current value: {companyInfo.companyPhone}
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="companyWebsite">Website</Label>
