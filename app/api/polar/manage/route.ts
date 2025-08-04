@@ -91,7 +91,7 @@ async function handleCancelSubscription(profile: any, polar: any) {
           limit: 10
         })
 
-        const activeSubscription = subscriptions.result?.items?.find(sub => 
+        const activeSubscription = subscriptions.result?.items?.find((sub: any) => 
           sub.status === 'active' || sub.status === 'trialing'
         )
 
@@ -126,9 +126,9 @@ async function handleCancelSubscription(profile: any, polar: any) {
   } catch (error) {
     console.error('Cancel subscription error:', error)
     console.error('Error details:', {
-      message: error.message,
-      statusCode: error.statusCode,
-      body: error.body
+      message: error instanceof Error ? error.message : 'Unknown error',
+      statusCode: error && typeof error === 'object' && 'statusCode' in error ? (error as any).statusCode : undefined,
+      body: error && typeof error === 'object' && 'body' in error ? (error as any).body : undefined
     })
     return NextResponse.json({ 
       error: 'Failed to cancel subscription',
@@ -138,18 +138,72 @@ async function handleCancelSubscription(profile: any, polar: any) {
 }
 
 async function handleCustomerPortal(profile: any, polar: any) {
+  let customerId = profile.polar_customer_id
+
   try {
-    if (!profile.polar_customer_id) {
-      console.error('❌ No customer ID found in profile:', profile)
-      return NextResponse.json({ error: 'No customer account found' }, { status: 404 })
+    // If no customer ID exists, create one automatically
+    if (!customerId) {
+      console.log('🔍 No customer ID found, creating new customer for user:', profile.id)
+      
+      // Create supabase client to update profile
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      )
+
+      // Get user's email for customer creation
+      const { data: { user } } = await supabase.auth.admin.getUserById(profile.id)
+      if (!user?.email) {
+        console.error('❌ No email found for user:', profile.id)
+        return NextResponse.json({ error: 'User email not found' }, { status: 400 })
+      }
+
+      try {
+        // Import the customer creation function
+        const { createOrGetCustomer } = await import('@/lib/polar-client')
+        
+        // Create customer in Polar
+        const customer = await createOrGetCustomer(
+          user.email, 
+          profile.full_name || profile.first_name || user.email.split('@')[0]
+        )
+
+        if (!customer) {
+          console.error('❌ Failed to create customer for email:', user.email)
+          return NextResponse.json({ error: 'Unable to create customer account' }, { status: 500 })
+        }
+
+        customerId = customer.id
+        console.log('✅ Created new customer:', customerId)
+
+        // Update profile with new customer ID
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ polar_customer_id: customerId })
+          .eq('id', profile.id)
+
+        if (updateError) {
+          console.error('❌ Failed to update profile with customer ID:', updateError)
+          // Continue anyway since customer was created
+        } else {
+          console.log('✅ Updated profile with customer ID:', customerId)
+        }
+
+      } catch (customerError) {
+        console.error('❌ Customer creation failed:', customerError)
+        return NextResponse.json({ 
+          error: 'Unable to create customer account',
+          details: customerError instanceof Error ? customerError.message : 'Unknown error'
+        }, { status: 500 })
+      }
     }
 
-    console.log('🔍 Creating customer portal session for customer:', profile.polar_customer_id)
+    console.log('🔍 Creating customer portal session for customer:', customerId)
 
     // First, verify the customer exists
     try {
       const customer = await polar.customers.get({
-        id: profile.polar_customer_id
+        id: customerId
       })
       console.log('✅ Customer found:', {
         id: customer.id,
@@ -160,8 +214,8 @@ async function handleCustomerPortal(profile: any, polar: any) {
       console.error('❌ Customer not found:', customerError)
       return NextResponse.json({ 
         error: 'Customer not found in Polar',
-        customerId: profile.polar_customer_id,
-        details: customerError.message
+        customerId: customerId,
+        details: customerError instanceof Error ? customerError.message : 'Unknown error'
       }, { status: 404 })
     }
 
@@ -170,14 +224,14 @@ async function handleCustomerPortal(profile: any, polar: any) {
     console.log('🔍 Using return URL:', returnUrl)
     
     const portalSession = await polar.customerSessions.create({
-      customerId: profile.polar_customer_id,
+      customerId: customerId,
       returnUrl: returnUrl
     })
 
     console.log('✅ Portal session created successfully:', {
       portalSession,
       url: portalSession?.customerPortalUrl,
-      customerId: profile.polar_customer_id
+      customerId: customerId
     })
 
     if (!portalSession || !portalSession.customerPortalUrl) {
@@ -197,27 +251,28 @@ async function handleCustomerPortal(profile: any, polar: any) {
     console.error('❌ Customer portal error:', error)
     
     // Enhanced error logging
-    if (error?.response) {
+    if (error && typeof error === 'object' && 'response' in error) {
+      const errorResponse = error.response as any
       console.error('❌ Response error:', {
-        status: error.response.status,
-        statusText: error.response.statusText,
-        data: error.response.data
+        status: errorResponse?.status,
+        statusText: errorResponse?.statusText,
+        data: errorResponse?.data
       })
     }
     
     console.error('❌ Error details:', {
-      name: error?.name,
-      message: error?.message,
-      statusCode: error?.statusCode,
-      body: error?.body,
-      stack: error?.stack,
-      customerId: profile.polar_customer_id
+      name: error && typeof error === 'object' && 'name' in error ? (error as any).name : undefined,
+      message: error instanceof Error ? error.message : 'Unknown error',
+      statusCode: error && typeof error === 'object' && 'statusCode' in error ? (error as any).statusCode : undefined,
+      body: error && typeof error === 'object' && 'body' in error ? (error as any).body : undefined,
+      stack: error instanceof Error ? error.stack : undefined,
+      customerId: customerId
     })
     
     return NextResponse.json({ 
       error: 'Failed to create customer portal session',
       details: error instanceof Error ? error.message : 'Unknown error',
-      errorType: error?.name || 'UnknownError'
+      errorType: error && typeof error === 'object' && 'name' in error ? (error as any).name : 'UnknownError'
     }, { status: 500 })
   }
 }
@@ -235,7 +290,7 @@ async function handleResumeSubscription(profile: any, polar: any) {
           limit: 10
         })
 
-        const activeSubscription = subscriptions.result?.items?.find(sub => 
+        const activeSubscription = subscriptions.result?.items?.find((sub: any) => 
           sub.status === 'active' || sub.status === 'trialing' || sub.status === 'canceled'
         )
 
