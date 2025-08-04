@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { PageHeader, PageContent } from "@/components/page-header"
 import { PipelineMetrics } from "./components/PipelineMetrics"
 import { PipelineBoard } from "./components/PipelineBoard"
-import { AddProjectDialog } from "./components/AddProjectDialog"
+import { EnhancedAddProjectDialog } from "@/components/projects/EnhancedAddProjectDialog"
 import { fetchPipelineProjects, fetchPipelineStages, calculateProjectPipelineMetrics } from "@/lib/project-pipeline"
 import type { PipelineProject, PipelineStage, PipelineMetrics as PipelineMetricsType } from "@/lib/types/pipeline"
 import { Search, X, Plus, Crown } from "lucide-react"
@@ -252,13 +252,15 @@ export default function PipelinePage() {
         </div>
       </div>
 
-      {/* Add Project Dialog */}
-      <AddProjectDialog
+      {/* Enhanced Add Project Dialog */}
+      <EnhancedAddProjectDialog
         open={showAddDialog}
         onOpenChange={setShowAddDialog}
         onProjectUpdate={handleProjectUpdate}
         onAddProject={addProjectOptimistically}
         onRevertChanges={revertOptimisticChanges}
+        defaultType="fixed"
+        context="pipeline"
       />
     </div>
   )

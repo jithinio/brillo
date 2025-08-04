@@ -4,11 +4,17 @@ import { createClient } from '@supabase/supabase-js'
 import { verifyPolarWebhook } from '@/lib/polar-client'
 import { POLAR_CONFIG } from '@/lib/config/environment'
 
-// Use service role for webhook operations
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+// Create supabase client function with proper error handling
+function createSupabaseClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Missing required Supabase environment variables')
+  }
+
+  return createClient(supabaseUrl, supabaseServiceKey)
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -62,6 +68,7 @@ export async function POST(request: NextRequest) {
 
 async function handleSubscriptionCreated(subscription: any) {
   try {
+    const supabase = createSupabaseClient()
     console.log('Processing subscription created:', subscription.id)
 
     // Find user by customer ID
@@ -114,6 +121,7 @@ async function handleSubscriptionCreated(subscription: any) {
 
 async function handleSubscriptionUpdated(subscription: any) {
   try {
+    const supabase = createSupabaseClient()
     console.log('Processing subscription updated:', subscription.id)
 
     const { data: profile } = await supabase
@@ -163,6 +171,7 @@ async function handleSubscriptionUpdated(subscription: any) {
 
 async function handleSubscriptionCancelled(subscription: any) {
   try {
+    const supabase = createSupabaseClient()
     console.log('Processing subscription cancelled:', subscription.id)
 
     const { data: profile } = await supabase
@@ -208,6 +217,7 @@ async function handleSubscriptionCancelled(subscription: any) {
 
 async function handlePaymentSucceeded(payment: any) {
   try {
+    const supabase = createSupabaseClient()
     console.log('Processing payment succeeded:', payment.id)
     
     // Log payment success
@@ -236,6 +246,7 @@ async function handlePaymentSucceeded(payment: any) {
 
 async function handlePaymentFailed(payment: any) {
   try {
+    const supabase = createSupabaseClient()
     console.log('Processing payment failed:', payment.id)
     
     // Log payment failure
@@ -272,6 +283,7 @@ async function logSubscriptionEvent(
   metadata: any = {}
 ) {
   try {
+    const supabase = createSupabaseClient()
     await supabase
       .from('subscription_events')
       .insert({

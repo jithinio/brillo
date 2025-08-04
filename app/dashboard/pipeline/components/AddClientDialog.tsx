@@ -13,13 +13,14 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { createPipelineClient } from "@/lib/pipeline"
+import { supabase } from "@/lib/supabase"
 import { toast } from "sonner"
 
 interface AddClientDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onClientUpdate: () => void
+  context?: 'pipeline' | 'project'
 }
 
 interface NewClientData {
@@ -27,19 +28,17 @@ interface NewClientData {
   company: string
   email: string
   phone: string
-  potential_value: string
-  pipeline_notes: string
+  notes: string
 }
 
-export function AddClientDialog({ open, onOpenChange, onClientUpdate }: AddClientDialogProps) {
+export function AddClientDialog({ open, onOpenChange, onClientUpdate, context = 'pipeline' }: AddClientDialogProps) {
   const [loading, setLoading] = useState(false)
   const [newClient, setNewClient] = useState<NewClientData>({
     name: "",
     company: "",
     email: "",
     phone: "",
-    potential_value: "",
-    pipeline_notes: "",
+    notes: "",
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -58,28 +57,36 @@ export function AddClientDialog({ open, onOpenChange, onClientUpdate }: AddClien
         company: newClient.company.trim() || undefined,
         email: newClient.email.trim() || undefined,
         phone: newClient.phone.trim() || undefined,
-        potential_value: newClient.potential_value ? parseFloat(newClient.potential_value) : undefined,
-        pipeline_notes: newClient.pipeline_notes.trim() || undefined,
+        notes: newClient.notes.trim() || undefined,
+        status: context === 'pipeline' ? 'pipeline' : 'active',
+        ...(context === 'pipeline' && {
+          pipeline_stage: 'lead',
+          deal_probability: 10
+        })
       }
 
-      const result = await createPipelineClient(clientData)
+      const { data: result, error } = await supabase
+        .from('clients')
+        .insert([clientData])
+        .select()
+        .single()
+
+      if (error) throw error
       
-      if (result) {
-        toast.success(`${newClient.name} added to pipeline`)
-        onClientUpdate()
-        onOpenChange(false)
-        // Reset form
-        setNewClient({
-          name: "",
-          company: "",
-          email: "",
-          phone: "",
-          potential_value: "",
-          pipeline_notes: "",
-        })
-      } else {
-        toast.error("Failed to add client")
-      }
+      const successMessage = context === 'pipeline' 
+        ? `${newClient.name} added to pipeline`
+        : `${newClient.name} added successfully`
+      toast.success(successMessage)
+      onClientUpdate()
+      onOpenChange(false)
+      // Reset form
+      setNewClient({
+        name: "",
+        company: "",
+        email: "",
+        phone: "",
+        notes: "",
+      })
     } catch (error) {
       console.error("Error adding client:", error)
       toast.error("Failed to add client")
@@ -96,8 +103,7 @@ export function AddClientDialog({ open, onOpenChange, onClientUpdate }: AddClien
       company: "",
       email: "",
       phone: "",
-      potential_value: "",
-      pipeline_notes: "",
+      notes: "",
     })
   }
 
@@ -106,9 +112,14 @@ export function AddClientDialog({ open, onOpenChange, onClientUpdate }: AddClien
       <DialogContent className="max-w-md">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Add New Lead</DialogTitle>
+            <DialogTitle>
+              {context === 'pipeline' ? 'Add New Lead' : 'Add Quick Client'}
+            </DialogTitle>
             <DialogDescription>
-              Add a new client to your pipeline. They'll start in the Lead stage.
+              {context === 'pipeline' 
+                ? "Add a new client to your pipeline. They'll start in the Lead stage."
+                : "Quickly add a new client to your database."
+              }
             </DialogDescription>
           </DialogHeader>
           
@@ -159,23 +170,11 @@ export function AddClientDialog({ open, onOpenChange, onClientUpdate }: AddClien
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="potential_value">Potential Value</Label>
-              <Input
-                id="potential_value"
-                type="number"
-                step="0.01"
-                value={newClient.potential_value}
-                onChange={(e) => setNewClient({ ...newClient, potential_value: e.target.value })}
-                placeholder="0.00"
-              />
-            </div>
-            
-            <div className="space-y-2">
               <Label htmlFor="notes">Notes</Label>
               <Textarea
                 id="notes"
-                value={newClient.pipeline_notes}
-                onChange={(e) => setNewClient({ ...newClient, pipeline_notes: e.target.value })}
+                value={newClient.notes}
+                onChange={(e) => setNewClient({ ...newClient, notes: e.target.value })}
                 placeholder="Any additional notes..."
                 rows={3}
               />
@@ -187,7 +186,7 @@ export function AddClientDialog({ open, onOpenChange, onClientUpdate }: AddClien
               Cancel
             </Button>
             <Button type="submit" disabled={loading || !newClient.name.trim()}>
-              {loading ? "Adding..." : "Add Lead"}
+              {loading ? "Adding..." : (context === 'pipeline' ? 'Add Lead' : 'Add Quick Client')}
             </Button>
           </DialogFooter>
         </form>

@@ -27,6 +27,8 @@ import {
   ChevronsUpDown,
   Check,
   X,
+  Repeat,
+  Timer,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -54,6 +56,48 @@ import {
   CommandList,
 } from "@/components/ui/command"
 import { Badge } from "@/components/ui/badge"
+
+// Project Type Cell Component
+function ProjectTypeCell({ project }: { project: Project }) {
+  const getProjectTypeConfig = (type: string) => {
+    switch (type) {
+      case 'fixed':
+        return {
+          icon: DollarSign,
+          label: 'Fixed',
+          color: 'bg-green-50 text-green-700 ring-green-600/20'
+        }
+      case 'recurring':
+        return {
+          icon: Repeat,
+          label: 'Recurring',
+          color: 'bg-blue-50 text-blue-700 ring-blue-600/20'
+        }
+      case 'hourly':
+        return {
+          icon: Timer,
+          label: 'Hourly',
+          color: 'bg-purple-50 text-purple-700 ring-purple-600/20'
+        }
+      default:
+        return {
+          icon: DollarSign,
+          label: 'Fixed',
+          color: 'bg-gray-50 text-gray-700 ring-gray-600/20'
+        }
+    }
+  }
+
+  const config = getProjectTypeConfig(project.project_type || 'fixed')
+  const Icon = config.icon
+
+  return (
+    <Badge variant="outline" className={`${config.color} border-0 ring-1 ring-inset`}>
+      <Icon className="w-3 h-3 mr-1" />
+      {config.label}
+    </Badge>
+  )
+}
 import { formatCurrency } from "@/lib/currency"
 import { ClientAvatar } from "@/components/ui/client-avatar"
 import { DatePickerTable } from "@/components/ui/date-picker-table"
@@ -520,40 +564,27 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
       enableHiding: true,
     },
     {
-      accessorKey: "start_date",
+      accessorKey: "project_type",
       header: ({ column }) => (
-        <SortableHeader column={column} icon={CalendarDays}>
-          Start Date
+        <SortableHeader column={column} icon={GitBranch}>
+          Type
         </SortableHeader>
       ),
       cell: ({ row }) => {
         const project = row.original
-        const startDate = row.getValue("start_date") as string
-        const date = startDate ? new Date(startDate) : undefined
-
-        return (
-          <div className="w-full min-w-0">
-            <div className="min-w-0">
-              <DatePickerTable
-                date={date}
-                onSelect={(newDate) => actions.onDateChange(project, 'start_date', newDate)}
-                placeholder="Start date"
-              />
-            </div>
-          </div>
-        )
+        return <ProjectTypeCell project={project} />
       },
       enableHiding: true,
     },
     {
-      accessorKey: "budget",
+      accessorKey: "total_budget",
       header: ({ column }) => (
         <SortableHeader column={column} icon={DollarSign}>
-          Budget
+          Total Budget
         </SortableHeader>
       ),
       cell: ({ row }) => {
-        const budget = row.getValue("budget") as number
+        const budget = row.getValue("total_budget") as number
         return (
           <div className="w-full">
             {budget ? (
@@ -617,16 +648,42 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
       ),
       cell: ({ row }) => {
         const project = row.original
-        // Auto-calculate pending amount: budget - received = pending
-        const budget = project.budget || 0
-        const received = project.received || 0
+        // Auto-calculate pending amount: Use total_budget for new project types, budget for legacy
+        const budget = project.total_budget || project.budget || 0
+        const received = project.payment_received || project.received || 0
         const pending = Math.max(0, budget - received) // Ensure it's not negative
         
-                return (
+        return (
           <div className="w-full">
             <span className="truncate font-normal text-sm">{formatCurrency(pending)}</span>
           </div>
         )
+      },
+        enableHiding: true,
+      },
+      {
+        accessorKey: "start_date",
+        header: ({ column }) => (
+          <SortableHeader column={column} icon={CalendarDays}>
+            Start Date
+          </SortableHeader>
+        ),
+        cell: ({ row }) => {
+          const project = row.original
+          const startDate = row.getValue("start_date") as string
+          const date = startDate ? new Date(startDate) : undefined
+
+          return (
+            <div className="w-full min-w-0">
+              <div className="min-w-0">
+                <DatePickerTable
+                  date={date}
+                  onSelect={(newDate) => actions.onDateChange(project, 'start_date', newDate)}
+                  placeholder="Start date"
+                />
+              </div>
+            </div>
+          )
         },
         enableHiding: true,
       },

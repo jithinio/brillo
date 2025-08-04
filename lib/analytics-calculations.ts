@@ -4,7 +4,9 @@ import { format, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOf
 export interface Project {
   id: string
   name: string
+  project_type?: 'fixed' | 'recurring' | 'hourly'
   budget?: number
+  total_budget?: number
   revenue?: number
   expenses?: number
   payment_received?: number
@@ -67,7 +69,7 @@ const getProjectValue = (project: Project): number => {
   if (project.status === 'on hold' || project.status === 'cancelled') {
     return project.payment_received || 0
   }
-  return project.budget || project.revenue || 0
+  return project.total_budget || project.budget || project.revenue || 0
 }
 
 const getProjectExpenses = (project: Project): number => {

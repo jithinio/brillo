@@ -65,12 +65,13 @@ const defaultColumns: EnhancedColumn[] = [
   { id: 'name', label: 'Project Name', width: 280, visible: true, aggregation: 'count', sortable: true },
   { id: 'clients', label: 'Client', width: 200, visible: true, aggregation: 'count', sortable: true },
   { id: 'status', label: 'Status', width: 140, visible: true, aggregation: 'count', format: 'status', sortable: true },
-  { id: 'start_date', label: 'Start Date', width: 140, visible: true, format: 'date', sortable: true },
-  { id: 'due_date', label: 'Due Date', width: 140, visible: true, format: 'date', sortable: true },
-  { id: 'budget', label: 'Budget', width: 140, visible: true, aggregation: 'sum', format: 'currency', sortable: true },
+  { id: 'project_type', label: 'Type', width: 120, visible: true, aggregation: 'count', format: 'project_type', sortable: true },
+  { id: 'total_budget', label: 'Budget', width: 140, visible: true, aggregation: 'sum', format: 'currency', sortable: true },
   { id: 'expenses', label: 'Expenses', width: 140, visible: true, aggregation: 'sum', format: 'currency', sortable: true },
   { id: 'received', label: 'Received', width: 140, visible: true, aggregation: 'sum', format: 'currency', sortable: true },
   { id: 'pending', label: 'Pending', width: 140, visible: true, aggregation: 'sum', format: 'currency', sortable: true },
+  { id: 'start_date', label: 'Start Date', width: 140, visible: true, format: 'date', sortable: true },
+  { id: 'due_date', label: 'Due Date', width: 140, visible: true, format: 'date', sortable: true },
 ]
 
 // Status configuration
@@ -80,6 +81,13 @@ const STATUS_CONFIG = {
   completed: { label: 'Completed', color: 'bg-gray-50 text-gray-700 ring-gray-600/20', dot: 'bg-gray-600' },
   on_hold: { label: 'On Hold', color: 'bg-amber-50 text-amber-700 ring-amber-600/20', dot: 'bg-amber-600' },
   cancelled: { label: 'Cancelled', color: 'bg-red-50 text-red-700 ring-red-600/20', dot: 'bg-red-600' },
+} as const
+
+// Project type configuration
+const PROJECT_TYPE_CONFIG = {
+  fixed: { label: 'Fixed', color: 'bg-green-50 text-green-700 ring-green-600/20' },
+  recurring: { label: 'Recurring', color: 'bg-blue-50 text-blue-700 ring-blue-600/20' },
+  hourly: { label: 'Hourly', color: 'bg-purple-50 text-purple-700 ring-purple-600/20' },
 } as const
 
 // Custom hook for infinite scroll with intersection observer
@@ -188,6 +196,16 @@ function ClientCell({ client }: { client: EnhancedProject['clients'] }) {
         )}
       </div>
     </div>
+  )
+}
+
+function ProjectTypeCell({ projectType }: { projectType: 'fixed' | 'recurring' | 'hourly' }) {
+  const config = PROJECT_TYPE_CONFIG[projectType] || PROJECT_TYPE_CONFIG.fixed
+  
+  return (
+    <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${config.color}`}>
+      {config.label}
+    </span>
   )
 }
 
@@ -356,10 +374,10 @@ export function EnhancedDataTable({
       switch (col.aggregation) {
         case 'sum':
           if (col.id === 'pending') {
-            // Calculate pending as budget - received
+            // Calculate pending as total_budget - received
             acc[col.id] = projects.reduce((sum, proj) => {
-              const budget = proj.budget || 0
-              const received = proj.received || 0
+              const budget = proj.total_budget || 0
+              const received = proj.payment_received || 0
               return sum + Math.max(0, budget - received)
             }, 0)
           } else {
@@ -369,8 +387,8 @@ export function EnhancedDataTable({
         case 'average':
           if (col.id === 'pending') {
             const totalPending = projects.reduce((sum, proj) => {
-              const budget = proj.budget || 0
-              const received = proj.received || 0
+              const budget = proj.total_budget || 0
+              const received = proj.payment_received || 0
               return sum + Math.max(0, budget - received)
             }, 0)
             acc[col.id] = totalPending / projects.length
@@ -681,6 +699,9 @@ export function EnhancedDataTable({
                             project={project} 
                             onStatusChange={actions.onStatusChange} 
                           />
+                        )}
+                        {col.id === 'project_type' && (
+                          <ProjectTypeCell projectType={project.project_type || 'fixed'} />
                         )}
                         {(col.id === 'start_date' || col.id === 'due_date') && (
                           <DateCell date={project[col.id]} />

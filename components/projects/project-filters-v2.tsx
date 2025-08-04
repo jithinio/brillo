@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Filter, ChevronDown, Search, Plus, Calendar, Settings, CheckCircle, Users, X, Crown } from "lucide-react"
+import { Filter, ChevronDown, Search, Plus, Calendar, Settings, CheckCircle, Users, X, Crown, Tag } from "lucide-react"
 import { ColumnViewFilter } from "./column-view-filter"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -59,6 +59,12 @@ const STATUS_OPTIONS = [
   { value: "cancelled", label: "Cancelled" },
 ]
 
+const PROJECT_TYPE_OPTIONS = [
+  { value: "fixed", label: "Fixed" },
+  { value: "recurring", label: "Recurring" },
+  { value: "hourly", label: "Hourly" },
+]
+
 const TIME_PERIOD_OPTIONS = [
   { value: "this_month", label: "This Month" },
   { value: "last_month", label: "Last Month" },
@@ -90,11 +96,13 @@ export function ProjectFiltersV2({
     updateSearch,
     toggleStatus,
     toggleClient,
+    toggleProjectType,
     clearFilters,
     clearFilterType,
   } = useProjectFiltersV2()
 
   const [statusOpen, setStatusOpen] = React.useState(false)
+  const [projectTypeOpen, setProjectTypeOpen] = React.useState(false)
   const [clientOpen, setClientOpen] = React.useState(false)
   const [timePeriodOpen, setTimePeriodOpen] = React.useState(false)
   const [viewOpen, setViewOpen] = React.useState(false)
@@ -248,6 +256,50 @@ export function ProjectFiltersV2({
               </PopoverContent>
             </Popover>
           )}
+
+          {/* Project Type Filter */}
+          <Popover open={projectTypeOpen} onOpenChange={setProjectTypeOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn(
+                  "h-8 border-dashed transition-colors text-sm font-normal text-muted-foreground",
+                  filters.projectType.length > 0 && "border-gray-600 dark:border-gray-400 bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"
+                )}
+              >
+                <Tag className={cn("mr-1 h-3 w-3", filters.projectType.length > 0 ? "text-gray-600 dark:text-gray-400" : "text-muted-foreground")} />
+                Type
+                {filters.projectType.length > 0 && (
+                  <Badge variant="secondary" className="ml-1 h-4 px-1 text-xs font-normal bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                    {filters.projectType.length}
+                  </Badge>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[200px] p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Search type..." />
+                <CommandList>
+                  <CommandEmpty>No results found.</CommandEmpty>
+                  <CommandGroup>
+                    {PROJECT_TYPE_OPTIONS.map((projectType) => (
+                      <CommandItem
+                        key={projectType.value}
+                        onSelect={() => toggleProjectType(projectType.value as 'fixed' | 'recurring' | 'hourly')}
+                      >
+                        <Checkbox
+                          checked={filters.projectType.includes(projectType.value as 'fixed' | 'recurring' | 'hourly')}
+                          className="mr-2"
+                        />
+                        {projectType.label}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
 
           {/* Client Filter */}
           <Popover open={clientOpen} onOpenChange={setClientOpen}>

@@ -6,6 +6,7 @@ import type { ReadonlyURLSearchParams } from 'next/navigation'
 export const ProjectFiltersSchema = z.object({
   status: z.array(z.enum(['active', 'pipeline', 'on_hold', 'completed', 'cancelled'])).default([]),
   client: z.array(z.string()).default([]),
+  projectType: z.array(z.enum(['fixed', 'recurring', 'hourly'])).default([]),
   timePeriod: z.enum(['this_month', 'last_month', 'this_quarter', 'last_quarter', 'this_year', 'last_year']).nullable().default(null),
   search: z.string().default(''),
 })
@@ -86,6 +87,7 @@ export function parseFiltersFromSearchParams(searchParams: ReadonlyURLSearchPara
   const params = {
     status: searchParams.getAll('status'),
     client: searchParams.getAll('client'),
+    projectType: searchParams.getAll('projectType'),
     timePeriod: validTimePeriods.includes(timePeriodParam as string) ? timePeriodParam : null,
     search: searchParams.get('search') || '',
   }
@@ -106,6 +108,9 @@ export function filtersToSearchParams(filters: ProjectFilters): URLSearchParams 
 
   // Add client filters
   filters.client.forEach(client => params.append('client', client))
+
+  // Add project type filters
+  filters.projectType.forEach(projectType => params.append('projectType', projectType))
 
   // Add time period
   if (filters.timePeriod) params.set('timePeriod', filters.timePeriod)
@@ -133,6 +138,13 @@ export function buildFilterConditions(filters: ProjectFilters) {
   if (filters.client.length > 0) {
     conditions.push(`client_id = ANY($${paramIndex})`)
     values.push(filters.client)
+    paramIndex++
+  }
+
+  // Project type filter
+  if (filters.projectType.length > 0) {
+    conditions.push(`project_type = ANY($${paramIndex})`)
+    values.push(filters.projectType)
     paramIndex++
   }
 
@@ -169,6 +181,7 @@ export function hasActiveFilters(filters: ProjectFilters): boolean {
   return (
     filters.status.length > 0 ||
     filters.client.length > 0 ||
+    filters.projectType.length > 0 ||
     filters.timePeriod !== null ||
     filters.search !== ''
   )
@@ -179,6 +192,7 @@ export function countActiveFilters(filters: ProjectFilters): number {
   let count = 0
   count += filters.status.length
   count += filters.client.length
+  count += filters.projectType.length
   if (filters.timePeriod) count++
   if (filters.search) count++
   return count

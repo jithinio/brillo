@@ -10,9 +10,11 @@ export interface Project {
   id: string
   name: string
   status: string
+  project_type?: 'fixed' | 'recurring' | 'hourly'
   start_date: string | null
   due_date: string | null
   budget: number | null
+  total_budget: number | null
   expenses: number | null
   received: number | null
   pending: number | null
@@ -62,6 +64,7 @@ const fetchProjects = async (filters: ProjectFilters = {}): Promise<ProjectsResp
       status,
       start_date,
       due_date,
+      total_budget,
       budget,
       expenses,
       payment_received,
@@ -83,6 +86,10 @@ const fetchProjects = async (filters: ProjectFilters = {}): Promise<ProjectsResp
 
   if (filters.client && filters.client.length > 0) {
     query = query.in('client_id', filters.client)
+  }
+
+  if (filters.projectType && filters.projectType.length > 0) {
+    query = query.in('project_type', filters.projectType)
   }
 
   // Only fetch projects with actual status values (excludes lost projects which have status=null)
@@ -180,6 +187,18 @@ const fetchProjects = async (filters: ProjectFilters = {}): Promise<ProjectsResp
 
 // Update project status with optimistic updates
 const updateProjectStatus = async ({ id, status }: { id: string; status: string }) => {
+  // First, fetch the current project to check if it's recurring and has a due date
+  const { data: currentProject, error: fetchError } = await supabase
+    .from('projects')
+    .select('due_date, recurring_frequency, total_budget, project_type')
+    .eq('id', id)
+    .single()
+
+  if (fetchError) {
+    console.error('❌ Failed to fetch current project:', fetchError)
+    throw new Error(`Failed to fetch project: ${fetchError.message}`)
+  }
+
   // Prepare update data based on status
   const updateData: any = { 
     status, 
@@ -196,11 +215,17 @@ const updateProjectStatus = async ({ id, status }: { id: string; status: string 
     updateData.deal_probability = null
   }
 
+  // Handle recurring projects without due date
+  if (currentProject.recurring_frequency && !currentProject.due_date) {
+    updateData.due_date = new Date().toISOString().split('T')[0] // Set to current date in YYYY-MM-DD format
+    console.log('📅 Setting due_date to current date for recurring project without due date')
+  }
+
   const { data, error } = await supabase
     .from('projects')
     .update(updateData)
     .eq('id', id)
-    .select()
+    .select('*')
     .single()
 
   if (error) {

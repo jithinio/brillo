@@ -27,7 +27,7 @@ export function DatePickerTable({
   disabled
 }: DatePickerTableProps) {
   return (
-    <Popover>
+    <Popover modal={true}>
       <PopoverTrigger asChild>
         <div
           className={cn(
@@ -41,7 +41,10 @@ export function DatePickerTable({
           </span>
         </div>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
+      <PopoverContent 
+        className="w-auto p-0" 
+        align="start"
+      >
         <Calendar
           mode="single"
           selected={date}

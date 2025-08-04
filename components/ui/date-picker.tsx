@@ -29,7 +29,7 @@ export function DatePicker({
   size = "default"
 }: DatePickerProps) {
   return (
-    <Popover>
+    <Popover modal={true}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -44,7 +44,10 @@ export function DatePicker({
           {date ? format(date, "MMM d, yyyy") : <span>{placeholder}</span>}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
+      <PopoverContent 
+        className="w-auto p-0" 
+        align="start"
+      >
         <Calendar
           mode="single"
           selected={date}

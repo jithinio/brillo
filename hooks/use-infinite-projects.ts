@@ -56,14 +56,26 @@ export interface Project {
   id: string
   name: string
   status: string
+  project_type?: 'fixed' | 'recurring' | 'hourly'
   start_date: string | null
   due_date: string | null
   budget: number | null
+  total_budget: number | null
   expenses: number | null
   received: number | null
   pending: number | null
   created_at: string
   updated_at: string
+  
+  // Hourly project fields
+  hourly_rate_new?: number
+  estimated_hours?: number
+  actual_hours?: number
+  
+  // Common fields
+  auto_calculate_total?: boolean
+  currency?: string
+  
   clients?: {
     id: string
     name: string
@@ -116,6 +128,10 @@ const fetchProjectsPage = async (
 
   if (filters.client && filters.client.length > 0) {
     query = query.in('client_id', filters.client)
+  }
+
+  if (filters.projectType && filters.projectType.length > 0) {
+    query = query.in('project_type', filters.projectType)
   }
 
   // Only fetch projects with actual status values (excludes lost projects which have status=null)
@@ -186,15 +202,28 @@ const fetchProjectsPage = async (
     .map(project => ({
     id: project.id,
     name: project.name,
+    description: project.description,
     status: project.status,
+    project_type: project.project_type,
     start_date: project.start_date,
     due_date: project.due_date,
     budget: project.budget,
+    total_budget: project.total_budget,
     expenses: project.expenses,
-    received: project.payment_received || 0,
+    received: project.payment_received || project.received || 0,
     pending: project.payment_pending || 0,
     created_at: project.created_at,
     updated_at: project.updated_at,
+    client_id: project.client_id,
+    pipeline_stage: project.pipeline_stage,
+    pipeline_notes: project.pipeline_notes,
+    currency: project.currency,
+    recurring_frequency: project.recurring_frequency,
+    recurring_amount: project.recurring_amount,
+    hourly_rate_new: project.hourly_rate_new,
+    estimated_hours: project.estimated_hours,
+    actual_hours: project.actual_hours,
+    auto_calculate_total: project.auto_calculate_total,
     clients: project.clients ? {
       id: project.clients.id,
       name: project.clients.name,
@@ -227,6 +256,18 @@ const fetchProjectsPage = async (
 const updateProjectStatus = async ({ id, status }: { id: string; status: string }) => {
   console.log(`🔄 Updating project ${id} to status: ${status}`)
   
+  // First, fetch the current project to check if it's recurring and has a due date
+  const { data: currentProject, error: fetchError } = await supabase
+    .from('projects')
+    .select('due_date, recurring_frequency, total_budget, project_type')
+    .eq('id', id)
+    .single()
+
+  if (fetchError) {
+    console.error('❌ Failed to fetch current project:', fetchError)
+    throw new Error(`Failed to fetch project: ${fetchError.message}`)
+  }
+
   // Prepare update data based on status
   const updateData: any = { 
     status, 
@@ -245,13 +286,19 @@ const updateProjectStatus = async ({ id, status }: { id: string; status: string 
     console.log('🗑️ Clearing pipeline fields')
   }
 
+  // Handle recurring projects without due date
+  if (currentProject.recurring_frequency && !currentProject.due_date) {
+    updateData.due_date = new Date().toISOString().split('T')[0] // Set to current date in YYYY-MM-DD format
+    console.log('📅 Setting due_date to current date for recurring project without due date')
+  }
+
   console.log('📝 Update data:', updateData)
 
   const { data, error } = await supabase
     .from('projects')
     .update(updateData)
     .eq('id', id)
-    .select()
+    .select('*')
     .single()
 
   if (error) {
@@ -295,7 +342,7 @@ async function fetchDatabaseMetrics(): Promise<{
     // Get all projects with minimal data for metrics calculation
     const { data: projects, error } = await supabase
       .from('projects')
-      .select('status, pipeline_stage, budget, expenses, payment_received')
+      .select('status, pipeline_stage, project_type, total_budget, budget, expenses, payment_received')
       .not('status', 'is', null) // Exclude lost projects (which have status=null)
 
     if (error) throw error
@@ -312,11 +359,11 @@ async function fetchDatabaseMetrics(): Promise<{
     const onHoldProjects = validProjects.filter(p => p.status === 'on_hold').length
     const cancelledProjects = validProjects.filter(p => p.status === 'cancelled').length
     
-    const totalBudget = validProjects.reduce((sum, p) => sum + (p.budget || 0), 0)
+    const totalBudget = validProjects.reduce((sum, p) => sum + (p.total_budget || p.budget || 0), 0)
     const totalExpenses = validProjects.reduce((sum, p) => sum + (p.expenses || 0), 0)
     const totalReceived = validProjects.reduce((sum, p) => sum + (p.payment_received || 0), 0)
     const totalPending = validProjects.reduce((sum, p) => {
-      const budget = p.budget || 0
+      const budget = p.total_budget || p.budget || 0
       const received = p.payment_received || 0
       return sum + Math.max(0, budget - received)
     }, 0)
@@ -382,7 +429,7 @@ async function fetchFilteredMetrics(filters: ProjectFilters = {}): Promise<{
     // Build query with filters applied
     let query = supabase
       .from('projects')
-      .select('status, budget, expenses, payment_received')
+      .select('status, project_type, total_budget, budget, expenses, payment_received')
 
     // Apply filters (matching the same logic as fetchProjectsPage)
     if (filters.status && filters.status.length > 0) {
@@ -420,11 +467,11 @@ async function fetchFilteredMetrics(filters: ProjectFilters = {}): Promise<{
     const onHoldProjects = projects?.filter(p => p.status === 'on_hold').length || 0
     const cancelledProjects = projects?.filter(p => p.status === 'cancelled').length || 0
     
-    const totalBudget = projects?.reduce((sum, p) => sum + (p.budget || 0), 0) || 0
+    const totalBudget = projects?.reduce((sum, p) => sum + (p.total_budget || p.budget || 0), 0) || 0
     const totalExpenses = projects?.reduce((sum, p) => sum + (p.expenses || 0), 0) || 0
     const totalReceived = projects?.reduce((sum, p) => sum + (p.payment_received || 0), 0) || 0
     const totalPending = projects?.reduce((sum, p) => {
-      const budget = p.budget || 0
+      const budget = p.total_budget || p.budget || 0
       const received = p.payment_received || 0
       return sum + Math.max(0, budget - received)
     }, 0) || 0

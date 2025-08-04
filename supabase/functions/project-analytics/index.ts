@@ -13,6 +13,7 @@ interface ProjectAnalyticsRequest {
   }
   clientIds?: string[]
   statusFilter?: string[]
+  projectTypeFilter?: string[]
   includeFinancials?: boolean
   includePerformance?: boolean
   includeForecasting?: boolean
@@ -79,6 +80,8 @@ serve(async (req) => {
         name,
         status,
         budget,
+        total_budget,
+        project_type,
         expenses,
         payment_received,
         start_date,
@@ -107,6 +110,10 @@ serve(async (req) => {
 
     if (requestBody.statusFilter?.length) {
       query = query.in('status', requestBody.statusFilter)
+    }
+
+    if (requestBody.projectTypeFilter?.length) {
+      query = query.in('project_type', requestBody.projectTypeFilter)
     }
     
     // Exclude lost projects and pipeline projects from analytics
@@ -281,11 +288,12 @@ function calculateTrends(projects: any[]) {
 }
 
 function calculatePerformanceMetrics(projects: any[]) {
-  const projectsWithBudget = projects.filter(p => p.budget && p.expenses)
+  const projectsWithBudget = projects.filter(p => (p.total_budget || p.budget) && p.expenses)
   
   // Budget accuracy
   const budgetAccuracies = projectsWithBudget.map(p => {
-    const variance = Math.abs(p.budget - p.expenses) / p.budget
+    const budget = p.total_budget || p.budget || 0
+    const variance = Math.abs(budget - p.expenses) / budget
     return Math.max(0, 1 - variance) * 100
   })
   

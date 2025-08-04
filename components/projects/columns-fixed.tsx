@@ -50,9 +50,11 @@ export type Project = {
   id: string
   name: string
   status: string
+  project_type?: 'fixed' | 'recurring' | 'hourly'
   start_date: string | null
   due_date: string | null
   budget: number | null
+  total_budget: number | null
   expenses: number | null
   received: number | null
   pending: number | null
@@ -394,6 +396,35 @@ export function createFixedColumns(actions: ColumnActions): ColumnDef<Project>[]
       ),
     },
 
+    // Project Type column
+    {
+      accessorKey: "project_type",
+      size: 100,
+      minSize: 100,
+      maxSize: 100,
+      header: ({ column }) => (
+        <SortableHeader column={column} width={100}>
+          Type
+        </SortableHeader>
+      ),
+      cell: ({ row }) => {
+        const projectType = row.original.project_type || 'fixed'
+        const config = {
+          fixed: { label: 'Fixed', color: 'bg-green-50 text-green-700 ring-green-600/20' },
+          recurring: { label: 'Recurring', color: 'bg-blue-50 text-blue-700 ring-blue-600/20' },
+          hourly: { label: 'Hourly', color: 'bg-purple-50 text-purple-700 ring-purple-600/20' },
+        }[projectType]
+        
+        return (
+          <div style={{ width: '100px' }}>
+            <Badge variant="outline" className={`${config.color} border-0 ring-1 ring-inset text-xs`}>
+              {config.label}
+            </Badge>
+          </div>
+        )
+      },
+    },
+
     // Start date column
     {
       accessorKey: "start_date",
@@ -424,7 +455,7 @@ export function createFixedColumns(actions: ColumnActions): ColumnDef<Project>[]
 
     // Budget column
     {
-      accessorKey: "budget",
+      accessorKey: "total_budget",
       size: COLUMN_WIDTHS.budget,
       minSize: COLUMN_WIDTHS.budget,
       maxSize: COLUMN_WIDTHS.budget,
@@ -435,7 +466,7 @@ export function createFixedColumns(actions: ColumnActions): ColumnDef<Project>[]
       ),
       cell: ({ row }) => (
         <CurrencyCell
-          amount={row.original.budget}
+          amount={row.original.total_budget || row.original.budget}
           className="text-blue-600 font-semibold"
         />
       ),
@@ -490,12 +521,20 @@ export function createFixedColumns(actions: ColumnActions): ColumnDef<Project>[]
           Pending
         </SortableHeader>
       ),
-      cell: ({ row }) => (
-        <CurrencyCell
-          amount={row.original.pending}
-          className="text-orange-600"
-        />
-      ),
+      cell: ({ row }) => {
+        const project = row.original
+        // Calculate pending dynamically: total_budget - payment_received for new types, budget - received for legacy
+        const budget = project.total_budget || project.budget || 0
+        const received = project.payment_received || project.received || 0
+        const pending = Math.max(0, budget - received)
+        
+        return (
+          <CurrencyCell
+            amount={pending}
+            className="text-orange-600"
+          />
+        )
+      },
     },
 
     // Actions column

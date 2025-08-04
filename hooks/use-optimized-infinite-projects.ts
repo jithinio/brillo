@@ -74,6 +74,9 @@ async function fetchProjectsWithMetrics(
     if (filters.client?.length > 0) {
       query = query.in('client_id', filters.client)
     }
+    if (filters.projectType?.length > 0) {
+      query = query.in('project_type', filters.projectType)
+    }
     if (filters.search) {
       query = query.or(`name.ilike.%${filters.search}%,description.ilike.%${filters.search}%`)
     }
@@ -171,7 +174,7 @@ async function fetchProjectsWithMetrics(
       // Fetch full metrics for unfiltered view
       const { data: allProjects } = await supabase
         .from('projects')
-        .select('status, budget, expenses, payment_received')
+        .select('status, total_budget, budget, expenses, payment_received')
 
       if (allProjects) {
         metrics = {
@@ -181,11 +184,11 @@ async function fetchProjectsWithMetrics(
           completedProjects: allProjects.filter(p => p.status === 'completed').length,
           onHoldProjects: allProjects.filter(p => p.status === 'on_hold').length,
           cancelledProjects: allProjects.filter(p => p.status === 'cancelled').length,
-          totalBudget: allProjects.reduce((sum, p) => sum + (p.budget || 0), 0),
+          totalBudget: allProjects.reduce((sum, p) => sum + (p.total_budget || p.budget || 0), 0),
           totalExpenses: allProjects.reduce((sum, p) => sum + (p.expenses || 0), 0),
           totalReceived: allProjects.reduce((sum, p) => sum + (p.payment_received || 0), 0),
           totalPending: allProjects.reduce((sum, p) => {
-            const budget = p.budget || 0
+            const budget = p.total_budget || p.budget || 0
             const received = p.payment_received || 0
             return sum + Math.max(0, budget - received)
           }, 0)

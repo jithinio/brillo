@@ -57,6 +57,7 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
     const clientId = searchParams.get('clientId')
+    const projectType = searchParams.get('projectType')
 
     // Build base query
     let query = supabase
@@ -66,6 +67,8 @@ export async function GET(request: NextRequest) {
         name,
         status,
         budget,
+        total_budget,
+        project_type,
         expenses,
         payment_received,
         start_date,
@@ -88,6 +91,9 @@ export async function GET(request: NextRequest) {
     }
     if (clientId) {
       query = query.eq('client_id', clientId)
+    }
+    if (projectType) {
+      query = query.eq('project_type', projectType)
     }
     
     // Exclude lost projects and pipeline projects from analytics
@@ -242,9 +248,10 @@ function calculatePerformanceMetrics(projects: any[]) {
     : 0
   
   // Calculate budget accuracy
-  const projectsWithBudget = projects.filter(p => p.budget && p.expenses)
+  const projectsWithBudget = projects.filter(p => (p.total_budget || p.budget) && p.expenses)
   const budgetAccuracies = projectsWithBudget.map(p => {
-    const variance = Math.abs(p.budget - p.expenses) / p.budget
+    const budget = p.total_budget || p.budget || 0
+    const variance = Math.abs(budget - p.expenses) / budget
     return Math.max(0, 1 - variance) * 100
   })
   

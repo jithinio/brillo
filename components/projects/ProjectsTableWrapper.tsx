@@ -44,6 +44,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { ClientAvatar } from "@/components/ui/client-avatar"
 import { toast } from "sonner"
+import { EnhancedAddProjectDialog } from "./EnhancedAddProjectDialog"
 
 import { useInfiniteProjects } from "@/hooks/use-infinite-projects"
 import { useProjectFiltersV2 } from "@/hooks/use-project-filters-v2"
@@ -116,11 +117,14 @@ const COLUMN_WIDTHS = {
   name: 280,      
   client: 200,    
   status: 140,    
-  dates: 140,     
+  project_type: 120,  // After status
+  start_date: 140,
+  total_budget: 110,  // Before expenses
   budget: 110,    
   expenses: 110,  
   received: 110,  
   pending: 110,   
+  due_date: 140,
   actions: 80,    
 } as const
 
@@ -660,19 +664,42 @@ export function ProjectsTableWrapper({
             status: project.status, // Carry forward the original status
             start_date: project.start_date,
             due_date: project.due_date,
+            
+            // Legacy fields (for backward compatibility)
             budget: project.budget,
+            hourly_rate: project.hourly_rate,
+            
+            // New multi-project type fields
+            project_type: project.project_type || 'fixed',
+            total_budget: project.total_budget || project.budget || 0,
+            auto_calculate_total: project.auto_calculate_total || false,
+            
+            // Recurring project fields
+            recurring_frequency: project.recurring_frequency,
+            recurring_amount: project.recurring_amount,
+            recurring_end_date: project.recurring_end_date,
+            last_recurring_calculation: null, // Reset for duplicate
+            
+            // Hourly project fields
+            hourly_rate_new: project.hourly_rate_new,
+            total_hours_logged: 0, // Reset logged hours for duplicate
+            
+            // Financial fields
             expenses: project.expenses || 0,
             revenue: project.revenue || 0,
             profit_margin: project.profit_margin || 0,
             currency: project.currency || 'USD',
             payment_status: project.payment_status || 'pending',
             invoice_amount: project.invoice_amount || 0,
-            payment_received: project.received || project.payment_received || 0, // Carry over received amount
-            payment_pending: project.pending || project.payment_pending || 0, // Carry over pending amount
-            hourly_rate: project.hourly_rate,
+            payment_received: 0, // Reset received amount for duplicate
+            payment_pending: project.total_budget || project.budget || 0, // Set pending to total budget
+            
+            // Time tracking fields
             estimated_hours: project.estimated_hours,
             actual_hours: 0, // Reset actual hours for duplicate
             progress: 0, // Reset progress for duplicate
+            
+            // Other fields
             notes: project.notes,
             pipeline_stage: project.pipeline_stage,
             pipeline_notes: project.pipeline_notes,
@@ -738,7 +765,7 @@ export function ProjectsTableWrapper({
             <span className="text-black dark:text-white font-medium">{active}</span>
           ) : null
         }
-      } else if (columnKey === 'budget') {
+      } else if (columnKey === 'total_budget' || columnKey === 'budget') {
         footer = ({ table }: any) => {
           const total = table.aggregations?.totalBudget || 0
           return total > 0 ? (
@@ -792,6 +819,8 @@ export function ProjectsTableWrapper({
     }
   }, [allColumns, columnOrder.length])
 
+
+
   // Reorder and filter columns based on user preferences
   const columns = React.useMemo(() => {
     if (columnOrder.length === 0) return allColumns
@@ -830,24 +859,28 @@ export function ProjectsTableWrapper({
   function handleEditProject(project: any) {
     setSelectedProject(project)
     
+    // Populate the form with existing project data
     setNewProject({
       name: project.name || "",
-      client_id: project.clients?.id || "",
+      client_id: project.client_id || "",
       status: project.status || "active",
       start_date: project.start_date ? new Date(project.start_date) : undefined,
       due_date: project.due_date ? new Date(project.due_date) : undefined,
-      budget: project.budget?.toString() || "",
-      expenses: project.expenses?.toString() || "",
-      received: project.received?.toString() || "",
+      budget: (project.total_budget || project.budget || 0).toString(),
+      expenses: (project.expenses || 0).toString(),
+      received: (project.payment_received || project.received || 0).toString(),
       description: project.description || "",
       pipeline_notes: project.pipeline_notes || "",
     })
     
+    // Set client if available
     if (project.clients) {
-      const client = clients.find(c => c.id === project.clients.id)
-      setSelectedClient(client || null)
-    } else {
-      setSelectedClient(null)
+      setSelectedClient(project.clients)
+    } else if (project.client_id && clients.length > 0) {
+      const client = clients.find(c => c.id === project.client_id)
+      if (client) {
+        setSelectedClient(client)
+      }
     }
     
     setIsEditDialogOpen(true)
@@ -873,19 +906,42 @@ export function ProjectsTableWrapper({
           status: project.status, // Carry forward the original status
           start_date: project.start_date,
           due_date: project.due_date,
+          
+          // Legacy fields (for backward compatibility)
           budget: project.budget,
+          hourly_rate: project.hourly_rate,
+          
+          // New multi-project type fields
+          project_type: project.project_type || 'fixed',
+          total_budget: project.total_budget || project.budget || 0,
+          auto_calculate_total: project.auto_calculate_total || false,
+          
+          // Recurring project fields
+          recurring_frequency: project.recurring_frequency,
+          recurring_amount: project.recurring_amount,
+          recurring_end_date: project.recurring_end_date,
+          last_recurring_calculation: null, // Reset for duplicate
+          
+          // Hourly project fields
+          hourly_rate_new: project.hourly_rate_new,
+          total_hours_logged: 0, // Reset logged hours for duplicate
+          
+          // Financial fields
           expenses: project.expenses || 0,
           revenue: project.revenue || 0,
           profit_margin: project.profit_margin || 0,
           currency: project.currency || 'USD',
           payment_status: project.payment_status || 'pending',
           invoice_amount: project.invoice_amount || 0,
-          payment_received: project.received || project.payment_received || 0, // Carry over received amount
-          payment_pending: project.pending || project.payment_pending || 0, // Carry over pending amount
-          hourly_rate: project.hourly_rate,
+          payment_received: 0, // Reset received amount for duplicate
+          payment_pending: project.total_budget || project.budget || 0, // Set pending to total budget
+          
+          // Time tracking fields
           estimated_hours: project.estimated_hours,
           actual_hours: 0, // Reset actual hours for duplicate
           progress: 0, // Reset progress for duplicate
+          
+          // Other fields
           notes: project.notes,
           pipeline_stage: project.pipeline_stage,
           pipeline_notes: project.pipeline_notes,
@@ -951,13 +1007,41 @@ export function ProjectsTableWrapper({
                   status: project.status,
                   start_date: project.start_date,
                   due_date: project.due_date,
+                  
+                  // Legacy fields
                   budget: project.budget,
                   hourly_rate: project.hourly_rate,
+                  
+                  // New multi-project type fields
+                  project_type: project.project_type,
+                  total_budget: project.total_budget,
+                  auto_calculate_total: project.auto_calculate_total,
+                  
+                  // Recurring project fields
+                  recurring_frequency: project.recurring_frequency,
+                  recurring_amount: project.recurring_amount,
+                  recurring_end_date: project.recurring_end_date,
+                  last_recurring_calculation: project.last_recurring_calculation,
+                  
+                  // Hourly project fields
+                  hourly_rate_new: project.hourly_rate_new,
+                  total_hours_logged: project.total_hours_logged,
+                  
+                  // Financial and tracking fields
+                  expenses: project.expenses,
+                  revenue: project.revenue,
+                  profit_margin: project.profit_margin,
+                  currency: project.currency,
+                  payment_status: project.payment_status,
+                  invoice_amount: project.invoice_amount,
+                  payment_received: project.payment_received,
+                  payment_pending: project.payment_pending,
                   estimated_hours: project.estimated_hours,
                   actual_hours: project.actual_hours,
                   progress: project.progress,
                   notes: project.notes,
                   pipeline_stage: project.pipeline_stage,
+                  pipeline_notes: project.pipeline_notes,
                   deal_probability: project.deal_probability
                 }))
 
@@ -1004,13 +1088,34 @@ export function ProjectsTableWrapper({
     console.log('Export projects')
   }
 
+  // Helper function to get proper column display names
+  const getColumnDisplayName = (col: any) => {
+    const key = col.id || col.accessorKey
+    const displayNames: Record<string, string> = {
+      'select': 'Select',
+      'name': 'Project Name',
+      'client': 'Client',
+      'status': 'Status',
+      'project_type': 'Project Type',
+      'start_date': 'Start Date',
+      'total_budget': 'Total Budget',
+      'budget': 'Budget',
+      'expenses': 'Expenses',
+      'received': 'Received',
+      'pending': 'Pending',
+      'due_date': 'Due Date',
+      'actions': 'Actions'
+    }
+    return displayNames[key] || key
+  }
+
   // Column metadata for view filter
   const columnMetadata = React.useMemo(() => {
     if (columnOrder.length === 0) {
       return allColumns.map(col => ({
         id: col.id || col.accessorKey,
         accessorKey: col.accessorKey,
-        header: col.header,
+        header: getColumnDisplayName(col),
         visible: columnVisibility[col.id || col.accessorKey] !== false,
         canHide: col.accessorKey !== 'select'
       }))
@@ -1027,7 +1132,7 @@ export function ProjectsTableWrapper({
     return [...orderedColumns, ...newColumns].map(col => ({
       id: col.id || col.accessorKey,
       accessorKey: col.accessorKey,
-      header: col.header,
+      header: getColumnDisplayName(col),
       visible: columnVisibility[col.id || col.accessorKey] !== false,
       canHide: col.accessorKey !== 'select'
     }))
@@ -1047,6 +1152,38 @@ export function ProjectsTableWrapper({
     })
   }, [])
   
+  // Force refresh table preferences to recognize new columns
+  const forceRefreshTablePreferences = React.useCallback(() => {
+    // Clear all preferences to force recognition of new columns
+    updateTablePreference(TABLE_NAME, "column_widths", {})
+    updateTablePreference(TABLE_NAME, "column_order", [])
+    updateTablePreference(TABLE_NAME, "column_visibility", {})
+    updateTablePreference(TABLE_NAME, "last_updated", Date.now())
+    
+    // Reset state to defaults - new columns will be auto-detected
+    setColumnWidths({})
+    setColumnOrder([])
+    setColumnVisibility({})
+    
+    toast.success("Table preferences reset - new columns are now visible")
+  }, [TABLE_NAME, updateTablePreference])
+
+  // Auto-refresh preferences if new columns (like project_type) are missing (but only once on initial load)
+  const [hasAutoRefreshed, setHasAutoRefreshed] = React.useState(false)
+  
+  React.useEffect(() => {
+    if (allColumns.length > 0 && preferencesLoaded && !hasAutoRefreshed) {
+      const hasProjectTypeColumn = allColumns.some(col => (col.id || col.accessorKey) === 'project_type')
+      const projectTypeVisible = columnVisibility['project_type']
+      
+      // Only refresh if project_type column exists but isn't in visibility settings (first time only)
+      if (hasProjectTypeColumn && projectTypeVisible === undefined && Object.keys(columnVisibility).length > 0) {
+        forceRefreshTablePreferences()
+        setHasAutoRefreshed(true)
+      }
+    }
+  }, [allColumns, columnVisibility, preferencesLoaded, forceRefreshTablePreferences, hasAutoRefreshed])
+
   // Reset to parent preferences (for sub-pages)
   const resetToParentPreferences = React.useCallback(() => {
     const PARENT_TABLE_NAME = "projects-table-all-projects"
@@ -1285,8 +1422,8 @@ export function ProjectsTableWrapper({
           <PageActionsMenu 
             entityType="projects" 
             onExport={handleExport}
-            onResetColumns={resetToParentPreferences}
-            showResetColumns={TABLE_NAME !== "projects-table-all-projects"}
+            onResetColumns={TABLE_NAME === "projects-table-all-projects" ? forceRefreshTablePreferences : resetToParentPreferences}
+            showResetColumns={true}
           />
         }
       />
@@ -1361,517 +1498,33 @@ export function ProjectsTableWrapper({
       </div>
 
       {/* Edit Project Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
-        setIsEditDialogOpen(open)
-        if (!open) {
-          setSelectedProject(null)
-          setSelectedClient(null)
-          setClientSearchQuery("")
-          setDisplayedClientsCount(10)
-          setRecentlyReceived("") // Clear recently received field
-        }
-      }}>
-        <DialogContent className="max-w-2xl" onOpenAutoFocus={(e) => e.preventDefault()}>
-          <DialogHeader>
-            <DialogTitle>Edit Project</DialogTitle>
-            <DialogDescription>Update project information and settings</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="edit-project-name">Project Name *</Label>
-                <Input
-                  id="edit-project-name"
-                  value={newProject.name}
-                  onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
-                  placeholder="Enter project name"
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-project-client">Client</Label>
-                <Popover modal={true} open={clientDropdownOpen} onOpenChange={setClientDropdownOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={clientDropdownOpen}
-                      className="w-full justify-between h-9 px-3 py-1 text-base bg-transparent shadow-sm hover:bg-transparent hover:border-ring focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] md:text-sm text-left"
-                    >
-                      {selectedClient ? (
-                        <div className="flex items-center space-x-2 min-w-0 flex-1 mr-2">
-                          <ClientAvatar 
-                            name={selectedClient.name} 
-                            avatarUrl={selectedClient.avatar_url}
-                            size="xs"
-                          />
-                          <span className="truncate">{selectedClient.name} - {selectedClient.company}</span>
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground flex-1 mr-2">Select client</span>
-                      )}
-                      <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-                    <Command shouldFilter={false}>
-                      <CommandInput 
-                        placeholder="Search clients..." 
-                        value={clientSearchQuery}
-                        onValueChange={setClientSearchQuery}
-                      />
-                      <div className="max-h-60 overflow-y-auto">
-                        <CommandList>
-                          <CommandEmpty>No clients found.</CommandEmpty>
-                          <CommandGroup>
-                            {displayedClients.map((client) => (
-                              <CommandItem
-                                key={client.id}
-                                value={`${client.name} ${client.company || ''}`}
-                                onSelect={() => handleClientSelect(client.id)}
-                                className="flex items-center space-x-3 p-3"
-                              >
-                                <ClientAvatar 
-                                  name={client.name} 
-                                  avatarUrl={client.avatar_url}
-                                  size="lg"
-                                />
-                                <div className="flex-1 min-w-0">
-                                  <div className="font-medium">{client.name}</div>
-                                  {client.company && (
-                                    <div className="text-sm text-muted-foreground">{client.company}</div>
-                                  )}
-                                  {client.email && (
-                                    <div className="text-xs text-muted-foreground">{client.email}</div>
-                                  )}
-                                </div>
-                                <Check
-                                  className={cn(
-                                    "ml-auto h-4 w-4",
-                                    selectedClient?.id === client.id ? "opacity-100" : "opacity-0"
-                                  )}
-                                />
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </div>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-                             <div>
-                 <Label htmlFor="edit-project-status">Status</Label>
-                 <Select value={newProject.status} onValueChange={(value) => setNewProject({ ...newProject, status: value })}>
-                   <SelectTrigger className="text-sm rounded-lg shadow-xs">
-                     <SelectValue placeholder="Select status" />
-                   </SelectTrigger>
-                   <SelectContent>
-                     <SelectItem value="active">
-                       <div className="flex items-center gap-2 whitespace-nowrap">
-                         <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0" />
-                         <span className="whitespace-nowrap">Active</span>
-                       </div>
-                     </SelectItem>
-                     <SelectItem value="pipeline">
-                       <div className="flex items-center gap-2 whitespace-nowrap">
-                         <div className="w-2 h-2 bg-purple-500 rounded-full flex-shrink-0" />
-                         <span className="whitespace-nowrap">Pipeline</span>
-                       </div>
-                     </SelectItem>
-                     <SelectItem value="on_hold">
-                       <div className="flex items-center gap-2 whitespace-nowrap">
-                         <div className="w-2 h-2 bg-yellow-500 rounded-full flex-shrink-0" />
-                         <span className="whitespace-nowrap">On Hold</span>
-                       </div>
-                     </SelectItem>
-                     <SelectItem value="completed">
-                       <div className="flex items-center gap-2 whitespace-nowrap">
-                         <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0" />
-                         <span className="whitespace-nowrap">Completed</span>
-                       </div>
-                     </SelectItem>
-                     <SelectItem value="cancelled">
-                       <div className="flex items-center gap-2 whitespace-nowrap">
-                         <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0" />
-                         <span className="whitespace-nowrap">Cancelled</span>
-                       </div>
-                     </SelectItem>
-                   </SelectContent>
-                 </Select>
-               </div>
-              <div>
-                <Label htmlFor="edit-project-budget">Budget</Label>
-                <Input
-                  id="edit-project-budget"
-                  type="number"
-                  value={newProject.budget}
-                  onChange={(e) => setNewProject({ ...newProject, budget: e.target.value })}
-                  placeholder="0"
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="edit-project-expenses">Expenses</Label>
-                <Input
-                  id="edit-project-expenses"
-                  type="number"
-                  value={newProject.expenses}
-                  onChange={(e) => setNewProject({ ...newProject, expenses: e.target.value })}
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-project-received">Received Amount</Label>
-                <Input
-                  id="edit-project-received"
-                  type="number"
-                  value={newProject.received}
-                  onChange={(e) => setNewProject({ ...newProject, received: e.target.value })}
-                  placeholder="0"
-                />
-              </div>
-            </div>
-            
-            {/* Recently Received Section */}
-            <div className="grid grid-cols-1 gap-4">
-              <div>
-                <Label htmlFor="edit-project-recently-received">Recently Received</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="edit-project-recently-received"
-                    type="number"
-                    value={recentlyReceived}
-                    onChange={(e) => setRecentlyReceived(e.target.value)}
-                    placeholder="Enter recently received amount"
-                    className="flex-1"
-                  />
-                  <Button 
-                    type="button"
-                    variant="outline"
-                    onClick={handleAddRecentlyReceived}
-                    disabled={!recentlyReceived || isNaN(parseFloat(recentlyReceived))}
-                    className="shrink-0"
-                  >
-                    Add to Received
-                  </Button>
-                </div>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Start Date</Label>
-                <DatePicker
-                  date={newProject.start_date}
-                  onSelect={(date) => setNewProject({ ...newProject, start_date: date })}
-                  placeholder="Pick start date"
-                />
-              </div>
-              <div>
-                <Label>Due Date</Label>
-                <DatePicker
-                  date={newProject.due_date}
-                  onSelect={(date) => setNewProject({ ...newProject, due_date: date })}
-                  placeholder="Pick due date"
-                />
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="edit-project-description">Description</Label>
-              <Textarea
-                id="edit-project-description"
-                value={newProject.description}
-                onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
-                placeholder="Project description or notes"
-                rows={3}
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-pipeline-notes">Pipeline Notes</Label>
-              <Textarea
-                id="edit-pipeline-notes"
-                value={newProject.pipeline_notes}
-                onChange={(e) => setNewProject({ ...newProject, pipeline_notes: e.target.value })}
-                placeholder="Pipeline notes and currency conversion history"
-                rows={4}
-                className="text-sm"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Includes pipeline activity and currency conversion details
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => {
-              setIsEditDialogOpen(false)
-              setSelectedProject(null)
-              setSelectedClient(null)
-            }}>
-              Cancel
-            </Button>
-            <Button size="sm" onClick={handleSaveProject} disabled={!newProject.name}>
-              Update Project
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <EnhancedAddProjectDialog
+        open={isEditDialogOpen}
+        onOpenChange={(open) => {
+          setIsEditDialogOpen(open)
+          if (!open) {
+            setSelectedProject(null)
+          }
+        }}
+        onProjectUpdate={forceRefresh}
+        editProject={selectedProject}
+        defaultType="fixed"
+        context="project"
+      />
 
-      {/* Add Project Dialog */}
-      <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
-        setIsAddDialogOpen(open)
-        if (!open) {
-          setSelectedProject(null)
-          setSelectedClient(null)
-          setClientSearchQuery("")
-          setDisplayedClientsCount(10)
-          setRecentlyReceived("") // Clear recently received field
-          setNewProject({
-            name: "",
-            client_id: "",
-            status: defaultStatus,
-            start_date: undefined,
-            due_date: undefined,
-            budget: "",
-            expenses: "",
-            received: "",
-            description: "",
-            pipeline_notes: "",
-          })
-        }
-      }}>
-        <DialogContent className="max-w-2xl" onOpenAutoFocus={(e) => e.preventDefault()}>
-          <DialogHeader>
-            <DialogTitle>Add New Project</DialogTitle>
-            <DialogDescription>Create a new project with client information and settings</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="add-project-name">Project Name *</Label>
-                <Input
-                  id="add-project-name"
-                  value={newProject.name}
-                  onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
-                  placeholder="Enter project name"
-                />
-              </div>
-              <div>
-                <Label htmlFor="add-project-client">Client</Label>
-                <Popover modal={true} open={clientDropdownOpen} onOpenChange={setClientDropdownOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={clientDropdownOpen}
-                      className="w-full justify-between h-9 px-3 py-1 text-base bg-transparent shadow-sm hover:bg-transparent hover:border-ring focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] md:text-sm text-left"
-                    >
-                      {selectedClient ? (
-                        <div className="flex items-center space-x-2 min-w-0 flex-1 mr-2">
-                          <ClientAvatar 
-                            name={selectedClient.name} 
-                            avatarUrl={selectedClient.avatar_url}
-                            size="xs"
-                          />
-                          <span className="truncate">{selectedClient.name} - {selectedClient.company}</span>
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground flex-1 mr-2">Select client</span>
-                      )}
-                      <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-                    <Command shouldFilter={false}>
-                      <CommandInput 
-                        placeholder="Search clients..." 
-                        value={clientSearchQuery}
-                        onValueChange={setClientSearchQuery}
-                      />
-                      <div className="max-h-60 overflow-y-auto">
-                        <CommandList>
-                          <CommandEmpty>No clients found.</CommandEmpty>
-                          <CommandGroup>
-                            {displayedClients.map((client) => (
-                              <CommandItem
-                                key={client.id}
-                                value={`${client.name} ${client.company || ''}`}
-                                onSelect={() => handleClientSelect(client.id)}
-                                className="flex items-center space-x-3 p-3"
-                              >
-                                <ClientAvatar 
-                                  name={client.name} 
-                                  avatarUrl={client.avatar_url}
-                                  size="lg"
-                                />
-                                <div className="flex-1 min-w-0">
-                                  <div className="font-medium">{client.name}</div>
-                                  {client.company && (
-                                    <div className="text-sm text-muted-foreground">{client.company}</div>
-                                  )}
-                                  {client.email && (
-                                    <div className="text-xs text-muted-foreground">{client.email}</div>
-                                  )}
-                                </div>
-                                <Check
-                                  className={cn(
-                                    "ml-auto h-4 w-4",
-                                    selectedClient?.id === client.id ? "opacity-100" : "opacity-0"
-                                  )}
-                                />
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </div>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-                             <div>
-                 <Label htmlFor="add-project-status">Status</Label>
-                 <Select value={newProject.status} onValueChange={(value) => setNewProject({ ...newProject, status: value })}>
-                   <SelectTrigger className="text-sm rounded-lg shadow-xs">
-                     <SelectValue placeholder="Select status" />
-                   </SelectTrigger>
-                   <SelectContent>
-                     <SelectItem value="active">
-                       <div className="flex items-center gap-2 whitespace-nowrap">
-                         <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0" />
-                         <span className="whitespace-nowrap">Active</span>
-                       </div>
-                     </SelectItem>
-                     <SelectItem value="pipeline">
-                       <div className="flex items-center gap-2 whitespace-nowrap">
-                         <div className="w-2 h-2 bg-purple-500 rounded-full flex-shrink-0" />
-                         <span className="whitespace-nowrap">Pipeline</span>
-                       </div>
-                     </SelectItem>
-                     <SelectItem value="on_hold">
-                       <div className="flex items-center gap-2 whitespace-nowrap">
-                         <div className="w-2 h-2 bg-yellow-500 rounded-full flex-shrink-0" />
-                         <span className="whitespace-nowrap">On Hold</span>
-                       </div>
-                     </SelectItem>
-                     <SelectItem value="completed">
-                       <div className="flex items-center gap-2 whitespace-nowrap">
-                         <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0" />
-                         <span className="whitespace-nowrap">Completed</span>
-                       </div>
-                     </SelectItem>
-                     <SelectItem value="cancelled">
-                       <div className="flex items-center gap-2 whitespace-nowrap">
-                         <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0" />
-                         <span className="whitespace-nowrap">Cancelled</span>
-                       </div>
-                     </SelectItem>
-                   </SelectContent>
-                 </Select>
-               </div>
-              <div>
-                <Label htmlFor="add-project-budget">Budget</Label>
-                <Input
-                  id="add-project-budget"
-                  type="number"
-                  value={newProject.budget}
-                  onChange={(e) => setNewProject({ ...newProject, budget: e.target.value })}
-                  placeholder="0"
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="add-project-expenses">Expenses</Label>
-                <Input
-                  id="add-project-expenses"
-                  type="number"
-                  value={newProject.expenses}
-                  onChange={(e) => setNewProject({ ...newProject, expenses: e.target.value })}
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <Label htmlFor="add-project-received">Received</Label>
-                <Input
-                  id="add-project-received"
-                  type="number"
-                  value={newProject.received}
-                  onChange={(e) => setNewProject({ ...newProject, received: e.target.value })}
-                  placeholder="0"
-                />
-              </div>
-            </div>
-            
-            {/* Recently Received Section */}
-            <div className="grid grid-cols-1 gap-4">
-              <div>
-                <Label htmlFor="add-project-recently-received">Recently Received</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="add-project-recently-received"
-                    type="number"
-                    value={recentlyReceived}
-                    onChange={(e) => setRecentlyReceived(e.target.value)}
-                    placeholder="Enter recently received amount"
-                    className="flex-1"
-                  />
-                  <Button 
-                    type="button"
-                    variant="outline"
-                    onClick={handleAddRecentlyReceived}
-                    disabled={!recentlyReceived || isNaN(parseFloat(recentlyReceived))}
-                    className="shrink-0"
-                  >
-                    Add to Received
-                  </Button>
-                </div>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="add-project-start-date">Start Date</Label>
-                <DatePicker
-                  date={newProject.start_date}
-                  onSelect={(date) => setNewProject({ ...newProject, start_date: date })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="add-project-due-date">Due Date</Label>
-                <DatePicker
-                  date={newProject.due_date}
-                  onSelect={(date) => setNewProject({ ...newProject, due_date: date })}
-                />
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="add-project-description">Description</Label>
-              <Textarea
-                id="add-project-description"
-                value={newProject.description}
-                onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
-                placeholder="Project description or notes"
-                rows={3}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => {
-              setIsAddDialogOpen(false)
-              setSelectedProject(null)
-              setSelectedClient(null)
-            }}>
-              Cancel
-            </Button>
-            <Button size="sm" onClick={handleSaveProject} disabled={!newProject.name}>
-              Add
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
+
+
+
+
+      {/* Enhanced Add Project Dialog */}
+      <EnhancedAddProjectDialog
+        open={isAddDialogOpen}
+        onOpenChange={setIsAddDialogOpen}
+        onProjectUpdate={forceRefresh}
+        defaultType="fixed"
+        context="project"
+      />
     </div>
   )
 } 

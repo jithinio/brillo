@@ -110,6 +110,14 @@ export function useProjectFiltersV2() {
     updateFilter('client', newClients)
   }, [urlFilters.client, updateFilter])
 
+  // Toggle project type
+  const toggleProjectType = useCallback((projectType: 'fixed' | 'recurring' | 'hourly') => {
+    const newProjectTypes = urlFilters.projectType.includes(projectType)
+      ? urlFilters.projectType.filter(pt => pt !== projectType)
+      : [...urlFilters.projectType, projectType]
+    updateFilter('projectType', newProjectTypes)
+  }, [urlFilters.projectType, updateFilter])
+
   // Clear all filters
   const clearFilters = useCallback(() => {
     console.log('🧹 Clearing all filters, navigating to:', pathname)
@@ -122,7 +130,7 @@ export function useProjectFiltersV2() {
 
   // Clear specific filter type
   const clearFilterType = useCallback((filterType: keyof ProjectFilters) => {
-    if (filterType === 'status' || filterType === 'client') {
+    if (filterType === 'status' || filterType === 'client' || filterType === 'projectType') {
       updateFilter(filterType, [])
     } else if (filterType === 'search') {
       updateFilter(filterType, '')
@@ -150,6 +158,7 @@ export function useProjectFiltersV2() {
     updateSearch, // New optimized search function
     toggleStatus,
     toggleClient,
+    toggleProjectType,
     clearFilters,
     clearFilterType,
   }

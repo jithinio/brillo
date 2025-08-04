@@ -136,12 +136,12 @@ export function useOptimizedProjects() {
       completedProjects: projects.filter(p => p.status === 'completed').length,
       onHoldProjects: projects.filter(p => p.status === 'on_hold').length,
       cancelledProjects: projects.filter(p => p.status === 'cancelled').length,
-      totalBudget: projects.reduce((sum, p) => sum + (p.budget || 0), 0),
+      totalBudget: projects.reduce((sum, p) => sum + (p.total_budget || p.budget || 0), 0),
       totalExpenses: projects.reduce((sum, p) => sum + (p.expenses || 0), 0),
       totalReceived: projects.reduce((sum, p) => sum + (p.received || 0), 0),
       totalPending: projects.reduce((sum, p) => {
-        const budget = p.budget || 0
-        const received = p.received || 0
+        const budget = p.total_budget || p.budget || 0
+        const received = p.payment_received || p.received || 0
         return sum + Math.max(0, budget - received)
       }, 0)
     }
@@ -205,6 +205,10 @@ export function useOptimizedProjects() {
       }
       if (currentFilters.client.length > 0) {
         query = query.in('client_id', currentFilters.client)
+      }
+      
+      if (currentFilters.projectType && currentFilters.projectType.length > 0) {
+        query = query.in('project_type', currentFilters.projectType)
       }
       
       // Only fetch projects with actual status values (excludes lost projects which have status=null)

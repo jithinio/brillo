@@ -310,14 +310,14 @@ export async function calculateProjectPipelineMetrics(projects: PipelineProject[
   const pitchedCount = projects.filter(p => p.pipeline_stage === 'pitched').length
   const discussionCount = projects.filter(p => p.pipeline_stage === 'in discussion').length
   
-  // Calculate total potential value (budget)
+  // Calculate total potential value (total_budget)
   const totalValue = projects.reduce((sum, project) => {
-    return sum + (project.budget || 0)
+    return sum + (project.total_budget || project.budget || 0)
   }, 0)
   
-  // Calculate weighted value (budget * probability)
+  // Calculate weighted value (total_budget * probability)
   const weightedValue = projects.reduce((sum, project) => {
-    const potential = project.budget || 0
+    const potential = project.total_budget || project.budget || 0
     const probability = (project.deal_probability || 0) / 100
     return sum + (potential * probability)
   }, 0)
