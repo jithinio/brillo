@@ -14,6 +14,18 @@ export function createPolarClient() {
   })
 }
 
+// Helper to check if Polar is available
+export async function isPolarAvailable(): Promise<boolean> {
+  try {
+    const polar = createPolarClient()
+    await polar.organizations.get({ id: process.env.NEXT_PUBLIC_POLAR_ORGANIZATION_ID! })
+    return true
+  } catch (error: any) {
+    console.warn('Polar availability check failed:', error.message)
+    return false
+  }
+}
+
 // For backward compatibility - both server and client use the same token
 export const createPolarServerClient = createPolarClient
 export const createPolarClientClient = createPolarClient
@@ -141,6 +153,48 @@ export async function createOrGetCustomer(email: string, name?: string) {
       body: error.body,
       email: email
     })
+    
+    // Handle account under review or API unavailable
+    if (error.statusCode === 401 || 
+        (error.message && error.message.includes('invalid_token'))) {
+      throw new Error('Billing services are currently unavailable. Please try again later.')
+    }
+    
+    // Check if customer already exists error
+    if (error.message && (
+      error.message.includes('customer with this email address already exists') ||
+      error.message.includes('already exists') ||
+      (error.body && typeof error.body === 'string' && 
+       error.body.includes('customer with this email address already exists'))
+    )) {
+      console.log('Customer already exists, attempting to retrieve by email search')
+      
+      // Try one more time to find the customer
+      try {
+        const searchResult = await polar.customers.list({ 
+          email: email,
+          limit: 100 // Increase limit in case there are many customers
+        })
+        
+        if (searchResult.items && searchResult.items.length > 0) {
+          // Find the exact match
+          const exactMatch = searchResult.items.find(c => c.email === email)
+          if (exactMatch) {
+            console.log('Found existing customer on retry:', exactMatch.id)
+            return exactMatch
+          }
+          
+          // If no exact match, return the first one
+          console.log('Found existing customer (first match):', searchResult.items[0].id)
+          return searchResult.items[0]
+        }
+      } catch (retryError) {
+        console.error('Failed to retrieve existing customer:', retryError)
+      }
+      
+      // If we still can't find it, throw a more helpful error
+      throw new Error(`Customer with email ${email} already exists but cannot be retrieved. This might be due to organization context changes.`)
+    }
     
     // If email domain is invalid, return null to use guest checkout
     if (error.message && (

@@ -22,6 +22,7 @@ export const POLAR_CONFIG = {
 } as const
 
 // Environment helpers
+// NOTE: NODE_ENV=production is required in .env.local for Polar production tokens to work
 export const IS_DEVELOPMENT = process.env.NODE_ENV === 'development'
 export const IS_PRODUCTION = process.env.NODE_ENV === 'production'
 

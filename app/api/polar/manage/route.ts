@@ -51,6 +51,27 @@ export async function POST(request: NextRequest) {
 
     const polar = createPolarClient()
 
+    // Test Polar connectivity first
+    try {
+      // Quick connectivity test
+      await polar.organizations.get({ id: process.env.NEXT_PUBLIC_POLAR_ORGANIZATION_ID! })
+    } catch (connectivityError: any) {
+      console.error('❌ Polar connectivity test failed:', connectivityError)
+      
+      // Handle specific error cases
+      if (connectivityError.statusCode === 401 || 
+          (connectivityError.message && connectivityError.message.includes('invalid_token'))) {
+        return NextResponse.json({ 
+          error: 'Subscription services temporarily unavailable',
+          details: 'Our billing system is currently under maintenance. Please try again later.',
+          code: 'POLAR_UNAVAILABLE'
+        }, { status: 503 })
+      }
+      
+      // For other errors, continue but log them
+      console.warn('⚠️ Polar connectivity issue, continuing with request...')
+    }
+
     switch (action) {
       case 'cancel':
         console.log('🔍 Handling cancel subscription')

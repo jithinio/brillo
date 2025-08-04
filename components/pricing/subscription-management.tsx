@@ -54,6 +54,11 @@ export function SubscriptionManagement() {
       const data = await response.json()
 
       if (!response.ok) {
+        // Handle specific error codes
+        if (response.status === 503 && data.code === 'POLAR_UNAVAILABLE') {
+          toast.error('Billing services temporarily unavailable. Please try again later.')
+          return
+        }
         throw new Error(data.error || 'Failed to manage subscription')
       }
 
