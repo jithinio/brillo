@@ -180,12 +180,14 @@ export function CashFlowChart({
                   fill="var(--chart-1)" 
                   radius={[2, 2, 0, 0]}
                   name="Incoming"
+                  isAnimationActive={false}
                 />
                 <Bar 
                   dataKey="outgoing" 
                   fill="var(--chart-2)" 
                   radius={[2, 2, 0, 0]}
                   name="Outgoing"
+                  isAnimationActive={false}
                 />
               </BarChart>
             </ChartContainer>

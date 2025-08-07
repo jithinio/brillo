@@ -7,74 +7,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import type { ChartConfig } from "@/components/ui/chart"
 import { Line, LineChart, Bar, BarChart, XAxis, YAxis, LabelList, ReferenceLine } from "recharts"
-import { TrendingUp, TrendingDown, Calendar, DollarSign, CalendarIcon } from "lucide-react"
+import { TrendingUp, TrendingDown, Calendar, DollarSign, CalendarIcon, RefreshCw, AlertCircle } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { format, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear, subMonths, subQuarters, subYears } from "date-fns"
 
 import { formatCurrency, getCurrencySymbol } from "@/lib/currency"
 import { formatLargeNumber } from "@/lib/utils"
 import { useSettings } from "@/components/settings-provider"
-import { supabase } from "@/lib/supabase"
 import { UpgradeSuccessHandler } from "@/components/upgrade-success-handler"
 import { useAuth } from "@/components/auth-provider"
+import { Skeleton } from "@/components/ui/skeleton"
+import { useDashboardData, type DashboardProject } from "@/hooks/use-dashboard-data"
 
-// Types for project data
-interface Project {
-  id: string
-  name: string
-  budget?: number
-  total_budget?: number
-  revenue?: number
-  expenses?: number
-  payment_received?: number
-  payment_pending?: number
-  start_date?: string
-  due_date?: string
-  created_at: string
-  status: string
-  clients?: {
-    id: string
-    name: string
-    company?: string
-    created_at?: string
-  }
-}
+// Re-export type for compatibility
+type Project = DashboardProject
 
-// Data fetching and calculation functions
-const fetchProjects = async (): Promise<Project[]> => {
-  try {
-    const { data, error } = await supabase
-      .from('projects')
-      .select(`
-        *,
-        clients (
-          id,
-          name,
-          company,
-          created_at
-        )
-      `)
-      .order('created_at', { ascending: false })
-
-    if (error) {
-      console.error('Error fetching projects:', error)
-      return []
-    }
-
-    // Quick check for budget data
-    if (data && data.length > 0) {
-      const hasAnyBudgets = data.some(p => (p.budget || 0) > 0 || (p.total_budget || 0) > 0)
-      if (!hasAnyBudgets) {
-        console.warn('⚠️ No projects have budget values - analytics will show $0')
-      }
-    }
-
-    return data || []
-  } catch (error) {
-    console.error('Error fetching projects:', error)
-    return []
-  }
-}
+// Removed fetchProjects - now handled by useDashboardData hook
 
 const calculateMRR = (projects: Project[], period: string): { current: number; previous: number; trend: 'up' | 'down'; percentage: number } => {
   const now = new Date()
@@ -609,7 +558,8 @@ const MetricCard = ({
   percentage, 
   period,
   onPeriodChange,
-  formatCurrency 
+  formatCurrency,
+  isLoading = false
 }: {
   title: string
   current: number
@@ -619,6 +569,7 @@ const MetricCard = ({
   period: string
   onPeriodChange: (value: string) => void
   formatCurrency: (amount: number) => string
+  isLoading?: boolean
 }) => (
   <Card className="relative overflow-hidden border bg-transparent">
     <CardHeader className="p-8 pb-3">
@@ -654,22 +605,30 @@ const MetricCard = ({
     </CardHeader>
     <CardContent className="px-8 pt-0 pb-8">
         <div className="space-y-1">
-          <div className="text-3xl font-normal text-foreground">
-            {formatLargeNumber(current, getCurrencySymbol())}
-          </div>
-          <div className="flex items-center gap-3" style={{ marginTop: '12px' }}>
-            <div className="flex items-center gap-1">
-              {trend === 'up' ? (
-                <TrendingUp className="h-3 w-3 text-green-600" />
-              ) : (
-                <TrendingDown className="h-3 w-3 text-red-600" />
-              )}
-              <span className={`text-xs font-normal ${trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
-              {percentage.toFixed(2)}%
-              </span>
+          {isLoading ? (
+            <Skeleton className="h-9 w-32" />
+          ) : (
+            <div className="text-3xl font-normal text-foreground">
+              {formatLargeNumber(current, getCurrencySymbol())}
             </div>
-            <span className="text-xs text-muted-foreground">vs previous period</span>
-        </div>
+          )}
+          {isLoading ? (
+            <Skeleton className="h-4 w-28" />
+          ) : (
+            <div className="flex items-center gap-3" style={{ marginTop: '12px' }}>
+              <div className="flex items-center gap-1">
+                {trend === 'up' ? (
+                  <TrendingUp className="h-3 w-3 text-green-600" />
+                ) : (
+                  <TrendingDown className="h-3 w-3 text-red-600" />
+                )}
+                <span className={`text-xs font-normal ${trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
+                {percentage.toFixed(2)}%
+                </span>
+              </div>
+              <span className="text-xs text-muted-foreground">vs previous period</span>
+            </div>
+          )}
       </div>
     </CardContent>
   </Card>
@@ -685,7 +644,8 @@ const RevenueChart = ({
   onTypeChange, 
   onPeriodChange,
   formatCurrency,
-  projects
+  projects,
+  isLoading = false
 }: {
   type: 'revenue' | 'expenses'
   period: string
@@ -697,6 +657,7 @@ const RevenueChart = ({
   onPeriodChange: (value: string) => void
   formatCurrency: (amount: number) => string
   projects: Project[]
+  isLoading?: boolean
 }) => {
   // Filter data based on selected period
   const getFilteredData = () => {
@@ -796,28 +757,41 @@ const RevenueChart = ({
     <CardContent className="px-8 pt-0 pb-8">
       <div className="space-y-4">
         <div className="space-y-1">
-          <div className="text-3xl font-normal text-foreground">
-            {formatLargeNumber(dynamicAmount, getCurrencySymbol())}
-          </div>
-          <div className="flex items-center gap-3" style={{ marginTop: '12px' }}>
-            <div className="flex items-center gap-1">
-              {dynamicTrend.trend === 'up' ? (
-                <TrendingUp className="h-3 w-3 text-green-600" />
-              ) : (
-                <TrendingDown className="h-3 w-3 text-red-600" />
-              )}
-              <span className={`text-xs font-normal ${dynamicTrend.trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
-                {dynamicTrend.percentage}%
-              </span>
+          {isLoading ? (
+            <Skeleton className="h-9 w-32" />
+          ) : (
+            <div className="text-3xl font-normal text-foreground">
+              {formatLargeNumber(dynamicAmount, getCurrencySymbol())}
             </div>
-            <span className="text-xs text-muted-foreground">vs previous period</span>
-          </div>
+          )}
+          {isLoading ? (
+            <Skeleton className="h-4 w-28" />
+          ) : (
+            <div className="flex items-center gap-3" style={{ marginTop: '12px' }}>
+              <div className="flex items-center gap-1">
+                {dynamicTrend.trend === 'up' ? (
+                  <TrendingUp className="h-3 w-3 text-green-600" />
+                ) : (
+                  <TrendingDown className="h-3 w-3 text-red-600" />
+                )}
+                <span className={`text-xs font-normal ${dynamicTrend.trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
+                  {dynamicTrend.percentage}%
+                </span>
+              </div>
+              <span className="text-xs text-muted-foreground">vs previous period</span>
+            </div>
+          )}
         </div>
         
         {/* Chart */}
         <div className="h-80 w-full" style={{ marginTop: '48px' }}>
-          <ChartContainer config={revenueChartConfig} className="h-full w-full">
-            <LineChart data={filteredData} margin={{ top: 20, right: 20, left: 20, bottom: 0 }}>
+          {isLoading ? (
+            <div className="h-full w-full flex items-center justify-center">
+              <Skeleton className="h-full w-full" />
+            </div>
+          ) : (
+            <ChartContainer config={revenueChartConfig} className="h-full w-full">
+              <LineChart data={filteredData} margin={{ top: 20, right: 20, left: 20, bottom: 0 }}>
               <XAxis 
                 dataKey="month" 
                 axisLine={false}
@@ -858,9 +832,11 @@ const RevenueChart = ({
                 strokeWidth={3}
                 dot={{ fill: type === 'revenue' ? 'var(--chart-1)' : 'var(--chart-2)', strokeWidth: 0, r: 4 }}
                 activeDot={{ r: 6, stroke: type === 'revenue' ? 'var(--chart-1)' : 'var(--chart-2)', strokeWidth: 2, fill: 'white' }}
+                isAnimationActive={false}
               />
             </LineChart>
           </ChartContainer>
+          )}
         </div>
       </div>
             </CardContent>
@@ -872,12 +848,14 @@ const YearlyBarChart = ({
   type, 
   onTypeChange,
   formatCurrency,
-  projects
+  projects,
+  isLoading = false
 }: {
   type: 'revenue' | 'expenses'
   onTypeChange: (value: 'revenue' | 'expenses') => void
   formatCurrency: (amount: number) => string
   projects: Project[]
+  isLoading?: boolean
 }) => {
   // This will be passed from parent component
   const yearlyData = generateYearlyData(projects)
@@ -903,47 +881,60 @@ const YearlyBarChart = ({
     <CardContent className="px-8 pt-0 pb-8">
       <div className="space-y-4">
         {/* Yearly Growth section */}
-        <div className="space-y-1">
-          <div className="text-3xl font-normal text-foreground">
-            {(() => {
-              // Calculate yearly growth percentage
-              if (yearlyData.length < 2) return '0%'
-              const currentYear = yearlyData[yearlyData.length - 1][type]
-              const previousYear = yearlyData[yearlyData.length - 2][type]
-              const growthPercentage = previousYear > 0 ? ((currentYear - previousYear) / previousYear) * 100 : 0
-              return `${growthPercentage.toFixed(2)}%`
-            })()}
-          </div>
-          <div className="flex items-center gap-3" style={{ marginTop: '12px' }}>
-            <div className="flex items-center gap-1">
+                <div className="space-y-1">
+          {isLoading ? (
+            <Skeleton className="h-9 w-20" />
+          ) : (
+            <div className="text-3xl font-normal text-foreground">
               {(() => {
-                if (yearlyData.length < 2) return null
+                // Calculate yearly growth percentage
+                if (yearlyData.length < 2) return '0%'
                 const currentYear = yearlyData[yearlyData.length - 1][type]
                 const previousYear = yearlyData[yearlyData.length - 2][type]
                 const growthPercentage = previousYear > 0 ? ((currentYear - previousYear) / previousYear) * 100 : 0
-                const trend = growthPercentage >= 0 ? 'up' : 'down'
-                return (
-                  <>
-                    {trend === 'up' ? (
-                      <TrendingUp className="h-3 w-3 text-green-600" />
-                    ) : (
-                      <TrendingDown className="h-3 w-3 text-red-600" />
-                    )}
-                    <span className={`text-xs font-normal ${trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
-                      {Math.abs(growthPercentage).toFixed(2)}%
-                    </span>
-                  </>
-                )
-              })()}
+                return `${growthPercentage.toFixed(2)}%`
+              })()} 
             </div>
-            <span className="text-xs text-muted-foreground">yearly growth</span>
-          </div>
+          )}
+                    {isLoading ? (
+            <Skeleton className="h-4 w-28" />
+          ) : (
+            <div className="flex items-center gap-3" style={{ marginTop: '12px' }}>
+              <div className="flex items-center gap-1">
+                {(() => {
+                  if (yearlyData.length < 2) return null
+                  const currentYear = yearlyData[yearlyData.length - 1][type]
+                  const previousYear = yearlyData[yearlyData.length - 2][type]
+                  const growthPercentage = previousYear > 0 ? ((currentYear - previousYear) / previousYear) * 100 : 0
+                  const trend = growthPercentage >= 0 ? 'up' : 'down'
+                  return (
+                    <>
+                      {trend === 'up' ? (
+                        <TrendingUp className="h-3 w-3 text-green-600" />
+                      ) : (
+                        <TrendingDown className="h-3 w-3 text-red-600" />
+                      )}
+                      <span className={`text-xs font-normal ${trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
+                        {Math.abs(growthPercentage).toFixed(2)}%
+                      </span>
+                    </>
+                  )
+                })()} 
+              </div>
+              <span className="text-xs text-muted-foreground">yearly growth</span>
+            </div>
+          )}
         </div>
 
         {/* Chart */}
         <div className="h-96 w-full" style={{ marginTop: '48px' }}>
-        <ChartContainer config={yearlyChartConfig} className="h-full w-full">
-          <BarChart data={yearlyData} barCategoryGap="20%" margin={{ top: 30, right: 30, left: 0, bottom: 0 }}>
+        {isLoading ? (
+          <div className="h-full w-full flex items-center justify-center">
+            <Skeleton className="h-full w-full" />
+          </div>
+        ) : (
+          <ChartContainer config={yearlyChartConfig} className="h-full w-full">
+            <BarChart data={yearlyData} barCategoryGap="20%" margin={{ top: 30, right: 30, left: 0, bottom: 0 }}>
             <XAxis 
               dataKey="year" 
               axisLine={false}
@@ -956,6 +947,7 @@ const YearlyBarChart = ({
               dataKey={type} 
               fill={type === 'revenue' ? 'var(--chart-1)' : 'var(--chart-2)'}
               radius={[64, 64, 0, 0]}
+              isAnimationActive={false}
             >
               <LabelList 
                 dataKey={type} 
@@ -969,6 +961,7 @@ const YearlyBarChart = ({
             </Bar>
           </BarChart>
         </ChartContainer>
+        )}
         </div>
       </div>
             </CardContent>
@@ -986,30 +979,16 @@ export default function DashboardPage() {
   const [revenuePeriod, setRevenuePeriod] = useState("this-year")
   const [yearlyType, setYearlyType] = useState<'revenue' | 'expenses'>('revenue')
   const [greeting, setGreeting] = useState("")
-  const [projects, setProjects] = useState<Project[]>([])
-  const [loading, setLoading] = useState(true)
+  
+  // Use new efficient dashboard data hook
+  const { projects, isLoading: loading, error, lastUpdated, refreshData } = useDashboardData()
 
   // Get user name from auth context
   const userName = user 
     ? user.user_metadata?.full_name || user.email?.split("@")[0] || "User"
     : "User"
 
-  // Fetch projects on component mount
-  useEffect(() => {
-    const loadProjects = async () => {
-      setLoading(true)
-      try {
-        const projectData = await fetchProjects()
-        setProjects(projectData)
-      } catch (error) {
-        console.error('Error loading projects:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadProjects()
-  }, [])
+  // Removed manual data fetching - now handled by useDashboardData hook
 
   useEffect(() => {
     const getGreeting = () => {
@@ -1038,10 +1017,41 @@ export default function DashboardPage() {
       <UpgradeSuccessHandler />
       {/* Dynamic Greeting */}
       <div className="mb-8">
-        <h1 className="text-3xl font-normal text-foreground mb-2">
-          {greeting}, {userName}! 👋
-        </h1>
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="text-3xl font-normal text-foreground">
+            {greeting}, {userName}! 👋
+          </h1>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={refreshData}
+              disabled={loading}
+              className="h-8 w-8 p-0"
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
+          </div>
+        </div>
         <p className="text-muted-foreground">Here's what's happening with your business today.</p>
+        
+        {/* Error Alert */}
+        {error && (
+          <Alert variant="destructive" className="mt-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Failed to load dashboard data: {error}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={refreshData}
+                className="ml-2 h-6"
+              >
+                Retry
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
       </div>
 
       {/* Summary Section */}
@@ -1057,6 +1067,7 @@ export default function DashboardPage() {
             period={mrrPeriod}
             onPeriodChange={setMrrPeriod}
             formatCurrency={settingsFormatCurrency}
+            isLoading={loading}
           />
           <MetricCard
             title="QRR"
@@ -1067,6 +1078,7 @@ export default function DashboardPage() {
             period={qrrPeriod}
             onPeriodChange={setQrrPeriod}
             formatCurrency={settingsFormatCurrency}
+            isLoading={loading}
           />
           <MetricCard
             title="ARR"
@@ -1077,6 +1089,7 @@ export default function DashboardPage() {
             period={arrPeriod}
             onPeriodChange={setArrPeriod}
             formatCurrency={settingsFormatCurrency}
+            isLoading={loading}
           />
         </div>
 
@@ -1093,6 +1106,7 @@ export default function DashboardPage() {
             onPeriodChange={setRevenuePeriod}
             formatCurrency={settingsFormatCurrency}
             projects={projects}
+            isLoading={loading}
           />
         </div>
 
@@ -1103,6 +1117,7 @@ export default function DashboardPage() {
             onTypeChange={setYearlyType}
             formatCurrency={settingsFormatCurrency}
             projects={projects}
+            isLoading={loading}
           />
         </div>
       </div>
