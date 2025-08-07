@@ -164,14 +164,16 @@ export function AnalyticsFilters({
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  className="h-8 w-[120px] justify-start text-left font-normal border-dashed text-sm"
+                  className="h-8 min-w-[80px] max-w-[160px] w-auto justify-start text-left font-normal border-dashed text-sm px-3"
                 >
-                  <Calendar className="mr-1 h-3 w-3" />
-                  {filters.dateRange?.start ? (
-                    formatDate(filters.dateRange.start)
-                  ) : (
-                    <span className="text-muted-foreground">Start</span>
-                  )}
+                  <Calendar className="mr-1 h-3 w-3 flex-shrink-0" />
+                  <span className="truncate">
+                    {filters.dateRange?.start ? (
+                      formatDate(filters.dateRange.start)
+                    ) : (
+                      <span className="text-muted-foreground">Start</span>
+                    )}
+                  </span>
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0 shadow-lg border" align="start">
@@ -186,6 +188,7 @@ export function AnalyticsFilters({
                       })
                     }
                   }}
+                  defaultMonth={filters.dateRange?.start} // Preserve the month of the selected date when opening
                   captionLayout="dropdown"
                   fromYear={2020}
                   toYear={2030}
@@ -202,14 +205,16 @@ export function AnalyticsFilters({
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  className="h-8 w-[120px] justify-start text-left font-normal border-dashed text-sm"
+                  className="h-8 min-w-[80px] max-w-[160px] w-auto justify-start text-left font-normal border-dashed text-sm px-3"
                 >
-                  <Calendar className="mr-1 h-3 w-3" />
-                  {filters.dateRange?.end ? (
-                    formatDate(filters.dateRange.end)
-                  ) : (
-                    <span className="text-muted-foreground">End</span>
-                  )}
+                  <Calendar className="mr-1 h-3 w-3 flex-shrink-0" />
+                  <span className="truncate">
+                    {filters.dateRange?.end ? (
+                      formatDate(filters.dateRange.end)
+                    ) : (
+                      <span className="text-muted-foreground">End</span>
+                    )}
+                  </span>
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0 shadow-lg border" align="start">
@@ -224,6 +229,7 @@ export function AnalyticsFilters({
                       })
                     }
                   }}
+                  defaultMonth={filters.dateRange?.end} // Preserve the month of the selected date when opening
                   captionLayout="dropdown"
                   fromYear={2020}
                   toYear={2030}
@@ -376,23 +382,7 @@ export function AnalyticsFilters({
       {/* Active Filter Badges */}
       {hasActiveFilters && (
         <div className="flex items-center gap-1 flex-wrap">
-          {/* Date Range Badge */}
-          {filters.dateRange && (
-            <Badge variant="secondary" className="h-6 px-2 text-xs">
-              {formatDate(filters.dateRange.start)} - {formatDate(filters.dateRange.end)}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="ml-1 h-3 w-3 p-0 hover:bg-transparent"
-                onClick={() => {
-                  handleDateRangeChange(undefined)
-                  setQuickPeriodValue("")
-                }}
-              >
-                <X className="h-2 w-2" />
-              </Button>
-            </Badge>
-          )}
+
 
           {/* Quick Period Badge */}
           {quickPeriodValue && (

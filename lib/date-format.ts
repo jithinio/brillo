@@ -72,7 +72,8 @@ export function parseFormattedDate(dateString: string, format: DateFormat = DEFA
         const parts = cleanDate.split(separator)
         if (parts.length === 3) {
           const [month, day, year] = parts.map(Number)
-          const date = new Date(year, month - 1, day)
+          // Create date in local timezone to avoid timezone offset issues
+          const date = new Date(year, month - 1, day, 12, 0, 0, 0) // Set to noon to avoid DST issues
           if (date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day) {
             return date
           }
@@ -86,7 +87,8 @@ export function parseFormattedDate(dateString: string, format: DateFormat = DEFA
         const parts = cleanDate.split(separator)
         if (parts.length === 3) {
           const [day, month, year] = parts.map(Number)
-          const date = new Date(year, month - 1, day)
+          // Create date in local timezone to avoid timezone offset issues
+          const date = new Date(year, month - 1, day, 12, 0, 0, 0) // Set to noon to avoid DST issues
           if (date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day) {
             return date
           }
@@ -98,7 +100,8 @@ export function parseFormattedDate(dateString: string, format: DateFormat = DEFA
         const parts = cleanDate.split('-')
         if (parts.length === 3) {
           const [year, month, day] = parts.map(Number)
-          const date = new Date(year, month - 1, day)
+          // Create date in local timezone to avoid timezone offset issues
+          const date = new Date(year, month - 1, day, 12, 0, 0, 0) // Set to noon to avoid DST issues
           if (date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day) {
             return date
           }
@@ -122,7 +125,8 @@ export function parseFormattedDate(dateString: string, format: DateFormat = DEFA
             if (monthIndex !== -1) {
               const day = parseInt(dayStr)
               const year = parseInt(yearStr)
-              const date = new Date(year, monthIndex, day)
+              // Create date in local timezone to avoid timezone offset issues
+              const date = new Date(year, monthIndex, day, 12, 0, 0, 0) // Set to noon to avoid DST issues
               if (date.getFullYear() === year && date.getMonth() === monthIndex && date.getDate() === day) {
                 return date
               }
@@ -137,7 +141,8 @@ export function parseFormattedDate(dateString: string, format: DateFormat = DEFA
             if (monthIndex !== -1) {
               const day = parseInt(dayStr)
               const year = parseInt(yearStr)
-              const date = new Date(year, monthIndex, day)
+              // Create date in local timezone to avoid timezone offset issues
+              const date = new Date(year, monthIndex, day, 12, 0, 0, 0) // Set to noon to avoid DST issues
               if (date.getFullYear() === year && date.getMonth() === monthIndex && date.getDate() === day) {
                 return date
               }

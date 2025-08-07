@@ -312,6 +312,7 @@ export function createClientColumns(columnConfig: ClientColumnConfig): ColumnDef
                       columnConfig.onStatusChange(client.id, `client_since:${newDate.toISOString()}`)
                     }
                   }}
+                  defaultMonth={date} // Preserve the month of the selected date when opening
                   disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
                   initialFocus
                   captionLayout="dropdown"

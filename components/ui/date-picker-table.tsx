@@ -61,6 +61,7 @@ export function DatePickerTable({
           mode="single"
           selected={date}
           onSelect={handleSelect}
+          defaultMonth={date} // Preserve the month of the selected date when opening
           initialFocus
           captionLayout="dropdown"
           fromYear={2020}

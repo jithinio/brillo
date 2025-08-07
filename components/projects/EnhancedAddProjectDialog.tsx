@@ -379,7 +379,7 @@ const parseDate = (dateString: string, userDateFormat?: string) => {
   if (dateString.includes('-') && dateString.length === 10) {
     // Create date in local timezone to avoid timezone issues
     const [year, month, day] = dateString.split('-').map(Number)
-    date = new Date(year, month - 1, day) // month is 0-indexed
+    date = new Date(year, month - 1, day, 12, 0, 0, 0) // month is 0-indexed, set to noon to avoid DST issues
   } else {
     // Parse other date formats
     date = new Date(dateString)
