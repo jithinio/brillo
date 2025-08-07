@@ -108,6 +108,9 @@ export function DataTableV2<TData, TValue>({
           budget: true,
           expenses: false,
           pending: false,
+          recurring_amount: false, // Hidden by default
+          hourly_rate_new: false, // Hidden by default  
+          actual_hours: false, // Hidden by default
           actions: true,
         }
         setColumnVisibility(defaults)

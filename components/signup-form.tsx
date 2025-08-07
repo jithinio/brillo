@@ -98,6 +98,13 @@ export function SignupForm({ className, ...props }: React.ComponentProps<"div">)
           <form className="p-6 md:p-8" onSubmit={handleSubmit}>
             <div className="flex flex-col gap-6">
               <div className="flex flex-col items-center text-center">
+                <div className="mb-4">
+                  <img 
+                    src="/brillo_logo.svg" 
+                    alt="Brillo Logo" 
+                    className="h-8 w-auto object-contain"
+                  />
+                </div>
                 <h1 className="text-2xl font-bold">Create your account</h1>
                 <p className="text-balance text-muted-foreground">Join Brillo and streamline your business</p>
               </div>

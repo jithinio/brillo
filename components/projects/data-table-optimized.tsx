@@ -225,6 +225,9 @@ export function OptimizedDataTable<TData, TValue>({
           budget: true,
           expenses: false,
           pending: false,
+          recurring_amount: false, // Hidden by default
+          hourly_rate_new: false, // Hidden by default  
+          actual_hours: false, // Hidden by default
           actions: true,
         }
         setColumnVisibility(defaults)
@@ -291,10 +294,10 @@ export function OptimizedDataTable<TData, TValue>({
   }
 
   const statusConfig = {
-    active: { icon: CheckCircle, label: "Active", color: "bg-green-100 text-green-800" },
-    "on-hold": { icon: Pause, label: "On Hold", color: "bg-yellow-100 text-yellow-800" },
-    completed: { icon: CheckCircle, label: "Completed", color: "bg-blue-100 text-blue-800" },
-    cancelled: { icon: XCircle, label: "Cancelled", color: "bg-red-100 text-red-800" },
+    active: { icon: CheckCircle, label: "Active", color: "bg-emerald-100 text-emerald-800" },
+    "on-hold": { icon: Pause, label: "On Hold", color: "bg-amber-100 text-amber-800" },
+    completed: { icon: CheckCircle, label: "Completed", color: "bg-slate-100 text-slate-800" },
+    cancelled: { icon: XCircle, label: "Cancelled", color: "bg-rose-100 text-rose-800" },
   }
 
   const handleStatusChange = (item: TData, newStatus: string) => {

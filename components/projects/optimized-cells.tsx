@@ -14,37 +14,37 @@ import {
   GitBranch 
 } from "lucide-react"
 
-// Status configuration
+// Status configuration with flat colors
 const statusConfig = {
   active: {
     label: "Active",
     icon: Clock,
     variant: "outline" as const,
-    iconClassName: "text-blue-500",
+    iconClassName: "text-emerald-600",
   },
   completed: {
     label: "Completed",
     icon: CheckCircle,
     variant: "outline" as const,
-    iconClassName: "text-green-500",
+    iconClassName: "text-slate-600",
   },
   on_hold: {
     label: "On Hold",
     icon: Pause,
     variant: "outline" as const,
-    iconClassName: "text-yellow-500",
+    iconClassName: "text-amber-600",
   },
   cancelled: {
     label: "Cancelled",
     icon: XCircle,
     variant: "outline" as const,
-    iconClassName: "text-gray-400 dark:text-gray-500",
+    iconClassName: "text-rose-600",
   },
   pipeline: {
     label: "Pipeline",
     icon: GitBranch,
     variant: "outline" as const,
-    iconClassName: "text-purple-500",
+    iconClassName: "text-sky-600",
   },
 }
 

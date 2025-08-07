@@ -359,11 +359,11 @@ async function fetchDatabaseMetrics(): Promise<{
     const onHoldProjects = validProjects.filter(p => p.status === 'on_hold').length
     const cancelledProjects = validProjects.filter(p => p.status === 'cancelled').length
     
-    const totalBudget = validProjects.reduce((sum, p) => sum + (p.total_budget || p.budget || 0), 0)
+    const totalBudget = validProjects.reduce((sum, p) => sum + (p.budget || p.total_budget || 0), 0)
     const totalExpenses = validProjects.reduce((sum, p) => sum + (p.expenses || 0), 0)
     const totalReceived = validProjects.reduce((sum, p) => sum + (p.payment_received || 0), 0)
     const totalPending = validProjects.reduce((sum, p) => {
-      const budget = p.total_budget || p.budget || 0
+      const budget = p.budget || p.total_budget || 0
       const received = p.payment_received || 0
       return sum + Math.max(0, budget - received)
     }, 0)
@@ -467,11 +467,11 @@ async function fetchFilteredMetrics(filters: ProjectFilters = {}): Promise<{
     const onHoldProjects = projects?.filter(p => p.status === 'on_hold').length || 0
     const cancelledProjects = projects?.filter(p => p.status === 'cancelled').length || 0
     
-    const totalBudget = projects?.reduce((sum, p) => sum + (p.total_budget || p.budget || 0), 0) || 0
+    const totalBudget = projects?.reduce((sum, p) => sum + (p.budget || p.total_budget || 0), 0) || 0
     const totalExpenses = projects?.reduce((sum, p) => sum + (p.expenses || 0), 0) || 0
     const totalReceived = projects?.reduce((sum, p) => sum + (p.payment_received || 0), 0) || 0
     const totalPending = projects?.reduce((sum, p) => {
-      const budget = p.total_budget || p.budget || 0
+      const budget = p.budget || p.total_budget || 0
       const received = p.payment_received || 0
       return sum + Math.max(0, budget - received)
     }, 0) || 0

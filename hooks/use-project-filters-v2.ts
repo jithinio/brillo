@@ -45,20 +45,20 @@ export function useProjectFiltersV2() {
     })
   }, [urlFilters, pathname, router])
 
-  // Fast debounced update for search with improved loading state
+  // Ultra-fast debounced update for search with improved loading state
   const debouncedSearchUpdate = useMemo(() => {
     return fastDebounce((searchValue: string) => {
       updateFilters({ search: searchValue })
       
-      // Ensure minimum loading duration for better UX
+      // Shorter minimum loading duration for better responsiveness
       if (searchingTimeoutRef.current) {
         clearTimeout(searchingTimeoutRef.current)
       }
       
       searchingTimeoutRef.current = setTimeout(() => {
         setIsSearching(false)
-      }, 300) // Minimum 300ms loading duration
-    }, 150) // Slightly longer debounce for better visual feedback
+      }, 100) // Reduced from 300ms to 100ms for faster feedback
+    }, 50) // Reduced from 150ms to 50ms for much faster search
   }, [updateFilters])
 
   // Immediate search update function for instant UI feedback
@@ -80,9 +80,9 @@ export function useProjectFiltersV2() {
     debouncedSearchUpdate(searchValue) // Debounced URL/API update
   }, [debouncedSearchUpdate])
 
-  // General debounced update for other filters (can be slower)
+  // Optimized debounced update for other filters
   const debouncedUpdateFilters = useMemo(
-    () => debounce(updateFilters, 200), // Slightly faster than before
+    () => debounce(updateFilters, 100), // Reduced from 200ms to 100ms for better responsiveness
     [updateFilters]
   )
 

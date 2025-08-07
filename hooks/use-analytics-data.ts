@@ -81,6 +81,7 @@ export const useAnalyticsData = (filters?: AnalyticsFilters) => {
         id,
         name,
         budget,
+        total_budget,
         revenue,
         expenses,
         payment_received,
@@ -106,7 +107,7 @@ export const useAnalyticsData = (filters?: AnalyticsFilters) => {
     }
 
     // Transform the data to match our interface and exclude lost projects
-    return (data || [])
+    const transformedData = (data || [])
       .filter(project => 
         project.status !== null && // Additional check for lost projects
         (project as any).pipeline_stage !== 'lost' // Exclude lost pipeline stage
@@ -115,6 +116,14 @@ export const useAnalyticsData = (filters?: AnalyticsFilters) => {
         ...project,
         clients: project.clients && project.clients.length > 0 ? project.clients[0] : undefined
       }))
+
+    // Check for budget data
+    const projectsWithBudgets = transformedData.filter(p => (p.budget || 0) > 0 || (p.total_budget || 0) > 0)
+    if (transformedData.length > 0 && projectsWithBudgets.length === 0) {
+      console.warn('⚠️ Analytics: No projects have budget values')
+    }
+
+    return transformedData
   }, [])
 
   // Fetch clients with project count
@@ -322,7 +331,7 @@ export const useQuickAnalytics = () => {
       if (project.status === 'on hold' || project.status === 'cancelled') {
         return sum + (project.payment_received || 0)
       }
-      return sum + (project.budget || project.revenue || 0)
+      return sum + (project.budget || project.total_budget || project.revenue || 0)
     }, 0)
 
     const totalExpenses = activeProjects.reduce((sum, project) => {

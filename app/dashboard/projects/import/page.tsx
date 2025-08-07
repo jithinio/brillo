@@ -45,10 +45,11 @@ interface ClientData {
 
 const PROJECT_FIELDS = [
   { key: 'name', label: 'Project Name', required: true },
+  { key: 'total_budget', label: 'Total Budget', required: false },
+  { key: 'budget', label: 'Budget', required: false },
   { key: 'status', label: 'Status', required: false },
   { key: 'start_date', label: 'Start Date', required: false },
   { key: 'due_date', label: 'Due Date', required: false },
-  { key: 'budget', label: 'Budget', required: false },
   { key: 'description', label: 'Description', required: false },
   
   // Financial tracking fields
@@ -260,7 +261,7 @@ export default function ProjectImportPage() {
   const { usage, canCreate, getOverLimitStatus } = useSubscription()
   const fileInputRef = useRef<HTMLInputElement>(null)
   
-  const [step, setStep] = useState<'upload' | 'mapping' | 'client-confirm' | 'importing' | 'complete'>('upload')
+  const [step, setStep] = useState<'upload' | 'mapping' | 'client-confirm' | 'duplicate-check' | 'importing' | 'complete'>('upload')
   const [csvData, setCsvData] = useState<CsvData | null>(null)
   const [fieldMappings, setFieldMappings] = useState<FieldMapping[]>([])
   const [clientMappings, setClientMappings] = useState<FieldMapping[]>([])
@@ -268,6 +269,7 @@ export default function ProjectImportPage() {
   const [importClients, setImportClients] = useState(false)
   const [detectedClients, setDetectedClients] = useState<ClientData[]>([])
   const [progress, setProgress] = useState(0)
+  const [currentOperation, setCurrentOperation] = useState<string>('')
   const [importResults, setImportResults] = useState<{ 
     projects: { success: number; errors: number; total: number }
     clients: { success: number; errors: number; total: number }
@@ -276,6 +278,17 @@ export default function ProjectImportPage() {
     clients: { success: 0, errors: 0, total: 0 }
   })
   const [errors, setErrors] = useState<string[]>([])
+  
+  // Cache to prevent duplicate client lookups within the same import session
+  const [clientCache, setClientCache] = useState<Map<string, string>>(new Map())
+  
+  // Duplicate detection state
+  const [duplicateInfo, setDuplicateInfo] = useState<{
+    clients: { existing: number; new: number; duplicates: string[] }
+    projects: { duplicates: string[] }
+  }>({ clients: { existing: 0, new: 0, duplicates: [] }, projects: { duplicates: [] } })
+  const [allowDuplicates, setAllowDuplicates] = useState(false)
+  const [isAnalyzingDuplicates, setIsAnalyzingDuplicates] = useState(false)
 
   // Helper function to parse various date formats
   const parseFlexibleDate = (dateString: string): string | null => {
@@ -672,9 +685,20 @@ export default function ProjectImportPage() {
             (normalizedHeader === 'status' && field.key === 'status') ||
             (normalizedHeader === 'startdate' && field.key === 'start_date') ||
             (normalizedHeader === 'enddate' && field.key === 'due_date') ||
+            // Total Budget mappings (more comprehensive terms)
+            (normalizedHeader === 'totalbudget' && field.key === 'total_budget') ||
+            (normalizedHeader === 'total_budget' && field.key === 'total_budget') ||
+            (normalizedHeader === 'totalamount' && field.key === 'total_budget') ||
+            (normalizedHeader === 'totalcost' && field.key === 'total_budget') ||
+            (normalizedHeader === 'totalvalue' && field.key === 'total_budget') ||
+            (normalizedHeader === 'overallbudget' && field.key === 'total_budget') ||
+            
+            // Budget mappings (simpler terms)
             (normalizedHeader === 'budget' && field.key === 'budget') ||
             (normalizedHeader === 'amount' && field.key === 'budget') ||
             (normalizedHeader === 'cost' && field.key === 'budget') ||
+            (normalizedHeader === 'price' && field.key === 'budget') ||
+            (normalizedHeader === 'value' && field.key === 'budget') ||
             
             // Financial tracking fields
             (normalizedHeader === 'expenses' && field.key === 'expenses') ||
@@ -785,6 +809,10 @@ export default function ProjectImportPage() {
     const hasClientFields = clientMappingResults.some(m => m.mapped)
     setHasClientData(hasClientFields)
     
+    // Debug: Ensure budget field is available
+    console.log('Available project fields:', PROJECT_FIELDS.map(f => `${f.key}: ${f.label}`))
+    console.log('Generated mappings:', projectMappings.map(m => `${m.csvField} -> ${m.dbField}`))
+    
     setFieldMappings(projectMappings)
     setClientMappings(clientMappingResults)
     setStep('mapping')
@@ -887,7 +915,7 @@ export default function ProjectImportPage() {
     return true
   }
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!validateMappings() || !csvData) return
 
     if (hasClientData) {
@@ -932,7 +960,121 @@ export default function ProjectImportPage() {
       setDetectedClients(clients)
       setStep('client-confirm')
     } else {
+      await analyzeDuplicates()
+    }
+  }
+
+  const analyzeDuplicates = async () => {
+    if (!csvData || !isSupabaseConfigured()) {
       handleImport()
+      return
+    }
+
+    setIsAnalyzingDuplicates(true)
+    setCurrentOperation('Analyzing for duplicates...')
+
+    try {
+      const mappedProjectFields = fieldMappings.filter(m => m.mapped)
+      const mappedClientFields = clientMappings.filter(m => m.mapped)
+      
+      // Extract all unique project names and client data
+      const projectNames = new Set<string>()
+      const uniqueClients = new Map<string, any>()
+      
+      csvData.rows.forEach(row => {
+        // Collect project names
+        const projectData: any = {}
+        mappedProjectFields.forEach(mapping => {
+          const csvIndex = csvData.headers.indexOf(mapping.csvField)
+          if (csvIndex !== -1) {
+            projectData[mapping.dbField] = row[csvIndex] || null
+          }
+        })
+        
+        if (projectData.name) {
+          projectNames.add(projectData.name)
+        }
+        
+        // Collect unique clients
+        if (importClients && hasClientData) {
+          const clientData: any = {}
+          mappedClientFields.forEach(mapping => {
+            const csvIndex = csvData.headers.indexOf(mapping.csvField)
+            if (csvIndex !== -1) {
+              const value = row[csvIndex] || null
+              if (mapping.dbField === 'client_name') {
+                clientData.name = value
+              } else if (mapping.dbField === 'client_email') {
+                clientData.email = value
+              }
+            }
+          })
+
+          if (clientData.name) {
+            const clientKey = clientData.email ? `${clientData.name}|${clientData.email}` : clientData.name
+            uniqueClients.set(clientKey, clientData)
+          }
+        }
+      })
+
+      const duplicateClients: string[] = []
+      const duplicateProjects: string[] = []
+      
+      // Note: For projects, we now check for exact duplicates (name + client + budget) during import
+      // So we'll skip the bulk duplicate check here as it's not accurate enough
+      // Projects with same name but different amounts should be allowed
+      if (projectNames.size > 0) {
+        setCurrentOperation(`Note: Project duplicates will be checked individually during import...`)
+        // We could do a more sophisticated check here, but it's complex with client/budget combinations
+        // Better to let the import process handle it with exact matching
+      }
+
+      // Batch check clients
+      if (uniqueClients.size > 0) {
+        setCurrentOperation(`Checking ${uniqueClients.size} clients for duplicates...`)
+        const clientNames = Array.from(uniqueClients.values()).map(c => c.name)
+        
+        // Split into chunks of 1000 for database query limits
+        for (let i = 0; i < clientNames.length; i += 1000) {
+          const chunk = clientNames.slice(i, i + 1000)
+          try {
+            const { data: existingClients } = await supabase
+              .from('clients')
+              .select('name')
+              .in('name', chunk)
+
+            if (existingClients) {
+              existingClients.forEach(client => {
+                duplicateClients.push(client.name)
+              })
+            }
+          } catch (error) {
+            console.error('Error checking client duplicates:', error)
+          }
+        }
+      }
+
+      setDuplicateInfo({
+        clients: { 
+          existing: duplicateClients.length, 
+          new: uniqueClients.size - duplicateClients.length, 
+          duplicates: duplicateClients 
+        },
+        projects: { duplicates: duplicateProjects }
+      })
+
+      if (duplicateClients.length > 0 || duplicateProjects.length > 0) {
+        setStep('duplicate-check')
+      } else {
+        handleImport()
+      }
+    } catch (error) {
+      console.error('Error during duplicate analysis:', error)
+      // If duplicate analysis fails, just proceed with import
+      handleImport()
+    } finally {
+      setIsAnalyzingDuplicates(false)
+      setCurrentOperation('')
     }
   }
 
@@ -941,17 +1083,45 @@ export default function ProjectImportPage() {
 
     setStep('importing')
     setProgress(0)
+    setCurrentOperation('Preparing import...')
     setErrors([])
+    setClientCache(new Map()) // Clear client cache for new import
 
     const mappedProjectFields = fieldMappings.filter(m => m.mapped)
     const mappedClientFields = clientMappings.filter(m => m.mapped)
     const totalRows = csvData.rows.length
+    
+    // Calculate total operations for accurate progress
+    const hasClientOperations = importClients && hasClientData
+    const operationsPerRow = hasClientOperations ? 2 : 1 // Client + Project or just Project
+    const totalOperations = totalRows * operationsPerRow
     
     console.log('Starting import with mappings:')
     console.log('Project fields:', mappedProjectFields)
     console.log('Client fields:', mappedClientFields)
     console.log('CSV headers:', csvData.headers)
     console.log('Total rows to import:', totalRows)
+    
+    // Validation: Check for required mappings
+    const nameMapping = mappedProjectFields.find(m => m.dbField === 'name')
+    if (!nameMapping) {
+      const error = 'Project name field is required but not mapped'
+      console.error(error)
+      toast.error(error)
+      setErrors([error])
+      setStep('mapping')
+      return
+    }
+    
+    // Validation: Check if name mapping field exists in CSV
+    if (csvData.headers.indexOf(nameMapping.csvField) === -1) {
+      const error = `Mapped field "${nameMapping.csvField}" not found in CSV headers`
+      console.error(error)
+      toast.error(error)
+      setErrors([error])
+      setStep('mapping')
+      return
+    }
     
     // Debug: Show first row of data to understand the structure
     console.log('First row of CSV data:', csvData.rows[0])
@@ -983,10 +1153,31 @@ export default function ProjectImportPage() {
     let clientErrors = 0
     const errorList: string[] = []
     const demoClientsMap = new Map<string, string>() // Track demo clients by name to avoid duplicates
+    let completedOperations = 0
 
     for (let i = 0; i < csvData.rows.length; i++) {
       const row = csvData.rows[i]
+      
+      // Update current operation status
+      setCurrentOperation(`Processing row ${i + 1} of ${totalRows}...`)
       console.log(`Processing row ${i + 1}:`, row)
+      
+      // Validation: Check if row has enough columns
+      if (!row || row.length === 0) {
+        console.warn(`Row ${i + 1} is empty, skipping...`)
+        projectErrors++
+        errorList.push(`Row ${i + 1}: Empty row`)
+        continue
+      }
+      
+      // Validation: Check if row has the expected number of columns
+      if (row.length < csvData.headers.length) {
+        console.warn(`Row ${i + 1} has ${row.length} columns but expected ${csvData.headers.length}, padding with empty values`)
+        // Pad the row with empty strings to match header count
+        while (row.length < csvData.headers.length) {
+          row.push('')
+        }
+      }
       
       try {
         let clientId: string | null = null
@@ -1024,22 +1215,73 @@ export default function ProjectImportPage() {
           console.log('Client data to import:', clientData)
 
           if (clientData.name) {
-            if (isSupabaseConfigured()) {
+            setCurrentOperation(`Processing client: ${clientData.name}`)
+            
+            // Check cache first to avoid duplicate lookups within the same import
+            const cacheKey = clientData.email ? `${clientData.name}|${clientData.email}` : clientData.name
+            const cachedClientId = clientCache.get(cacheKey)
+            
+            if (cachedClientId) {
+              clientId = cachedClientId
+              console.log(`Using cached client ID for "${clientData.name}": ${clientId}`)
+            } else if (isSupabaseConfigured()) {
               try {
-                const { data: clientResult, error: clientError } = await supabase
+                // Enhanced duplicate detection - check by name, email, or company
+                let clientResult = null
+                let clientError = null
+
+                // Check for existing client by name first, then by email
+                console.log(`Checking for existing client: name="${clientData.name}", email="${clientData.email || 'none'}"`)
+                
+                // First check by name
+                let { data: nameResult, error: nameError } = await supabase
                   .from('clients')
-                  .select('id, name') // Select existing clients to check for duplicates
+                  .select('id, name, email')
                   .eq('name', clientData.name)
+
+                if (nameError) {
+                  console.error('Client name lookup error:', nameError)
+                  throw nameError
+                }
+
+                // If found by name, use it
+                if (nameResult && nameResult.length > 0) {
+                  clientResult = nameResult
+                  clientError = null
+                } else if (clientData.email) {
+                  // If not found by name but have email, check by email
+                  const { data: emailResult, error: emailError } = await supabase
+                    .from('clients')
+                    .select('id, name, email')
+                    .eq('email', clientData.email)
+
+                  if (emailError) {
+                    console.error('Client email lookup error:', emailError)
+                    throw emailError
+                  }
+
+                  clientResult = emailResult
+                  clientError = null
+                } else {
+                  // No email and no name match
+                  clientResult = null
+                  clientError = null
+                }
 
                 if (clientError) throw clientError
                 
-                if (clientResult && clientResult.length > 0) {
-                  // If client already exists, use its ID
-                  clientId = String(clientResult[0].id)
+                if (clientResult && clientResult.length > 0 && !allowDuplicates) {
+                  // If client already exists and we're not allowing duplicates, use its ID
+                  clientId = clientResult[0].id ? String(clientResult[0].id) : null
                   clientSuccess++
                   console.log(`Client "${clientData.name}" already exists with ID: ${clientId}`)
+                  
+                  // Cache the result for future rows (only if valid ID)
+                  if (clientId) {
+                    setClientCache(prev => new Map(prev.set(cacheKey, clientId)))
+                  }
                 } else {
-                  // If client does not exist, insert new client
+                  // If client does not exist OR we're allowing duplicates, insert new client
                   const { data: newClientResult, error: newClientError } = await supabase
                     .from('clients')
                     .insert([{
@@ -1058,10 +1300,21 @@ export default function ProjectImportPage() {
                   if (newClientError) throw newClientError
                   
                   if (newClientResult && newClientResult.length > 0) {
-                    clientId = String(newClientResult[0].id)
+                    clientId = newClientResult[0].id ? String(newClientResult[0].id) : null
                     clientSuccess++
                     console.log('New client created with ID:', clientId)
+                    
+                    // Cache the newly created client (only if valid ID)
+                    if (clientId) {
+                      setClientCache(prev => new Map(prev.set(cacheKey, clientId)))
+                    }
                   }
+                }
+                
+                // Update progress after client processing
+                if (hasClientOperations) {
+                  completedOperations++
+                  setProgress(Math.round((completedOperations / totalOperations) * 100))
                 }
               } catch (error) {
                 console.error('Client import error:', error)
@@ -1085,6 +1338,10 @@ export default function ProjectImportPage() {
         }
 
         // Import project
+        const nameFieldIndex = csvData.headers.indexOf(mappedProjectFields.find(m => m.dbField === 'name')?.csvField || '')
+        const projectName = nameFieldIndex >= 0 ? row[nameFieldIndex] || 'Unknown Project' : 'Unknown Project'
+        setCurrentOperation(`Processing project: ${projectName}`)
+        
         const projectData: any = {}
         
         mappedProjectFields.forEach(mapping => {
@@ -1101,7 +1358,7 @@ export default function ProjectImportPage() {
             }
             
             // Handle special field types
-            if (mapping.dbField === 'budget' || mapping.dbField === 'hourly_rate' || 
+            if (mapping.dbField === 'budget' || mapping.dbField === 'total_budget' || mapping.dbField === 'hourly_rate' || 
                 mapping.dbField === 'expenses' || mapping.dbField === 'revenue' || 
                 mapping.dbField === 'invoice_amount' || mapping.dbField === 'payment_received' || 
                 mapping.dbField === 'payment_pending') {
@@ -1156,8 +1413,9 @@ export default function ProjectImportPage() {
           throw new Error('Project name is required')
         }
 
-        // Auto-calculate pending amount: budget - received = pending
+        // Handle both budget fields - use whichever is provided
         const budget = projectData.budget || 0
+        const totalBudget = projectData.total_budget || 0
         const received = projectData.payment_received || 0
         const autoPending = Math.max(0, budget - received) // Ensure it's not negative
         
@@ -1170,6 +1428,27 @@ export default function ProjectImportPage() {
         }
 
         if (isSupabaseConfigured()) {
+          // Check for existing project with same name, client, and key details
+          // Only skip if it's truly identical (name + client + budget)
+          const safeClientId = (clientId && clientId !== 'null') ? clientId : null
+          const { data: existingProject, error: existingProjectError } = await supabase
+            .from('projects')
+            .select('id, name, budget, client_id')
+            .eq('name', projectData.name)
+            .eq('client_id', safeClientId)
+            .eq('budget', budget)
+
+          if (existingProjectError) {
+            throw existingProjectError
+          }
+
+          if (existingProject && existingProject.length > 0 && !allowDuplicates) {
+            console.log(`⚠️ Project "${projectData.name}" with identical details already exists for this client, skipping...`)
+            projectErrors++
+            errorList.push(`Row ${i + 1}: Project "${projectData.name}" with identical budget (${budget}) already exists for this client (skipped)`)
+            continue
+          }
+
           // Real database import
           const projectInsertData = {
             name: projectData.name,
@@ -1177,8 +1456,9 @@ export default function ProjectImportPage() {
             start_date: projectData.start_date,
             due_date: projectData.due_date,
             budget: budget,
+            total_budget: totalBudget,
             description: projectData.description || null,
-            client_id: clientId || null,
+            client_id: (clientId && clientId !== 'null') ? clientId : null,
             
             // Financial tracking fields
             expenses: projectData.expenses || 0,
@@ -1211,6 +1491,10 @@ export default function ProjectImportPage() {
           
           projectSuccess++
           console.log('Project imported successfully to database')
+          
+          // Update progress after project processing
+          completedOperations++
+          setProgress(Math.round((completedOperations / totalOperations) * 100))
         } else {
           // Demo mode - add to mock data (this won't persist page refresh)
           const newProject = {
@@ -1220,6 +1504,7 @@ export default function ProjectImportPage() {
             start_date: projectData.start_date,
             due_date: projectData.due_date,
             budget: budget,
+            total_budget: totalBudget,
             description: projectData.description || null,
             
             // Financial tracking fields
@@ -1252,16 +1537,52 @@ export default function ProjectImportPage() {
           
           projectSuccess++
           console.log('Project imported successfully to demo storage')
+          
+          // Update progress after project processing (demo mode)
+          completedOperations++
+          setProgress(Math.round((completedOperations / totalOperations) * 100))
         }
         
       } catch (error) {
         projectErrors++
-        const errorMessage = `Row ${i + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`
+        
+        // Enhanced error handling with detailed information
+        let errorMessage = `Row ${i + 1}: `
+        
+        if (error instanceof Error) {
+          errorMessage += error.message
+          console.error('Import error details:', {
+            row: i + 1,
+            error: error.message,
+            stack: error.stack,
+            rowData: row
+          })
+        } else if (typeof error === 'string') {
+          errorMessage += error
+          console.error('Import string error:', { row: i + 1, error, rowData: row })
+        } else if (error && typeof error === 'object') {
+          // Handle Supabase/database errors
+          const dbError = error as any
+          if (dbError.message) {
+            errorMessage += `Database error: ${dbError.message}`
+            if (dbError.details) errorMessage += ` - ${dbError.details}`
+            if (dbError.hint) errorMessage += ` (Hint: ${dbError.hint})`
+          } else {
+            errorMessage += `Object error: ${JSON.stringify(error)}`
+          }
+          console.error('Import object error:', { row: i + 1, error, rowData: row })
+        } else {
+          errorMessage += `Unknown error type: ${typeof error} - ${String(error)}`
+          console.error('Import unknown error:', { row: i + 1, error, errorType: typeof error, rowData: row })
+        }
+        
         errorList.push(errorMessage)
         console.error('Import error:', errorMessage)
+        
+        // Update progress even on error (to maintain accurate tracking)
+        completedOperations++
+        setProgress(Math.round((completedOperations / totalOperations) * 100))
       }
-
-      setProgress(Math.round(((i + 1) / totalRows) * 100))
     }
 
     console.log('Import completed. Results:', {
@@ -1272,6 +1593,8 @@ export default function ProjectImportPage() {
       errorList
     })
 
+    setCurrentOperation('Import completed!')
+    setProgress(100)
     setImportResults({
       projects: { success: projectSuccess, errors: projectErrors, total: totalRows },
       clients: { success: clientSuccess, errors: clientErrors, total: importClients ? detectedClients.length : 0 }
@@ -1592,11 +1915,59 @@ Data Analytics Platform,on_hold,2024-02-15,2024-05-15,18000,3000,15000,USD,parti
                 <Button variant="outline" onClick={handleStartOver}>
                   Start Over
                 </Button>
-                <Button onClick={handleNext}>
-                  Next
-                </Button>
+                <div className="flex gap-2">
+                  {!hasClientData && (
+                    <Button 
+                      variant="outline" 
+                      onClick={handleImport}
+                      disabled={isAnalyzingDuplicates}
+                    >
+                      Skip Duplicate Check
+                    </Button>
+                  )}
+                  <Button 
+                    onClick={handleNext}
+                    disabled={isAnalyzingDuplicates}
+                  >
+                    {isAnalyzingDuplicates && !hasClientData ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Checking Duplicates...
+                      </>
+                    ) : (
+                      'Next'
+                    )}
+                  </Button>
+                </div>
               </div>
             </div>
+          )}
+
+          {/* Duplicate Analysis Progress */}
+          {isAnalyzingDuplicates && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Analyzing for Duplicates
+                </CardTitle>
+                <CardDescription>
+                  Checking your data against existing records to prevent duplicates...
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {currentOperation && (
+                  <div className="text-sm text-gray-600 flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {currentOperation}
+                  </div>
+                )}
+                <div className="text-sm text-gray-500">
+                  This process is faster than checking during import and helps prevent database conflicts.
+                  You can skip this check if you prefer to import immediately.
+                </div>
+              </CardContent>
+            </Card>
           )}
 
           {/* Client Confirmation Step */}
@@ -1642,12 +2013,153 @@ Data Analytics Platform,on_hold,2024-02-15,2024-05-15,18000,3000,15000,USD,parti
                   </div>
                 )}
 
-                <div className="flex justify-between">
+                <div className="flex items-center justify-between">
                   <Button variant="outline" onClick={() => setStep('mapping')}>
                     Back
                   </Button>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      onClick={handleImport}
+                      disabled={isAnalyzingDuplicates}
+                    >
+                      Skip Duplicate Check
+                    </Button>
+                    <Button 
+                      onClick={async () => await analyzeDuplicates()}
+                      disabled={isAnalyzingDuplicates}
+                    >
+                      {isAnalyzingDuplicates ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Checking Duplicates...
+                        </>
+                      ) : (
+                        'Continue'
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Duplicate Check Step */}
+          {step === 'duplicate-check' && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                  Duplicate Records Detected
+                </CardTitle>
+                <CardDescription>
+                  We found existing records that match your import data. Please review and decide how to proceed.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {duplicateInfo.projects.duplicates.length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="font-medium flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4 text-orange-500" />
+                      Duplicate Projects ({duplicateInfo.projects.duplicates.length})
+                    </h3>
+                    <div className="bg-orange-50 p-3 rounded-md">
+                      <p className="text-sm text-orange-800 mb-2">
+                        These projects already exist in your database:
+                      </p>
+                      <ul className="text-sm text-orange-700 space-y-1">
+                        {duplicateInfo.projects.duplicates.slice(0, 5).map((project, idx) => (
+                          <li key={idx} className="flex items-center gap-2">
+                            <span className="w-1 h-1 bg-orange-500 rounded-full"></span>
+                            {project}
+                          </li>
+                        ))}
+                        {duplicateInfo.projects.duplicates.length > 5 && (
+                          <li className="text-orange-600 italic">
+                            ...and {duplicateInfo.projects.duplicates.length - 5} more
+                          </li>
+                        )}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+
+                {duplicateInfo.clients.duplicates.length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="font-medium flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4 text-blue-500" />
+                      Duplicate Clients ({duplicateInfo.clients.duplicates.length})
+                    </h3>
+                    <div className="bg-blue-50 p-3 rounded-md">
+                      <p className="text-sm text-blue-800 mb-2">
+                        These clients already exist in your database:
+                      </p>
+                      <ul className="text-sm text-blue-700 space-y-1">
+                        {duplicateInfo.clients.duplicates.slice(0, 5).map((client, idx) => (
+                          <li key={idx} className="flex items-center gap-2">
+                            <span className="w-1 h-1 bg-blue-500 rounded-full"></span>
+                            {client}
+                          </li>
+                        ))}
+                        {duplicateInfo.clients.duplicates.length > 5 && (
+                          <li className="text-blue-600 italic">
+                            ...and {duplicateInfo.clients.duplicates.length - 5} more
+                          </li>
+                        )}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-3">
+                  <h3 className="font-medium">How would you like to proceed?</h3>
+                  <div className="space-y-2">
+                    <div className="flex items-start space-x-3">
+                      <input
+                        type="radio"
+                        id="skip-duplicates"
+                        name="duplicate-action"
+                        checked={!allowDuplicates}
+                        onChange={() => setAllowDuplicates(false)}
+                        className="mt-1"
+                      />
+                      <label htmlFor="skip-duplicates" className="text-sm">
+                        <span className="font-medium text-green-600">Skip duplicates (Recommended)</span>
+                        <p className="text-gray-600 mt-1">
+                          Only import new records. Existing records will be left unchanged.
+                        </p>
+                      </label>
+                    </div>
+                    <div className="flex items-start space-x-3">
+                      <input
+                        type="radio"
+                        id="allow-duplicates"
+                        name="duplicate-action"
+                        checked={allowDuplicates}
+                        onChange={() => setAllowDuplicates(true)}
+                        className="mt-1"
+                      />
+                      <label htmlFor="allow-duplicates" className="text-sm">
+                        <span className="font-medium text-orange-600">Create duplicates anyway</span>
+                        <p className="text-gray-600 mt-1">
+                          Import all records, even if they create duplicates.
+                        </p>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-between">
+                  <Button variant="outline" onClick={() => setStep(importClients ? 'client-confirm' : 'mapping')}>
+                    Back
+                  </Button>
                   <Button onClick={handleImport}>
-                    Import Projects {importClients && `& ${detectedClients.length} Clients`}
+                    Continue Import
+                    {!allowDuplicates && (
+                      <span className="ml-2 text-xs opacity-75">
+                        (Skip {duplicateInfo.projects.duplicates.length + duplicateInfo.clients.duplicates.length} duplicates)
+                      </span>
+                    )}
                   </Button>
                 </div>
               </CardContent>
@@ -1670,6 +2182,12 @@ Data Analytics Platform,on_hold,2024-02-15,2024-05-15,18000,3000,15000,USD,parti
                     <span>{progress}%</span>
                   </div>
                   <Progress value={progress} className="w-full" />
+                  {currentOperation && (
+                    <div className="text-sm text-gray-600 mt-2 flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      {currentOperation}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

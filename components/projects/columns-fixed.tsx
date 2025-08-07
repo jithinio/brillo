@@ -58,6 +58,12 @@ export type Project = {
   expenses: number | null
   received: number | null
   pending: number | null
+  recurring_amount?: number | null
+  hourly_rate?: number | null
+  hourly_rate_new?: number | null
+  actual_hours?: number | null
+  total_hours_logged?: number | null
+  estimated_hours?: number | null
   created_at: string
   updated_at: string
   clients?: {
@@ -90,37 +96,37 @@ const COLUMN_WIDTHS = {
   actions: 80,    // Fixed width for actions
 } as const
 
-// Status configuration with consistent styling
+// Status configuration with flat colors
 const STATUS_CONFIG = {
   active: {
     label: "Active",
     icon: Activity,
     variant: "default" as const,
-    className: "bg-green-100 text-green-800 hover:bg-green-200",
+    className: "bg-emerald-100 text-emerald-800 hover:bg-emerald-200",
   },
   pipeline: {
     label: "Pipeline", 
     icon: GitBranch,
     variant: "secondary" as const,
-    className: "bg-blue-100 text-blue-800 hover:bg-blue-200",
+    className: "bg-sky-100 text-sky-800 hover:bg-sky-200",
   },
   completed: {
     label: "Completed",
     icon: CheckCircle,
     variant: "outline" as const,
-    className: "bg-gray-100 text-gray-800 hover:bg-gray-200",
+    className: "bg-slate-100 text-slate-800 hover:bg-slate-200",
   },
   on_hold: {
     label: "On Hold",
     icon: Pause,
     variant: "secondary" as const,
-    className: "bg-yellow-100 text-yellow-800 hover:bg-yellow-200",
+    className: "bg-amber-100 text-amber-800 hover:bg-amber-200",
   },
   cancelled: {
     label: "Cancelled",
     icon: XCircle,
     variant: "destructive" as const,
-    className: "bg-red-100 text-red-800 hover:bg-red-200",
+    className: "bg-rose-100 text-rose-800 hover:bg-rose-200",
   },
 } as const
 
@@ -409,15 +415,15 @@ export function createFixedColumns(actions: ColumnActions): ColumnDef<Project>[]
       ),
       cell: ({ row }) => {
         const projectType = row.original.project_type || 'fixed'
-        const config = {
-          fixed: { label: 'Fixed', color: 'bg-green-50 text-green-700 ring-green-600/20' },
-          recurring: { label: 'Recurring', color: 'bg-blue-50 text-blue-700 ring-blue-600/20' },
-          hourly: { label: 'Hourly', color: 'bg-purple-50 text-purple-700 ring-purple-600/20' },
-        }[projectType]
+                  const config = {
+            fixed: { label: 'Fixed', color: 'bg-emerald-100 text-emerald-800 ring-emerald-700/20' },
+            recurring: { label: 'Recurring', color: 'bg-sky-100 text-sky-800 ring-sky-700/20' },
+            hourly: { label: 'Hourly', color: 'bg-violet-100 text-violet-800 ring-violet-700/20' },
+          }[projectType]
         
         return (
           <div style={{ width: '100px' }}>
-            <Badge variant="outline" className={`${config.color} border-0 ring-1 ring-inset text-xs`}>
+            <Badge variant="outline" className={`${config.color} border-0 ring-1 ring-inset text-xs font-medium`}>
               {config.label}
             </Badge>
           </div>

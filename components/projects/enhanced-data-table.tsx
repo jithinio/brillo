@@ -70,24 +70,27 @@ const defaultColumns: EnhancedColumn[] = [
   { id: 'expenses', label: 'Expenses', width: 140, visible: true, aggregation: 'sum', format: 'currency', sortable: true },
   { id: 'received', label: 'Received', width: 140, visible: true, aggregation: 'sum', format: 'currency', sortable: true },
   { id: 'pending', label: 'Pending', width: 140, visible: true, aggregation: 'sum', format: 'currency', sortable: true },
+  { id: 'recurring_amount', label: 'Recurring Amount', width: 160, visible: false, aggregation: 'sum', format: 'currency', sortable: true },
+  { id: 'hourly_rate_new', label: 'Hourly Rate', width: 120, visible: false, aggregation: 'avg', format: 'currency', sortable: true },
+  { id: 'actual_hours', label: 'Actual Hours', width: 120, visible: false, aggregation: 'sum', format: 'number', sortable: true },
   { id: 'start_date', label: 'Start Date', width: 140, visible: true, format: 'date', sortable: true },
   { id: 'due_date', label: 'Due Date', width: 140, visible: true, format: 'date', sortable: true },
 ]
 
-// Status configuration
+// Status configuration with flat colors
 const STATUS_CONFIG = {
-  active: { label: 'Active', color: 'bg-green-50 text-green-700 ring-green-600/20', dot: 'bg-green-600' },
-  pipeline: { label: 'Pipeline', color: 'bg-blue-50 text-blue-700 ring-blue-600/20', dot: 'bg-blue-600' },
-  completed: { label: 'Completed', color: 'bg-gray-50 text-gray-700 ring-gray-600/20', dot: 'bg-gray-600' },
-  on_hold: { label: 'On Hold', color: 'bg-amber-50 text-amber-700 ring-amber-600/20', dot: 'bg-amber-600' },
-  cancelled: { label: 'Cancelled', color: 'bg-red-50 text-red-700 ring-red-600/20', dot: 'bg-red-600' },
+  active: { label: 'Active', color: 'bg-emerald-100 text-emerald-800 ring-emerald-700/20', dot: 'bg-emerald-700' },
+  pipeline: { label: 'Pipeline', color: 'bg-sky-100 text-sky-800 ring-sky-700/20', dot: 'bg-sky-700' },
+  completed: { label: 'Completed', color: 'bg-slate-100 text-slate-800 ring-slate-700/20', dot: 'bg-slate-700' },
+  on_hold: { label: 'On Hold', color: 'bg-amber-100 text-amber-800 ring-amber-700/20', dot: 'bg-amber-700' },
+  cancelled: { label: 'Cancelled', color: 'bg-rose-100 text-rose-800 ring-rose-700/20', dot: 'bg-rose-700' },
 } as const
 
-// Project type configuration
+// Project type configuration with flat colors
 const PROJECT_TYPE_CONFIG = {
-  fixed: { label: 'Fixed', color: 'bg-green-50 text-green-700 ring-green-600/20' },
-  recurring: { label: 'Recurring', color: 'bg-blue-50 text-blue-700 ring-blue-600/20' },
-  hourly: { label: 'Hourly', color: 'bg-purple-50 text-purple-700 ring-purple-600/20' },
+  fixed: { label: 'Fixed', color: 'bg-emerald-100 text-emerald-800 ring-emerald-700/20' },
+  recurring: { label: 'Recurring', color: 'bg-sky-100 text-sky-800 ring-sky-700/20' },
+  hourly: { label: 'Hourly', color: 'bg-violet-100 text-violet-800 ring-violet-700/20' },
 } as const
 
 // Custom hook for infinite scroll with intersection observer

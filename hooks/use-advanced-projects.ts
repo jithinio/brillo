@@ -168,11 +168,11 @@ const fetchProjects = async (filters: ProjectFilters = {}): Promise<ProjectsResp
     completedProjects: transformedProjects.filter(p => p.status === 'completed').length,
     onHoldProjects: transformedProjects.filter(p => p.status === 'on_hold').length,
     cancelledProjects: transformedProjects.filter(p => p.status === 'cancelled').length,
-    totalBudget: transformedProjects.reduce((sum, p) => sum + (p.budget || 0), 0),
+    totalBudget: transformedProjects.reduce((sum, p) => sum + (p.budget || p.total_budget || 0), 0),
     totalExpenses: transformedProjects.reduce((sum, p) => sum + (p.expenses || 0), 0),
     totalReceived: transformedProjects.reduce((sum, p) => sum + (p.received || 0), 0),
     totalPending: transformedProjects.reduce((sum, p) => {
-      const budget = p.budget || 0
+      const budget = p.budget || p.total_budget || 0
       const received = p.received || 0
       return sum + Math.max(0, budget - received)
     }, 0)

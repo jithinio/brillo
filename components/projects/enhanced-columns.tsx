@@ -31,19 +31,19 @@ function ProjectTypeIndicator({ project }: { project: EnhancedProject }) {
       icon: DollarSign,
       label: "Fixed",
       variant: "default" as const,
-      className: "bg-blue-100 text-blue-800 hover:bg-blue-200"
+      className: "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
     },
     recurring: {
       icon: Repeat,
       label: "Recurring",
       variant: "secondary" as const,
-      className: "bg-green-100 text-green-800 hover:bg-green-200"
+      className: "bg-sky-100 text-sky-800 hover:bg-sky-200"
     },
     hourly: {
       icon: Clock,
       label: "Hourly",
       variant: "outline" as const,
-      className: "bg-purple-100 text-purple-800 hover:bg-purple-200"
+      className: "bg-violet-100 text-violet-800 hover:bg-violet-200"
     }
   }
 
@@ -51,8 +51,8 @@ function ProjectTypeIndicator({ project }: { project: EnhancedProject }) {
   const Icon = config.icon
 
   return (
-    <Badge variant={config.variant} className={config.className}>
-      <Icon className="h-3 w-3 mr-1" />
+    <Badge variant={config.variant} className={`${config.className} text-xs font-medium`}>
+      <Icon className="h-3 w-3 mr-1.5" />
       {config.label}
     </Badge>
   )
@@ -106,27 +106,27 @@ function ProjectProgress({ project }: { project: EnhancedProject }) {
     active: {
       label: "Active",
       variant: "default" as const,
-      className: "bg-green-100 text-green-800"
+      className: "bg-emerald-100 text-emerald-800"
     },
     completed: {
       label: "Completed",
       variant: "secondary" as const,
-      className: "bg-gray-100 text-gray-800"
+      className: "bg-slate-100 text-slate-800"
     },
     on_hold: {
       label: "On Hold",
       variant: "secondary" as const,
-      className: "bg-yellow-100 text-yellow-800"
+      className: "bg-amber-100 text-amber-800"
     },
     cancelled: {
       label: "Cancelled",
       variant: "destructive" as const,
-      className: "bg-red-100 text-red-800"
+      className: "bg-rose-100 text-rose-800"
     },
     pipeline: {
       label: "Pipeline",
       variant: "outline" as const,
-      className: "bg-blue-100 text-blue-800"
+      className: "bg-sky-100 text-sky-800"
     }
   }
 

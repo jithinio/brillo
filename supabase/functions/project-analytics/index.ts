@@ -292,7 +292,7 @@ function calculatePerformanceMetrics(projects: any[]) {
   
   // Budget accuracy
   const budgetAccuracies = projectsWithBudget.map(p => {
-    const budget = p.total_budget || p.budget || 0
+    const budget = p.budget || p.total_budget || 0
     const variance = Math.abs(budget - p.expenses) / budget
     return Math.max(0, 1 - variance) * 100
   })
@@ -337,11 +337,11 @@ async function calculateForecastingMetrics(supabase: any, projects: any[]) {
   
   // Predict revenue from active projects
   const averageCompletionRate = completedProjects.length > 0 
-    ? completedProjects.reduce((sum, p) => sum + (p.payment_received || 0) / (p.budget || 1), 0) / completedProjects.length 
+    ? completedProjects.reduce((sum, p) => sum + (p.payment_received || 0) / (p.budget || p.total_budget || 1), 0) / completedProjects.length 
     : 0.8 // Default 80% completion rate
   
   const predictedRevenue = activeProjects.reduce((sum, p) => 
-    sum + (p.budget || 0) * averageCompletionRate, 0
+    sum + (p.budget || p.total_budget || 0) * averageCompletionRate, 0
   )
 
   // Estimate completion timeline

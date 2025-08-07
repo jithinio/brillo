@@ -65,25 +65,25 @@ function ProjectTypeCell({ project }: { project: Project }) {
         return {
           icon: DollarSign,
           label: 'Fixed',
-          color: 'bg-green-50 text-green-700 ring-green-600/20'
+          color: 'bg-emerald-100 text-emerald-800 ring-emerald-700/20'
         }
       case 'recurring':
         return {
           icon: Repeat,
           label: 'Recurring',
-          color: 'bg-blue-50 text-blue-700 ring-blue-600/20'
+          color: 'bg-sky-100 text-sky-800 ring-sky-700/20'
         }
       case 'hourly':
         return {
           icon: Timer,
           label: 'Hourly',
-          color: 'bg-purple-50 text-purple-700 ring-purple-600/20'
+          color: 'bg-violet-100 text-violet-800 ring-violet-700/20'
         }
       default:
         return {
           icon: DollarSign,
           label: 'Fixed',
-          color: 'bg-gray-50 text-gray-700 ring-gray-600/20'
+          color: 'bg-slate-100 text-slate-800 ring-slate-700/20'
         }
     }
   }
@@ -92,8 +92,8 @@ function ProjectTypeCell({ project }: { project: Project }) {
   const Icon = config.icon
 
   return (
-    <Badge variant="outline" className={`${config.color} border-0 ring-1 ring-inset`}>
-      <Icon className="w-3 h-3 mr-1" />
+    <Badge variant="outline" className={`${config.color} border-0 ring-1 ring-inset text-xs font-medium`}>
+      <Icon className="w-3 h-3 mr-1.5" />
       {config.label}
     </Badge>
   )
@@ -108,12 +108,20 @@ export type Project = {
   id: string
   name: string
   status: string
+  project_type?: 'fixed' | 'recurring' | 'hourly'
   start_date?: string
   due_date?: string
   budget?: number
+  total_budget?: number
   expenses?: number
   received?: number
   pending?: number
+  recurring_amount?: number
+  hourly_rate?: number
+  hourly_rate_new?: number
+  actual_hours?: number
+  total_hours_logged?: number
+  estimated_hours?: number
   created_at: string
   clients?: {
     id: string
@@ -128,31 +136,31 @@ const statusConfig = {
     label: "Active",
     icon: Clock,
     variant: "outline" as const,
-    iconClassName: "text-blue-500",
+    iconClassName: "text-emerald-600",
   },
   completed: {
     label: "Completed",
     icon: CheckCircle,
     variant: "outline" as const,
-    iconClassName: "text-green-500",
+    iconClassName: "text-slate-600",
   },
   on_hold: {
     label: "On Hold",
     icon: Pause,
     variant: "outline" as const,
-    iconClassName: "text-yellow-500",
+    iconClassName: "text-amber-600",
   },
   cancelled: {
     label: "Cancelled",
     icon: XCircle,
     variant: "outline" as const,
-          iconClassName: "text-gray-400 dark:text-gray-500",
+    iconClassName: "text-rose-600",
   },
   pipeline: {
     label: "Pipeline",
     icon: GitBranch,
     variant: "outline" as const,
-    iconClassName: "text-purple-500",
+    iconClassName: "text-sky-600",
   },
 }
 
@@ -710,6 +718,79 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
               </div>
             </div>
           )
+      },
+      enableHiding: true,
+    },
+    {
+      accessorKey: "recurring_amount",
+      header: ({ column }) => (
+        <SortableHeader column={column} icon={DollarSign}>
+          Recurring Amount
+        </SortableHeader>
+      ),
+      cell: ({ row }) => {
+        const project = row.original
+        const recurringAmount = project.recurring_amount || 0
+        
+        return (
+          <div className="w-full">
+            <span className="truncate font-normal text-sm">
+              {project.project_type === 'recurring' && recurringAmount > 0 
+                ? formatCurrency(recurringAmount)
+                : '—'
+              }
+            </span>
+          </div>
+        )
+      },
+      enableHiding: true,
+    },
+    {
+      accessorKey: "hourly_rate_new",
+      header: ({ column }) => (
+        <SortableHeader column={column} icon={Clock}>
+          Hourly Rate
+        </SortableHeader>
+      ),
+      cell: ({ row }) => {
+        const project = row.original
+        const hourlyRate = project.hourly_rate_new || project.hourly_rate || 0
+        
+        return (
+          <div className="w-full">
+            <span className="truncate font-normal text-sm">
+              {(project.project_type === 'hourly' || hourlyRate > 0)
+                ? `${formatCurrency(hourlyRate)}/hr`
+                : '—'
+              }
+            </span>
+          </div>
+        )
+      },
+      enableHiding: true,
+    },
+    {
+      accessorKey: "actual_hours",
+      header: ({ column }) => (
+        <SortableHeader column={column} icon={Activity}>
+          Actual Hours
+        </SortableHeader>
+      ),
+      cell: ({ row }) => {
+        const project = row.original
+        const actualHours = project.actual_hours || project.total_hours_logged || 0
+        const estimatedHours = project.estimated_hours || 0
+        
+        return (
+          <div className="w-full">
+            <span className="truncate font-normal text-sm">
+              {actualHours > 0 || estimatedHours > 0
+                ? `${actualHours}${estimatedHours > 0 ? `/${estimatedHours}` : ''}h`
+                : '—'
+              }
+            </span>
+          </div>
+        )
       },
       enableHiding: true,
     },

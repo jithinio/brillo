@@ -145,7 +145,7 @@ export async function GET(request: NextRequest) {
 // Analytics calculation functions (optimized for edge runtime)
 function calculateOverview(projects: any[]) {
   const totalProjects = projects.length
-  const totalValue = projects.reduce((sum, p) => sum + (p.budget || 0), 0)
+  const totalValue = projects.reduce((sum, p) => sum + (p.total_budget || p.budget || 0), 0)
   const completedProjects = projects.filter(p => p.status === 'completed').length
   
   return {
@@ -250,7 +250,7 @@ function calculatePerformanceMetrics(projects: any[]) {
   // Calculate budget accuracy
   const projectsWithBudget = projects.filter(p => (p.total_budget || p.budget) && p.expenses)
   const budgetAccuracies = projectsWithBudget.map(p => {
-    const budget = p.total_budget || p.budget || 0
+    const budget = p.budget || p.total_budget || 0
     const variance = Math.abs(budget - p.expenses) / budget
     return Math.max(0, 1 - variance) * 100
   })

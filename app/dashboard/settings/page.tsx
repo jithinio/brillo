@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -40,7 +40,7 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("general")
   const [hasUserChanges, setHasUserChanges] = useState(false) // Track if user has made changes
   const [initialLoadComplete, setInitialLoadComplete] = useState(false) // Track if initial load from DB is complete
-  const [taxInfoLoaded, setTaxInfoLoaded] = useState(false) // Track if tax info has been loaded to prevent loops
+  const hasInitializedTax = useRef(false) // Ref to absolutely prevent tax loading loops
   
   // General settings state
   const [generalSettings, setGeneralSettings] = useState({
@@ -118,54 +118,53 @@ export default function SettingsPage() {
     } catch (error) {
       console.error('Error loading settings data:', error)
     }
-  }, [settings.defaultCurrency, settings.companyLogo, isLoading, initialLoadComplete]) // Only depend on key settings properties to prevent loops
+  }, [settings.defaultCurrency, settings.invoicePrefix, settings.dateFormat, settings.companyLogo, isLoading, initialLoadComplete]) // Add missing dependencies but avoid settings object to prevent loops
 
-  // Separate one-time effect for tax info to prevent Switch infinite loops
+  // Load tax info only once on mount to prevent Switch infinite loops
   useEffect(() => {
-    // Only run once on initial load and if not already loaded
-    if (isLoading || taxInfoLoaded) return
+    // Use ref to absolutely prevent multiple runs
+    if (hasInitializedTax.current) return
+    hasInitializedTax.current = true
 
     try {
       const savedTax = localStorage.getItem('tax-info')
       
       if (savedTax) {
         const parsed = JSON.parse(savedTax)
-        setTaxInfo(prev => ({
-          taxId: parsed.taxId || prev.taxId,
-          defaultTaxRate: parsed.defaultTaxRate || settings.taxRate?.toString() || prev.defaultTaxRate,
-          taxName: parsed.taxName || settings.taxName || prev.taxName,
-          taxJurisdiction: parsed.taxJurisdiction || prev.taxJurisdiction,
-          taxAddress: parsed.taxAddress || prev.taxAddress,
-          includeTaxInPrices: parsed.includeTaxInPrices !== undefined ? parsed.includeTaxInPrices : (settings.includeTaxInPrices !== undefined ? settings.includeTaxInPrices : prev.includeTaxInPrices),
-          autoCalculateTax: parsed.autoCalculateTax !== undefined ? parsed.autoCalculateTax : (settings.autoCalculateTax !== undefined ? settings.autoCalculateTax : prev.autoCalculateTax),
-        }))
-      } else if (settings.taxRate !== undefined || settings.taxName || settings.includeTaxInPrices !== undefined || settings.autoCalculateTax !== undefined) {
+        setTaxInfo({
+          taxId: parsed.taxId || "",
+          defaultTaxRate: parsed.defaultTaxRate || settings.taxRate?.toString() || "8.00",
+          taxName: parsed.taxName || settings.taxName || "Sales Tax",
+          taxJurisdiction: parsed.taxJurisdiction || "",
+          taxAddress: parsed.taxAddress || "",
+          includeTaxInPrices: parsed.includeTaxInPrices !== undefined ? parsed.includeTaxInPrices : (settings.includeTaxInPrices !== undefined ? settings.includeTaxInPrices : false),
+          autoCalculateTax: parsed.autoCalculateTax !== undefined ? parsed.autoCalculateTax : (settings.autoCalculateTax !== undefined ? settings.autoCalculateTax : true),
+        })
+      } else {
         // Use settings provider values (from database) as primary source - only on initial load
-        setTaxInfo(prev => ({
-          ...prev,
-          defaultTaxRate: settings.taxRate?.toString() || prev.defaultTaxRate,
-          taxName: settings.taxName || prev.taxName,
-          includeTaxInPrices: settings.includeTaxInPrices !== undefined ? settings.includeTaxInPrices : prev.includeTaxInPrices,
-          autoCalculateTax: settings.autoCalculateTax !== undefined ? settings.autoCalculateTax : prev.autoCalculateTax,
-        }))
+        setTaxInfo({
+          taxId: "",
+          defaultTaxRate: settings.taxRate?.toString() || "8.00",
+          taxName: settings.taxName || "Sales Tax",
+          taxJurisdiction: "",
+          taxAddress: "",
+          includeTaxInPrices: settings.includeTaxInPrices !== undefined ? settings.includeTaxInPrices : false,
+          autoCalculateTax: settings.autoCalculateTax !== undefined ? settings.autoCalculateTax : true,
+        })
       }
-      
-      // Mark tax info as loaded to prevent this effect from running again
-      setTaxInfoLoaded(true)
     } catch (error) {
       console.error('Error loading tax settings data:', error)
-      setTaxInfoLoaded(true) // Still mark as loaded even on error to prevent loops
     }
-  }, [isLoading, taxInfoLoaded]) // Depend on loading state and loaded flag
+  }, []) // Empty dependency array - run only once on mount
 
-  // Initial load completion effect - remove initialLoadComplete from deps to prevent loop
+  // Simple initial load completion effect 
   useEffect(() => {
     if (!isLoading && !initialLoadComplete) {
       setInitialLoadComplete(true)
     }
-  }, [isLoading]) // Removed initialLoadComplete from deps to prevent infinite loop
+  }, [isLoading, initialLoadComplete])
 
-  // Separate effect for company info - only runs once on mount
+  // Load company info only after initial load is complete - run only once
   useEffect(() => {
     if (!isLoading && initialLoadComplete) {
       const newCompanyInfo = {
@@ -178,10 +177,9 @@ export default function SettingsPage() {
       }
       
       setCompanyInfo(newCompanyInfo)
-      // Don't set initialLoadComplete again - it's already true
       setHasUserChanges(false)
     }
-  }, [settings.companyName, settings.companyAddress, settings.companyPhone, settings.companyWebsite, settings.companyEmail, settings.companyRegistration, isLoading, initialLoadComplete])
+  }, [isLoading, initialLoadComplete]) // Removed settings dependencies to prevent loops
 
   // Removed debug effects - using individual save buttons now
 
@@ -544,7 +542,7 @@ export default function SettingsPage() {
                         <div className="w-16 h-16 border rounded-lg overflow-hidden bg-muted flex items-center justify-center">
                           <img
                             key={companyLogo} // Force re-render when logo changes
-                            src={companyLogo || "/placeholder.svg"}
+                            src={companyLogo || "/brillo_logo.svg"}
                             alt="Company Logo"
                             className="w-full h-full object-contain"
                             onLoad={() => {
@@ -737,6 +735,7 @@ export default function SettingsPage() {
                     checked={taxInfo.includeTaxInPrices}
                     onCheckedChange={(checked) => {
                       setTaxInfo(prev => ({...prev, includeTaxInPrices: checked}))
+                      setHasUserChanges(true)
                     }}
                   />
                   <Label htmlFor="includeTaxInPrices" className="text-sm">
@@ -750,6 +749,7 @@ export default function SettingsPage() {
                     checked={taxInfo.autoCalculateTax}
                     onCheckedChange={(checked) => {
                       setTaxInfo(prev => ({...prev, autoCalculateTax: checked}))
+                      setHasUserChanges(true)
                     }}
                   />
                   <Label htmlFor="autoCalculateTax" className="text-sm">

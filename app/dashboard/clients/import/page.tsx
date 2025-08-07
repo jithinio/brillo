@@ -16,6 +16,7 @@ import { PageHeader, PageContent } from "@/components/page-header"
 import { validateCSVFile } from "@/lib/input-validation"
 import { toast } from "sonner"
 import { useSubscription } from "@/components/providers/subscription-provider"
+import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 
 interface CsvData {
   headers: string[]
@@ -54,6 +55,7 @@ export default function ClientImportPage() {
   const [csvData, setCsvData] = useState<CsvData | null>(null)
   const [fieldMappings, setFieldMappings] = useState<FieldMapping[]>([])
   const [progress, setProgress] = useState(0)
+  const [currentOperation, setCurrentOperation] = useState<string>('')
   const [importResults, setImportResults] = useState<{ success: number; errors: number; total: number }>({ success: 0, errors: 0, total: 0 })
   const [errors, setErrors] = useState<string[]>([])
 
@@ -184,6 +186,7 @@ export default function ClientImportPage() {
 
     setStep('importing')
     setProgress(0)
+    setCurrentOperation('Preparing import...')
     setErrors([])
 
     const mappedFields = fieldMappings.filter(m => m.mapped)
@@ -194,6 +197,7 @@ export default function ClientImportPage() {
 
     for (let i = 0; i < csvData.rows.length; i++) {
       const row = csvData.rows[i]
+      setCurrentOperation(`Processing client ${i + 1} of ${totalRows}: ${row[csvData.headers.indexOf(mappedFields.find(m => m.dbField === 'name')?.csvField || '')] || 'Unknown Client'}`)
       
       try {
         // Create client object from mapped fields
@@ -211,18 +215,103 @@ export default function ClientImportPage() {
           throw new Error('Name is required')
         }
 
-        // Simulate import process (in real app, this would be a database insert)
-        await new Promise(resolve => setTimeout(resolve, 100))
-        
-        successCount++
+        if (isSupabaseConfigured()) {
+          // Real database import with duplicate checking
+          // Enhanced duplicate detection - check by name, email, or both
+          let existingClient = null
+          
+          if (clientData.email) {
+            // Check by both name and email
+            const { data, error } = await supabase
+              .from('clients')
+              .select('id, name, email')
+              .or(`name.eq.${clientData.name},email.eq.${clientData.email}`)
+
+            if (error) throw error
+            existingClient = data && data.length > 0 ? data[0] : null
+          } else {
+            // Check by name only
+            const { data, error } = await supabase
+              .from('clients')
+              .select('id, name')
+              .eq('name', clientData.name)
+
+            if (error) throw error
+            existingClient = data && data.length > 0 ? data[0] : null
+          }
+
+          if (existingClient) {
+            console.log(`Client "${clientData.name}" already exists, skipping...`)
+            // Count as success but don't insert (duplicate skipped)
+            successCount++
+          } else {
+            // Insert new client
+            const { error: insertError } = await supabase
+              .from('clients')
+              .insert([{
+                name: clientData.name,
+                email: clientData.email || null,
+                phone: clientData.phone || null,
+                company: clientData.company || null,
+                address: clientData.address || null,
+                city: clientData.city || null,
+                state: clientData.state || null,
+                zip_code: clientData.zip_code || null,
+                country: clientData.country || 'United States',
+                notes: clientData.notes || null
+              }])
+
+            if (insertError) throw insertError
+            
+            console.log(`New client "${clientData.name}" created successfully`)
+            successCount++
+          }
+        } else {
+          // Demo mode - simulate import process
+          await new Promise(resolve => setTimeout(resolve, 100))
+          successCount++
+        }
       } catch (error) {
         errorCount++
-        errorList.push(`Row ${i + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        
+        // Enhanced error handling with detailed information
+        let errorMessage = `Row ${i + 1}: `
+        
+        if (error instanceof Error) {
+          errorMessage += error.message
+          console.error('Client import error details:', {
+            row: i + 1,
+            error: error.message,
+            stack: error.stack,
+            rowData: row
+          })
+        } else if (typeof error === 'string') {
+          errorMessage += error
+          console.error('Client import string error:', { row: i + 1, error, rowData: row })
+        } else if (error && typeof error === 'object') {
+          // Handle Supabase/database errors
+          const dbError = error as any
+          if (dbError.message) {
+            errorMessage += `Database error: ${dbError.message}`
+            if (dbError.details) errorMessage += ` - ${dbError.details}`
+            if (dbError.hint) errorMessage += ` (Hint: ${dbError.hint})`
+          } else {
+            errorMessage += `Object error: ${JSON.stringify(error)}`
+          }
+          console.error('Client import object error:', { row: i + 1, error, rowData: row })
+        } else {
+          errorMessage += `Unknown error type: ${typeof error} - ${String(error)}`
+          console.error('Client import unknown error:', { row: i + 1, error, errorType: typeof error, rowData: row })
+        }
+        
+        errorList.push(errorMessage)
       }
 
       setProgress(Math.round(((i + 1) / totalRows) * 100))
     }
 
+    setCurrentOperation('Import completed!')
+    setProgress(100)
     setImportResults({ success: successCount, errors: errorCount, total: totalRows })
     setErrors(errorList)
     setStep('complete')
@@ -412,10 +501,19 @@ export default function ClientImportPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Progress value={progress} className="w-full" />
-              <p className="text-sm text-muted-foreground text-center">
-                {progress}% complete
-              </p>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Progress</span>
+                  <span>{progress}%</span>
+                </div>
+                <Progress value={progress} className="w-full" />
+                {currentOperation && (
+                  <div className="text-sm text-gray-600 mt-2 flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {currentOperation}
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         )}

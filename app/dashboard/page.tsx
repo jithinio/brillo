@@ -23,6 +23,7 @@ interface Project {
   id: string
   name: string
   budget?: number
+  total_budget?: number
   revenue?: number
   expenses?: number
   payment_received?: number
@@ -31,6 +32,12 @@ interface Project {
   due_date?: string
   created_at: string
   status: string
+  clients?: {
+    id: string
+    name: string
+    company?: string
+    created_at?: string
+  }
 }
 
 // Data fetching and calculation functions
@@ -38,12 +45,28 @@ const fetchProjects = async (): Promise<Project[]> => {
   try {
     const { data, error } = await supabase
       .from('projects')
-      .select('*')
+      .select(`
+        *,
+        clients (
+          id,
+          name,
+          company,
+          created_at
+        )
+      `)
       .order('created_at', { ascending: false })
 
     if (error) {
       console.error('Error fetching projects:', error)
       return []
+    }
+
+    // Quick check for budget data
+    if (data && data.length > 0) {
+      const hasAnyBudgets = data.some(p => (p.budget || 0) > 0 || (p.total_budget || 0) > 0)
+      if (!hasAnyBudgets) {
+        console.warn('⚠️ No projects have budget values - analytics will show $0')
+      }
     }
 
     return data || []
@@ -103,8 +126,8 @@ const calculateMRR = (projects: Project[], period: string): { current: number; p
     if (project.status === 'on hold' || project.status === 'canceled') {
       amount = project.payment_received || 0
     } else {
-      // Use budget as primary, revenue as fallback, then 0
-      amount = project.budget || project.revenue || 0
+      // Use total_budget as primary, budget as fallback, then revenue, then 0
+      amount = project.total_budget || project.budget || project.revenue || 0
     }
     
     return sum + amount
@@ -117,8 +140,8 @@ const calculateMRR = (projects: Project[], period: string): { current: number; p
     if (project.status === 'on hold' || project.status === 'canceled') {
       amount = project.payment_received || 0
     } else {
-      // Use budget as primary, revenue as fallback, then 0
-      amount = project.budget || project.revenue || 0
+      // Use total_budget as primary, budget as fallback, then revenue, then 0
+      amount = project.total_budget || project.budget || project.revenue || 0
     }
     
     return sum + amount
@@ -185,8 +208,8 @@ const calculateQRR = (projects: Project[], period: string): { current: number; p
     if (project.status === 'on hold' || project.status === 'canceled') {
       amount = project.payment_received || 0
     } else {
-      // Use budget as primary, revenue as fallback, then 0
-      amount = project.budget || project.revenue || 0
+      // Use total_budget as primary, budget as fallback, then revenue, then 0
+      amount = project.total_budget || project.budget || project.revenue || 0
     }
     
     return sum + amount
@@ -199,8 +222,8 @@ const calculateQRR = (projects: Project[], period: string): { current: number; p
     if (project.status === 'on hold' || project.status === 'canceled') {
       amount = project.payment_received || 0
     } else {
-      // Use budget as primary, revenue as fallback, then 0
-      amount = project.budget || project.revenue || 0
+      // Use total_budget as primary, budget as fallback, then revenue, then 0
+      amount = project.total_budget || project.budget || project.revenue || 0
     }
     
     return sum + amount
@@ -267,8 +290,8 @@ const calculateARR = (projects: Project[], period: string): { current: number; p
     if (project.status === 'on hold' || project.status === 'canceled') {
       amount = project.payment_received || 0
     } else {
-      // Use budget as primary, revenue as fallback, then 0
-      amount = project.budget || project.revenue || 0
+      // Use total_budget as primary, budget as fallback, then revenue, then 0
+      amount = project.total_budget || project.budget || project.revenue || 0
     }
     
     return sum + amount
@@ -281,8 +304,8 @@ const calculateARR = (projects: Project[], period: string): { current: number; p
     if (project.status === 'on hold' || project.status === 'canceled') {
       amount = project.payment_received || 0
     } else {
-      // Use budget as primary, revenue as fallback, then 0
-      amount = project.budget || project.revenue || 0
+      // Use total_budget as primary, budget as fallback, then revenue, then 0
+      amount = project.total_budget || project.budget || project.revenue || 0
     }
     
     return sum + amount
@@ -355,8 +378,8 @@ const calculateRevenueData = (projects: Project[], period: string): { current: n
     if (project.status === 'on hold' || project.status === 'canceled') {
       amount = project.payment_received || 0
     } else {
-      // Use budget as primary, revenue as fallback, then 0
-      amount = project.budget || project.revenue || 0
+      // Use total_budget as primary, budget as fallback, then revenue, then 0
+      amount = project.total_budget || project.budget || project.revenue || 0
     }
     
     return sum + amount
@@ -369,8 +392,8 @@ const calculateRevenueData = (projects: Project[], period: string): { current: n
     if (project.status === 'on hold' || project.status === 'canceled') {
       amount = project.payment_received || 0
     } else {
-      // Use budget as primary, revenue as fallback, then 0
-      amount = project.budget || project.revenue || 0
+      // Use total_budget as primary, budget as fallback, then revenue, then 0
+      amount = project.total_budget || project.budget || project.revenue || 0
     }
     
     return sum + amount
@@ -478,8 +501,8 @@ const generateRevenueLineData = (projects: Project[]): Array<{ month: string; re
       if (project.status === 'on hold' || project.status === 'canceled') {
         amount = project.payment_received || 0
       } else {
-        // Use budget as primary, revenue as fallback, then 0
-        amount = project.budget || project.revenue || 0
+        // Use total_budget as primary, budget as fallback, then revenue, then 0
+        amount = project.total_budget || project.budget || project.revenue || 0
       }
       
       return sum + amount
@@ -531,8 +554,8 @@ const generateYearlyData = (projects: Project[]): Array<{ year: string; revenue:
       if (project.status === 'on hold' || project.status === 'canceled') {
         amount = project.payment_received || 0
       } else {
-        // Use budget as primary, revenue as fallback, then 0
-        amount = project.budget || project.revenue || 0
+        // Use total_budget as primary, budget as fallback, then revenue, then 0
+        amount = project.total_budget || project.budget || project.revenue || 0
       }
       
       return sum + amount

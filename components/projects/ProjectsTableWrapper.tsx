@@ -48,7 +48,7 @@ import { EnhancedAddProjectDialog } from "./EnhancedAddProjectDialog"
 
 import { useInfiniteProjects } from "@/hooks/use-infinite-projects"
 import { useProjectFiltersV2 } from "@/hooks/use-project-filters-v2"
-import { useTablePreferences } from "@/hooks/use-table-preferences"
+import { useTablePreferencesEnterprise } from "@/hooks/use-table-preferences-enterprise"
 import { PageHeader } from "@/components/page-header"
 import { PageActionsMenu } from "@/components/page-actions-menu"
 import { ProjectFiltersV2 } from "@/components/projects/project-filters-v2"
@@ -279,8 +279,17 @@ export function ProjectsTableWrapper({
     }
   }, [newProject, recentlyReceived])
 
-  // Table preferences
-  const { getTablePreference, updateTablePreference, isLoading: preferencesLoading } = useTablePreferences()
+  // Enterprise table preferences with batching and debouncing
+  const { 
+    getTablePreference, 
+    updateTablePreference, 
+    updateMultipleTablePreferences,
+    forceImmediateSave,
+    isLoading: preferencesLoading,
+    isSaving: preferencesSaving,
+    saveMetrics,
+    hasPendingUpdates
+  } = useTablePreferencesEnterprise()
   const TABLE_NAME = `projects-table-${pageTitle.toLowerCase().replace(/\s+/g, '-')}`
   const [preferencesLoaded, setPreferencesLoaded] = React.useState(false)
 
@@ -323,9 +332,14 @@ export function ProjectsTableWrapper({
     fetchClients()
   }, [])
 
-  // Load preferences with inheritance from main projects page
+  // Track if preferences have been initialized to prevent re-runs (fixes tab focus issue)
+  const preferencesInitializedRef = React.useRef(false)
+
+  // Load preferences with inheritance from main projects page (only once)
   React.useEffect(() => {
-    if (!preferencesLoading && !preferencesLoaded) {
+    if (!preferencesLoading && !preferencesLoaded && !preferencesInitializedRef.current) {
+      preferencesInitializedRef.current = true
+      
       // Define parent table name (main projects page)
       const PARENT_TABLE_NAME = "projects-table-all-projects"
       const isMainPage = TABLE_NAME === PARENT_TABLE_NAME
@@ -366,7 +380,7 @@ export function ProjectsTableWrapper({
             savedVisibility = parentVisibility
           }
           
-          // Mark that we've inherited from parent at this time
+          // Mark that we've inherited from parent at this time (silently, no batching)
           if (parentLastUpdated > 0) {
             updateTablePreference(TABLE_NAME, "last_inherited_from", parentLastUpdated)
           }
@@ -390,7 +404,7 @@ export function ProjectsTableWrapper({
       
       setPreferencesLoaded(true)
     }
-  }, [preferencesLoading, preferencesLoaded, getTablePreference, updateTablePreference, TABLE_NAME])
+  }, [preferencesLoading, preferencesLoaded, TABLE_NAME]) // Removed function dependencies to prevent tab focus re-runs
 
   // All the handler functions from the original implementation
   const handleClientSelect = (clientId: string) => {
@@ -1166,7 +1180,7 @@ export function ProjectsTableWrapper({
     setColumnVisibility({})
     
     toast.success("Table preferences reset - new columns are now visible")
-  }, [TABLE_NAME, updateTablePreference])
+  }, [TABLE_NAME]) // Removed function dependency to prevent tab focus triggers
 
   // Auto-refresh preferences if new columns (like project_type) are missing (but only once on initial load)
   const [hasAutoRefreshed, setHasAutoRefreshed] = React.useState(false)
@@ -1182,7 +1196,7 @@ export function ProjectsTableWrapper({
         setHasAutoRefreshed(true)
       }
     }
-  }, [allColumns, columnVisibility, preferencesLoaded, forceRefreshTablePreferences, hasAutoRefreshed])
+  }, [allColumns, columnVisibility, preferencesLoaded, hasAutoRefreshed]) // Removed function dependency
 
   // Reset to parent preferences (for sub-pages)
   const resetToParentPreferences = React.useCallback(() => {
@@ -1218,7 +1232,7 @@ export function ProjectsTableWrapper({
       
       toast.success("Reset to main page column settings")
     }
-  }, [TABLE_NAME, updateTablePreference, getTablePreference])
+  }, [TABLE_NAME]) // Removed function dependencies to prevent tab focus triggers
 
   const handleColumnVisibilityChange = React.useCallback((columnId: string, visible: boolean) => {
     setColumnVisibility(prev => ({
@@ -1264,21 +1278,23 @@ export function ProjectsTableWrapper({
     })
   }, [isResizing, resizeStartX, resizeStartWidth])
 
-  // Helper to update preference with timestamp
-  const updatePreferenceWithTimestamp = React.useCallback((key: string, value: any) => {
-    updateTablePreference(TABLE_NAME, key, value)
-    // Update last_updated timestamp for the main projects page
-    if (TABLE_NAME === "projects-table-all-projects") {
-      updateTablePreference(TABLE_NAME, "last_updated", Date.now())
+  // Enterprise batched preference updates
+  const updatePreferencesBatch = React.useCallback((updates: Record<string, any>) => {
+    if (preferencesLoaded) {
+      // Add timestamp for main projects page
+      if (TABLE_NAME === "projects-table-all-projects") {
+        updates.last_updated = Date.now()
+      }
+      updateMultipleTablePreferences(TABLE_NAME, updates)
     }
-  }, [TABLE_NAME, updateTablePreference])
+  }, [TABLE_NAME, updateMultipleTablePreferences, preferencesLoaded])
 
-  // Save column widths immediately
+  // Save column widths with batching
   const saveColumnWidths = React.useCallback((widths: Record<string, number>) => {
     if (preferencesLoaded && Object.keys(widths).length > 0) {
-      updatePreferenceWithTimestamp("column_widths", widths)
+      updatePreferencesBatch({ column_widths: widths })
     }
-  }, [updatePreferenceWithTimestamp, preferencesLoaded])
+  }, [updatePreferencesBatch, preferencesLoaded])
 
   // Keep ref in sync with state for immediate access
   React.useEffect(() => {
@@ -1347,23 +1363,38 @@ export function ProjectsTableWrapper({
     }
   }, [TABLE_NAME, preferencesLoaded, saveColumnWidths])
 
-  React.useEffect(() => {
-    if (preferencesLoaded && columnOrder.length > 0) {
-      updatePreferenceWithTimestamp("column_order", columnOrder)
-    }
-  }, [columnOrder, updatePreferenceWithTimestamp, preferencesLoaded])
+  // Track if initial state has been set to prevent saving during initial load
+  const initialStateSetRef = React.useRef(false)
 
+  // Optimized single effect for all preference changes with batching
   React.useEffect(() => {
-    if (preferencesLoaded && Object.keys(columnVisibility).length > 0) {
-      updatePreferenceWithTimestamp("column_visibility", columnVisibility)
+    if (!preferencesLoaded) return
+    
+    // Skip during initial load to prevent saving initial state
+    if (!initialStateSetRef.current) {
+      initialStateSetRef.current = true
+      return
     }
-  }, [columnVisibility, updatePreferenceWithTimestamp, preferencesLoaded])
 
-  React.useEffect(() => {
-    if (preferencesLoaded && (sortBy || sortDirection)) {
-      updatePreferenceWithTimestamp("sorting", { sortBy, sortDirection })
+    const updates: Record<string, any> = {}
+    
+    if (columnOrder.length > 0) {
+      updates.column_order = columnOrder
     }
-  }, [sortBy, sortDirection, updatePreferenceWithTimestamp, preferencesLoaded])
+    
+    if (Object.keys(columnVisibility).length > 0) {
+      updates.column_visibility = columnVisibility
+    }
+    
+    if (sortBy || sortDirection) {
+      updates.sorting = { sortBy, sortDirection }
+    }
+
+    // Only update if we have changes to save
+    if (Object.keys(updates).length > 0) {
+      updatePreferencesBatch(updates)
+    }
+  }, [columnOrder, columnVisibility, sortBy, sortDirection, preferencesLoaded]) // Removed function dependency
 
   // Summary metrics
   const summaryMetrics = React.useMemo(() => ({
@@ -1419,12 +1450,30 @@ export function ProjectsTableWrapper({
       <PageHeader
         title={pageTitle}
         action={
-          <PageActionsMenu 
-            entityType="projects" 
-            onExport={handleExport}
-            onResetColumns={TABLE_NAME === "projects-table-all-projects" ? forceRefreshTablePreferences : resetToParentPreferences}
-            showResetColumns={true}
-          />
+          <div className="flex items-center gap-2">
+            {/* Enterprise Performance Indicator */}
+            {hasPendingUpdates && (
+              <div className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
+                <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
+                Saving...
+              </div>
+            )}
+            {preferencesSaving && (
+              <div className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400">
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+                Syncing
+              </div>
+            )}
+            <PageActionsMenu 
+              entityType="projects" 
+              onExport={handleExport}
+              onResetColumns={TABLE_NAME === "projects-table-all-projects" ? forceRefreshTablePreferences : resetToParentPreferences}
+              showResetColumns={true}
+              // Enterprise features
+              onForceSave={hasPendingUpdates ? forceImmediateSave : undefined}
+              saveMetrics={saveMetrics}
+            />
+          </div>
         }
       />
       

@@ -101,6 +101,9 @@ export function DataTable<TData, TValue>({ columns, data, onAddProject, onBatchD
           expenses: window.innerWidth > 1200,
           pending: window.innerWidth > 1200,
           created_at: window.innerWidth > 1024,
+          recurring_amount: false, // Hidden by default
+          hourly_rate_new: false, // Hidden by default  
+          actual_hours: false, // Hidden by default
         }
         setColumnVisibility(defaults)
       }
