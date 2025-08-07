@@ -479,6 +479,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Client>[] {
               date={date}
               onSelect={(newDate) => actions.onDateChange(client, 'created_at', newDate)}
               placeholder="Set client since"
+              disableFuture={true}
             />
           </div>
         )

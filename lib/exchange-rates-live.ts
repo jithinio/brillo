@@ -167,7 +167,13 @@ async function fetchHistoricalRates(
   }
 
   // Format date to YYYY-MM-DD
-  const formattedDate = new Date(date).toISOString().split('T')[0]
+  const formattedDate = (() => {
+    const d = new Date(date)
+    const year = d.getFullYear()
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  })()
   
   // Check if the date is in the future - if so, use live rates
   const targetDate = new Date(formattedDate)

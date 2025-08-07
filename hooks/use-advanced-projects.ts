@@ -5,6 +5,7 @@ import { useCallback, useMemo } from "react"
 import { supabase } from "@/lib/supabase"
 import { queryKeys, cacheUtils } from "@/components/query-provider"
 import { toast } from "sonner"
+import { formatDateForDatabase } from "@/lib/date-format"
 
 export interface Project {
   id: string
@@ -217,7 +218,7 @@ const updateProjectStatus = async ({ id, status }: { id: string; status: string 
 
   // Handle recurring projects without due date
   if (currentProject.recurring_frequency && !currentProject.due_date) {
-    updateData.due_date = new Date().toISOString().split('T')[0] // Set to current date in YYYY-MM-DD format
+    updateData.due_date = formatDateForDatabase(new Date()) // Set to current date in YYYY-MM-DD format
     console.log('📅 Setting due_date to current date for recurring project without due date')
   }
 

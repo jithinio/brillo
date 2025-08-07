@@ -21,6 +21,9 @@ interface DatePickerProps {
   placeholder?: string
   disabled?: boolean
   size?: "default" | "sm"
+  disableFuture?: boolean
+  fromYear?: number
+  toYear?: number
 }
 
 export function DatePicker({ 
@@ -28,7 +31,10 @@ export function DatePicker({
   onSelect, 
   placeholder = "Pick a date", 
   disabled,
-  size = "default"
+  size = "default",
+  disableFuture = false,
+  fromYear = 2004,
+  toYear = new Date().getFullYear() + (disableFuture ? 0 : 10)
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false)
   const { formatDate } = useSettings()
@@ -66,10 +72,11 @@ export function DatePicker({
           selected={date}
           onSelect={handleSelect}
           defaultMonth={date} // Preserve the month of the selected date when opening
+          disabled={disableFuture ? (date) => date > new Date() || date < new Date("1900-01-01") : undefined}
           initialFocus
           captionLayout="dropdown"
-          fromYear={2020}
-          toYear={2030}
+          fromYear={fromYear}
+          toYear={toYear}
         />
       </PopoverContent>
     </Popover>

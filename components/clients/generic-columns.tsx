@@ -41,6 +41,7 @@ import {
 } from "@/components/ui/popover"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { format } from "date-fns"
+import { formatDateForDatabase } from "@/lib/date-format"
 
 const clientStatusConfig = {
   active: {
@@ -309,15 +310,15 @@ export function createClientColumns(columnConfig: ClientColumnConfig): ColumnDef
                   onSelect={(newDate) => {
                     // Update client_since date
                     if (columnConfig.onStatusChange && newDate) {
-                      columnConfig.onStatusChange(client.id, `client_since:${newDate.toISOString()}`)
+                      columnConfig.onStatusChange(client.id, `client_since:${formatDateForDatabase(newDate)}`)
                     }
                   }}
                   defaultMonth={date} // Preserve the month of the selected date when opening
                   disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
                   initialFocus
                   captionLayout="dropdown"
-                  fromYear={2020}
-                  toYear={2030}
+                  fromYear={2004}
+                  toYear={new Date().getFullYear()}
                 />
               </PopoverContent>
             </Popover>

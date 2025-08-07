@@ -12,6 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Switch } from "@/components/ui/switch"
 import { DatePicker } from "@/components/ui/date-picker"
+import { formatDateForDatabase } from "@/lib/date-format"
 import { Plus, Trash2, Send, Save, UserPlus, Building, Mail, Phone, MapPin, Receipt, Download, CheckCircle, CalendarDays, Plus as PlusIcon, RefreshCw, Loader2, Check, Users, Calendar, DollarSign, FileText, AlertTriangle, X, ChevronDown, ChevronsUpDown, User, Edit3, Copy, XCircle, Clock } from "lucide-react"
 import { toast } from "sonner"
 import { formatCurrency, CURRENCIES, getDefaultCurrency } from "@/lib/currency"
@@ -729,8 +730,8 @@ export default function GenerateInvoicePage() {
           total_amount: total,
           currency: clientCurrency, // Include the selected currency for this invoice
           status: 'draft', // Save as draft
-          issue_date: invoiceDate.toISOString().split('T')[0],
-          due_date: (dueDate?.toISOString() || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()).split('T')[0],
+          issue_date: formatDateForDatabase(invoiceDate),
+          due_date: formatDateForDatabase(dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
           notes: notes || '',
           terms: paymentTerms || ''
         }
@@ -814,8 +815,8 @@ export default function GenerateInvoicePage() {
           invoice_number: finalInvoiceNumber,
           client_id: selectedClient.id,
           project_id: selectedProject?.id || null,
-          issue_date: invoiceDate.toISOString().split('T')[0],
-          due_date: (dueDate?.toISOString() || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()).split('T')[0],
+          issue_date: formatDateForDatabase(invoiceDate),
+          due_date: formatDateForDatabase(dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
           amount: subtotal,
           tax_rate: taxEnabled ? parseFloat(customTaxRate) : 0,
           tax_amount: tax,
@@ -997,8 +998,8 @@ export default function GenerateInvoicePage() {
           total_amount: total,
           currency: clientCurrency, // Include the selected currency for this invoice
           status: 'sent', // Start as sent, can be changed to 'draft' later
-          issue_date: invoiceDate.toISOString().split('T')[0], // DATE format (YYYY-MM-DD)
-          due_date: (dueDate?.toISOString() || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()).split('T')[0], // DATE format
+          issue_date: formatDateForDatabase(invoiceDate), // DATE format (YYYY-MM-DD)
+          due_date: formatDateForDatabase(dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)), // DATE format
           notes: notes || '',
           terms: paymentTerms || ''
         }
@@ -1141,8 +1142,8 @@ export default function GenerateInvoicePage() {
                 invoice_number: finalInvoiceNumber,
                 client_id: selectedClient.id,
                 project_id: selectedProject?.id || null,
-                issue_date: invoiceDate.toISOString().split('T')[0],
-                due_date: (dueDate?.toISOString() || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()).split('T')[0],
+                issue_date: formatDateForDatabase(invoiceDate),
+                due_date: formatDateForDatabase(dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
                 amount: subtotal,
                 tax_rate: taxEnabled ? parseFloat(customTaxRate) : 0,
                 tax_amount: tax,
@@ -1173,8 +1174,8 @@ export default function GenerateInvoicePage() {
             invoice_number: finalInvoiceNumber,
             client_id: selectedClient.id,
             project_id: selectedProject?.id || null,
-            issue_date: invoiceDate.toISOString().split('T')[0],
-            due_date: (dueDate?.toISOString() || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()).split('T')[0],
+            issue_date: formatDateForDatabase(invoiceDate),
+            due_date: formatDateForDatabase(dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
             amount: subtotal,
             tax_rate: taxEnabled ? parseFloat(customTaxRate) : 0,
             tax_amount: tax,

@@ -130,7 +130,6 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
 
   // Helper function to update usage limits based on plan and current usage
   const updateUsageLimits = useCallback(async (planId: string, currentUsage?: any) => {
-    console.log('🔄 Updating usage limits for plan:', planId)
     
     const plan = getPlan(planId)
     
@@ -161,7 +160,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
       }
     }
     
-    console.log('📊 Updating limits with usage:', usageData, 'for plan:', plan.name)
+
     
     const newUsage = {
       projects: { 
@@ -181,7 +180,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
       }
     }
     
-    console.log('🎯 Setting new usage limits:', newUsage)
+
     
     // Only update usage if it actually changed to prevent unnecessary re-renders
     setUsage(prevUsage => {
@@ -193,16 +192,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
         prevUsage.clients.limit !== newUsage.clients.limit ||
         prevUsage.invoices.limit !== newUsage.invoices.limit
       
-      console.log('🔄 Usage change check:', {
-        hasUsageChanged,
-        prevUsage,
-        newUsage,
-        changes: {
-          projectsCurrent: prevUsage.projects.current !== newUsage.projects.current,
-          clientsCurrent: prevUsage.clients.current !== newUsage.clients.current,
-          invoicesCurrent: prevUsage.invoices.current !== newUsage.invoices.current
-        }
-      })
+
       
       return hasUsageChanged ? newUsage : prevUsage
     })
@@ -220,7 +210,6 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     const subscriptionCacheThreshold = 2 * 60 * 1000 // 2 minutes
 
     if (!force && timeSinceLastCheck < subscriptionCacheThreshold && cachedSubscriptionData) {
-      console.log('🔄 Using cached subscription data')
       // Use cached data if it's recent
       const cachedData = cachedSubscriptionData
       setSubscription(cachedData)
@@ -367,7 +356,6 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
           cachedSubscriptionData.cancelAtPeriodEnd !== subscriptionData.cancelAtPeriodEnd
         
         if (hasChanges) {
-          console.log('🔄 Subscription data changed, updating state')
           setSubscription(subscriptionData)
           setCachedSubscriptionData(subscriptionData)
           
@@ -376,8 +364,6 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
           if (subscription.planId !== subscriptionData.planId) {
             updateUsageLimits(subscriptionData.planId)
           }
-        } else {
-          console.log('✅ No subscription changes detected')
         }
         
         setError(null)
@@ -399,13 +385,11 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     const debounceThreshold = force ? 15 * 1000 : 5 * 60 * 1000 // 15 seconds for forced, 5 minutes for automatic
 
     if (!force && timeSinceLastCheck < debounceThreshold) {
-      console.log('🔄 Skipping usage check - too soon since last check')
       return
     }
 
     // For forced checks, use a shorter debounce to allow more frequent updates while preventing spam
     if (force && timeSinceLastCheck < 15 * 1000) {
-      console.log('🔄 Skipping forced usage check - too soon since last check (15s minimum)')
       return
     }
 
@@ -430,8 +414,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
         const result = await response.json()
         const usageData = result.usage || result // Handle both formats
         
-        console.log('📊 Usage data received:', usageData)
-        console.log('📋 Current subscription plan:', subscription.planId)
+
         
         // Use the updateUsageLimits function which correctly calculates limits based on current plan
         await updateUsageLimits(subscription.planId, usageData)

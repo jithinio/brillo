@@ -82,6 +82,7 @@ import { TableErrorBoundary } from "./ErrorBoundary"
 import { formatCurrencyAbbreviated } from "@/lib/currency-utils"
 import { useCanPerformAction } from "@/components/over-limit-alert"
 import { useSubscription } from "@/components/providers/subscription-provider"
+import { formatDateForDatabase } from "@/lib/date-format"
 
 // Types
 interface Client {
@@ -434,8 +435,8 @@ export function ProjectsTableWrapper({
           const updateData: any = {
             name: newProject.name,
             status: newProject.status,
-            start_date: newProject.start_date ? newProject.start_date.toISOString().split('T')[0] : null,
-            due_date: newProject.due_date ? newProject.due_date.toISOString().split('T')[0] : null,
+            start_date: formatDateForDatabase(newProject.start_date),
+            due_date: formatDateForDatabase(newProject.due_date),
             budget: budget || null,
             expenses: expenses,
             payment_received: received,
@@ -489,8 +490,8 @@ export function ProjectsTableWrapper({
             .insert([{
               name: newProject.name,
               status: newProject.status,
-              start_date: newProject.start_date ? newProject.start_date.toISOString().split('T')[0] : null,
-              due_date: newProject.due_date ? newProject.due_date.toISOString().split('T')[0] : null,
+              start_date: formatDateForDatabase(newProject.start_date),
+              due_date: formatDateForDatabase(newProject.due_date),
               budget: budget || null,
               expenses: expenses,
               payment_received: received,
@@ -615,7 +616,7 @@ export function ProjectsTableWrapper({
         try {
           if (isSupabaseConfigured()) {
             const updateData = {
-              [field]: date ? date.toISOString().split('T')[0] : null,
+              [field]: formatDateForDatabase(date),
               updated_at: new Date().toISOString()
             }
 

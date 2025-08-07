@@ -19,10 +19,16 @@ export function DateRangePicker({
   className,
   date,
   onDateChange,
+  disableFuture = false,
+  fromYear = 2004,
+  toYear = new Date().getFullYear() + (disableFuture ? 0 : 10)
 }: {
   className?: string
   date: DateRange | undefined
   onDateChange: (date: DateRange | undefined) => void
+  disableFuture?: boolean
+  fromYear?: number
+  toYear?: number
 }) {
   const { formatDate } = useSettings()
 
@@ -61,7 +67,11 @@ export function DateRangePicker({
             defaultMonth={date?.from}
             selected={date}
             onSelect={onDateChange}
+            disabled={disableFuture ? (date) => date > new Date() || date < new Date("1900-01-01") : undefined}
             numberOfMonths={2}
+            captionLayout="dropdown"
+            fromYear={fromYear}
+            toYear={toYear}
             initialFocus
           />
         </PopoverContent>

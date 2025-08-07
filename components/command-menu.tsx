@@ -67,21 +67,16 @@ export function CommandMenu() {
 
   // Fetch search results from database
   const fetchSearchResults = React.useCallback(async (query: string) => {
-    console.log('fetchSearchResults called with query:', query)
-    
     if (!query || query.length < 2) {
-      console.log('Query too short, clearing results')
       setSearchResults([])
       return
     }
 
-    console.log('Starting search...')
     setIsSearching(true)
     try {
       const results: any[] = []
 
       if (isSupabaseConfigured()) {
-        console.log('Supabase is configured, searching user-specific database...')
         // Search clients - automatically filtered by RLS policies
         const { data: clients } = await supabase
           .from('clients')
@@ -140,9 +135,7 @@ export function CommandMenu() {
             amount: formatCurrency(invoice.total_amount)
           })))
         }
-        console.log('Database search results:', results)
       } else {
-        console.log('Supabase not configured, using mock data...')
         // Fallback to mock data
         const filtered = mockSearchResults.filter(item => 
           item.name.toLowerCase().includes(query.toLowerCase()) ||
@@ -150,10 +143,8 @@ export function CommandMenu() {
           (item.client && item.client.toLowerCase().includes(query.toLowerCase()))
         )
         results.push(...filtered)
-        console.log('Using mock data, filtered results:', filtered)
       }
 
-      console.log('Final search results:', results)
       setSearchResults(results)
     } catch (error) {
       console.error('Search error:', error)

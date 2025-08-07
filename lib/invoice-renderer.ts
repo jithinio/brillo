@@ -38,7 +38,11 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
         formatOptions.day = '2-digit'
         return date.toLocaleDateString('en-GB', formatOptions)
       case 'YYYY-MM-DD':
-        return date.toISOString().split('T')[0]
+        // Use local timezone-safe formatting
+        const year = date.getFullYear()
+        const month = String(date.getMonth() + 1).padStart(2, '0')
+        const day = String(date.getDate()).padStart(2, '0')
+        return `${year}-${month}-${day}`
       case 'MM-DD-YYYY':
         formatOptions.year = 'numeric'
         formatOptions.month = '2-digit'

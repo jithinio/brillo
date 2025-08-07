@@ -124,15 +124,7 @@ export function SubscriptionManagement() {
   const isFreePlan = subscription.planId === 'free'
   const isProPlan = subscription.planId === 'pro_monthly' || subscription.planId === 'pro_yearly'
 
-  // Debug logging for subscription data
-  console.log('🔍 Subscription Debug:', {
-    subscription,
-    plan,
-    usage,
-    isLoading,
-    isFreePlan,
-    isProPlan
-  })
+
 
   // Show loading state if subscription data is not available
   if (isLoading) {

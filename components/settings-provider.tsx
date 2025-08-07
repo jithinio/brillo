@@ -135,11 +135,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           
           if (isMounted) setSettings(updatedSettings)
           
-          console.log('🔍 Database settings loaded:', {
-            invoiceTemplate: dbSettings.invoice_template,
-            hasTemplate: !!dbSettings.invoice_template,
-            templateId: dbSettings.invoice_template?.templateId
-          })
+
           
           // Check if localStorage has a newer template than database
           const localStorageTemplate = localStorage.getItem('setting_invoiceTemplate') || localStorage.getItem('invoice-template-settings')
@@ -208,12 +204,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             }
           }
           
-          if (dbSettings.invoice_template) {
-            console.log('✅ Template loaded from database:', dbSettings.invoice_template.templateId)
-            console.log('✅ Template details:', dbSettings.invoice_template)
-          } else {
-            console.log('❌ No invoice template found in database')
-          }
+
           
           // Cache the logo to localStorage for faster subsequent loads
           if (dbSettings.company_logo) {

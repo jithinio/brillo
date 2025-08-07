@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import type { PipelineProject, PipelineStage, PipelineMetrics, ProjectStageColumn } from './types/pipeline'
+import { formatDateForDatabase } from './date-format'
 
 export async function fetchPipelineStages(): Promise<PipelineStage[]> {
   try {
@@ -144,7 +145,7 @@ export async function convertProjectToActive(projectId: string): Promise<boolean
       .single()
 
     const defaultCurrency = settings?.default_currency || 'USD'
-    const todayDate = new Date().toISOString().split('T')[0]
+    const todayDate = formatDateForDatabase(new Date())
     console.log('💰 Default currency:', defaultCurrency)
     console.log('📅 Setting start date to today:', todayDate)
     

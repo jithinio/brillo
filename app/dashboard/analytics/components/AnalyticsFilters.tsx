@@ -189,9 +189,10 @@ export function AnalyticsFilters({
                     }
                   }}
                   defaultMonth={filters.dateRange?.start} // Preserve the month of the selected date when opening
+                  disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
                   captionLayout="dropdown"
-                  fromYear={2020}
-                  toYear={2030}
+                  fromYear={2004}
+                  toYear={new Date().getFullYear()}
                   initialFocus
                 />
               </PopoverContent>
@@ -230,9 +231,10 @@ export function AnalyticsFilters({
                     }
                   }}
                   defaultMonth={filters.dateRange?.end} // Preserve the month of the selected date when opening
+                  disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
                   captionLayout="dropdown"
-                  fromYear={2020}
-                  toYear={2030}
+                  fromYear={2004}
+                  toYear={new Date().getFullYear()}
                   initialFocus
                 />
               </PopoverContent>
