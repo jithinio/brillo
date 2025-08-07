@@ -13,6 +13,9 @@ export interface CompanySettings {
   default_currency: string
   tax_rate: number
   tax_name: string
+  tax_id?: string
+  tax_jurisdiction?: string
+  tax_address?: string
   include_tax_in_prices: boolean
   auto_calculate_tax: boolean
   invoice_prefix: string
@@ -67,23 +70,28 @@ export async function getCompanySettings(): Promise<CompanySettings | null> {
 
 export async function upsertCompanySettings(settings: Partial<CompanySettings>): Promise<CompanySettings | null> {
   try {
+    console.log('🔄 upsertCompanySettings called with:', settings)
     
     if (!isSupabaseConfigured()) {
-      console.log('Supabase not configured, cannot save settings')
+      console.log('❌ Supabase not configured, cannot save settings')
       return null
     }
+    
+    console.log('✅ Supabase is configured, proceeding with save...')
 
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     
     if (authError) {
-      console.error('Authentication error:', authError)
+      console.error('❌ Authentication error:', authError)
       return null
     }
     
     if (!user) {
-      console.log('No authenticated user found')
+      console.log('❌ No authenticated user found - user must be logged in to save settings')
       return null
     }
+    
+    console.log('✅ User authenticated:', user.email, '(ID:', user.id, ')')
 
     // Check if settings already exist and get the current default currency
     const { data: existingArray } = await supabase
@@ -140,6 +148,12 @@ export async function upsertCompanySettings(settings: Partial<CompanySettings>):
         
       if (result.error) {
         console.error('Error inserting company settings:', result.error)
+        console.error('Insert error details:', {
+          message: result.error.message,
+          details: result.error.details,
+          hint: result.error.hint,
+          code: result.error.code
+        })
         return null
       }
       
@@ -151,13 +165,18 @@ export async function upsertCompanySettings(settings: Partial<CompanySettings>):
 
     if (result.error) {
       console.error('Error upserting company settings:', result.error)
-      console.error('Error details:', result.error)
+      console.error('Error details:', {
+        message: result.error.message,
+        details: result.error.details,
+        hint: result.error.hint,
+        code: result.error.code
+      })
       return null
     }
     
     console.log('Database operation successful:', result.data)
 
-    return null
+    return result.data && result.data.length > 0 ? result.data[0] : null
   } catch (err) {
     console.error('Unexpected error in upsertCompanySettings:', err)
     return null

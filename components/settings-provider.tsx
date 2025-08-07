@@ -21,6 +21,9 @@ interface AppSettings {
   companyLogo: string
   taxRate: number
   taxName: string
+  taxId: string
+  taxJurisdiction: string
+  taxAddress: string
   includeTaxInPrices: boolean
   autoCalculateTax: boolean
   invoicePrefix: string
@@ -47,6 +50,9 @@ const defaultSettings: AppSettings = {
   companyLogo: "",
   taxRate: 8.0,
   taxName: "Sales Tax",
+  taxId: "",
+  taxJurisdiction: "",
+  taxAddress: "",
   includeTaxInPrices: false,
   autoCalculateTax: true,
   invoicePrefix: "INV",
@@ -116,6 +122,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             defaultCurrency: dbSettings.default_currency || loadedSettings.defaultCurrency,
             taxRate: dbSettings.tax_rate || loadedSettings.taxRate,
             taxName: dbSettings.tax_name || loadedSettings.taxName,
+            taxId: dbSettings.tax_id || loadedSettings.taxId,
+            taxJurisdiction: dbSettings.tax_jurisdiction || loadedSettings.taxJurisdiction,
+            taxAddress: dbSettings.tax_address || loadedSettings.taxAddress,
             includeTaxInPrices: dbSettings.include_tax_in_prices || loadedSettings.includeTaxInPrices,
             autoCalculateTax: dbSettings.auto_calculate_tax || loadedSettings.autoCalculateTax,
             invoicePrefix: dbSettings.invoice_prefix || loadedSettings.invoicePrefix,
@@ -168,6 +177,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                   defaultCurrency: dbSettings.default_currency || loadedSettings.defaultCurrency,
                   taxRate: dbSettings.tax_rate || loadedSettings.taxRate,
                   taxName: dbSettings.tax_name || loadedSettings.taxName,
+                  taxId: dbSettings.tax_id || loadedSettings.taxId,
+                  taxJurisdiction: dbSettings.tax_jurisdiction || loadedSettings.taxJurisdiction,
+                  taxAddress: dbSettings.tax_address || loadedSettings.taxAddress,
                   includeTaxInPrices: dbSettings.include_tax_in_prices || loadedSettings.includeTaxInPrices,
                   autoCalculateTax: dbSettings.auto_calculate_tax || loadedSettings.autoCalculateTax,
                   invoicePrefix: dbSettings.invoice_prefix || loadedSettings.invoicePrefix,
@@ -282,6 +294,15 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         case 'taxName':
           dbSettingsUpdate.tax_name = value
           break
+        case 'taxId':
+          dbSettingsUpdate.tax_id = value
+          break
+        case 'taxJurisdiction':
+          dbSettingsUpdate.tax_jurisdiction = value
+          break
+        case 'taxAddress':
+          dbSettingsUpdate.tax_address = value
+          break
         case 'includeTaxInPrices':
           dbSettingsUpdate.include_tax_in_prices = value
           break
@@ -303,6 +324,15 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         console.log('Updating database with settings:', dbSettingsUpdate)
         const result = await upsertCompanySettings(dbSettingsUpdate)
         console.log('Database update result:', result)
+        
+        if (result) {
+          console.log('✅ Settings successfully saved to database')
+        } else {
+          console.warn('⚠️ Settings not saved to database - check console for errors')
+          console.warn('💡 If you see column errors, run the SQL from add-tax-columns.sql')
+        }
+      } else {
+        console.log('No database fields to update for key:', key)
       }
     } catch (error) {
       console.error('Failed to save setting to database:', error)

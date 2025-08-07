@@ -27,6 +27,8 @@ import { uploadCompanyLogo } from "@/lib/company-settings"
 import { DATE_FORMAT_OPTIONS, type DateFormat } from "@/lib/date-format"
 import { clearCurrencyConversionCache } from "@/lib/currency-conversion-cache"
 import { SubscriptionManagement } from "@/components/pricing/subscription-management"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { InfoIcon } from "lucide-react"
 
 export default function SettingsPage() {
   const searchParams = useSearchParams()
@@ -34,6 +36,14 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false)
   const [savingGeneral, setSavingGeneral] = useState(false)
   const [savingCompany, setSavingCompany] = useState(false)
+  const [savingTax, setSavingTax] = useState(false)
+  
+  // Check if Supabase is configured
+  const isSupabaseConfigured = () => {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    return url && key && url.startsWith("https://") && url.includes(".supabase.co") && key.startsWith("eyJ")
+  }
   const [companyLogo, setCompanyLogo] = useState("") // Always start empty, will be set by settings provider
   const [originalCurrency, setOriginalCurrency] = useState("USD") // Track original currency for change detection
   const [showCurrencyWarning, setShowCurrencyWarning] = useState(false) // Control currency change warning dialog
@@ -132,22 +142,22 @@ export default function SettingsPage() {
       if (savedTax) {
         const parsed = JSON.parse(savedTax)
         setTaxInfo({
-          taxId: parsed.taxId || "",
+          taxId: parsed.taxId || settings.taxId || "",
           defaultTaxRate: parsed.defaultTaxRate || settings.taxRate?.toString() || "8.00",
           taxName: parsed.taxName || settings.taxName || "Sales Tax",
-          taxJurisdiction: parsed.taxJurisdiction || "",
-          taxAddress: parsed.taxAddress || "",
+          taxJurisdiction: parsed.taxJurisdiction || settings.taxJurisdiction || "",
+          taxAddress: parsed.taxAddress || settings.taxAddress || "",
           includeTaxInPrices: parsed.includeTaxInPrices !== undefined ? parsed.includeTaxInPrices : (settings.includeTaxInPrices !== undefined ? settings.includeTaxInPrices : false),
           autoCalculateTax: parsed.autoCalculateTax !== undefined ? parsed.autoCalculateTax : (settings.autoCalculateTax !== undefined ? settings.autoCalculateTax : true),
         })
       } else {
         // Use settings provider values (from database) as primary source - only on initial load
         setTaxInfo({
-          taxId: "",
+          taxId: settings.taxId || "",
           defaultTaxRate: settings.taxRate?.toString() || "8.00",
           taxName: settings.taxName || "Sales Tax",
-          taxJurisdiction: "",
-          taxAddress: "",
+          taxJurisdiction: settings.taxJurisdiction || "",
+          taxAddress: settings.taxAddress || "",
           includeTaxInPrices: settings.includeTaxInPrices !== undefined ? settings.includeTaxInPrices : false,
           autoCalculateTax: settings.autoCalculateTax !== undefined ? settings.autoCalculateTax : true,
         })
@@ -191,9 +201,11 @@ export default function SettingsPage() {
       localStorage.setItem('general-settings', JSON.stringify(generalSettings))
       
       // Update global settings provider
-      updateSetting('defaultCurrency', generalSettings.defaultCurrency)
-      updateSetting('invoicePrefix', generalSettings.invoicePrefix)
-      updateSetting('dateFormat', generalSettings.dateFormat)
+      await Promise.all([
+        updateSetting('defaultCurrency', generalSettings.defaultCurrency),
+        updateSetting('invoicePrefix', generalSettings.invoicePrefix),
+        updateSetting('dateFormat', generalSettings.dateFormat)
+      ])
       
       // Clear currency conversion cache if currency changed
       if (generalSettings.defaultCurrency !== originalCurrency) {
@@ -223,23 +235,83 @@ export default function SettingsPage() {
       localStorage.setItem('company-info', JSON.stringify(companyInfo))
       
       // Update global settings provider (this should save to database)
-      updateSetting('companyName', companyInfo.companyName)
-      updateSetting('companyAddress', companyInfo.companyAddress)
-      updateSetting('companyEmail', companyInfo.companyEmail)
-      updateSetting('companyPhone', companyInfo.companyPhone)
-      updateSetting('companyWebsite', companyInfo.companyWebsite)
-      updateSetting('companyRegistration', companyInfo.companyRegistration)
-      updateSetting('companyLogo', companyLogo)
+      await Promise.all([
+        updateSetting('companyName', companyInfo.companyName),
+        updateSetting('companyAddress', companyInfo.companyAddress),
+        updateSetting('companyEmail', companyInfo.companyEmail),
+        updateSetting('companyPhone', companyInfo.companyPhone),
+        updateSetting('companyWebsite', companyInfo.companyWebsite),
+        updateSetting('companyRegistration', companyInfo.companyRegistration),
+        updateSetting('companyLogo', companyLogo)
+      ])
       
       // Reset user changes flag after successful save
       setHasUserChanges(false)
       
-      toast.success("Company information saved successfully!")
+      if (isSupabaseConfigured()) {
+        toast.success("Company information saved successfully!", {
+          description: "Saved to both localStorage and database"
+        })
+      } else {
+        toast.success("Company information saved locally!", {
+          description: "Database not configured - see DATABASE_SETUP.md for full sync"
+        })
+      }
     } catch (error) {
       console.error('Error saving company information:', error)
       toast.error("Failed to save company information. Please try again.")
     } finally {
       setSavingCompany(false)
+    }
+  }
+
+  const handleSaveTax = async () => {
+    try {
+      setSavingTax(true)
+      
+      console.log('💾 Starting tax information save process...')
+      
+      // Save tax info to localStorage
+      localStorage.setItem('tax-info', JSON.stringify(taxInfo))
+      console.log('✅ Tax info saved to localStorage')
+      
+      // Update global settings provider (this should save to database)
+      console.log('📋 Saving tax settings to database:', {
+        taxRate: parseFloat(taxInfo.defaultTaxRate),
+        taxName: taxInfo.taxName,
+        taxId: taxInfo.taxId,
+        taxJurisdiction: taxInfo.taxJurisdiction,
+        taxAddress: taxInfo.taxAddress,
+        includeTaxInPrices: taxInfo.includeTaxInPrices,
+        autoCalculateTax: taxInfo.autoCalculateTax
+      })
+      
+      await Promise.all([
+        updateSetting('taxRate', parseFloat(taxInfo.defaultTaxRate)),
+        updateSetting('taxName', taxInfo.taxName),
+        updateSetting('taxId', taxInfo.taxId),
+        updateSetting('taxJurisdiction', taxInfo.taxJurisdiction),
+        updateSetting('taxAddress', taxInfo.taxAddress),
+        updateSetting('includeTaxInPrices', taxInfo.includeTaxInPrices),
+        updateSetting('autoCalculateTax', taxInfo.autoCalculateTax)
+      ])
+      
+      console.log('✅ All tax settings update calls completed')
+      
+      if (isSupabaseConfigured()) {
+        toast.success("Tax information saved successfully!", {
+          description: "Saved to both localStorage and database"
+        })
+      } else {
+        toast.success("Tax information saved locally!", {
+          description: "Database not configured - see DATABASE_SETUP.md for full sync"
+        })
+      }
+    } catch (error) {
+      console.error('Error saving tax information:', error)
+      toast.error("Failed to save tax information. Please try again.")
+    } finally {
+      setSavingTax(false)
     }
   }
 
@@ -283,12 +355,18 @@ export default function SettingsPage() {
       console.log('Saving tax settings:', {
         taxRate: parseFloat(taxInfo.defaultTaxRate),
         taxName: taxInfo.taxName,
+        taxId: taxInfo.taxId,
+        taxJurisdiction: taxInfo.taxJurisdiction,
+        taxAddress: taxInfo.taxAddress,
         includeTaxInPrices: taxInfo.includeTaxInPrices,
         autoCalculateTax: taxInfo.autoCalculateTax
       })
       
       updateSetting('taxRate', parseFloat(taxInfo.defaultTaxRate))
       updateSetting('taxName', taxInfo.taxName)
+      updateSetting('taxId', taxInfo.taxId)
+      updateSetting('taxJurisdiction', taxInfo.taxJurisdiction)
+      updateSetting('taxAddress', taxInfo.taxAddress)
       updateSetting('includeTaxInPrices', taxInfo.includeTaxInPrices)
       updateSetting('autoCalculateTax', taxInfo.autoCalculateTax)
       
@@ -386,6 +464,16 @@ export default function SettingsPage() {
         title="Settings"
       />
       <PageContent>
+        {!isSupabaseConfigured() && (
+          <Alert className="mb-6 border-amber-200 bg-amber-50">
+            <InfoIcon className="h-4 w-4 text-amber-600" />
+            <AlertTitle className="text-amber-800">Database Not Configured</AlertTitle>
+            <AlertDescription className="text-amber-700">
+              Settings are saving to localStorage only. For full functionality including cross-device sync, 
+              please configure Supabase. See <code className="bg-amber-100 px-1 rounded">DATABASE_SETUP.md</code> for instructions.
+            </AlertDescription>
+          </Alert>
+        )}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList>
             <TabsTrigger value="general">General</TabsTrigger>
@@ -669,8 +757,20 @@ export default function SettingsPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Tax Information</CardTitle>
-                <CardDescription>Configure tax settings for invoices and financial reporting.</CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Tax Information</CardTitle>
+                    <CardDescription>Configure tax settings for invoices and financial reporting.</CardDescription>
+                  </div>
+                  <Button size="sm" onClick={handleSaveTax} disabled={savingTax}>
+                    {savingTax ? (
+                      <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="mr-1.5 h-4 w-4" />
+                    )}
+                    {savingTax ? "Saving..." : "Save"}
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
