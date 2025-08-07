@@ -5,6 +5,7 @@ import { createContext, useContext, useEffect, useState } from "react"
 import { formatCurrency as formatCurrencyUtil, setDefaultCurrency, getDefaultCurrency } from "@/lib/currency"
 import { getCompanySettings, upsertCompanySettings, type CompanySettings } from "@/lib/company-settings"
 import { getDateFormat, setDateFormat, formatDateWithUserPreference, type DateFormat } from "@/lib/date-format"
+import { useAuth } from "@/components/auth-provider"
 
 // Feature flag: Set to false if database integration is causing issues
 // Re-enabled after fixing duplicate records issue
@@ -68,6 +69,7 @@ const SettingsContext = createContext<SettingsContextType>({
 })
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
+  const { user, loading: authLoading } = useAuth()
   const [settings, setSettings] = useState<AppSettings>(defaultSettings)
   const [isLoading, setIsLoading] = useState(false) // Start with false to prevent flash
 
@@ -83,6 +85,19 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         return
       }
 
+      // Wait for authentication to complete before loading from database
+      if (authLoading) {
+        console.log('⏳ Waiting for authentication to complete...')
+        return
+      }
+
+      console.log('🔑 Auth state:', { 
+        user: user?.email || 'not logged in', 
+        userId: user?.id || 'none',
+        authLoading,
+        timestamp: new Date().toISOString()
+      })
+      
       const loadedSettings = { ...defaultSettings }
       
       // First, get currency from global currency system
@@ -104,11 +119,14 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       
       if (isMounted) setSettings(loadedSettings)
       
-      // Then try to load from database immediately (don't wait)
-      try {
-        const dbSettings = await getCompanySettings()
-        
-        if (dbSettings && isMounted) {
+      // Then try to load from database only if user is authenticated
+      if (user?.id) {
+        console.log('📦 Loading settings from database for user:', user.email)
+        try {
+          const dbSettings = await getCompanySettings()
+          
+          if (dbSettings && isMounted) {
+            console.log('✅ Database settings loaded:', dbSettings)
           // Update settings state with database values
           const updatedSettings = {
             ...loadedSettings,
@@ -223,12 +241,16 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             localStorage.setItem('setting_companyLogo', JSON.stringify(dbSettings.company_logo))
           }
         }
-      } catch (error) {
-        console.error('Failed to load settings from database:', error)
-        // Continue with localStorage/default settings - don't break the app
-      } finally {
-        if (isMounted) setIsLoading(false)
+        } catch (error) {
+          console.error('Failed to load settings from database:', error)
+          // Continue with localStorage/default settings - don't break the app
+        }
+      } else {
+        console.log('ℹ️ User not authenticated - using localStorage/default settings only')
       }
+      
+      // Always set loading to false at the end
+      if (isMounted) setIsLoading(false)
     }
     
     loadSettings()
@@ -237,7 +259,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [authLoading, user?.id]) // Re-run when auth state changes
 
   const updateSetting = async (key: keyof AppSettings, value: any) => {
     setSettings((prev) => ({ ...prev, [key]: value }))

@@ -27,22 +27,26 @@ export interface CompanySettings {
 
 export async function getCompanySettings(): Promise<CompanySettings | null> {
   try {
+    console.log('🔍 getCompanySettings called at:', new Date().toISOString())
+    
     if (!isSupabaseConfigured()) {
-      console.log('Supabase not configured, using mock data')
+      console.log('❌ Supabase not configured, cannot fetch settings')
       return null
     }
 
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     
     if (authError) {
-      console.error('Authentication error:', authError)
+      console.error('❌ Authentication error in getCompanySettings:', authError.message)
       return null
     }
     
     if (!user) {
-      console.log('No authenticated user found')
+      console.log('❌ No authenticated user found in getCompanySettings')
       return null
     }
+    
+    console.log('✅ User authenticated in getCompanySettings:', user.email)
 
     // Get the most recent record if multiple exist
     const { data: dataArray, error } = await supabase
@@ -55,11 +59,20 @@ export async function getCompanySettings(): Promise<CompanySettings | null> {
     const data = dataArray && dataArray.length > 0 ? dataArray[0] : null
 
     if (error) {
-      console.error('Error fetching company settings:', error)
+      console.error('❌ Database error fetching company settings:', error)
       return null
     }
 
-
+    if (data) {
+      console.log('✅ Company settings loaded from database:', {
+        companyName: data.company_name,
+        taxId: data.tax_id,
+        taxJurisdiction: data.tax_jurisdiction,
+        taxAddress: data.tax_address
+      })
+    } else {
+      console.log('ℹ️ No company settings found in database for user')
+    }
     
     return data
   } catch (err) {
