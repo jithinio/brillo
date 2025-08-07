@@ -122,6 +122,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       // Then try to load from database only if user is authenticated
       if (user?.id) {
         console.log('📦 Loading settings from database for user:', user.email)
+        console.log('📦 User session details:', {
+          userId: user.id,
+          email: user.email,
+          hasSession: !!user,
+          userKeys: Object.keys(user)
+        })
         try {
           const dbSettings = await getCompanySettings()
           
@@ -160,7 +166,15 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             setDateFormat(dbSettings.date_format as DateFormat)
           }
           
-          if (isMounted) setSettings(updatedSettings)
+          if (isMounted) {
+            console.log('🔄 Settings provider updating context with database values:', {
+              companyName: updatedSettings.companyName,
+              taxId: updatedSettings.taxId,
+              taxJurisdiction: updatedSettings.taxJurisdiction,
+              taxAddress: updatedSettings.taxAddress
+            })
+            setSettings(updatedSettings)
+          }
           
 
           
@@ -215,7 +229,15 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                   setDateFormat(dbSettings.date_format as DateFormat)
                 }
                 
-                if (isMounted) setSettings(updatedSettingsWithLocalTemplate)
+                if (isMounted) {
+                  console.log('🔄 Settings provider updating context with localStorage template values:', {
+                    companyName: updatedSettingsWithLocalTemplate.companyName,
+                    taxId: updatedSettingsWithLocalTemplate.taxId,
+                    taxJurisdiction: updatedSettingsWithLocalTemplate.taxJurisdiction,
+                    taxAddress: updatedSettingsWithLocalTemplate.taxAddress
+                  })
+                  setSettings(updatedSettingsWithLocalTemplate)
+                }
                 
                 // Sync localStorage template to database in background
                 try {

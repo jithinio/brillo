@@ -34,19 +34,32 @@ export async function getCompanySettings(): Promise<CompanySettings | null> {
       return null
     }
 
+    // Check session first
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    console.log('🔍 Session check:', {
+      hasSession: !!session,
+      hasUser: !!session?.user,
+      sessionError: sessionError?.message,
+      userId: session?.user?.id,
+      email: session?.user?.email
+    })
+    
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     
     if (authError) {
       console.error('❌ Authentication error in getCompanySettings:', authError.message)
+      console.error('❌ Full auth error details:', authError)
       return null
     }
     
     if (!user) {
       console.log('❌ No authenticated user found in getCompanySettings')
+      console.log('❌ User data from getUser():', user)
       return null
     }
     
     console.log('✅ User authenticated in getCompanySettings:', user.email)
+    console.log('✅ User ID:', user.id)
 
     // Get the most recent record if multiple exist
     const { data: dataArray, error } = await supabase
