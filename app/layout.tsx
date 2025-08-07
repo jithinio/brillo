@@ -84,9 +84,12 @@ export const metadata: Metadata = {
   description: "Manage your clients, projects, and invoices with ease",
   generator: 'v0.dev',
   icons: {
-    icon: '/Favicon.png',
-    shortcut: '/Favicon.png',
-    apple: '/Favicon.png',
+    icon: [
+      { url: '/Favicon.svg', type: 'image/svg+xml' },
+      { url: '/Favicon.png', type: 'image/png' }
+    ],
+    shortcut: '/Favicon.svg',
+    apple: '/Favicon.png', // Keep PNG for Apple devices as they have better PNG support
   },
 }
 
