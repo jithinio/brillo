@@ -82,7 +82,12 @@ const inconsolata = Inconsolata({
 export const metadata: Metadata = {
   title: "Brillo - Business Management Platform",
   description: "Manage your clients, projects, and invoices with ease",
-    generator: 'v0.dev'
+  generator: 'v0.dev',
+  icons: {
+    icon: '/Favicon.png',
+    shortcut: '/Favicon.png',
+    apple: '/Favicon.png',
+  },
 }
 
 export default function RootLayout({
