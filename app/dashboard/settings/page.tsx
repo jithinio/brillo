@@ -107,7 +107,6 @@ export default function SettingsPage() {
         )
 
         if (hasChanged) {
-          console.log('📝 Updating general settings from settings:', newGeneralSettings)
           setGeneralSettings(newGeneralSettings)
         }
         
@@ -148,7 +147,6 @@ export default function SettingsPage() {
         })
         
         if (hasChanged || !hasInitializedTax.current) {
-          console.log('📝 Updating tax info from settings:', newTaxInfo)
           setTaxInfo(newTaxInfo)
           hasInitializedTax.current = true
         }
@@ -183,14 +181,13 @@ export default function SettingsPage() {
       )
       
       if (hasChanged) {
-        console.log('📝 Updating company info from settings:', newCompanyInfo)
         setCompanyInfo(newCompanyInfo)
         setHasUserChanges(false)
       }
     }
   }, [isLoading, initialLoadComplete, settings.companyName, settings.companyAddress, settings.companyPhone, settings.companyWebsite, settings.companyEmail, settings.companyRegistration])
 
-  // Removed debug effects - using individual save buttons now
+
 
   const handleSaveGeneral = async () => {
     try {
@@ -208,7 +205,6 @@ export default function SettingsPage() {
       
       // Clear currency conversion cache if currency changed
       if (generalSettings.defaultCurrency !== originalCurrency) {
-        console.log('💱 Currency changed, clearing conversion cache')
         clearCurrencyConversionCache()
         setOriginalCurrency(generalSettings.defaultCurrency)
         
@@ -268,22 +264,8 @@ export default function SettingsPage() {
     try {
       setSavingTax(true)
       
-      console.log('💾 Starting tax information save process...')
-      
       // Save tax info to localStorage
       localStorage.setItem('tax-info', JSON.stringify(taxInfo))
-      console.log('✅ Tax info saved to localStorage')
-      
-      // Update global settings provider (this should save to database)
-      console.log('📋 Saving tax settings to database:', {
-        taxRate: parseFloat(taxInfo.defaultTaxRate),
-        taxName: taxInfo.taxName,
-        taxId: taxInfo.taxId,
-        taxJurisdiction: taxInfo.taxJurisdiction,
-        taxAddress: taxInfo.taxAddress,
-        includeTaxInPrices: taxInfo.includeTaxInPrices,
-        autoCalculateTax: taxInfo.autoCalculateTax
-      })
       
       await Promise.all([
         updateSetting('taxRate', parseFloat(taxInfo.defaultTaxRate)),
@@ -295,7 +277,7 @@ export default function SettingsPage() {
         updateSetting('autoCalculateTax', taxInfo.autoCalculateTax)
       ])
       
-      console.log('✅ All tax settings update calls completed')
+
       
       if (isSupabaseConfigured()) {
         toast.success("Tax information saved successfully!", {
@@ -351,15 +333,6 @@ export default function SettingsPage() {
       updateSetting('companyLogo', companyLogo)
       
       // Update tax information
-      console.log('Saving tax settings:', {
-        taxRate: parseFloat(taxInfo.defaultTaxRate),
-        taxName: taxInfo.taxName,
-        taxId: taxInfo.taxId,
-        taxJurisdiction: taxInfo.taxJurisdiction,
-        taxAddress: taxInfo.taxAddress,
-        includeTaxInPrices: taxInfo.includeTaxInPrices,
-        autoCalculateTax: taxInfo.autoCalculateTax
-      })
       
       updateSetting('taxRate', parseFloat(taxInfo.defaultTaxRate))
       updateSetting('taxName', taxInfo.taxName)

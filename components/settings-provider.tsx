@@ -275,6 +275,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       if (isMounted) setIsLoading(false)
     }
     
+    // Only load settings if we're not in the middle of logout
+    if (!authLoading && user === null) {
+      // User is logged out, just set loading to false and don't fetch anything
+      setIsLoading(false)
+      return
+    }
+    
     loadSettings()
     
     // Cleanup function

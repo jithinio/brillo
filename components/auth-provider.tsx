@@ -122,11 +122,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
+      // Clear any cached authentication state
+      setUser(null)
+      setLoading(true)
+      
+      // Sign out from Supabase
       await supabase.auth.signOut()
+      
+      console.log('✅ User signed out successfully')
     } catch (error) {
       console.error("Sign out error:", error)
       // Force local sign out even if Supabase fails
       setUser(null)
+    } finally {
+      setLoading(false)
     }
   }
 

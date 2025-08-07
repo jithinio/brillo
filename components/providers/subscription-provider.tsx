@@ -200,6 +200,15 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
 
   const loadSubscriptionData = async (force: boolean = false) => {
     if (!user) {
+      // Reset subscription to default free state when no user
+      setSubscription({
+        planId: 'free',
+        status: 'active',
+        customerId: null,
+        subscriptionId: null,
+        currentPeriodEnd: null,
+        cancelAtPeriodEnd: false
+      })
       setIsLoading(false)
       return
     }
@@ -377,7 +386,15 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
   }
 
   const checkUsage = async (force: boolean = false) => {
-    if (!user) return
+    if (!user) {
+      // Reset usage to default free plan limits when no user
+      setUsage({
+        projects: { current: 0, limit: 20, canCreate: true },
+        clients: { current: 0, limit: 10, canCreate: true },
+        invoices: { current: 0, limit: 'none', canCreate: false }
+      })
+      return
+    }
 
     // Smart debouncing: shorter interval for forced checks (like from sidebar), longer for automatic checks
     const now = Date.now()
