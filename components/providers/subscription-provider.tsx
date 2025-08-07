@@ -292,20 +292,16 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
 
               }
             } else if (response.status === 401) {
-              console.warn('🧹 401 Unauthorized from Polar API - clearing stale subscription data')
-              const cleared = await clearStaleSubscriptionData(user.id)
-              if (cleared) {
-                return loadSubscriptionData(true)
-              }
+              console.warn('🔍 401 Unauthorized from Polar API - skipping Polar subscription lookup')
+              // Don't clear subscription data for 401 errors - could be temporary API issues
+              subscriptionId = null // Reset to prevent further API calls
             }
           } catch (error) {
             console.warn('Could not fetch subscription from Polar:', error)
             if (error instanceof Error && error.message.includes('401')) {
-              console.warn('🧹 Clearing stale subscription data due to 401 error')
-              const cleared = await clearStaleSubscriptionData(user.id)
-              if (cleared) {
-                return loadSubscriptionData(true)
-              }
+              console.warn('🔍 401 error in Polar API - skipping Polar calls')
+              // Don't clear subscription data for 401 errors - could be temporary API issues
+              subscriptionId = null // Reset to prevent further API calls
             }
           }
         }
@@ -376,12 +372,8 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
             console.warn('Could not fetch subscription details from Polar:', error)
             // If we get a 401 error, clear stale subscription data
             if (error instanceof Error && error.message.includes('401')) {
-              console.warn('🧹 Clearing stale subscription data due to 401 error')
-              const cleared = await clearStaleSubscriptionData(user.id)
-              if (cleared) {
-                // Refetch profile data after clearing stale data
-                return loadSubscriptionData(true)
-              }
+              console.warn('🔍 401 error in Polar subscription details - skipping Polar calls')
+              // Don't clear subscription data for 401 errors - could be temporary API issues
               subscriptionId = null // Reset subscription ID to prevent further attempts
             }
           }
