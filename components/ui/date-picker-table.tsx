@@ -12,6 +12,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { useSettings } from "@/components/settings-provider"
 
 interface DatePickerTableProps {
   date?: Date
@@ -26,8 +27,19 @@ export function DatePickerTable({
   placeholder = "Pick a date", 
   disabled
 }: DatePickerTableProps) {
+  const [open, setOpen] = React.useState(false)
+  const { formatDate } = useSettings()
+
+  const handleSelect = (selectedDate: Date | undefined) => {
+    onSelect?.(selectedDate)
+    setOpen(false) // Close popover after selection
+  }
+
+  // Format the displayed date using user's preferred format (compact for tables)
+  const displayDate = date ? formatDate(date) : undefined
+
   return (
-    <Popover modal={true}>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <div
           className={cn(
@@ -37,7 +49,7 @@ export function DatePickerTable({
           )}
         >
           <span className="truncate min-w-0">
-            {date ? format(date, "MMM d, yy") : placeholder}
+            {displayDate || placeholder}
           </span>
         </div>
       </PopoverTrigger>
@@ -48,7 +60,7 @@ export function DatePickerTable({
         <Calendar
           mode="single"
           selected={date}
-          onSelect={onSelect}
+          onSelect={handleSelect}
           initialFocus
           captionLayout="dropdown"
           fromYear={2020}

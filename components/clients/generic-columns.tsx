@@ -90,6 +90,7 @@ interface ClientColumnConfig {
   onProjectClick?: (projectId: string) => void
   onEditClient?: (client: any) => void
   refetch?: () => void
+  formatDate?: (date: Date | string | null | undefined) => string
 }
 
 // Create footer functions
@@ -112,6 +113,7 @@ const getCountryName = (countryCode: string): string => {
 }
 
 export function createClientColumns(columnConfig: ClientColumnConfig): ColumnDef<Client>[] {
+  const formatDate = columnConfig.formatDate || ((date: any) => date?.toString() || "")
   
   const footerFunctions = createFooterFunctions()
   
@@ -297,7 +299,7 @@ export function createClientColumns(columnConfig: ClientColumnConfig): ColumnDef
             <Popover>
               <PopoverTrigger asChild>
                 <button className="text-sm text-muted-foreground hover:text-foreground focus:outline-none cursor-pointer w-full text-left">
-                  {date ? format(date, "MMM d, yyyy") : "—"}
+                  {date ? formatDate(date) : "—"}
                 </button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">

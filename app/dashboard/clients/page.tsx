@@ -7,6 +7,7 @@ import { GenericTableWrapper } from "@/components/table/GenericTableWrapper"
 import { createClientColumns } from "@/components/clients/generic-columns"
 import { useClients } from "@/hooks/use-clients"
 import { Button } from "@/components/ui/button"
+import { useSettings } from "@/components/settings-provider"
 import {
   Dialog,
   DialogContent,
@@ -273,6 +274,7 @@ export default function ClientsPage() {
   const [isLoading, setIsLoading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const router = useRouter()
+  const { formatDate } = useSettings()
 
   // State for filters
   const [filters, setFilters] = useState({})
@@ -897,6 +899,7 @@ export default function ClientsPage() {
           onStatusChange: clientsData.updateStatus,
           onRelationshipChange: clientsData.updateStatus,
           onEditClient: entityActions.onEdit,
+          formatDate: formatDate,
         })}
         features={{
           search: true,

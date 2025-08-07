@@ -80,7 +80,7 @@ const backgroundColorPresets = [
 ]
 
 export default function CustomizeInvoicePage() {
-  const { settings, isLoading, updateSetting } = useSettings()
+  const { settings, isLoading, updateSetting, formatDate } = useSettings()
   const [activeTab, setActiveTab] = useState('template')
   const [saving, setSaving] = useState(false)
   const [template, setTemplate] = useState({
@@ -406,11 +406,11 @@ export default function CustomizeInvoicePage() {
               <div className="space-y-2">
                 <div>
                   <span style={{ color: template.secondaryColor, fontSize: '14px' }}>Invoice Date: </span>
-                  <span style={{ fontWeight: '500' }}>{invoiceData.date.toLocaleDateString()}</span>
+                  <span style={{ fontWeight: '500' }}>{formatDate(invoiceData.date)}</span>
                             </div>
                 <div>
                   <span style={{ color: template.secondaryColor, fontSize: '14px' }}>Due Date: </span>
-                  <span style={{ fontWeight: '500' }}>{invoiceData.dueDate.toLocaleDateString()}</span>
+                  <span style={{ fontWeight: '500' }}>{formatDate(invoiceData.dueDate)}</span>
                             </div>
                           </div>
             </div>
@@ -542,11 +542,11 @@ export default function CustomizeInvoicePage() {
               <>
                 <div>
                   <div style={{ color: template.secondaryColor, marginBottom: '4px' }}>Issue Date</div>
-                  <div style={{ fontWeight: '600' }}>{invoiceData.date.toLocaleDateString()}</div>
+                  <div style={{ fontWeight: '600' }}>{formatDate(invoiceData.date)}</div>
                           </div>
                 <div>
                   <div style={{ color: template.secondaryColor, marginBottom: '4px' }}>Due Date</div>
-                  <div style={{ fontWeight: '600' }}>{invoiceData.dueDate.toLocaleDateString()}</div>
+                  <div style={{ fontWeight: '600' }}>{formatDate(invoiceData.dueDate)}</div>
                         </div>
               </>
             )}
@@ -781,11 +781,11 @@ export default function CustomizeInvoicePage() {
               <div style={{ fontSize: '14px', lineHeight: '1.8' }}>
                 <div>
                   <span style={{ color: template.secondaryColor }}>Date: </span>
-                  <span style={{ fontWeight: '500' }}>{invoiceData.date.toLocaleDateString()}</span>
+                  <span style={{ fontWeight: '500' }}>{formatDate(invoiceData.date)}</span>
                 </div>
                 <div>
                   <span style={{ color: template.secondaryColor }}>Due: </span>
-                  <span style={{ fontWeight: '500' }}>{invoiceData.dueDate.toLocaleDateString()}</span>
+                  <span style={{ fontWeight: '500' }}>{formatDate(invoiceData.dueDate)}</span>
                 </div>
                 {template.showPaymentTerms && (
                   <div>
@@ -972,7 +972,7 @@ export default function CustomizeInvoicePage() {
                     Issue Date
                       </div>
                   <div style={{ fontSize: '14px', fontWeight: '600', color: template.primaryColor }}>
-                    {invoiceData.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    {formatDate(invoiceData.date)}
                   </div>
                   <div style={{ 
                     fontSize: '12px', 
@@ -986,7 +986,7 @@ export default function CustomizeInvoicePage() {
                     Due Date
                   </div>
                   <div style={{ fontSize: '14px', fontWeight: '600', color: template.primaryColor }}>
-                    {invoiceData.dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    {formatDate(invoiceData.dueDate)}
                   </div>
                             </div>
                           )}
@@ -1296,11 +1296,11 @@ export default function CustomizeInvoicePage() {
                 <>
                   <div className="flex justify-between">
                     <span style={{ color: template.secondaryColor }}>Issue date</span>
-                    <span style={{ color: template.primaryColor, fontWeight: '500' }}>{invoiceData.date.toLocaleDateString()}</span>
+                    <span style={{ color: template.primaryColor, fontWeight: '500' }}>{formatDate(invoiceData.date)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span style={{ color: template.secondaryColor }}>Due date</span>
-                    <span style={{ color: template.primaryColor, fontWeight: '500' }}>{invoiceData.dueDate.toLocaleDateString()}</span>
+                    <span style={{ color: template.primaryColor, fontWeight: '500' }}>{formatDate(invoiceData.dueDate)}</span>
                   </div>
                 </>
               )}

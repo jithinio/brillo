@@ -12,6 +12,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { useSettings } from "@/components/settings-provider"
+import { formatDateWithUserPreference } from "@/lib/date-format"
 
 interface DatePickerProps {
   date?: Date
@@ -28,8 +30,19 @@ export function DatePicker({
   disabled,
   size = "default"
 }: DatePickerProps) {
+  const [open, setOpen] = React.useState(false)
+  const { formatDate } = useSettings()
+
+  const handleSelect = (selectedDate: Date | undefined) => {
+    onSelect?.(selectedDate)
+    setOpen(false) // Close popover after selection
+  }
+
+  // Format the displayed date using user's preferred format
+  const displayDate = date ? formatDate(date) : undefined
+
   return (
-    <Popover modal={true}>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -41,7 +54,7 @@ export function DatePicker({
           disabled={disabled}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
-          {date ? format(date, "MMM d, yyyy") : <span>{placeholder}</span>}
+          {displayDate ? <span>{displayDate}</span> : <span>{placeholder}</span>}
         </Button>
       </PopoverTrigger>
       <PopoverContent 
@@ -51,7 +64,7 @@ export function DatePicker({
         <Calendar
           mode="single"
           selected={date}
-          onSelect={onSelect}
+          onSelect={handleSelect}
           initialFocus
           captionLayout="dropdown"
           fromYear={2020}

@@ -13,6 +13,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { format } from "date-fns"
+import { useSettings } from "@/components/settings-provider"
 
 export function DateRangePicker({
   className,
@@ -23,6 +24,8 @@ export function DateRangePicker({
   date: DateRange | undefined
   onDateChange: (date: DateRange | undefined) => void
 }) {
+  const { formatDate } = useSettings()
+
   return (
     <div className={cn("grid gap-2", className)}>
       <Popover modal={true}>
@@ -39,11 +42,10 @@ export function DateRangePicker({
             {date?.from ? (
               date.to ? (
                 <>
-                  {format(date.from, "LLL dd, y")} -{" "}
-                  {format(date.to, "LLL dd, y")}
+                  {formatDate(date.from)} - {formatDate(date.to)}
                 </>
               ) : (
-                format(date.from, "LLL dd, y")
+                formatDate(date.from)
               )
             ) : (
               <span>Pick a date</span>

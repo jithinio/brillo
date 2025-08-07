@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils"
 import type { DateRange, AnalyticsFilters } from "@/hooks/use-analytics-data"
 import type { Client } from "@/lib/analytics-calculations"
 import { format, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear, subMonths, subQuarters, subYears } from "date-fns"
+import { useSettings } from "@/components/settings-provider"
 
 interface AnalyticsFiltersProps {
   filters: AnalyticsFilters
@@ -82,6 +83,7 @@ export function AnalyticsFilters({
   isLoading = false,
   onRefresh
 }: AnalyticsFiltersProps) {
+  const { formatDate } = useSettings()
   const [clientSelectOpen, setClientSelectOpen] = useState(false)
   const [statusSelectOpen, setStatusSelectOpen] = useState(false)
   const [quickPeriodValue, setQuickPeriodValue] = useState<string>("")
@@ -166,7 +168,7 @@ export function AnalyticsFilters({
                 >
                   <Calendar className="mr-1 h-3 w-3" />
                   {filters.dateRange?.start ? (
-                    format(filters.dateRange.start, "MMM d")
+                    formatDate(filters.dateRange.start)
                   ) : (
                     <span className="text-muted-foreground">Start</span>
                   )}
@@ -204,7 +206,7 @@ export function AnalyticsFilters({
                 >
                   <Calendar className="mr-1 h-3 w-3" />
                   {filters.dateRange?.end ? (
-                    format(filters.dateRange.end, "MMM d")
+                    formatDate(filters.dateRange.end)
                   ) : (
                     <span className="text-muted-foreground">End</span>
                   )}
@@ -377,7 +379,7 @@ export function AnalyticsFilters({
           {/* Date Range Badge */}
           {filters.dateRange && (
             <Badge variant="secondary" className="h-6 px-2 text-xs">
-              {format(filters.dateRange.start, 'MMM d')} - {format(filters.dateRange.end, 'MMM d, yyyy')}
+              {formatDate(filters.dateRange.start)} - {formatDate(filters.dateRange.end)}
               <Button
                 variant="ghost"
                 size="sm"

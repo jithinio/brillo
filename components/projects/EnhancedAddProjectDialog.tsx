@@ -42,12 +42,66 @@ import { useCanPerformAction } from "@/components/over-limit-alert"
 import { useClients } from "@/hooks/use-clients"
 import { calculateRecurringTotal, calculateHourlyTotal } from "@/lib/project-calculation-engine"
 import { AddClientDialog } from "@/app/dashboard/pipeline/components/AddClientDialog"
-import type { 
-  CreateProjectData, 
-  FixedProjectFormData, 
-  RecurringProjectFormData, 
-  HourlyProjectFormData 
-} from "@/lib/types/enhanced-project"
+import { useSettings } from "@/components/settings-provider"
+import { parseFormattedDate } from "@/lib/date-format"
+// Define the types locally since the external types were removed
+interface CreateProjectData {
+  name: string
+  description?: string
+  client_id: string
+  currency: string
+  start_date?: string | null
+  due_date?: string | null
+  notes?: string
+  project_type: 'fixed' | 'recurring' | 'hourly'
+  total_budget?: number
+  auto_calculate_total?: boolean
+  recurring_frequency?: string
+  recurring_amount?: number
+  recurring_end_date?: string | null
+  hourly_rate_new?: number
+  estimated_hours?: number
+  actual_hours?: number
+}
+
+interface FixedProjectFormData {
+  name: string
+  description: string
+  client_id: string
+  currency: string
+  start_date: string
+  due_date: string
+  notes: string
+  project_type: 'fixed'
+  total_budget: number
+}
+
+interface RecurringProjectFormData {
+  name: string
+  description: string
+  client_id: string
+  currency: string
+  start_date: string
+  due_date: string
+  notes: string
+  project_type: 'recurring'
+  recurring_frequency: string
+  recurring_amount: number
+}
+
+interface HourlyProjectFormData {
+  name: string
+  description: string
+  client_id: string
+  currency: string
+  start_date: string
+  due_date: string
+  notes: string
+  project_type: 'hourly'
+  hourly_rate_new: number
+  estimated_hours: number
+  actual_hours: number
+}
 
 // Types
 type ProjectType = 'fixed' | 'recurring' | 'hourly'
@@ -309,13 +363,33 @@ const CurrencyField = ({ data, setData, context }: { data: any, setData: any, co
 }
 
 // Convert string dates to Date objects for the DatePicker with error handling
-const parseDate = (dateString: string) => {
-  if (!dateString) return undefined
-  const date = new Date(dateString)
+const parseDate = (dateString: string, userDateFormat?: string) => {
+  if (!dateString || dateString.trim() === '') return undefined
+  
+  // If we have a user format, try parsing with that first
+  if (userDateFormat) {
+    const parsed = parseFormattedDate(dateString, userDateFormat as any)
+    if (parsed) return parsed
+  }
+  
+  // Handle different date formats as fallback
+  let date: Date
+  
+  // If it's already an ISO date string (YYYY-MM-DD)
+  if (dateString.includes('-') && dateString.length === 10) {
+    // Create date in local timezone to avoid timezone issues
+    const [year, month, day] = dateString.split('-').map(Number)
+    date = new Date(year, month - 1, day) // month is 0-indexed
+  } else {
+    // Parse other date formats
+    date = new Date(dateString)
+  }
+  
   return isNaN(date.getTime()) ? undefined : date
 }
 
 // Convert Date to local YYYY-MM-DD string (timezone-safe)
+// We keep ISO format for internal storage as it's database-friendly
 const formatDateForInput = (date: Date): string => {
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
@@ -326,9 +400,10 @@ const formatDateForInput = (date: Date): string => {
 const DateFields = ({ data, setData, showEndDate = false }: { 
   data: any, setData: any, showEndDate?: boolean 
 }) => {
-  const startDate = parseDate(data.start_date)
-  const dueDate = parseDate(data.due_date)
-  const endDate = parseDate(data.recurring_end_date || data.end_date)
+  const { settings } = useSettings()
+  const startDate = parseDate(data.start_date, settings.dateFormat)
+  const dueDate = parseDate(data.due_date, settings.dateFormat)
+  const endDate = parseDate(data.recurring_end_date || data.end_date, settings.dateFormat)
 
   return (
     <div className={`grid ${showEndDate ? 'grid-cols-3' : 'grid-cols-2'} gap-4`}>
@@ -412,8 +487,9 @@ export function EnhancedAddProjectDialog({
   // Fetch clients
   const { data: clients = [], refetch: refetchClients } = useClients()
 
-  // Get default currency
-  const defaultCurrency = getDefaultCurrency()
+  // Get settings for currency and date format
+  const { settings } = useSettings()
+  const defaultCurrency = settings.defaultCurrency || getDefaultCurrency()
 
   // Form data for different project types
   const [fixedData, setFixedData] = useState<FixedProjectFormData>({
@@ -693,13 +769,17 @@ export function EnhancedAddProjectDialog({
         calculatedTotal = (currentData as FixedProjectFormData).total_budget || 0
       }
 
-      // Prepare project data
+      // Prepare project data with proper date handling
       const projectData: CreateProjectData = {
         ...currentData,
         currency: currentData.currency || defaultCurrency,
         project_type: activeTab,
         total_budget: calculatedTotal,
-        auto_calculate_total: activeTab !== 'fixed'
+        auto_calculate_total: activeTab !== 'fixed',
+        // Convert empty date strings to null for PostgreSQL
+        start_date: currentData.start_date || null,
+        due_date: currentData.due_date || null,
+        recurring_end_date: (currentData as any).recurring_end_date || null
       }
 
       let project: any
