@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     }
 
     const event = JSON.parse(body)
-    console.log('Polar webhook received:', event.type)
+
 
     switch (event.type) {
       case 'subscription.created':
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
         break
 
       default:
-        console.log('Unhandled webhook event:', event.type)
+
     }
 
     return NextResponse.json({ received: true })
@@ -72,14 +72,43 @@ async function handleSubscriptionCreated(subscription: any) {
     console.log('Processing subscription created:', subscription.id)
 
     // Find user by customer ID
-    const { data: profile } = await supabase
+    let { data: profile } = await supabase
       .from('profiles')
       .select('*')
       .eq('polar_customer_id', subscription.customerId)
       .single()
 
+    // If no profile found by customer ID, try to find by customer email from Polar
+    if (!profile && subscription.customer?.email) {
+      console.log('Profile not found by customer ID, trying to find by email:', subscription.customer.email)
+      
+      // Try to find user by email in auth.users and then get their profile
+      const { data: authUser } = await supabase.auth.admin.listUsers()
+      const user = authUser.users?.find(u => u.email === subscription.customer.email)
+      
+      if (user) {
+        // Get or create profile for this user
+        const { data: userProfile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single()
+        
+        if (userProfile) {
+          // Update profile with Polar customer ID
+          await supabase
+            .from('profiles')
+            .update({ polar_customer_id: subscription.customerId })
+            .eq('id', user.id)
+          
+          profile = { ...userProfile, polar_customer_id: subscription.customerId }
+          console.log('✅ Updated profile with customer ID for user:', user.id)
+        }
+      }
+    }
+
     if (!profile) {
-      console.error('Profile not found for customer:', subscription.customerId)
+      console.error('Profile not found for customer:', subscription.customerId, 'email:', subscription.customer?.email)
       return
     }
 

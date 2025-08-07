@@ -81,7 +81,46 @@ export default function SettingsPage() {
   })
 
   const { updateSetting, settings, isLoading } = useSettings()
-  const { isLoading: subscriptionLoading } = useSubscription()
+  const { isLoading: subscriptionLoading, refetchSubscription } = useSubscription()
+  
+  // Check if user needs subscription sync - but only once per session
+  const [syncChecked, setSyncChecked] = useState(false)
+  
+  useEffect(() => {
+    const checkSubscriptionSync = async () => {
+      // Only check once to avoid infinite loops
+      if (syncChecked) return
+      
+      try {
+        const { supabase } = await import('@/lib/supabase')
+        const { data: { user } } = await supabase.auth.getUser()
+        
+        if (user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('polar_customer_id, subscription_plan_id, polar_subscription_id')
+            .eq('id', user.id)
+            .single()
+          
+          // If user has subscription but missing customer/subscription IDs, show info message
+          if (profile && profile.subscription_plan_id !== 'free' && 
+              (!profile.polar_customer_id || !profile.polar_subscription_id)) {
+            console.log('⚠️ Detected missing subscription data - use Sync Data button to fix')
+            // Don't auto-refresh anymore to avoid loops
+          }
+        }
+      } catch (error) {
+        console.log('Could not check subscription sync:', error)
+      } finally {
+        setSyncChecked(true)
+      }
+    }
+    
+    // Check sync status when settings page loads and when tab changes to subscription
+    if (activeTab === 'subscription' && !subscriptionLoading && !syncChecked) {
+      checkSubscriptionSync()
+    }
+  }, [activeTab, subscriptionLoading, syncChecked])
 
   // Handle URL tab parameter
   useEffect(() => {

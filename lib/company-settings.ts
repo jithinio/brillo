@@ -27,7 +27,7 @@ export interface CompanySettings {
 
 export async function getCompanySettings(): Promise<CompanySettings | null> {
   try {
-    console.log('🔍 getCompanySettings called at:', new Date().toISOString())
+
     
     if (!isSupabaseConfigured()) {
       console.log('❌ Supabase not configured, cannot fetch settings')
@@ -36,13 +36,7 @@ export async function getCompanySettings(): Promise<CompanySettings | null> {
 
     // Check session first
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-    console.log('🔍 Session check:', {
-      hasSession: !!session,
-      hasUser: !!session?.user,
-      sessionError: sessionError?.message,
-      userId: session?.user?.id,
-      email: session?.user?.email
-    })
+
     
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     
@@ -58,8 +52,7 @@ export async function getCompanySettings(): Promise<CompanySettings | null> {
       return null
     }
     
-    console.log('✅ User authenticated in getCompanySettings:', user.email)
-    console.log('✅ User ID:', user.id)
+
 
     // Get the most recent record if multiple exist
     const { data: dataArray, error } = await supabase
@@ -77,12 +70,7 @@ export async function getCompanySettings(): Promise<CompanySettings | null> {
     }
 
     if (data) {
-      console.log('✅ Company settings loaded from database:', {
-        companyName: data.company_name,
-        taxId: data.tax_id,
-        taxJurisdiction: data.tax_jurisdiction,
-        taxAddress: data.tax_address
-      })
+
     } else {
       console.log('ℹ️ No company settings found in database for user')
     }

@@ -13,6 +13,7 @@ export function SubscriptionManagement() {
   const { subscription, plan, usage, isLoading, refetchSubscription } = useSubscription()
   const [isManaging, setIsManaging] = useState(false)
   const [isRefreshingUsage, setIsRefreshingUsage] = useState(false)
+  const [isSyncing, setIsSyncing] = useState(false)
 
   const handleManageSubscription = async (action: 'cancel' | 'portal' | 'resume') => {
     try {
@@ -22,18 +23,50 @@ export function SubscriptionManagement() {
       const { supabase } = await import('@/lib/supabase')
       const { data: { session } } = await supabase.auth.getSession()
       
-      console.log('🔍 Session Debug:', {
-        hasSession: !!session,
-        hasAccessToken: !!session?.access_token,
-        tokenLength: session?.access_token?.length,
-        userId: session?.user?.id
-      })
+
       
       if (!session) {
         throw new Error('Authentication required')
       }
 
-      console.log('🔍 Making API call to /api/polar/manage with action:', action)
+      // Handle portal action differently - fetch portal URL first, then redirect
+      if (action === 'portal') {
+        
+        try {
+          const portalResponse = await fetch(`/api/polar/portal?token=${encodeURIComponent(session.access_token)}`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`
+            }
+          });
+
+
+
+          const portalData = await portalResponse.json();
+
+          if (!portalResponse.ok) {
+            console.error('❌ Portal error:', portalData);
+            toast.error(portalData.error || 'Failed to create billing portal session');
+            return;
+          }
+
+          if (portalData.portalUrl) {
+            toast.success('Opening billing portal...');
+            window.open(portalData.portalUrl, '_blank');
+          } else {
+            console.error('❌ No portal URL in response:', portalData);
+            toast.error('Invalid portal response');
+          }
+          
+          return;
+        } catch (error) {
+          console.error('❌ Portal error:', error);
+          toast.error('Failed to open billing portal');
+          return;
+        }
+      }
+
+
 
       const response = await fetch('/api/polar/manage', {
         method: 'POST',
@@ -77,23 +110,16 @@ export function SubscriptionManagement() {
         throw new Error(errorMessage)
       }
 
-      console.log('🔍 Manage Subscription Response:', { action, data })
 
-      if (action === 'portal' && data.portalUrl) {
-        toast.success('Opening billing portal...')
-        window.open(data.portalUrl, '_blank')
-      } else if (action === 'portal' && !data.portalUrl) {
-        console.error('❌ Portal URL missing from response:', data)
-        toast.error('Failed to open billing portal - no URL received')
-      } else {
-        toast.success(data.message || 'Subscription updated successfully')
-        
-        // Force refresh subscription data after successful action
-        setTimeout(() => {
-          console.log('🔄 Force refreshing subscription data after action:', action)
-          refetchSubscription(true) // Force refresh since action was taken
-        }, 500)
-      }
+
+      toast.success(data.message || 'Subscription updated successfully')
+      
+      // Force refresh subscription data after successful action
+      setTimeout(() => {
+        // Force refresh for subscription state changes (cancel/resume) to clear cache
+        const needsForceRefresh = ['cancel', 'resume'].includes(action)
+        refetchSubscription(needsForceRefresh) // Force refresh for state changes
+      }, 500)
 
     } catch (error) {
       console.error('Subscription management error:', error)
@@ -106,13 +132,65 @@ export function SubscriptionManagement() {
   const handleRefreshUsage = async () => {
     try {
       setIsRefreshingUsage(true)
-      refetchSubscription(true) // Force refresh when user explicitly requests it
+      refetchSubscription(false) // Normal refresh when user explicitly requests it
       toast.success('Usage data refreshed')
     } catch (error) {
       console.error('Error refreshing usage:', error)
       toast.error('Failed to refresh usage data')
     } finally {
       setIsRefreshingUsage(false)
+    }
+  }
+
+  const handleSyncSubscription = async () => {
+    try {
+      setIsSyncing(true)
+      console.log('🔄 Manual subscription sync requested')
+      
+      // Get auth session
+      const { createClient } = await import('@supabase/supabase-js')
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      )
+      
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        toast.error('Authentication required')
+        return
+      }
+      
+      // Call sync endpoint
+      const response = await fetch('/api/polar/sync', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      
+      const result = await response.json()
+      
+      if (response.ok) {
+        console.log('✅ Sync result:', result)
+        
+        if (result.synced) {
+          toast.success(result.message || 'Subscription data synchronized')
+          // Force refresh subscription data after successful sync
+          refetchSubscription(true)
+        } else {
+          toast.info(result.message || 'Subscription data already up to date')
+        }
+      } else {
+        console.error('❌ Sync failed:', result)
+        toast.error(result.error || 'Failed to sync subscription data')
+      }
+      
+    } catch (error) {
+      console.error('Error syncing subscription:', error)
+      toast.error('Failed to sync subscription data')
+    } finally {
+      setIsSyncing(false)
     }
   }
 
@@ -235,6 +313,20 @@ export function SubscriptionManagement() {
                 )}
                 Manage Billing
                 <ExternalLink className="w-3 h-3 ml-1" />
+              </Button>
+              
+              <Button
+                onClick={handleSyncSubscription}
+                disabled={isSyncing || isLoading}
+                variant="outline"
+                size="sm"
+              >
+                {isSyncing ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                )}
+                Sync Data
               </Button>
 
               {(subscription.subscriptionId || isProPlan) ? (

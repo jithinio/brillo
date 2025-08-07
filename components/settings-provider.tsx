@@ -87,16 +87,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
       // Wait for authentication to complete before loading from database
       if (authLoading) {
-        console.log('⏳ Waiting for authentication to complete...')
+
         return
       }
 
-      console.log('🔑 Auth state:', { 
-        user: user?.email || 'not logged in', 
-        userId: user?.id || 'none',
-        authLoading,
-        timestamp: new Date().toISOString()
-      })
+
       
       const loadedSettings = { ...defaultSettings }
       
@@ -121,18 +116,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       
       // Then try to load from database only if user is authenticated
       if (user?.id) {
-        console.log('📦 Loading settings from database for user:', user.email)
-        console.log('📦 User session details:', {
-          userId: user.id,
-          email: user.email,
-          hasSession: !!user,
-          userKeys: Object.keys(user)
-        })
+
         try {
           const dbSettings = await getCompanySettings()
           
           if (dbSettings && isMounted) {
-            console.log('✅ Database settings loaded:', dbSettings)
+
           // Update settings state with database values
           const updatedSettings = {
             ...loadedSettings,
@@ -167,12 +156,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           }
           
           if (isMounted) {
-            console.log('🔄 Settings provider updating context with database values:', {
-              companyName: updatedSettings.companyName,
-              taxId: updatedSettings.taxId,
-              taxJurisdiction: updatedSettings.taxJurisdiction,
-              taxAddress: updatedSettings.taxAddress
-            })
+
             setSettings(updatedSettings)
           }
           
@@ -268,7 +252,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           // Continue with localStorage/default settings - don't break the app
         }
       } else {
-        console.log('ℹ️ User not authenticated - using localStorage/default settings only')
+
       }
       
       // Always set loading to false at the end

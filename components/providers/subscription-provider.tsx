@@ -213,10 +213,15 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
       return
     }
 
-    // Smart caching - only check subscription every 2 minutes unless forced
+    // Rate limiting: prevent calls within 2 seconds unless forced
     const now = Date.now()
-    const timeSinceLastCheck = now - lastSubscriptionCheck
+    if (!force && (now - lastSubscriptionCheck) < 2000) {
+      return
+    }
+
+    // Smart caching - check if we have recent cached data before updating timestamp
     const subscriptionCacheThreshold = 2 * 60 * 1000 // 2 minutes
+    const timeSinceLastCheck = now - lastSubscriptionCheck
 
     if (!force && timeSinceLastCheck < subscriptionCacheThreshold && cachedSubscriptionData) {
       // Use cached data if it's recent
@@ -225,6 +230,9 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
       setIsLoading(false)
       return
     }
+
+    // Update timestamp only when we're actually going to fetch new data
+    setLastSubscriptionCheck(now)
 
     try {
       // Only set loading if this is the very first load (no cached data exists)
@@ -256,9 +264,9 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
 
         // If we have a customer ID but no subscription ID, try to fetch it from Polar
         if (profile.polar_customer_id && !subscriptionId && profile.subscription_plan_id !== 'free') {
+
+          
           try {
-            console.log('🔍 Fetching subscription from Polar for customer:', profile.polar_customer_id)
-            
             const headers: HeadersInit = {
               'Content-Type': 'application/json'
             }
@@ -274,63 +282,95 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
               const data = await response.json()
               if (data.subscriptionId) {
                 subscriptionId = data.subscriptionId
-                console.log('✅ Found subscription ID from Polar:', subscriptionId)
+  
+                
+                // Update the database with the found subscription ID
+                await supabase
+                  .from('profiles')
+                  .update({ polar_subscription_id: subscriptionId })
+                  .eq('id', user.id)
+
               }
             } else if (response.status === 401) {
               console.warn('🧹 401 Unauthorized from Polar API - clearing stale subscription data')
               const cleared = await clearStaleSubscriptionData(user.id)
               if (cleared) {
-                // Refetch profile data after clearing stale data
                 return loadSubscriptionData(true)
               }
             }
           } catch (error) {
             console.warn('Could not fetch subscription from Polar:', error)
-            // If we get a 401 error, clear stale subscription data
             if (error instanceof Error && error.message.includes('401')) {
               console.warn('🧹 Clearing stale subscription data due to 401 error')
               const cleared = await clearStaleSubscriptionData(user.id)
               if (cleared) {
-                // Refetch profile data after clearing stale data
                 return loadSubscriptionData(true)
               }
             }
           }
         }
+        
+        // Only show warning if user truly has no customer ID AND has active subscription
+        if (!profile.polar_customer_id && profile.subscription_plan_id !== 'free') {
+
+          // This indicates the user subscribed but webhook didn't sync properly
+          // User can use the "Sync Data" button to manually trigger sync
+          
+          // Set a minimal subscription state to avoid constant refreshing
+          setSubscription({
+            plan: profile.subscription_plan_id || 'free',
+            status: profile.subscription_status || 'free',
+            currentPeriodEnd: profile.subscription_current_period_end || null,
+            cancelAtPeriodEnd: false,
+            customerId: null,
+            subscriptionId: null
+          })
+          setIsLoading(false)
+          return
+        }
 
         let subscriptionDetails = null
 
-        // If we have a subscription ID, fetch detailed subscription info from Polar
+        // If we have a subscription ID, fetch detailed subscription info from Polar (with caching)
         if (subscriptionId) {
           try {
-            console.log('🔍 Fetching detailed subscription info from Polar')
-            const headers: HeadersInit = {
-              'Content-Type': 'application/json'
-            }
-            if (session?.access_token) {
-              headers['Authorization'] = `Bearer ${session.access_token}`
-            }
-
-            const response = await fetch(`/api/polar/subscription-details?subscriptionId=${subscriptionId}`, {
-              headers
-            })
+            // Check if we already have recent subscription details cached
+            const cacheKey = `subscription_details_${subscriptionId}`
+            const cachedDetails = sessionStorage.getItem(cacheKey)
+            const cacheTimestamp = sessionStorage.getItem(`${cacheKey}_timestamp`)
+            const now = Date.now()
+            const cacheAge = cacheTimestamp ? now - parseInt(cacheTimestamp) : Infinity
             
-            if (response.ok) {
-              const data = await response.json()
+            // Use cache if less than 2 minutes old
+            if (cachedDetails && cacheAge < 2 * 60 * 1000) {
+              const data = JSON.parse(cachedDetails)
               subscriptionDetails = data.subscription
-              console.log('✅ Got subscription details:', {
-                id: subscriptionDetails?.id,
-                status: subscriptionDetails?.status,
-                cancelAtPeriodEnd: subscriptionDetails?.cancelAtPeriodEnd
-              })
-            } else if (response.status === 401) {
-              console.warn('🧹 401 Unauthorized from Polar subscription details - clearing stale data')
-              const cleared = await clearStaleSubscriptionData(user.id)
-              if (cleared) {
-                // Refetch profile data after clearing stale data
-                return loadSubscriptionData(true)
+            } else {
+              const headers: HeadersInit = {
+                'Content-Type': 'application/json'
               }
-              subscriptionId = null // Reset subscription ID to prevent further attempts
+              if (session?.access_token) {
+                headers['Authorization'] = `Bearer ${session.access_token}`
+              }
+
+              const response = await fetch(`/api/polar/subscription-details?subscriptionId=${subscriptionId}`, {
+                headers
+              })
+              
+              if (response.ok) {
+                const data = await response.json()
+                subscriptionDetails = data.subscription
+
+                
+                // Cache the result
+                sessionStorage.setItem(cacheKey, JSON.stringify(data))
+                sessionStorage.setItem(`${cacheKey}_timestamp`, now.toString())
+              } else if (response.status === 401) {
+                console.warn('🧹 401 Unauthorized from Polar subscription details - clearing stale data')
+                const cleared = await clearStaleSubscriptionData(user.id)
+
+                subscriptionId = null // Reset subscription ID to prevent further attempts
+              }
             }
           } catch (error) {
             console.warn('Could not fetch subscription details from Polar:', error)
@@ -467,7 +507,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
   useEffect(() => {
     if (user && user.id) {
       // Load subscription data first, then usage will be updated automatically
-      loadSubscriptionData(true) // Force initial load
+      loadSubscriptionData(true) // Force initial load to bypass rate limiting on first load
     }
   }, [user?.id]) // Only depend on user ID to prevent re-runs when user object reference changes
 
@@ -490,8 +530,34 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     }
   }, [subscription.planId, user?.id]) // Only depend on user ID
 
-  const refetchSubscription = (forceUsageCheck: boolean = false) => {
-    if (user && document.visibilityState === 'visible') {
+  const refetchSubscription = useCallback((forceUsageCheck: boolean = false) => {
+    if (user) {
+      // Rate limiting for refetch calls
+      const now = Date.now()
+      const timeSinceLastRefetch = now - lastSubscriptionCheck
+      
+      // Prevent refetch calls within 3 seconds unless forced
+      if (!forceUsageCheck && timeSinceLastRefetch < 3000) {
+        return
+      }
+      
+      // Only proceed if page is visible (but don't block forced calls)
+      if (!forceUsageCheck && document.visibilityState !== 'visible') {
+        return
+      }
+      
+      // Clear cached subscription details when forcing refresh
+      let cacheWasCleared = false
+      if (forceUsageCheck) {
+        // Clear all subscription detail caches
+        Object.keys(sessionStorage).forEach(key => {
+          if (key.startsWith('subscription_details_')) {
+            sessionStorage.removeItem(key)
+          }
+        })
+        cacheWasCleared = true
+      }
+      
       // Check if we're on pages that shouldn't auto-refresh
       const isProfilePage = window.location.pathname.includes('/profile')
       const isSettingsPage = window.location.pathname.includes('/settings')
@@ -503,8 +569,8 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
           return
         }
         
-        // Only force subscription data reload if usage needs to be forced
-        loadSubscriptionData(forceUsageCheck)
+        // Force subscription data reload only if cache was cleared
+        loadSubscriptionData(cacheWasCleared) // Force reload only when cache was actually cleared
         
         // Only check usage if explicitly requested to reduce API calls
         if (forceUsageCheck) {
@@ -512,9 +578,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
         }
       }, 500) // Increased delay to prevent rapid successive calls
     }
-  }
-
-
+  }, [user, lastSubscriptionCheck]) // Include lastSubscriptionCheck to enable rate limiting
 
   const value: SubscriptionContextType = {
     subscription,

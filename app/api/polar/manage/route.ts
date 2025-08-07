@@ -1,7 +1,7 @@
 // Polar subscription management API route
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { createPolarClient } from '@/lib/polar-client'
+import { createPolarClient, createOrGetCustomer } from '@/lib/polar-client'
 
 export async function POST(request: NextRequest) {
   try {
@@ -217,66 +217,168 @@ async function handleCancelSubscription(profile: any, polar: any) {
 async function createPortalSession(polar: any, customerId?: string, userEmail?: string) {
   const returnUrl = `${process.env.NEXTAUTH_URL || process.env.VERCEL_URL || 'http://localhost:3000'}/dashboard/settings?tab=subscription`
   
-  // Strategy 1: Try with customer ID if available
-  if (customerId) {
-    try {
-      console.log('🔍 Attempting portal creation with customer ID:', customerId)
-      const portalSession = await polar.customerSessions.create({
-        customerId: customerId,
-        returnUrl: returnUrl
-      })
-      
-      if (portalSession && portalSession.customerPortalUrl) {
-        console.log('✅ Portal session created with customer ID')
-        return {
-          url: portalSession.customerPortalUrl,
-          message: 'Opening billing portal'
-        }
-      }
-    } catch (error: any) {
-      console.log('❌ Portal creation with customer ID failed:', error.message)
-    }
-  }
+  console.log('🔍 Starting portal session creation with:', {
+    hasCustomerId: !!customerId,
+    hasUserEmail: !!userEmail,
+    returnUrl: returnUrl
+  })
   
-  // Strategy 2: Try with email if available
-  if (userEmail) {
-    try {
-      console.log('🔍 Attempting portal creation with email:', userEmail)
-      const portalSession = await polar.customerSessions.create({
-        customerEmail: userEmail,
-        returnUrl: returnUrl
-      })
-      
-      if (portalSession && portalSession.customerPortalUrl) {
-        console.log('✅ Portal session created with email')
-        return {
-          url: portalSession.customerPortalUrl,
-          message: 'Opening billing portal using email authentication'
-        }
-      }
-    } catch (error: any) {
-      console.log('❌ Portal creation with email failed:', error.message)
-    }
-  }
+  // First, let's try to test if the customerSessions API exists
+  console.log('🔍 Testing Polar SDK customer sessions capabilities...')
+  console.log('🔍 Available methods on polar object:', Object.keys(polar))
+  console.log('🔍 customerSessions available?:', !!polar.customerSessions)
   
-  // Strategy 3: Try without any customer identification (guest mode)
-  try {
-    console.log('🔍 Attempting anonymous portal creation...')
-    const portalSession = await polar.customerSessions.create({
-      returnUrl: returnUrl
-    })
+  if (polar.customerSessions) {
+    console.log('🔍 customerSessions methods:', Object.getOwnPropertyNames(polar.customerSessions))
     
-    if (portalSession && portalSession.customerPortalUrl) {
-      console.log('✅ Anonymous portal session created')
-      return {
-        url: portalSession.customerPortalUrl,
-        message: 'Opening billing portal - please log in with your email'
+    // Strategy 1: Try with customer ID (the proper way)
+    if (customerId) {
+      try {
+        console.log('🔍 Attempting customerSessions.create with customer ID:', customerId)
+        const session = await polar.customerSessions.create({
+          customerId: customerId
+        })
+        
+        console.log('🔍 CustomerSessions response:', {
+          hasSession: !!session,
+          sessionKeys: session ? Object.keys(session) : [],
+          hasCustomerPortalUrl_underscore: !!session?.customer_portal_url,
+          customerPortalUrl_underscore: session?.customer_portal_url,
+          hasCustomerPortalUrl_camelCase: !!session?.customerPortalUrl,
+          customerPortalUrl_camelCase: session?.customerPortalUrl,
+          fullResponse: JSON.stringify(session, null, 2)
+        })
+        
+        // Check for the proper customer_portal_url property (from API docs)
+        if (session?.customer_portal_url) {
+          console.log('✅ CustomerSessions API worked! Using customer_portal_url:', session.customer_portal_url)
+          return {
+            url: session.customer_portal_url,
+            message: 'Opening secure customer session portal'
+          }
+        }
+        
+        // Also check for camelCase version (in case SDK converts it)
+        if (session?.customerPortalUrl) {
+          console.log('✅ CustomerSessions API worked! Using customerPortalUrl:', session.customerPortalUrl)
+          return {
+            url: session.customerPortalUrl,
+            message: 'Opening secure customer session portal'
+          }
+        }
+      } catch (apiError: any) {
+        console.error('❌ CustomerSessions API with customer ID failed:', {
+          message: apiError?.message,
+          statusCode: apiError?.statusCode,
+          body: apiError?.body
+        })
       }
+    }
+    
+    // Strategy 2: Try with email if customer ID failed
+    if (userEmail) {
+      try {
+        console.log('🔍 Attempting customerSessions.create with email:', userEmail)
+        const session = await polar.customerSessions.create({
+          customerEmail: userEmail
+        })
+        
+        console.log('🔍 CustomerSessions email response:', {
+          hasSession: !!session,
+          sessionKeys: session ? Object.keys(session) : [],
+          hasCustomerPortalUrl: !!session?.customer_portal_url,
+          customerPortalUrl: session?.customer_portal_url
+        })
+        
+        if (session?.customer_portal_url) {
+          console.log('✅ CustomerSessions API worked with email!')
+          return {
+            url: session.customer_portal_url,
+            message: 'Opening secure customer session portal'
+          }
+        }
+        
+        if (session?.customerPortalUrl) {
+          console.log('✅ CustomerSessions API worked with email (camelCase)!')
+          return {
+            url: session.customerPortalUrl,
+            message: 'Opening secure customer session portal'
+          }
+        }
+      } catch (apiError: any) {
+        console.error('❌ CustomerSessions API with email failed:', {
+          message: apiError?.message,
+          statusCode: apiError?.statusCode,
+          body: apiError?.body
+        })
+      }
+    }
+    
+    // Strategy 3: Try minimal params as last resort
+    try {
+      console.log('🔍 Attempting customerSessions.create with minimal parameters...')
+      const session = await polar.customerSessions.create({})
+      
+      console.log('🔍 CustomerSessions minimal response:', {
+        hasSession: !!session,
+        sessionKeys: session ? Object.keys(session) : [],
+        hasCustomerPortalUrl: !!session?.customer_portal_url,
+        customerPortalUrl: session?.customer_portal_url
+      })
+      
+      if (session?.customer_portal_url) {
+        console.log('✅ CustomerSessions API worked with minimal params!')
+        return {
+          url: session.customer_portal_url,
+          message: 'Opening customer session portal'
+        }
+      }
+      
+      if (session?.customerPortalUrl) {
+        console.log('✅ CustomerSessions API worked with minimal params (camelCase)!')
+        return {
+          url: session.customerPortalUrl,
+          message: 'Opening customer session portal'
+        }
+      }
+    } catch (apiError: any) {
+      console.error('❌ CustomerSessions API minimal params failed:', {
+        message: apiError?.message,
+        statusCode: apiError?.statusCode,
+        body: apiError?.body
+      })
+    }
+  }
+  
+  // Use Polar customer portal URL as a working fallback
+  try {
+    console.log('🔍 Using Polar customer portal URL fallback...')
+    
+    // Get the organization ID from environment variables
+    const organizationId = process.env.NEXT_PUBLIC_POLAR_ORGANIZATION_ID
+    
+    if (!organizationId) {
+      throw new Error('Missing NEXT_PUBLIC_POLAR_ORGANIZATION_ID environment variable')
+    }
+    
+    // Get the organization slug from environment variables
+    // We need the slug (like "align-labs") not the UUID
+    const organizationSlug = process.env.POLAR_ORGANIZATION_SLUG || 'align-labs'
+    
+    // Construct the proper customer portal URL format
+    // Format: https://polar.sh/{org-slug}/portal
+    const portalUrl = `https://polar.sh/${organizationSlug}/portal`
+    
+    console.log('✅ Redirecting to Polar customer portal:', portalUrl)
+    return {
+      url: portalUrl,
+      message: 'Redirecting to customer portal - please log in with your email'
     }
   } catch (error: any) {
-    console.log('❌ Anonymous portal creation failed:', error.message)
+    console.error('❌ Customer portal URL construction failed:', error.message)
   }
   
+  console.error('❌ All portal creation strategies failed')
   throw new Error('All portal creation strategies failed')
 }
 
@@ -284,33 +386,35 @@ async function handleCustomerPortal(profile: any, polar: any) {
   let customerId = profile.polar_customer_id
 
   try {
-    // If no customer ID exists, create one automatically
-    if (!customerId) {
-      console.log('🔍 No customer ID found, creating new customer for user:', profile.id)
-      
-      // Create supabase client to update profile
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-      )
+    // Create supabase client to get user information
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
 
-      // Get user's email for customer creation
-      const { data: { user }, error: userFetchError } = await supabase.auth.admin.getUserById(profile.id)
-      if (userFetchError) {
-        console.error('❌ Failed to fetch user data:', userFetchError)
-        return NextResponse.json({ 
-          error: 'Unable to access user information',
-          details: 'Failed to retrieve user data from authentication service.'
-        }, { status: 500 })
-      }
-      
-      if (!user?.email) {
-        console.error('❌ No email found for user:', profile.id)
-        return NextResponse.json({ 
-          error: 'User email not found',
-          details: 'Customer account requires a valid email address.'
-        }, { status: 400 })
-      }
+    // Get user's email first (needed for all operations)
+    const { data: { user }, error: userFetchError } = await supabase.auth.admin.getUserById(profile.id)
+    
+    if (userFetchError) {
+      console.error('❌ Failed to fetch user data:', userFetchError)
+      return NextResponse.json({ 
+        error: 'Unable to access user information',
+        details: 'Failed to retrieve user data from authentication service.'
+      }, { status: 500 })
+    }
+    
+    const userEmail = user?.email
+    
+    console.log('🔍 User information:', {
+      hasEmail: !!userEmail,
+      email: userEmail,
+      hasCustomerId: !!customerId,
+      customerId: customerId
+    })
+
+    // If no customer ID exists, create one automatically
+    if (!customerId && userEmail) {
+      console.log('🔍 No customer ID found, creating new customer for user:', profile.id)
 
       try {
         // Import the customer creation function
@@ -354,81 +458,36 @@ async function handleCustomerPortal(profile: any, polar: any) {
           stack: customerError?.stack
         })
         
-        // Provide more specific error messages based on the error type
-        let errorMessage = 'Unable to create customer account'
-        let details = 'An unexpected error occurred while creating your billing account.'
-        
-        if (customerError?.message) {
-          if (customerError.message.includes('Billing services are currently unavailable')) {
-            details = 'Our billing system is temporarily unavailable. Please try again in a few minutes.'
-          } else if (customerError.message.includes('already exists but cannot be retrieved')) {
-            // Special handling for existing customer that can't be retrieved
-            console.log('🔄 Customer exists but can\'t be retrieved, attempting email-based portal access...')
-            
-            // Try to create portal session with just email (newer Polar API feature)
-            try {
-              const returnUrl = `${process.env.NEXTAUTH_URL || process.env.VERCEL_URL || 'http://localhost:3000'}/dashboard/settings?tab=subscription`
-              
-              // First try creating session with email instead of customer ID
-              const portalSession = await polar.customerSessions.create({
-                customerEmail: user.email,
-                returnUrl: returnUrl,
-              })
-              
-              if (portalSession && portalSession.customerPortalUrl) {
-                console.log('✅ Created email-based portal session successfully')
-                return NextResponse.json({ 
-                  portalUrl: portalSession.customerPortalUrl,
-                  message: 'Opening billing portal using email authentication'
-                })
-              }
-            } catch (emailPortalError: any) {
-              console.error('❌ Email-based portal creation failed:', emailPortalError)
-              
-              // Last resort: try without any customer identification
-              try {
-                const portalSession = await polar.customerSessions.create({
-                  returnUrl: `${process.env.NEXTAUTH_URL || process.env.VERCEL_URL || 'http://localhost:3000'}/dashboard/settings`,
-                })
-                
-                if (portalSession && portalSession.customerPortalUrl) {
-                  console.log('✅ Created anonymous portal session successfully')
-                  return NextResponse.json({ 
-                    portalUrl: portalSession.customerPortalUrl,
-                    message: 'Opening billing portal - please log in with your email'
-                  })
-                }
-              } catch (guestError: any) {
-                console.error('❌ Anonymous portal creation also failed:', guestError)
-              }
+        // Special handling for existing customer that can't be retrieved
+        if (customerError?.message && customerError.message.includes('already exists but cannot be retrieved')) {
+          console.log('🔄 Customer exists but can\'t be retrieved, will use alternative portal access methods at the end...')
+          // Don't return an error here, let it fall through to use the main createPortalSession helper
+          // which has the same fallback strategies but in a more robust way
+        } else {
+          // For other types of errors, return the specific error
+          // Provide more specific error messages based on the error type
+          let errorMessage = 'Unable to create customer account'
+          let details = 'An unexpected error occurred while creating your billing account.'
+          
+          if (customerError?.message) {
+            if (customerError.message.includes('Billing services are currently unavailable')) {
+              details = 'Our billing system is temporarily unavailable. Please try again in a few minutes.'
+            } else if (customerError.message.includes('not a valid email address')) {
+              details = 'Your email address is not accepted by our billing system. Please contact support.'
+            } else {
+              details = customerError.message
             }
-            
-            details = 'A customer account already exists but is not accessible. Please contact support to resolve this issue.'
-          } else if (customerError.message.includes('not a valid email address')) {
-            details = 'Your email address is not accepted by our billing system. Please contact support.'
-          } else {
-            details = customerError.message
           }
+          
+          return NextResponse.json({ 
+            error: errorMessage,
+            details: details
+          }, { status: 500 })
         }
-        
-        return NextResponse.json({ 
-          error: errorMessage,
-          details: details
-        }, { status: 500 })
       }
     }
 
-    console.log('🔍 Creating customer portal session for customer:', customerId)
-
-    // Get user email for fallback portal creation
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
-    const { data: { user } } = await supabase.auth.admin.getUserById(profile.id)
-    const userEmail = user?.email
-
-    // Use the robust portal creation helper
+    // Use the robust portal creation helper (handles all fallback strategies)
     const portalResult = await createPortalSession(polar, customerId, userEmail)
 
     return NextResponse.json({ 
@@ -459,9 +518,18 @@ async function handleCustomerPortal(profile: any, polar: any) {
       customerId: customerId
     })
     
+    // Provide more user-friendly error messages
+    let finalErrorMessage = 'Failed to create customer portal session'
+    let finalDetails = error instanceof Error ? error.message : 'Unknown error'
+    
+    if (error instanceof Error && error.message === 'All portal creation strategies failed') {
+      finalErrorMessage = 'Unable to access billing portal'
+      finalDetails = 'We are unable to connect you to the billing portal at this time. This may be due to an existing customer account issue. Please contact support for assistance.'
+    }
+    
     return NextResponse.json({ 
-      error: 'Failed to create customer portal session',
-      details: error instanceof Error ? error.message : 'Unknown error',
+      error: finalErrorMessage,
+      details: finalDetails,
       errorType: error && typeof error === 'object' && 'name' in error ? (error as any).name : 'UnknownError'
     }, { status: 500 })
   }

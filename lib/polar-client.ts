@@ -240,9 +240,9 @@ export async function createOrGetCustomer(email: string, name?: string) {
         console.error('Failed to retrieve existing customer with comprehensive search:', retryError.message)
       }
       
-      // If we still can't find it, throw a specific error for the API to handle
-      console.log('⚠️ Customer exists but cannot be retrieved, will use alternative approach')
-      throw new Error(`Customer with email ${email} already exists but cannot be retrieved. This might be due to organization context changes.`)
+      // If we still can't find it, return null to let the calling code handle it
+      console.log('⚠️ Customer exists but cannot be retrieved, returning null to use alternative approach')
+      return null
     }
     
     // If email domain is invalid, return null to use guest checkout

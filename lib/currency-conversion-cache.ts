@@ -108,7 +108,7 @@ class CurrencyConversionCache {
         validCount++
       }
 
-      console.log(`💾 Loaded ${validCount} cached currency conversions`)
+
     } catch (error) {
       console.error('Error loading currency conversion cache:', error)
       // Clear corrupted cache

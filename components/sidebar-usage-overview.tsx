@@ -153,12 +153,12 @@ export function SidebarUsageOverview() {
         (!usage?.clients || !usage?.projects || usage.clients.current === undefined)
 
       if (needsDataFetch) {
-        // Immediate fetch
-        refetchSubscription(true)
+        // Normal fetch without forcing cache clear
+        refetchSubscription(false)
         
-        // Backup fetch after delay
+        // Backup fetch after delay - also without forcing cache clear
         const timeoutId = setTimeout(() => {
-          refetchSubscription(true)
+          refetchSubscription(false)
         }, 2000)
         
         return () => clearTimeout(timeoutId)
@@ -168,11 +168,11 @@ export function SidebarUsageOverview() {
 
   // Ensure fresh data on component mount
   useEffect(() => {
-    // Only run once on mount - always ensure fresh data
+    // Only run once on mount - normal refresh without forcing cache clear
     if (isInitialized) {
       // Small delay to allow subscription provider to initialize
       const timeoutId = setTimeout(() => {
-        refetchSubscription(true)
+        refetchSubscription(false) // Don't force cache clear on mount
       }, 500)
       
       return () => clearTimeout(timeoutId)

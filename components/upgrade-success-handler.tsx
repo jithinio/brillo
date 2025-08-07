@@ -31,7 +31,7 @@ export function UpgradeSuccessHandler() {
       toast.error('Subscription upgrade failed. Please try again.')
       router.replace('/dashboard')
     }
-  }, [searchParams, user, router, refetchSubscription])
+  }, [searchParams, user, router]) // Removed refetchSubscription to prevent constant re-renders
 
   const handleUpgradeSuccess = async (customerSessionToken: string) => {
     try {
