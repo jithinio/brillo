@@ -8,9 +8,15 @@ export function createPolarClient() {
     throw new Error('POLAR_ACCESS_TOKEN is required for Polar operations')
   }
 
+  // Force production mode for active Polar accounts
+  // Change this to "sandbox" only if you're using sandbox tokens
+  const serverMode = "production"
+  
+  console.log(`🔍 Polar client connecting to: ${serverMode} mode`)
+  
   return new Polar({
     accessToken: POLAR_CONFIG.accessToken,
-    server: process.env.NODE_ENV === 'production' ? "production" : "sandbox",
+    server: serverMode,
   })
 }
 
@@ -125,14 +131,29 @@ export async function createOrGetCustomer(email: string, name?: string) {
   const polar = createPolarClient()
 
   try {
-    // Try to find existing customer first
+    // Try to find existing customer first with expanded search
     try {
-      const customers = await polar.customers.list({ email })
+      console.log('Searching for existing customer with email:', email)
+      const customers = await polar.customers.list({ 
+        email,
+        limit: 100 // Increase limit to ensure we find the customer
+      })
+      
       if (customers.items && customers.items.length > 0) {
-        console.log('Found existing customer:', customers.items[0].id)
+        // Find exact email match
+        const exactMatch = customers.items.find(c => c.email === email)
+        if (exactMatch) {
+          console.log('Found existing customer (exact match):', exactMatch.id)
+          return exactMatch
+        }
+        
+        // If no exact match but we have results, use the first one
+        console.log('Found existing customer (first result):', customers.items[0].id)
         return customers.items[0]
       }
-    } catch (listError) {
+      
+      console.log('No existing customer found in search results')
+    } catch (listError: any) {
       console.log('Could not list customers, will try to create:', listError.message)
     }
 
@@ -169,30 +190,58 @@ export async function createOrGetCustomer(email: string, name?: string) {
     )) {
       console.log('Customer already exists, attempting to retrieve by email search')
       
-      // Try one more time to find the customer
+      // Try comprehensive search strategies
       try {
-        const searchResult = await polar.customers.list({ 
-          email: email,
-          limit: 100 // Increase limit in case there are many customers
+        console.log('Customer exists error detected, trying comprehensive search...')
+        
+        // Strategy 1: Search with higher limit and no email filter
+        console.log('Strategy 1: Searching all customers...')
+        const allCustomers = await polar.customers.list({ 
+          limit: 200 // Get more customers
         })
         
-        if (searchResult.items && searchResult.items.length > 0) {
-          // Find the exact match
-          const exactMatch = searchResult.items.find(c => c.email === email)
+        if (allCustomers.items && allCustomers.items.length > 0) {
+          const exactMatch = allCustomers.items.find(c => c.email === email)
           if (exactMatch) {
-            console.log('Found existing customer on retry:', exactMatch.id)
+            console.log('Found existing customer via comprehensive search:', exactMatch.id)
             return exactMatch
           }
-          
-          // If no exact match, return the first one
-          console.log('Found existing customer (first match):', searchResult.items[0].id)
-          return searchResult.items[0]
         }
-      } catch (retryError) {
-        console.error('Failed to retrieve existing customer:', retryError)
+        
+        // Strategy 2: Search with pagination
+        console.log('Strategy 2: Trying paginated search...')
+        let page = 1
+        while (page <= 3) { // Search first 3 pages
+          try {
+            const pagedResult = await polar.customers.list({ 
+              limit: 100,
+              page
+            })
+            
+            if (pagedResult.items && pagedResult.items.length > 0) {
+              const exactMatch = pagedResult.items.find(c => c.email === email)
+              if (exactMatch) {
+                console.log(`Found existing customer on page ${page}:`, exactMatch.id)
+                return exactMatch
+              }
+            }
+            
+            if (!pagedResult.items || pagedResult.items.length < 100) {
+              break // No more pages
+            }
+            page++
+          } catch (pageError) {
+            console.log(`Page ${page} search failed:`, pageError.message)
+            break
+          }
+        }
+        
+      } catch (retryError: any) {
+        console.error('Failed to retrieve existing customer with comprehensive search:', retryError.message)
       }
       
-      // If we still can't find it, throw a more helpful error
+      // If we still can't find it, throw a specific error for the API to handle
+      console.log('⚠️ Customer exists but cannot be retrieved, will use alternative approach')
       throw new Error(`Customer with email ${email} already exists but cannot be retrieved. This might be due to organization context changes.`)
     }
     

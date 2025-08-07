@@ -983,9 +983,9 @@ export default function DashboardPage() {
   // Use new efficient dashboard data hook
   const { projects, isLoading: loading, error, lastUpdated, refreshData } = useDashboardData()
 
-  // Get user name from auth context
+  // Get user first name from auth context
   const userName = user 
-    ? user.user_metadata?.full_name || user.email?.split("@")[0] || "User"
+    ? (user.user_metadata?.full_name?.split(" ")[0]) || user.email?.split("@")[0] || "User"
     : "User"
 
   // Removed manual data fetching - now handled by useDashboardData hook

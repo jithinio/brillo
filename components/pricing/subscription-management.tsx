@@ -54,12 +54,27 @@ export function SubscriptionManagement() {
       const data = await response.json()
 
       if (!response.ok) {
-        // Handle specific error codes
-        if (response.status === 503 && data.code === 'POLAR_UNAVAILABLE') {
-          toast.error('Billing services temporarily unavailable. Please try again later.')
-          return
+        // Handle specific error codes with more detailed messages
+        if (response.status === 503) {
+          switch (data.code) {
+            case 'POLAR_UNAVAILABLE':
+            case 'POLAR_UNAUTHORIZED':
+              toast.error('Billing services temporarily unavailable. Please try again later.')
+              return
+            case 'POLAR_NOT_CONFIGURED':
+            case 'POLAR_ORG_NOT_FOUND':
+            case 'POLAR_CLIENT_ERROR':
+              toast.error('Billing system not properly configured. Please contact support.')
+              return
+            default:
+              toast.error(data.details || 'Billing services temporarily unavailable. Please try again later.')
+              return
+          }
         }
-        throw new Error(data.error || 'Failed to manage subscription')
+        
+        // Show detailed error message if available
+        const errorMessage = data.details ? `${data.error}: ${data.details}` : (data.error || 'Failed to manage subscription')
+        throw new Error(errorMessage)
       }
 
       console.log('🔍 Manage Subscription Response:', { action, data })
