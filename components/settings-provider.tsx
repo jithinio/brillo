@@ -42,11 +42,11 @@ interface SettingsContextType {
 
 const defaultSettings: AppSettings = {
   defaultCurrency: "USD",
-  companyName: "Brillo",
-  companyAddress: "123 Business St, City, State 12345",
-  companyEmail: "contact@brillo.so",
-  companyPhone: "+1 (555) 123-4567",
-  companyWebsite: "https://app.brillo.so",
+  companyName: "",
+  companyAddress: "",
+  companyEmail: "",
+  companyPhone: "",
+  companyWebsite: "",
   companyRegistration: "",
   companyLogo: "",
   taxRate: 8.0,

@@ -61,11 +61,11 @@ export default function SettingsPage() {
 
   // Company information state
   const [companyInfo, setCompanyInfo] = useState({
-    companyName: "Brillo",
-    companyAddress: "123 Business St, City, State 12345",
-    companyPhone: "+1 (555) 123-4567",
-    companyWebsite: "https://app.brillo.so",
-    companyEmail: "contact@brillo.so",
+    companyName: "",
+    companyAddress: "",
+    companyPhone: "",
+    companyWebsite: "",
+    companyEmail: "",
     companyRegistration: "",
   })
 
@@ -178,11 +178,11 @@ export default function SettingsPage() {
   useEffect(() => {
     if (!isLoading && initialLoadComplete) {
       const newCompanyInfo = {
-        companyName: settings.companyName || "Brillo",
-        companyAddress: settings.companyAddress || "123 Business St, City, State 12345",
-        companyPhone: settings.companyPhone || "+1 (555) 123-4567",
-        companyWebsite: settings.companyWebsite || "https://app.brillo.so",
-        companyEmail: settings.companyEmail || "contact@brillo.so",
+        companyName: settings.companyName || "",
+        companyAddress: settings.companyAddress || "",
+        companyPhone: settings.companyPhone || "",
+        companyWebsite: settings.companyWebsite || "",
+        companyEmail: settings.companyEmail || "",
         companyRegistration: settings.companyRegistration || "",
       }
       
@@ -683,6 +683,7 @@ export default function SettingsPage() {
                         setCompanyInfo({...companyInfo, companyName: e.target.value})
                         setHasUserChanges(true)
                       }}
+                      placeholder="e.g., Brillo"
                     />
                   </div>
 
@@ -695,6 +696,7 @@ export default function SettingsPage() {
                         setCompanyInfo({...companyInfo, companyAddress: e.target.value})
                         setHasUserChanges(true)
                       }}
+                      placeholder="e.g., 123 Business St, City, State 12345"
                       rows={3} 
                     />
                   </div>
@@ -721,6 +723,7 @@ export default function SettingsPage() {
                           setCompanyInfo({...companyInfo, companyWebsite: e.target.value})
                           setHasUserChanges(true)
                         }}
+                        placeholder="e.g., https://company.com"
                       />
                     </div>
                   </div>
@@ -736,6 +739,7 @@ export default function SettingsPage() {
                           setCompanyInfo({...companyInfo, companyEmail: e.target.value})
                           setHasUserChanges(true)
                         }}
+                        placeholder="e.g., contact@company.com"
                       />
                     </div>
                     <div className="space-y-2">
@@ -747,7 +751,7 @@ export default function SettingsPage() {
                           setCompanyInfo({...companyInfo, companyRegistration: e.target.value})
                           setHasUserChanges(true)
                         }}
-                        placeholder="e.g., 123456789" 
+                        placeholder="e.g., LLC-123456789" 
                       />
                     </div>
                   </div>
