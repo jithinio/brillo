@@ -99,10 +99,10 @@ export function getPlansArray(): SubscriptionPlan[] {
 }
 
 export function canAccessFeature(planId: string, feature: string): boolean {
-  // Safe feature checking that defaults to allowing access
-  // This ensures existing functionality isn't broken
+  // Secure feature checking - defaults to free plan if no plan specified
   
-  if (!planId) return true // Fallback: allow access if no plan
+  // If no planId provided, default to free plan (secure default)
+  if (!planId) planId = 'free'
   
   const plan = getPlan(planId)
   const isPro = isProPlan(planId)
@@ -117,7 +117,7 @@ export function canAccessFeature(planId: string, feature: string): boolean {
     case 'api_access':
       return isPro
     default:
-      return true // Fallback: allow access for unknown features
+      return false // Secure default: deny access for unknown features
   }
 }
 

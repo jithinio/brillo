@@ -1,6 +1,6 @@
 "use client"
 
-import { ReactNode } from "react"
+import { ReactNode, memo } from "react"
 import Link from "next/link"
 import { Crown } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -17,18 +17,19 @@ interface ProFeatureGateProps {
   showUpgrade?: boolean
 }
 
-export function ProFeatureGate({ 
+const ProFeatureGateComponent = ({ 
   children, 
   feature, 
   fallback, 
   className,
   showUpgrade = true 
-}: ProFeatureGateProps) {
+}: ProFeatureGateProps) => {
   const { hasAccess, plan, isLoading } = useSubscription()
 
   const checkFeatureAccess = () => {
-    // During loading, assume access to prevent flash
-    if (isLoading) return true
+    // During loading, deny access by default for security
+    // Only allow access if we have confirmed subscription status
+    if (isLoading) return false
     return hasAccess(feature)
   }
 
@@ -62,17 +63,28 @@ export function ProFeatureGate({
     }
   }
 
-  // Show badge loader during initial load to prevent flash
+  // Show secure loading state - don't show content until we confirm access
   if (isLoading) {
     return (
       <div className={cn("w-full flex items-center justify-center min-h-[calc(100vh-4rem)] p-8", className)}>
-        <Badge 
-          variant="secondary" 
-          className="flex items-center gap-2 text-xs shadow-md border bg-white dark:bg-gray-800 dark:text-gray-200"
-        >
-          <div className="w-3 h-3 border-2 border-gray-400 dark:border-gray-500 border-t-transparent rounded-full animate-spin" />
-          <span>Loading feature...</span>
-        </Badge>
+        <Card className="border-dashed border-2 border-muted-foreground/20 bg-muted/10 w-full max-w-[400px]">
+          <CardHeader className="text-center pb-4">
+            <div className="flex justify-center mb-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center">
+                <Crown className="w-6 h-6 text-white" />
+              </div>
+            </div>
+            <CardTitle className="text-center">
+              Checking Access...
+            </CardTitle>
+            <CardDescription className="text-center max-w-md mx-auto">
+              Verifying your subscription status for {getFeatureName().toLowerCase()}.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center">
+            <div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto" />
+          </CardContent>
+        </Card>
       </div>
     )
   }
@@ -132,6 +144,9 @@ export function ProFeatureGate({
     </div>
   )
 }
+
+// Memoized version to prevent unnecessary re-renders
+export const ProFeatureGate = memo(ProFeatureGateComponent)
 
 // Convenience components for specific features
 export function InvoicingGate({ children, className }: { children: ReactNode; className?: string }) {

@@ -54,28 +54,48 @@ export async function GET(request: NextRequest) {
         invoices: cachedUsage.invoices_count || 0
       }
     } else {
-      // Fetch fresh data only if cache is stale
-      const [projectsResult, clientsResult, invoicesResult] = await Promise.all([
-        supabase
-          .from('projects')
-          .select('id', { count: 'exact' })
-          .eq('user_id', user.id),
-        
-        supabase
-          .from('clients')
-          .select('id', { count: 'exact' })
-          .eq('user_id', user.id),
-        
-        supabase
-          .from('invoices')
-          .select('id', { count: 'exact' })
-          .eq('user_id', user.id)
-      ])
+      // Optimized: Single batch query instead of 3 separate queries
+      try {
+        const { data: batchResults, error: batchError } = await supabase.rpc('get_user_usage_counts', {
+          target_user_id: user.id
+        })
 
-      usage = {
-        projects: projectsResult.count || 0,
-        clients: clientsResult.count || 0,
-        invoices: invoicesResult.count || 0
+        if (batchError) {
+          console.warn('Batch query failed, falling back to individual queries:', batchError)
+          // Fallback to individual queries if batch fails
+          const [projectsResult, clientsResult, invoicesResult] = await Promise.all([
+            supabase.from('projects').select('id', { count: 'exact' }).eq('user_id', user.id),
+            supabase.from('clients').select('id', { count: 'exact' }).eq('user_id', user.id),
+            supabase.from('invoices').select('id', { count: 'exact' }).eq('user_id', user.id)
+          ])
+
+          usage = {
+            projects: projectsResult.count || 0,
+            clients: clientsResult.count || 0,
+            invoices: invoicesResult.count || 0
+          }
+        } else {
+          // Use optimized batch results
+          usage = {
+            projects: batchResults?.[0]?.projects_count || 0,
+            clients: batchResults?.[0]?.clients_count || 0,
+            invoices: batchResults?.[0]?.invoices_count || 0
+          }
+        }
+      } catch (error) {
+        console.error('Error in optimized usage query:', error)
+        // Final fallback to individual queries
+        const [projectsResult, clientsResult, invoicesResult] = await Promise.all([
+          supabase.from('projects').select('id', { count: 'exact' }).eq('user_id', user.id),
+          supabase.from('clients').select('id', { count: 'exact' }).eq('user_id', user.id),
+          supabase.from('invoices').select('id', { count: 'exact' }).eq('user_id', user.id)
+        ])
+
+        usage = {
+          projects: projectsResult.count || 0,
+          clients: clientsResult.count || 0,
+          invoices: invoicesResult.count || 0
+        }
       }
 
       // Update cache

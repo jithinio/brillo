@@ -12,17 +12,21 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { BadgeCheck, ChevronsUpDown, LogOut, Sparkles, Moon, Sun, Monitor, Palette, Settings2, User, CreditCard, Crown, MessageSquare } from "lucide-react"
+import { BadgeCheck, ChevronsUpDown, LogOut, Sparkles, Moon, Sun, Monitor, Palette, Settings2, User, CreditCard, Crown, MessageSquare, Loader2 } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { useSubscription } from "@/components/providers/subscription-provider"
 import { isProPlan } from "@/lib/subscription-plans"
 import { useTheme } from "next-themes"
+import { Skeleton } from "@/components/ui/skeleton"
 
 export function NavUser() {
   const { user, signOut, loading: authLoading } = useAuth()
   const { isMobile } = useSidebar()
   const { theme, setTheme } = useTheme()
-  const { subscription, isLoading } = useSubscription()
+  const { subscription, isLoading, getCachedPlanId } = useSubscription()
+
+  // Use the provider's cached plan ID for immediate rendering
+  const optimisticPlanId = getCachedPlanId()
 
   // Show loading state during auth loading to prevent "Demo User" flash
   if (authLoading) {
@@ -133,22 +137,23 @@ export function NavUser() {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              {!isLoading && (
-                isProPlan(subscription.planId) ? (
-                  <DropdownMenuItem asChild>
-                    <a href="/dashboard/settings?tab=subscription" className="cursor-pointer">
-                      <CreditCard className="mr-2 h-4 w-4" />
-                      Manage Subscription
-                    </a>
-                  </DropdownMenuItem>
-                ) : (
-                  <DropdownMenuItem asChild>
-                    <a href="/pricing" className="cursor-pointer">
-                      <Sparkles className="mr-2 h-4 w-4" />
-                      Upgrade to Pro
-                    </a>
-                  </DropdownMenuItem>
-                )
+              {/* Always show subscription button - use optimistic plan ID for immediate rendering */}
+              {isProPlan(optimisticPlanId) ? (
+                <DropdownMenuItem asChild>
+                  <a href="/dashboard/settings?tab=subscription" className="cursor-pointer flex items-center">
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    <span className="flex-1">Manage Subscription</span>
+                    {isLoading && <Loader2 className="h-3 w-3 animate-spin opacity-30" />}
+                  </a>
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem asChild>
+                  <a href="/pricing" className="cursor-pointer flex items-center">
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    <span className="flex-1">Upgrade to Pro</span>
+                    {isLoading && <Loader2 className="h-3 w-3 animate-spin opacity-30" />}
+                  </a>
+                </DropdownMenuItem>
               )}
             </DropdownMenuGroup>
             <DropdownMenuSeparator />

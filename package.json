@@ -7,9 +7,8 @@
     "dev": "next dev",
     "lint": "next lint",
     "start": "next start",
-    "verify:production": "node scripts/verify-production-setup.js",
-    "deploy:check": "npm run verify:production && npm run build",
-    "production:setup": "echo '🚀 Setting up for production...' && npm run verify:production"
+    "dev:webhooks": "stripe listen --forward-to localhost:3000/api/stripe/webhook",
+    "dev:all": "concurrently \"npm:dev\" \"npm:dev:webhooks\""
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -17,8 +16,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@emotion/is-prop-valid": "^1.3.1",
     "@hookform/resolvers": "^5.1.1",
-    "@polar-sh/nextjs": "^0.4.4",
-    "@polar-sh/sdk": "^0.34.9",
+
     "@radix-ui/react-accordion": "1.2.11",
     "@radix-ui/react-alert-dialog": "1.1.14",
     "@radix-ui/react-aspect-ratio": "1.1.7",
@@ -84,6 +82,7 @@
     "recharts": "^3.1.0",
     "resend": "^4.6.0",
     "sonner": "^2.0.6",
+    "stripe": "^18.4.0",
     "tailwind-merge": "^3.3.1",
     "vaul": "^1.1.2",
     "zod": "^4.0.14"
@@ -94,6 +93,7 @@
     "@types/node": "^24.0.13",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
+    "concurrently": "^8.2.2",
     "eslint": "9.32.0",
     "eslint-config-next": "15.4.6",
     "postcss": "^8.5.6",

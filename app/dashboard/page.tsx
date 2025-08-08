@@ -20,6 +20,7 @@ import { useAuth } from "@/components/auth-provider"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useDashboardData, type DashboardProject } from "@/hooks/use-dashboard-data"
 
+
 // Re-export type for compatibility
 type Project = DashboardProject
 
@@ -1022,6 +1023,7 @@ export default function DashboardPage() {
             {greeting}, {userName}! 👋
           </h1>
           <div className="flex items-center gap-2">
+
             <Button
               variant="ghost"
               size="sm"

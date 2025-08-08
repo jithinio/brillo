@@ -98,13 +98,13 @@ export default function SettingsPage() {
         if (user) {
           const { data: profile } = await supabase
             .from('profiles')
-            .select('polar_customer_id, subscription_plan_id, polar_subscription_id')
+            .select('stripe_customer_id, subscription_plan_id, stripe_subscription_id')
             .eq('id', user.id)
             .single()
           
           // If user has subscription but missing customer/subscription IDs, show info message
           if (profile && profile.subscription_plan_id !== 'free' && 
-              (!profile.polar_customer_id || !profile.polar_subscription_id)) {
+              (!profile.stripe_customer_id || !profile.stripe_subscription_id)) {
             console.log('⚠️ Detected missing subscription data - use Sync Data button to fix')
             // Don't auto-refresh anymore to avoid loops
           }

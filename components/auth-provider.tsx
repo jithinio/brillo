@@ -67,8 +67,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const {
         data: { subscription },
       } = supabase.auth.onAuthStateChange(async (event, session) => {
-        setUser(session?.user ?? null)
+        const previousUser = user
+        const currentUser = session?.user ?? null
+        
+        setUser(currentUser)
         setLoading(false)
+        
+        // If user just signed in, trigger subscription sync
+        if (event === 'SIGNED_IN' && currentUser && (!previousUser || previousUser.id !== currentUser.id)) {
+          console.log('🔄 User signed in, triggering subscription sync...')
+          
+          // Use a timeout to ensure the subscription provider has initialized
+          setTimeout(() => {
+            // Dispatch a custom event that the subscription provider can listen to
+            window.dispatchEvent(new CustomEvent('user-signed-in', { 
+              detail: { userId: currentUser.id } 
+            }))
+          }, 1000)
+        }
       })
 
       return () => subscription.unsubscribe()

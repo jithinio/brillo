@@ -1,13 +1,16 @@
 "use client"
 
-import { Crown, Users, FolderOpen } from "lucide-react"
+import { Crown, Users, FolderOpen, CreditCard } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { useSubscription } from "@/components/providers/subscription-provider"
+import { isProPlan } from "@/lib/subscription-plans"
 import { useAuth } from "@/components/auth-provider"
 import Link from "next/link"
 import { useEffect, useRef, useState } from "react"
 import { usePathname } from "next/navigation"
+import { useSubscriptionListener } from "@/lib/subscription-manager"
+import { SidebarUsageSkeleton } from "@/components/subscription/subscription-skeleton"
 
 export function SidebarUsageOverview() {
   const { subscription, usage, plan, isLoading, refetchSubscription } = useSubscription()
@@ -179,91 +182,33 @@ export function SidebarUsageOverview() {
     }
   }, [isInitialized, refetchSubscription])
 
-  // Set up intelligent realtime updates - only on pages where changes can happen
+  // Set up consolidated realtime updates using subscription manager
   useEffect(() => {
-    // Only set up realtime subscriptions when on relevant pages
-    if (!shouldUseRealtimeUpdates) {
+    if (!shouldUseRealtimeUpdates || !user?.id) {
       return
     }
 
-    const setupRealtimeSubscriptions = async () => {
-      try {
-        const { supabase } = await import('@/lib/supabase')
+    console.log('🔄 Setting up consolidated usage updates for user:', user.id)
+
+    // Single listener for all usage updates with smart debouncing
+    const unsubscribe = useSubscriptionListener(
+      'usage_updated',
+      (data) => {
+        console.log('📊 Usage updated:', data.payload.table)
         
-
+        // Smart debouncing - immediate for user activity, delayed for background
+        const isUserActive = document.visibilityState === 'visible'
+        const delay = isUserActive ? 300 : 1000
         
-        // Subscribe to projects table changes
-        const projectsSubscription = supabase
-          .channel('projects-usage-updates')
-          .on(
-            'postgres_changes',
-            {
-              event: '*', // Listen to INSERT, UPDATE, DELETE
-              schema: 'public',
-              table: 'projects',
-              filter: `user_id=eq.${user.id}`
-            },
-            (payload) => {
+        setTimeout(() => {
+          refetchSubscription(true)
+        }, delay)
+      },
+      user.id
+    )
 
-              handleDataChange('projects')
-            }
-          )
-          .subscribe()
-
-        // Subscribe to clients table changes  
-        const clientsSubscription = supabase
-          .channel('clients-usage-updates')
-          .on(
-            'postgres_changes',
-            {
-              event: '*', // Listen to INSERT, UPDATE, DELETE
-              schema: 'public', 
-              table: 'clients',
-              filter: `user_id=eq.${user.id}`
-            },
-            (payload) => {
-
-              handleDataChange('clients')
-            }
-          )
-          .subscribe()
-
-        // Store subscriptions and supabase instance for cleanup
-        subscriptionsRef.current = [
-          { subscription: projectsSubscription, supabase },
-          { subscription: clientsSubscription, supabase }
-        ]
-        
-      } catch (error) {
-        console.error('Error setting up realtime subscriptions:', error)
-      }
-    }
-
-    const handleDataChange = (type: 'projects' | 'clients') => {
-      // Add a small delay to allow database consistency
-      setTimeout(() => {
-
-        refetchSubscription(true)
-      }, 500)
-    }
-
-    setupRealtimeSubscriptions()
-
-    // Cleanup function
-    return () => {
-
-      subscriptionsRef.current.forEach(({ subscription, supabase }) => {
-        if (subscription && supabase) {
-          try {
-            supabase.removeChannel(subscription)
-          } catch (error) {
-            console.error('Error cleaning up subscription:', error)
-          }
-        }
-      })
-      subscriptionsRef.current = []
-    }
-  }, [shouldUseRealtimeUpdates, user?.id, refetchSubscription, pathname])
+    return unsubscribe
+  }, [shouldUseRealtimeUpdates, user?.id, refetchSubscription])
 
   // Intelligent usage data selection - prioritize valid data, fall back to cache
   const getDisplayUsage = () => {
@@ -331,46 +276,7 @@ export function SidebarUsageOverview() {
                      clientsUsed !== undefined || projectsUsed !== undefined || cachedUsage
 
   if (!hasAnyData && isLoading) {
-    return (
-      <Card className="mb-2">
-        <CardContent className="p-3 space-y-4">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium">Free Plan</span>
-          </div>
-          
-          {/* Loading skeleton for clients */}
-          <div className="space-y-1">
-            <div className="flex items-center justify-between text-xs">
-              <div className="flex items-center gap-1.5">
-                <Users className="w-3 h-3 text-muted-foreground" />
-                <span className="text-muted-foreground">Clients</span>
-              </div>
-              <div className="w-8 h-3 bg-muted rounded animate-pulse"></div>
-            </div>
-            <div className="w-full bg-secondary rounded-full h-2">
-              <div className="h-2 rounded-full bg-muted animate-pulse w-1/3"></div>
-            </div>
-          </div>
-
-          {/* Loading skeleton for projects */}
-          <div className="space-y-1">
-            <div className="flex items-center justify-between text-xs">
-              <div className="flex items-center gap-1.5">
-                <FolderOpen className="w-3 h-3 text-muted-foreground" />
-                <span className="text-muted-foreground">Projects</span>
-              </div>
-              <div className="w-8 h-3 bg-muted rounded animate-pulse"></div>
-            </div>
-            <div className="w-full bg-secondary rounded-full h-2">
-              <div className="h-2 rounded-full bg-muted animate-pulse w-1/2"></div>
-            </div>
-          </div>
-
-          {/* Loading upgrade button */}
-          <div className="w-full h-7 bg-muted rounded animate-pulse"></div>
-        </CardContent>
-      </Card>
-    )
+    return <SidebarUsageSkeleton />
   }
 
 
@@ -442,17 +348,32 @@ export function SidebarUsageOverview() {
           </div>
         </div>
 
-        {/* Upgrade Button */}
-        <Button 
-          asChild 
-          size="sm" 
-          className="w-full h-7 text-xs bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white border-0"
-        >
-          <Link href="/pricing">
-            <Crown className="w-3 h-3 mr-1" />
-            Upgrade to Pro
-          </Link>
-        </Button>
+        {/* Upgrade/Manage Button */}
+        {!isLoading && (
+          isProPlan(subscription.planId) ? (
+            <Button 
+              asChild 
+              size="sm" 
+              className="w-full h-7 text-xs bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white border-0"
+            >
+              <Link href="/dashboard/settings?tab=subscription">
+                <CreditCard className="w-3 h-3 mr-1" />
+                Manage Billing
+              </Link>
+            </Button>
+          ) : (
+            <Button 
+              asChild 
+              size="sm" 
+              className="w-full h-7 text-xs bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white border-0"
+            >
+              <Link href="/pricing">
+                <Crown className="w-3 h-3 mr-1" />
+                Upgrade to Pro
+              </Link>
+            </Button>
+          )
+        )}
       </CardContent>
     </Card>
   )

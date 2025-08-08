@@ -11,7 +11,7 @@ export function UpgradeSuccessHandler() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { user } = useAuth()
-  const { refetchSubscription } = useSubscription()
+  const { refetchSubscription, optimisticUpgrade } = useSubscription()
   const hasProcessed = useRef(false)
 
   useEffect(() => {
@@ -19,11 +19,10 @@ export function UpgradeSuccessHandler() {
     if (hasProcessed.current) return
 
     const upgradeStatus = searchParams.get('upgrade')
-    const customerSessionToken = searchParams.get('customer_session_token')
 
-    if (upgradeStatus === 'success' && customerSessionToken && user) {
+    if (upgradeStatus === 'success' && user) {
       hasProcessed.current = true
-      handleUpgradeSuccess(customerSessionToken)
+      handleUpgradeSuccess()
     } else if (upgradeStatus === 'cancelled') {
       toast.info('Subscription upgrade was cancelled')
       router.replace('/dashboard')
@@ -31,49 +30,72 @@ export function UpgradeSuccessHandler() {
       toast.error('Subscription upgrade failed. Please try again.')
       router.replace('/dashboard')
     }
-  }, [searchParams, user, router]) // Removed refetchSubscription to prevent constant re-renders
+  }, [searchParams, user, router])
 
-  const handleUpgradeSuccess = async (customerSessionToken: string) => {
+  const handleUpgradeSuccess = async () => {
     try {
       console.log('🚀 UPGRADE SUCCESS - Processing for user:', user?.id)
-      console.log('🎫 Customer session token:', customerSessionToken)
 
       // First, clean up the URL immediately to prevent infinite loops
       console.log('🧹 Cleaning up URL parameters...')
       router.replace('/dashboard')
 
-      // Update subscription status to pro_monthly as default
-      console.log('📝 Updating database with Pro subscription...')
-      
-      const updateData = {
-        subscription_plan_id: 'pro_monthly',
-        subscription_status: 'active',
-        subscription_current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-      }
-      
-      console.log('📊 Update data:', updateData)
-      
-      const { data, error } = await supabase
-        .from('profiles')
-        .update(updateData)
-        .eq('id', user!.id)
-        .select()
+      // ✨ OPTIMISTIC UPDATE: Immediately show pro features
+      const planFromUrl = searchParams.get('plan') || 'pro_monthly'
+      console.log('🚀 Applying optimistic upgrade to:', planFromUrl)
+      optimisticUpgrade(planFromUrl)
 
-      if (error) {
-        console.error('❌ Error updating subscription:', error)
-        toast.error('Error updating subscription status: ' + error.message)
-      } else {
-        console.log('✅ Database updated successfully:', data)
+      // Show immediate success message with pro features unlocked
+      toast.success('🎉 Welcome to Brillo Pro! All features unlocked!', {
+        duration: 4000,
+      })
+      
+      // Background sync to ensure consistency
+      console.log('⏳ Syncing with backend...')
+      
+      // Initial refresh after 1 second (in background)
+      setTimeout(async () => {
+        console.log('🔄 Background subscription sync...')
+        refetchSubscription(true)
+      }, 1000)
+      
+      // Second refresh after 3 seconds with status check
+      setTimeout(async () => {
+        console.log('🔄 Second subscription data refresh...')
+        refetchSubscription(true)
         
-        // Force refresh subscription context to update UI after successful upgrade
-        console.log('🔄 Force refreshing subscription context after upgrade...')
-        refetchSubscription(true) // Force refresh after upgrade
-        
-        // Show success message
-        toast.success('🎉 Successfully upgraded to Pro! Welcome to Pro features!', {
-          duration: 5000,
-        })
-      }
+        // Check if subscription is properly synced
+        try {
+          const { supabase } = await import('@/lib/supabase')
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('subscription_plan_id, subscription_status')
+            .eq('id', user?.id)
+            .single()
+          
+          console.log('📊 Current subscription status:', profile)
+          
+          if (profile?.subscription_plan_id && profile.subscription_plan_id !== 'free') {
+            toast.success('✅ Pro features activated! Welcome to Brillo Pro!', {
+              duration: 5000,
+            })
+          } else {
+            // If still not synced, show info message
+            toast.info('🔄 Setting up your Pro account - this may take a moment...', {
+              duration: 3000,
+            })
+            
+            // One more refresh after another 3 seconds
+            setTimeout(() => {
+              console.log('🔄 Final subscription data refresh...')
+              refetchSubscription(true)
+            }, 3000)
+          }
+        } catch (error) {
+          console.error('Error checking subscription status:', error)
+        }
+      }, 3000)
+      
     } catch (error) {
       console.error('💥 Upgrade success handling error:', error)
       toast.error('Error processing upgrade: ' + (error instanceof Error ? error.message : 'Unknown error'))
