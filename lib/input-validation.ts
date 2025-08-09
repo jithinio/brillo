@@ -42,10 +42,34 @@ export function validatePassword(password: string): ValidationResult {
     return { isValid: false, error: 'Password is too long' }
   }
 
+  // Check for complexity requirements
+  const hasUppercase = /[A-Z]/.test(password)
+  const hasLowercase = /[a-z]/.test(password)
+  const hasNumber = /\d/.test(password)
+  const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)
+
+  const missingRequirements = []
+  if (!hasUppercase) missingRequirements.push('uppercase letter')
+  if (!hasLowercase) missingRequirements.push('lowercase letter')
+  if (!hasNumber) missingRequirements.push('number')
+  if (!hasSpecialChar) missingRequirements.push('special character')
+
+  if (missingRequirements.length > 0) {
+    return { 
+      isValid: false, 
+      error: `Password must contain at least one ${missingRequirements.join(', ')}`
+    }
+  }
+
   // Check for common weak passwords
-  const weakPasswords = ['password', '123456', 'qwerty', 'admin', 'letmein']
+  const weakPasswords = ['password', '123456', 'qwerty', 'admin', 'letmein', 'password123', 'admin123']
   if (weakPasswords.includes(password.toLowerCase())) {
     return { isValid: false, error: 'Password is too common' }
+  }
+
+  // Check for repeated characters (more than 3 in a row)
+  if (/(.)\1{3,}/.test(password)) {
+    return { isValid: false, error: 'Password cannot have more than 3 repeated characters in a row' }
   }
 
   return { isValid: true, sanitizedValue: password }

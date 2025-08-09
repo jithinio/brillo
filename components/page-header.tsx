@@ -29,7 +29,7 @@ export function PageHeader({ title, description, breadcrumbs = [], action, error
       <div className="flex items-center gap-2 px-6">
         <SidebarTrigger className="-ml-1" />
         <Separator orientation="vertical" className="mr-2 h-4" />
-        <h1 className="text-lg font-normal tracking-tight">{title}</h1>
+        <h1 className="text-md font-normal tracking-tight">{title}</h1>
         {breadcrumbs.length > 0 && (
           <>
             <Separator orientation="vertical" className="mx-2 h-4" />

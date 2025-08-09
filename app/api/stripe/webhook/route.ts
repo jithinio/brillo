@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { verifyStripeWebhook } from '@/lib/stripe-client'
 import Stripe from 'stripe'
+import { logger } from '@/lib/logger'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,7 +16,7 @@ export async function POST(request: NextRequest) {
     const signature = request.headers.get('stripe-signature') || ''
 
     if (!process.env.STRIPE_WEBHOOK_SECRET) {
-      console.error('Webhook secret not configured')
+      logger.error('Webhook secret not configured')
       return NextResponse.json({ error: 'Webhook not configured' }, { status: 401 })
     }
 
@@ -24,11 +25,11 @@ export async function POST(request: NextRequest) {
     try {
       event = verifyStripeWebhook(body, signature, process.env.STRIPE_WEBHOOK_SECRET)
     } catch (err) {
-      console.error('Webhook signature verification failed:', err)
+      logger.error('Webhook signature verification failed', err)
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
     }
 
-    console.log('📩 Stripe webhook event received:', event.type)
+    logger.stripeLog('Webhook event received', { eventType: event.type })
 
     switch (event.type) {
       case 'customer.subscription.created':
@@ -52,29 +53,31 @@ export async function POST(request: NextRequest) {
         break
 
       default:
-        console.log('Unhandled webhook event:', event.type)
+        logger.info('Unhandled webhook event', { eventType: event.type })
     }
 
     return NextResponse.json({ received: true })
 
   } catch (error) {
-    console.error('Webhook processing error:', error)
+    logger.error('Webhook processing error', error)
     return NextResponse.json({
-      error: 'Webhook processing failed',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Webhook processing failed'
     }, { status: 500 })
   }
 }
 
 async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
   try {
-    console.log('🎉 Subscription created:', subscription.id, 'for customer:', subscription.customer)
+    logger.stripeLog('Subscription created', { 
+      subscriptionId: subscription.id,
+      customerId: subscription.customer 
+    })
     
     const customerId = subscription.customer as string
     let userId = subscription.metadata.userId
     
     if (!userId) {
-      console.warn('⚠️ No userId found in subscription metadata')
+      logger.warn('No userId found in subscription metadata')
       // Try to find user by customer ID
       const { data: profile } = await supabase
         .from('profiles')
@@ -83,7 +86,7 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
         .single()
       
       if (!profile) {
-        console.error('❌ Could not find user for customer:', customerId)
+        logger.error('Could not find user for customer', { customerId })
         return
       }
       
@@ -106,7 +109,10 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
       ? 'incomplete' // Keep as incomplete, will be updated on payment success
       : subscription.status
     
-    console.log(`📊 Setting subscription status to: ${subscriptionStatus} (original: ${subscription.status})`)
+    logger.stripeLog('Setting subscription status', { 
+      status: subscriptionStatus, 
+      originalStatus: subscription.status 
+    })
     
     const { error } = await supabase
       .from("profiles")
@@ -123,11 +129,11 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
       .eq("id", userId)
     
     if (error) {
-      console.error('❌ Failed to update profile on subscription created:', error)
+      logger.error('Failed to update profile on subscription created', error)
       return
     }
     
-    console.log('✅ Profile updated successfully for user:', userId)
+    logger.stripeLog('Profile updated successfully for subscription creation')
     
     // Log the event
     await supabase.from('subscription_events').insert({
@@ -144,19 +150,19 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
     })
     
   } catch (error) {
-    console.error('❌ Error in subscription created handler:', error)
+    logger.error('Error in subscription created handler', error)
   }
 }
 
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   try {
-    console.log('🔄 Subscription updated:', subscription.id)
+    logger.stripeLog('Subscription updated', { subscriptionId: subscription.id })
     
     const customerId = subscription.customer as string
     const userId = subscription.metadata.userId
     
     if (!userId) {
-      console.warn('⚠️ No userId found in subscription metadata')
+      logger.warn('No userId found in subscription metadata for update')
       return
     }
     

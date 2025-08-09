@@ -4,6 +4,7 @@ import type React from "react"
 import { createContext, useContext, useEffect, useState } from "react"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import type { User } from "@supabase/supabase-js"
+import { logger } from "@/lib/logger"
 
 interface AuthContextType {
   user: User | null
@@ -42,7 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const initializeAuth = async () => {
       if (!isSupabaseConfigured()) {
-        console.error("Supabase not configured properly - authentication required")
+        logger.error("Supabase not configured properly - authentication required")
         setLoading(false)
         return
       }
@@ -53,8 +54,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           data: { session },
         } = await supabase.auth.getSession()
         setUser(session?.user ?? null)
+        logger.authLog("Authentication initialized successfully")
       } catch (error) {
-        console.error("Auth initialization error:", error)
+        logger.error("Auth initialization error", error)
         setUser(null)
       }
       setLoading(false)
@@ -75,7 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         // If user just signed in, trigger subscription sync
         if (event === 'SIGNED_IN' && currentUser && (!previousUser || previousUser.id !== currentUser.id)) {
-          console.log('🔄 User signed in, triggering subscription sync...')
+          logger.authLog('User signed in, triggering subscription sync')
           
           // Use a timeout to ensure the subscription provider has initialized
           setTimeout(() => {
@@ -93,7 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     if (!isSupabaseConfigured()) {
-      console.error("Supabase not configured - authentication required")
+      logger.error("Supabase not configured - authentication required")
       return { error: { message: "Authentication service not available" } }
     }
 
@@ -102,16 +104,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email,
         password,
       })
+      if (!error) {
+        logger.authLog("User sign in successful")
+      }
       return { error }
     } catch (error) {
-      console.error("Sign in error:", error)
+      logger.error("Sign in error", error)
       return { error }
     }
   }
 
   const signUp = async (email: string, password: string, userData?: any) => {
     if (!isSupabaseConfigured()) {
-      console.error("Supabase not configured - authentication required")
+      logger.error("Supabase not configured - authentication required")
       return { error: { message: "Authentication service not available" } }
     }
 
@@ -123,16 +128,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           data: userData,
         },
       })
+      if (!error) {
+        logger.authLog("User sign up successful")
+      }
       return { error }
     } catch (error) {
-      console.error("Sign up error:", error)
+      logger.error("Sign up error", error)
       return { error }
     }
   }
 
   const signOut = async () => {
     if (!isSupabaseConfigured()) {
-      console.error("Supabase not configured - cannot sign out")
+      logger.error("Supabase not configured - cannot sign out")
       setUser(null)
       return
     }
@@ -145,9 +153,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Sign out from Supabase
       await supabase.auth.signOut()
       
-      console.log('✅ User signed out successfully')
+      logger.authLog("User signed out successfully")
     } catch (error) {
-      console.error("Sign out error:", error)
+      logger.error("Sign out error", error)
       // Force local sign out even if Supabase fails
       setUser(null)
     } finally {
