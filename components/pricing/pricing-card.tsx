@@ -1,8 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import { Check, Loader2, Sparkles } from "lucide-react"
+import { Check, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Loader } from "@/components/ui/loader"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { SubscriptionPlan } from "@/lib/types/subscription"
@@ -158,7 +159,7 @@ export function PricingCard({ plan, isCurrentPlan = false, className }: PricingC
         >
           {isUpgrading ? (
             <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              <Loader size="sm" variant="default" className="mr-2" />
               Processing...
             </>
           ) : (

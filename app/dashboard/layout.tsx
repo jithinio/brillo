@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { Loader } from "@/components/ui/loader"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { useAuth } from "@/components/auth-provider"
@@ -29,7 +30,7 @@ export default function DashboardLayout({
         <AppSidebar />
         <SidebarInset>
           <div className="flex items-center justify-center h-screen">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+            <Loader size="md" variant="light" />
           </div>
         </SidebarInset>
         <CommandMenu />

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { Check, ChevronsUpDown, Calculator, Clock, Repeat, DollarSign, Plus, Loader2 } from "lucide-react"
+import { Check, ChevronsUpDown, Calculator, Clock, Repeat, DollarSign, Plus } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { Loader } from "@/components/ui/loader"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -1171,7 +1172,7 @@ export function EnhancedAddProjectDialog({
           <Button type="submit" form="project-form" disabled={isLoading}>
             {isLoading ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader size="sm" variant="default" className="mr-2" />
                 Creating...
               </>
             ) : (

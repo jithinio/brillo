@@ -98,11 +98,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
               <a href="/dashboard">
-                <div className="flex w-32 h-8 items-center justify-start rounded-lg">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg">
                   <img 
-                    src="/brillo_logo.svg" 
+                    src="/logo_mark.svg" 
                     alt="Brillo Logo" 
-                    className="h-6 w-auto object-contain"
+                    className="h-7 w-7 object-contain"
                   />
                 </div>
               </a>

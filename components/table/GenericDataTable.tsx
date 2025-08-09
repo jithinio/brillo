@@ -3,6 +3,7 @@
 import * as React from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Badge } from "@/components/ui/badge"
+import { Loader } from "@/components/ui/loader"
 import { Button } from "@/components/ui/button"
 import { Trash2, Edit, FileText, Check, Eye, Send, FolderPlus, RotateCcw, Zap, Clock } from "lucide-react"
 import {
@@ -288,7 +289,7 @@ function GenericDataTableComponent<T extends GenericEntity>({
               variant="secondary" 
               className="flex items-center gap-2 text-xs shadow-md border bg-white dark:bg-gray-800 dark:text-gray-200"
             >
-              <div className="w-3 h-3 border-2 border-gray-400 dark:border-gray-500 border-t-transparent rounded-full animate-spin" />
+              <Loader size="xs" variant="default" />
               <span>Loading {entityType}...</span>
             </Badge>
           </div>
@@ -529,7 +530,7 @@ function GenericDataTableComponent<T extends GenericEntity>({
                               variant="secondary" 
                               className="flex items-center gap-2 text-xs shadow-lg border bg-white/95 dark:bg-gray-800/95 infinite-scroll-loader"
                             >
-                              <div className="w-3 h-3 border-2 border-gray-400 dark:border-gray-500 border-t-transparent rounded-full animate-spin" />
+                              <Loader size="xs" variant="default" />
                               <span>Loading more {entityType}...</span>
                             </Badge>
                           </motion.div>

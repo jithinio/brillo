@@ -3,6 +3,15 @@
 
 @source '../*.{js,ts,jsx,tsx,mdx}';
 
+/* 🚀 INSTANT PRO USER OPTIMIZATIONS - Hide pro elements immediately for pro users */
+html[data-user-plan="pro"] .pro-element-usage-card {
+  display: none !important;
+}
+
+html[data-user-plan="pro"] .pro-element-badge {
+  display: none !important;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {

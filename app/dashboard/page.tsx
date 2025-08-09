@@ -18,7 +18,8 @@ import { useSettings } from "@/components/settings-provider"
 import { UpgradeSuccessHandler } from "@/components/upgrade-success-handler"
 import { useAuth } from "@/components/auth-provider"
 import { Skeleton } from "@/components/ui/skeleton"
-import { useDashboardData, type DashboardProject } from "@/hooks/use-dashboard-data"
+import { useDashboardData, type DashboardProject } from "@/hooks/use-unified-projects"
+import { PageHeader } from "@/components/page-header"
 
 
 // Re-export type for compatibility
@@ -210,11 +211,12 @@ const calculateARR = (projects: Project[], period: string): { current: number; p
       previousStart = startOfYear(subYears(now, 2))
       previousEnd = endOfYear(subYears(now, 2))
       break
-    case '3-years':
-      currentStart = startOfYear(subYears(now, 2))
+    case '2-years':
+      // Last 2 years: compare last 2 years vs previous 2 years
+      currentStart = startOfYear(subYears(now, 1))
       currentEnd = endOfYear(now)
-      previousStart = startOfYear(subYears(now, 5))
-      previousEnd = endOfYear(subYears(now, 3))
+      previousStart = startOfYear(subYears(now, 3))
+      previousEnd = endOfYear(subYears(now, 1))
       break
     default:
       currentStart = startOfYear(now)
@@ -572,12 +574,12 @@ const MetricCard = ({
   formatCurrency: (amount: number) => string
   isLoading?: boolean
 }) => (
-  <Card className="relative overflow-hidden border bg-transparent">
-    <CardHeader className="p-8 pb-3">
+  <Card className="relative overflow-hidden border bg-transparent transition-all hover:shadow-sm h-full flex flex-col min-h-[140px]">
+    <CardHeader className="p-6 pb-3">
       <div className="flex items-center justify-between">
         <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
         <Select value={period} onValueChange={onPeriodChange}>
-          <SelectTrigger className="h-8 text-sm min-w-0 w-auto rounded-lg shadow-xs">
+          <SelectTrigger className="h-7 text-xs min-w-0 w-auto rounded-lg shadow-xs border-muted">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -604,19 +606,20 @@ const MetricCard = ({
         </Select>
       </div>
     </CardHeader>
-    <CardContent className="px-8 pt-0 pb-8">
-        <div className="space-y-1">
+    <CardContent className="px-6 pt-0 pb-6 flex-1">
+      <div className="flex flex-col h-full">
+        <div className="space-y-2">
           {isLoading ? (
-            <Skeleton className="h-9 w-32" />
+            <Skeleton className="h-8 w-32" />
           ) : (
-            <div className="text-3xl font-normal text-foreground">
+            <div className="text-2xl font-normal text-foreground transition-all">
               {formatLargeNumber(current, getCurrencySymbol())}
             </div>
           )}
           {isLoading ? (
             <Skeleton className="h-4 w-28" />
           ) : (
-            <div className="flex items-center gap-3" style={{ marginTop: '12px' }}>
+            <div className="flex items-center gap-2">
               <div className="flex items-center gap-1">
                 {trend === 'up' ? (
                   <TrendingUp className="h-3 w-3 text-green-600" />
@@ -624,12 +627,13 @@ const MetricCard = ({
                   <TrendingDown className="h-3 w-3 text-red-600" />
                 )}
                 <span className={`text-xs font-normal ${trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
-                {percentage.toFixed(2)}%
+                  {percentage.toFixed(1)}%
                 </span>
               </div>
               <span className="text-xs text-muted-foreground">vs previous period</span>
             </div>
           )}
+        </div>
       </div>
     </CardContent>
   </Card>
@@ -676,22 +680,65 @@ const RevenueChart = ({
         const monthlyData = generateRevenueLineData(projects)
         return monthlyData
       case 'quarterly':
-        // Show quarterly data (group by quarters)
-        const quarterlyData = [
-          { month: 'Q1', revenue: 9000, expenses: 13598 },
-          { month: 'Q2', revenue: 7060, expenses: 12508 },
-          { month: 'Q3', revenue: 8490, expenses: 7700 },
-          { month: 'Q4', revenue: 6670, expenses: 14108 },
-        ]
+        // Show quarterly data (group by quarters) - calculate from real data
+        const quarters = ['Q1', 'Q2', 'Q3', 'Q4']
+        const quarterlyData = quarters.map((quarter, index) => {
+          const quarterStart = new Date(currentYear, index * 3, 1)
+          const quarterEnd = new Date(currentYear, (index + 1) * 3, 0)
+          
+          const quarterProjects = projects.filter(project => {
+            const projectDate = new Date(project.start_date || project.created_at)
+            return projectDate >= quarterStart && projectDate <= quarterEnd && project.status !== 'pipeline' && (project as any).pipeline_stage !== 'lost'
+          })
+          
+          const revenue = quarterProjects.reduce((sum, project) => {
+            let amount = 0
+            if (project.status === 'on hold' || project.status === 'canceled') {
+              amount = project.payment_received || 0
+            } else {
+              amount = project.total_budget || project.budget || project.revenue || 0
+            }
+            return sum + amount
+          }, 0)
+          
+          const expenses = quarterProjects.reduce((sum, project) => {
+            return sum + (project.expenses || 0)
+          }, 0)
+          
+          return { month: quarter, revenue, expenses }
+        })
         return quarterlyData
       case 'last-year':
-        // Show last year's monthly data (simulated)
-        const lastYearData = generateRevenueLineData(projects)
-        return lastYearData.map(item => ({
-          ...item,
-          revenue: item.revenue * 0.85,
-          expenses: item.expenses * 0.9
-        }))
+        // Show last year's monthly data from real projects
+        const lastYear = currentYear - 1
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+        
+        const lastYearData = months.map((month, index) => {
+          const monthStart = new Date(lastYear, index, 1)
+          const monthEnd = new Date(lastYear, index + 1, 0)
+          
+          const monthProjects = projects.filter(project => {
+            const projectDate = new Date(project.start_date || project.created_at)
+            return projectDate >= monthStart && projectDate <= monthEnd && project.status !== 'pipeline' && (project as any).pipeline_stage !== 'lost'
+          })
+          
+          const revenue = monthProjects.reduce((sum, project) => {
+            let amount = 0
+            if (project.status === 'on hold' || project.status === 'canceled') {
+              amount = project.payment_received || 0
+            } else {
+              amount = project.total_budget || project.budget || project.revenue || 0
+            }
+            return sum + amount
+          }, 0)
+          
+          const expenses = monthProjects.reduce((sum, project) => {
+            return sum + (project.expenses || 0)
+          }, 0)
+          
+          return { month, revenue, expenses }
+        })
+        return lastYearData
 
       default:
         return generateRevenueLineData(projects)
@@ -722,8 +769,8 @@ const RevenueChart = ({
   const dynamicTrend = calculateDynamicTrend()
 
   return (
-  <Card className="border bg-transparent">
-    <CardHeader className="p-8 pb-3">
+  <Card className="border bg-transparent transition-all hover:shadow-sm">
+    <CardHeader className="p-6 pb-3">
       <div className="flex items-center justify-between">
         <CardTitle className="text-sm font-medium text-muted-foreground">
           {period === 'this-year' ? 'This Year Revenue' :
@@ -733,7 +780,7 @@ const RevenueChart = ({
         </CardTitle>
         <div className="flex items-center gap-2">
           <Select value={type} onValueChange={onTypeChange}>
-            <SelectTrigger className="h-8 text-sm min-w-0 w-auto rounded-lg shadow-xs">
+            <SelectTrigger className="h-7 text-xs min-w-0 w-auto rounded-lg shadow-xs border-muted">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -741,8 +788,8 @@ const RevenueChart = ({
               <SelectItem value="expenses">Expenses</SelectItem>
             </SelectContent>
           </Select>
-                    <Select value={period} onValueChange={onPeriodChange}>
-            <SelectTrigger className="h-8 text-sm min-w-0 w-auto rounded-lg shadow-xs">
+          <Select value={period} onValueChange={onPeriodChange}>
+            <SelectTrigger className="h-7 text-xs min-w-0 w-auto rounded-lg shadow-xs border-muted">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -755,20 +802,20 @@ const RevenueChart = ({
         </div>
       </div>
     </CardHeader>
-    <CardContent className="px-8 pt-0 pb-8">
+    <CardContent className="px-6 pt-0 pb-6">
       <div className="space-y-4">
-        <div className="space-y-1">
+        <div className="space-y-2">
           {isLoading ? (
-            <Skeleton className="h-9 w-32" />
+            <Skeleton className="h-8 w-32" />
           ) : (
-            <div className="text-3xl font-normal text-foreground">
+            <div className="text-2xl font-normal text-foreground transition-all">
               {formatLargeNumber(dynamicAmount, getCurrencySymbol())}
             </div>
           )}
           {isLoading ? (
             <Skeleton className="h-4 w-28" />
           ) : (
-            <div className="flex items-center gap-3" style={{ marginTop: '12px' }}>
+            <div className="flex items-center gap-2">
               <div className="flex items-center gap-1">
                 {dynamicTrend.trend === 'up' ? (
                   <TrendingUp className="h-3 w-3 text-green-600" />
@@ -785,7 +832,7 @@ const RevenueChart = ({
         </div>
         
         {/* Chart */}
-        <div className="h-80 w-full" style={{ marginTop: '48px' }}>
+        <div className="h-80 w-full mt-8">
           {isLoading ? (
             <div className="h-full w-full flex items-center justify-center">
               <Skeleton className="h-full w-full" />
@@ -840,8 +887,8 @@ const RevenueChart = ({
           )}
         </div>
       </div>
-            </CardContent>
-          </Card>
+    </CardContent>
+  </Card>
   )
 }
 
@@ -862,14 +909,14 @@ const YearlyBarChart = ({
   const yearlyData = generateYearlyData(projects)
   
   return (
-  <Card className="border bg-transparent">
-    <CardHeader className="p-8 pb-3">
+  <Card className="border bg-transparent transition-all hover:shadow-sm">
+    <CardHeader className="p-6 pb-3">
       <div className="flex items-center justify-between">
         <CardTitle className="text-sm font-medium text-muted-foreground">
           Yearly {type === 'revenue' ? 'Revenue' : 'Expenses'}
         </CardTitle>
         <Select value={type} onValueChange={onTypeChange}>
-          <SelectTrigger className="h-8 text-sm min-w-0 w-auto rounded-lg shadow-xs">
+          <SelectTrigger className="h-7 text-xs min-w-0 w-auto rounded-lg shadow-xs border-muted">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -878,29 +925,29 @@ const YearlyBarChart = ({
           </SelectContent>
         </Select>
       </div>
-            </CardHeader>
-    <CardContent className="px-8 pt-0 pb-8">
+    </CardHeader>
+    <CardContent className="px-6 pt-0 pb-6">
       <div className="space-y-4">
         {/* Yearly Growth section */}
-                <div className="space-y-1">
+        <div className="space-y-2">
           {isLoading ? (
-            <Skeleton className="h-9 w-20" />
+            <Skeleton className="h-8 w-20" />
           ) : (
-            <div className="text-3xl font-normal text-foreground">
+            <div className="text-2xl font-normal text-foreground transition-all">
               {(() => {
                 // Calculate yearly growth percentage
                 if (yearlyData.length < 2) return '0%'
                 const currentYear = yearlyData[yearlyData.length - 1][type]
                 const previousYear = yearlyData[yearlyData.length - 2][type]
                 const growthPercentage = previousYear > 0 ? ((currentYear - previousYear) / previousYear) * 100 : 0
-                return `${growthPercentage.toFixed(2)}%`
+                return `${growthPercentage.toFixed(1)}%`
               })()} 
             </div>
           )}
-                    {isLoading ? (
+          {isLoading ? (
             <Skeleton className="h-4 w-28" />
           ) : (
-            <div className="flex items-center gap-3" style={{ marginTop: '12px' }}>
+            <div className="flex items-center gap-2">
               <div className="flex items-center gap-1">
                 {(() => {
                   if (yearlyData.length < 2) return null
@@ -916,7 +963,7 @@ const YearlyBarChart = ({
                         <TrendingDown className="h-3 w-3 text-red-600" />
                       )}
                       <span className={`text-xs font-normal ${trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
-                        {Math.abs(growthPercentage).toFixed(2)}%
+                        {Math.abs(growthPercentage).toFixed(1)}%
                       </span>
                     </>
                   )
@@ -928,7 +975,7 @@ const YearlyBarChart = ({
         </div>
 
         {/* Chart */}
-        <div className="h-96 w-full" style={{ marginTop: '48px' }}>
+        <div className="h-96 w-full mt-8">
         {isLoading ? (
           <div className="h-full w-full flex items-center justify-center">
             <Skeleton className="h-full w-full" />
@@ -965,8 +1012,8 @@ const YearlyBarChart = ({
         )}
         </div>
       </div>
-            </CardContent>
-          </Card>
+    </CardContent>
+  </Card>
 )
 }
 
@@ -1014,113 +1061,111 @@ export default function DashboardPage() {
   const yearlyData = generateYearlyData(projects)
 
   return (
-    <div className="flex flex-1 flex-col gap-4 px-8 pb-4 pt-8 max-w-full overflow-hidden">
+    <div className="flex flex-1 flex-col max-w-full overflow-hidden">
       <UpgradeSuccessHandler />
-      {/* Dynamic Greeting */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-2">
-          <h1 className="text-3xl font-normal text-foreground">
-            {greeting}, {userName}! 👋
-          </h1>
-          <div className="flex items-center gap-2">
+      
+      {/* Page Header */}
+      <PageHeader
+        title={`${greeting}, ${userName}! 👋`}
+        description="Here's what's happening with your business today."
+        action={
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={refreshData}
+            disabled={loading}
+            className="h-8 w-8 p-0"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          </Button>
+        }
+      />
 
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={refreshData}
-              disabled={loading}
-              className="h-8 w-8 p-0"
-            >
-              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            </Button>
+      {/* Main Content */}
+      <div className="flex-1 overflow-hidden relative">
+        <div className="h-full overflow-y-auto">
+          <div className="p-6">
+            <div className="space-y-6">
+              {/* Error Alert */}
+              {error && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Failed to load dashboard data: {error}
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={refreshData}
+                      className="ml-2 h-6"
+                    >
+                      Retry
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              )}
+              
+              {/* MRR, QRR, and ARR Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <MetricCard
+                  title="MRR"
+                  current={mrrData.current}
+                  previous={mrrData.previous}
+                  trend={mrrData.trend}
+                  percentage={mrrData.percentage}
+                  period={mrrPeriod}
+                  onPeriodChange={setMrrPeriod}
+                  formatCurrency={settingsFormatCurrency}
+                  isLoading={loading}
+                />
+                <MetricCard
+                  title="QRR"
+                  current={qrrData.current}
+                  previous={qrrData.previous}
+                  trend={qrrData.trend}
+                  percentage={qrrData.percentage}
+                  period={qrrPeriod}
+                  onPeriodChange={setQrrPeriod}
+                  formatCurrency={settingsFormatCurrency}
+                  isLoading={loading}
+                />
+                <MetricCard
+                  title="ARR"
+                  current={arrData.current}
+                  previous={arrData.previous}
+                  trend={arrData.trend}
+                  percentage={arrData.percentage}
+                  period={arrPeriod}
+                  onPeriodChange={setArrPeriod}
+                  formatCurrency={settingsFormatCurrency}
+                  isLoading={loading}
+                />
+              </div>
+
+              {/* Revenue Line Chart */}
+              <RevenueChart
+                type={revenueType}
+                period={revenuePeriod}
+                current={revenueData.current}
+                previous={revenueData.previous}
+                trend={revenueData.trend}
+                percentage={revenueData.percentage}
+                onTypeChange={setRevenueType}
+                onPeriodChange={setRevenuePeriod}
+                formatCurrency={settingsFormatCurrency}
+                projects={projects}
+                isLoading={loading}
+              />
+
+              {/* Yearly Bar Chart */}
+              <YearlyBarChart
+                type={yearlyType}
+                onTypeChange={setYearlyType}
+                formatCurrency={settingsFormatCurrency}
+                projects={projects}
+                isLoading={loading}
+              />
+            </div>
           </div>
-        </div>
-        <p className="text-muted-foreground">Here's what's happening with your business today.</p>
-        
-        {/* Error Alert */}
-        {error && (
-          <Alert variant="destructive" className="mt-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Failed to load dashboard data: {error}
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={refreshData}
-                className="ml-2 h-6"
-              >
-                Retry
-              </Button>
-            </AlertDescription>
-          </Alert>
-        )}
-      </div>
-
-      {/* Summary Section */}
-      <div className="mb-8">
-        {/* MRR, QRR, and ARR Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <MetricCard
-            title="MRR"
-            current={mrrData.current}
-            previous={mrrData.previous}
-            trend={mrrData.trend}
-            percentage={mrrData.percentage}
-            period={mrrPeriod}
-            onPeriodChange={setMrrPeriod}
-            formatCurrency={settingsFormatCurrency}
-            isLoading={loading}
-          />
-          <MetricCard
-            title="QRR"
-            current={qrrData.current}
-            previous={qrrData.previous}
-            trend={qrrData.trend}
-            percentage={qrrData.percentage}
-            period={qrrPeriod}
-            onPeriodChange={setQrrPeriod}
-            formatCurrency={settingsFormatCurrency}
-            isLoading={loading}
-          />
-          <MetricCard
-            title="ARR"
-            current={arrData.current}
-            previous={arrData.previous}
-            trend={arrData.trend}
-            percentage={arrData.percentage}
-            period={arrPeriod}
-            onPeriodChange={setArrPeriod}
-            formatCurrency={settingsFormatCurrency}
-            isLoading={loading}
-          />
-        </div>
-
-        {/* Revenue Line Chart */}
-        <div className="mb-8">
-          <RevenueChart
-            type={revenueType}
-            period={revenuePeriod}
-            current={revenueData.current}
-            previous={revenueData.previous}
-            trend={revenueData.trend}
-            percentage={revenueData.percentage}
-            onTypeChange={setRevenueType}
-            onPeriodChange={setRevenuePeriod}
-            formatCurrency={settingsFormatCurrency}
-            projects={projects}
-            isLoading={loading}
-          />
-        </div>
-
-        {/* Yearly Bar Chart */}
-        <div>
-          <YearlyBarChart
-            type={yearlyType}
-            onTypeChange={setYearlyType}
-            formatCurrency={settingsFormatCurrency}
-            projects={projects}
-            isLoading={loading}
-          />
         </div>
       </div>
     </div>

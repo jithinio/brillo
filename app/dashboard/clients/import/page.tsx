@@ -2,8 +2,9 @@
 
 import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Upload, Download, CheckCircle, AlertCircle, FileText, Loader2 } from "lucide-react"
+import { ArrowLeft, Upload, Download, CheckCircle, AlertCircle, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Loader } from "@/components/ui/loader"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -509,7 +510,7 @@ export default function ClientImportPage() {
                 <Progress value={progress} className="w-full" />
                 {currentOperation && (
                   <div className="text-sm text-gray-600 mt-2 flex items-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader size="sm" variant="primary" />
                     {currentOperation}
                   </div>
                 )}

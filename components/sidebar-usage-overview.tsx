@@ -13,13 +13,19 @@ import { useSubscriptionListener } from "@/lib/subscription-manager"
 import { SidebarUsageSkeleton } from "@/components/subscription/subscription-skeleton"
 
 export function SidebarUsageOverview() {
-  const { subscription, usage, plan, isLoading, refetchSubscription } = useSubscription()
+  const { subscription, usage, plan, isLoading, refetchSubscription, getCachedPlanId } = useSubscription()
   const [previousCounts, setPreviousCounts] = useState({ projects: 0, clients: 0 })
   const [cachedUsage, setCachedUsage] = useState<typeof usage | null>(null)
   const [isInitialized, setIsInitialized] = useState(false)
+  const [hasMounted, setHasMounted] = useState(false)
   const subscriptionsRef = useRef<any[]>([])
   const { user } = useAuth()
   const pathname = usePathname()
+
+  // Track mounting to prevent hydration mismatch
+  useEffect(() => {
+    setHasMounted(true)
+  }, [])
 
   // Persistent cache key for localStorage
   const getCacheKey = () => user?.id ? `sidebar-usage-${user.id}` : null
@@ -254,13 +260,27 @@ export function SidebarUsageOverview() {
     }
   }, [displayUsage?.projects?.current, displayUsage?.clients?.current, previousCounts, isOnRelevantPage, cachedUsage])
   
-  // COMPLETELY HIDE FOR PRO USERS - only show when we're 100% certain it's a free user
-  // Don't show anything during loading to prevent any flashing
+  // 🚀 INSTANT PRO USER DETECTION - Never show for pro users, no flashing
+  // Check cached plan first to instantly hide for known pro users
+  const cachedPlanId = getCachedPlanId()
+  const isKnownProUser = hasMounted && isProPlan(cachedPlanId)
+  
+  // During SSR or before mount, hide to prevent hydration mismatch
+  if (!hasMounted) {
+    return null
+  }
+  
+  // INSTANTLY hide for known pro users - no loading needed
+  if (isKnownProUser) {
+    return null
+  }
+  
+  // For unknown users during loading, also hide to prevent flashing
   if (isLoading) {
     return null
   }
   
-  // Only show for explicitly free users after loading is complete
+  // Only show for explicitly confirmed free users after loading is complete
   if (subscription.planId !== 'free') {
     return null
   }
@@ -288,7 +308,7 @@ export function SidebarUsageOverview() {
   const usingCachedData = displayUsage === cachedUsage && cachedUsage !== null
   
   return (
-    <Card className="mb-2">
+    <Card className="mb-2 pro-element-usage-card">
       <CardContent className="p-3 space-y-4">
         <div className="flex items-center justify-between">
           <span className="text-xs font-medium">Free Plan</span>

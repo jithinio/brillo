@@ -2,8 +2,9 @@
 
 import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Upload, Download, CheckCircle, AlertCircle, FileText, Loader2, Users, Receipt } from "lucide-react"
+import { ArrowLeft, Upload, Download, CheckCircle, AlertCircle, FileText, Users, Receipt } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Loader } from "@/components/ui/loader"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -460,7 +461,7 @@ export default function InvoiceImportPage() {
               
               <div className={`flex items-center gap-2 ${step === 'importing' ? 'text-blue-600' : step === 'complete' ? 'text-green-600' : 'text-gray-400'}`}>
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step === 'importing' ? 'bg-blue-100 border-2 border-blue-600' : step === 'complete' ? 'bg-green-100 border-2 border-green-600' : 'bg-gray-100 border-2 border-gray-300'}`}>
-                  {step === 'complete' ? <CheckCircle className="h-4 w-4" /> : step === 'importing' ? <Loader2 className="h-4 w-4 animate-spin" /> : '3'}
+                  {step === 'complete' ? <CheckCircle className="h-4 w-4" /> : step === 'importing' ? <Loader size="sm" variant="primary" /> : '3'}
                 </div>
                 <span className="font-medium">Import</span>
               </div>

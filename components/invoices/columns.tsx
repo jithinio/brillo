@@ -16,10 +16,11 @@ import {
   Calendar,
   FileText,
   DollarSign,
-  Loader2,
+
   ChevronRight,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Loader } from "@/components/ui/loader"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   DropdownMenu,

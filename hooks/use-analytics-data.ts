@@ -1,8 +1,14 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
-import { supabase } from '@/lib/supabase'
-import type { Project, Client } from '@/lib/analytics-calculations'
+// DEPRECATED: This hook is now redirected to the unified hook  
+// This file will be removed after migration is complete
+import { 
+  useAnalyticsData as useUnifiedAnalyticsData, 
+  type AnalyticsFilters, 
+  type DateRange,
+  type Project,
+  type Client 
+} from '@/hooks/use-unified-projects'
 
 export interface DateRange {
   start: Date
@@ -63,15 +69,16 @@ const setToCache = (data: { projects: Project[], clients: Client[] }) => {
   }
 }
 
-// Main hook
+// DEPRECATED: Redirected to unified hook - remove this file after confirming migration works
 export const useAnalyticsData = (filters?: AnalyticsFilters) => {
-  const [analyticsData, setAnalyticsData] = useState<AnalyticsData>({
-    projects: [],
-    clients: [],
-    isLoading: true,
-    error: null,
-    lastUpdated: null
-  })
+  return useUnifiedAnalyticsData(filters)
+}
+
+  // Ref to track if we should trigger refresh
+  const refreshTriggerRef = useRef<(() => void) | null>(null)
+  
+  // Performance monitoring
+  const { trackRefresh, metrics: performanceMetrics } = useAnalyticsPerformance()
 
   // Fetch projects with client data
   const fetchProjects = useCallback(async (): Promise<Project[]> => {
@@ -147,11 +154,16 @@ export const useAnalyticsData = (filters?: AnalyticsFilters) => {
 
   // Main data fetching function
   const fetchAnalyticsData = useCallback(async (useCache: boolean = true) => {
+    const startTime = performance.now()
+    
     try {
       // Try cache first
       if (useCache) {
         const cached = getFromCache()
         if (cached) {
+          const endTime = performance.now()
+          trackRefresh(startTime, endTime, true) // Cache hit
+          
           setAnalyticsData(prev => ({
             ...prev,
             ...cached.data,
@@ -176,6 +188,9 @@ export const useAnalyticsData = (filters?: AnalyticsFilters) => {
       // Cache the fresh data
       setToCache(newData)
 
+      const endTime = performance.now()
+      trackRefresh(startTime, endTime, false) // Cache miss
+
       setAnalyticsData({
         ...newData,
         isLoading: false,
@@ -183,6 +198,9 @@ export const useAnalyticsData = (filters?: AnalyticsFilters) => {
         lastUpdated: new Date()
       })
     } catch (error) {
+      const endTime = performance.now()
+      trackRefresh(startTime, endTime, false) // Error case
+      
       console.error('Analytics data fetch error:', error)
       setAnalyticsData(prev => ({
         ...prev,
@@ -190,7 +208,7 @@ export const useAnalyticsData = (filters?: AnalyticsFilters) => {
         error: error instanceof Error ? error.message : 'Failed to fetch analytics data'
       }))
     }
-  }, [fetchProjects, fetchClients])
+  }, [fetchProjects, fetchClients, trackRefresh])
 
   // Filtered data based on filters
   const filteredData = useMemo(() => {
@@ -230,51 +248,52 @@ export const useAnalyticsData = (filters?: AnalyticsFilters) => {
     fetchAnalyticsData(false)
   }, [fetchAnalyticsData])
 
+  // Set up the refresh trigger ref
+  useEffect(() => {
+    refreshTriggerRef.current = refreshData
+  }, [refreshData])
+
+  // Use the advanced analytics cache system
+  const { refreshAnalytics } = useAnalyticsCache({
+    enableRealTimeUpdates: true,
+    debounceMs: 800, // Faster response
+    onCacheInvalidated: () => {
+      // Trigger a fresh fetch when cache is invalidated
+      refreshTriggerRef.current?.()
+    }
+  })
+
+  // Use optimistic updates for immediate feedback
+  const { optimisticCreateProject, optimisticUpdateProject, optimisticDeleteProject } = useAnalyticsOptimistic({
+    onOptimisticUpdate: (change) => {
+      // Apply optimistic changes to local state for immediate UI feedback
+      if (change.operation === 'create' && change.changes) {
+        setAnalyticsData(prev => ({
+          ...prev,
+          projects: [...prev.projects, change.changes as Project]
+        }))
+      } else if (change.operation === 'update') {
+        setAnalyticsData(prev => ({
+          ...prev,
+          projects: prev.projects.map(p => 
+            p.id === change.id ? { ...p, ...change.changes } : p
+          )
+        }))
+      } else if (change.operation === 'delete') {
+        setAnalyticsData(prev => ({
+          ...prev,
+          projects: prev.projects.filter(p => p.id !== change.id)
+        }))
+      }
+    }
+  })
+
   // Initial data fetch
   useEffect(() => {
     fetchAnalyticsData()
   }, [fetchAnalyticsData])
 
-  // Real-time updates using Supabase subscriptions
-  useEffect(() => {
-    let debounceTimer: NodeJS.Timeout | null = null
-
-    const handleDataChange = () => {
-      // Clear existing timer
-      if (debounceTimer) clearTimeout(debounceTimer)
-      
-      // Only update if page is visible and we have initial data
-      debounceTimer = setTimeout(() => {
-        if (document.visibilityState === 'visible' && !analyticsData.isLoading) {
-          fetchAnalyticsData(false)
-        }
-      }, 2000) // Increased debounce to 2 seconds
-    }
-
-    const projectsSubscription = supabase
-      .channel('projects-changes')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'projects' 
-      }, handleDataChange)
-      .subscribe()
-
-    const clientsSubscription = supabase
-      .channel('clients-changes')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'clients' 
-      }, handleDataChange)
-      .subscribe()
-
-    return () => {
-      if (debounceTimer) clearTimeout(debounceTimer)
-      projectsSubscription.unsubscribe()
-      clientsSubscription.unsubscribe()
-    }
-  }, [fetchAnalyticsData, analyticsData.isLoading])
+  // Note: Real-time updates are now handled by useAnalyticsCache hook above
 
   // Periodic refresh (every 10 minutes as fallback) - reduced frequency
   useEffect(() => {
@@ -303,7 +322,16 @@ export const useAnalyticsData = (filters?: AnalyticsFilters) => {
     lastUpdated: analyticsData.lastUpdated,
     
     // Actions
-    refreshData
+    refreshData,
+    refreshAnalytics,
+    
+    // Optimistic updates
+    optimisticCreateProject,
+    optimisticUpdateProject,
+    optimisticDeleteProject,
+    
+    // Performance metrics
+    performanceMetrics
   }
 }
 

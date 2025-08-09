@@ -79,7 +79,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
               <div className="flex flex-col items-center text-center">
                 <div className="mb-4">
                   <img 
-                    src="/brillo_logo.svg" 
+                    src="/logo_mark.svg" 
                     alt="Brillo Logo" 
                     className="h-8 w-auto object-contain"
                   />

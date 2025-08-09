@@ -12,12 +12,13 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { BadgeCheck, ChevronsUpDown, LogOut, Sparkles, Moon, Sun, Monitor, Palette, Settings2, User, CreditCard, Crown, MessageSquare, Loader2 } from "lucide-react"
+import { BadgeCheck, ChevronsUpDown, LogOut, Sparkles, Moon, Sun, Monitor, Palette, Settings2, User, CreditCard, Crown, MessageSquare } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { useSubscription } from "@/components/providers/subscription-provider"
 import { isProPlan } from "@/lib/subscription-plans"
 import { useTheme } from "next-themes"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Loader } from "@/components/ui/loader"
 
 export function NavUser() {
   const { user, signOut, loading: authLoading } = useAuth()
@@ -123,19 +124,7 @@ export function NavUser() {
             align="end"
             sideOffset={4}
           >
-            <DropdownMenuLabel className="p-0 font-normal">
-              <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarImage src={currentUser.avatar || "/placeholder-user.jpg"} alt={currentUser.name} />
-                  <AvatarFallback className="rounded-lg">{getInitials(currentUser.name)}</AvatarFallback>
-                </Avatar>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold text-foreground">{currentUser.name}</span>
-                  <span className="truncate text-xs text-foreground">{currentUser.email}</span>
-                </div>
-              </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
+
             <DropdownMenuGroup>
               {/* Always show subscription button - use optimistic plan ID for immediate rendering */}
               {isProPlan(optimisticPlanId) ? (
@@ -143,7 +132,7 @@ export function NavUser() {
                   <a href="/dashboard/settings?tab=subscription" className="cursor-pointer flex items-center">
                     <CreditCard className="mr-2 h-4 w-4" />
                     <span className="flex-1">Manage Subscription</span>
-                    {isLoading && <Loader2 className="h-3 w-3 animate-spin opacity-30" />}
+                    {isLoading && <Loader size="xs" variant="muted" className="opacity-30" />}
                   </a>
                 </DropdownMenuItem>
               ) : (
@@ -151,7 +140,7 @@ export function NavUser() {
                   <a href="/pricing" className="cursor-pointer flex items-center">
                     <Sparkles className="mr-2 h-4 w-4" />
                     <span className="flex-1">Upgrade to Pro</span>
-                    {isLoading && <Loader2 className="h-3 w-3 animate-spin opacity-30" />}
+                    {isLoading && <Loader size="xs" variant="muted" className="opacity-30" />}
                   </a>
                 </DropdownMenuItem>
               )}

@@ -15,8 +15,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { PhoneInput } from "@/components/ui/phone-input"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
-import { Save, Upload, Loader2, AlertTriangle } from "lucide-react"
+import { Save, Upload, AlertTriangle } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { Loader } from "@/components/ui/loader"
 import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "sonner"
 import { PageHeader, PageContent, PageTitle } from "@/components/page-header"
@@ -502,7 +503,7 @@ export default function SettingsPage() {
                   </div>
                   <Button size="sm" onClick={handleSaveGeneral} disabled={savingGeneral}>
                     {savingGeneral ? (
-                      <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                      <Loader size="sm" variant="default" className="mr-1.5" />
                     ) : (
                       <Save className="mr-1.5 h-4 w-4" />
                     )}
@@ -619,7 +620,7 @@ export default function SettingsPage() {
                   </div>
                   <Button size="sm" onClick={handleSaveCompany} disabled={savingCompany}>
                     {savingCompany ? (
-                      <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                      <Loader size="sm" variant="default" className="mr-1.5" />
                     ) : (
                       <Save className="mr-1.5 h-4 w-4" />
                     )}
@@ -641,7 +642,7 @@ export default function SettingsPage() {
                         <div className="w-16 h-16 border rounded-lg overflow-hidden bg-muted flex items-center justify-center">
                           <img
                             key={companyLogo} // Force re-render when logo changes
-                            src={companyLogo || "/brillo_logo.svg"}
+                            src={companyLogo || "/logo_mark.svg"}
                             alt="Company Logo"
                             className="w-full h-full object-contain"
                             onLoad={() => {
@@ -662,7 +663,7 @@ export default function SettingsPage() {
                           <Button variant="outline" size="sm" disabled={uploading} asChild>
                             <span>
                                                     {uploading ? (
-                        <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                        <Loader size="sm" variant="default" className="mr-1.5" />
                       ) : (
                         <Upload className="mr-1.5 h-4 w-4" />
                       )}
@@ -779,7 +780,7 @@ export default function SettingsPage() {
                   </div>
                   <Button size="sm" onClick={handleSaveTax} disabled={savingTax}>
                     {savingTax ? (
-                      <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                      <Loader size="sm" variant="default" className="mr-1.5" />
                     ) : (
                       <Save className="mr-1.5 h-4 w-4" />
                     )}

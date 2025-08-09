@@ -268,28 +268,42 @@ export const calculateTopPayingClients = (projects: Project[], limit: number = 5
   const clients = Array.from(clientMap.values()).map(client => {
     client.avgProjectValue = client.totalValue / client.projectCount
     
-    // Calculate trend (simplified - could be enhanced with historical data)
+    // Calculate trend using quarterly comparison for more accuracy
     const clientProjects = validProjects.filter(p => p.client_id === client.id)
-    const recentProjects = clientProjects.filter(p => {
+    const now = new Date()
+    
+    // Get last two quarters of data
+    const currentQuarterStart = startOfQuarter(now)
+    const currentQuarterEnd = endOfQuarter(now)
+    const previousQuarterStart = startOfQuarter(subQuarters(now, 1))
+    const previousQuarterEnd = endOfQuarter(subQuarters(now, 1))
+    
+    const currentQuarterProjects = clientProjects.filter(p => {
       const projectDate = new Date(p.created_at)
-      const sixMonthsAgo = subMonths(new Date(), 6)
-      return projectDate >= sixMonthsAgo
+      return projectDate >= currentQuarterStart && projectDate <= currentQuarterEnd
     })
     
-    const olderProjects = clientProjects.filter(p => {
+    const previousQuarterProjects = clientProjects.filter(p => {
       const projectDate = new Date(p.created_at)
-      const sixMonthsAgo = subMonths(new Date(), 6)
-      const twelveMonthsAgo = subMonths(new Date(), 12)
-      return projectDate >= twelveMonthsAgo && projectDate < sixMonthsAgo
+      return projectDate >= previousQuarterStart && projectDate <= previousQuarterEnd
     })
     
-    const recentValue = recentProjects.reduce((sum, p) => sum + getProjectValue(p), 0)
-    const olderValue = olderProjects.reduce((sum, p) => sum + getProjectValue(p), 0)
+    const currentValue = currentQuarterProjects.reduce((sum, p) => sum + getProjectValue(p), 0)
+    const previousValue = previousQuarterProjects.reduce((sum, p) => sum + getProjectValue(p), 0)
     
-    if (olderValue > 0) {
-      const trendPercentage = ((recentValue - olderValue) / olderValue) * 100
+    // Calculate trend based on quarterly performance
+    if (previousValue > 0) {
+      const trendPercentage = ((currentValue - previousValue) / previousValue) * 100
       client.trend = trendPercentage >= 0 ? 'up' : 'down'
       client.trendPercentage = Math.abs(trendPercentage)
+    } else if (currentValue > 0) {
+      // New client or first quarter activity
+      client.trend = 'up'
+      client.trendPercentage = 100
+    } else {
+      // No recent activity
+      client.trend = 'down'
+      client.trendPercentage = 0
     }
     
     return client
@@ -322,11 +336,18 @@ export const calculateCLTV = (projects: Project[], clients: Client[]): Analytics
     const monthsActive = Math.max(1, differenceInMonths(lastProject, firstProject))
     const purchaseFrequency = clientProjects.length / monthsActive
     
-    // Gross margin (simplified - assume 30% margin)
-    const grossMargin = 0.3
+    // Calculate real gross margin from project expenses
+    const totalExpenses = clientProjects.reduce((sum, p) => sum + getProjectExpenses(p), 0)
+    const grossMargin = totalValue > 0 ? Math.max(0.1, (totalValue - totalExpenses) / totalValue) : 0.3
     
-    // Churn rate (simplified - assume 10% monthly churn)
-    const churnRate = 0.1
+    // Calculate churn rate based on actual client activity
+    const recentActivity = validProjects.filter(p => {
+      const projectDate = new Date(p.created_at)
+      const threeMonthsAgo = subMonths(new Date(), 3)
+      return p.client_id === client.id && projectDate >= threeMonthsAgo
+    }).length
+    
+    const churnRate = recentActivity > 0 ? 0.05 : 0.2 // Lower churn for active clients
     
     // CLTV = (AOV × Purchase Frequency × Gross Margin) / Churn Rate
     return (avgOrderValue * purchaseFrequency * grossMargin) / churnRate
@@ -334,8 +355,45 @@ export const calculateCLTV = (projects: Project[], clients: Client[]): Analytics
   
   const currentCLTV = clientCLTVs.reduce((sum, cltv) => sum + cltv, 0) / clientCLTVs.length || 0
   
-  // Calculate previous period CLTV (simplified)
-  const previousCLTV = currentCLTV * 0.85 // Assume 15% growth
+  // Calculate previous period CLTV based on real data from 6 months ago
+  const sixMonthsAgo = subMonths(new Date(), 6)
+  const twelveMonthsAgo = subMonths(new Date(), 12)
+  
+  const previousPeriodProjects = validProjects.filter(project => {
+    const projectDate = new Date(project.start_date || project.created_at)
+    return projectDate >= twelveMonthsAgo && projectDate < sixMonthsAgo
+  })
+  
+  const previousClientCLTVs = clients.map(client => {
+    const clientProjects = previousPeriodProjects.filter(p => p.client_id === client.id)
+    
+    if (clientProjects.length === 0) return 0
+    
+    const totalValue = clientProjects.reduce((sum, p) => sum + getProjectValue(p), 0)
+    const avgOrderValue = totalValue / clientProjects.length
+    
+    const firstProject = new Date(Math.min(...clientProjects.map(p => new Date(p.created_at).getTime())))
+    const lastProject = new Date(Math.max(...clientProjects.map(p => new Date(p.created_at).getTime())))
+    const monthsActive = Math.max(1, differenceInMonths(lastProject, firstProject))
+    const purchaseFrequency = clientProjects.length / monthsActive
+    
+    // Use real gross margin calculation
+    const totalExpenses = clientProjects.reduce((sum, p) => sum + getProjectExpenses(p), 0)
+    const grossMargin = totalValue > 0 ? Math.max(0.1, (totalValue - totalExpenses) / totalValue) : 0.3
+    
+    // Calculate churn rate based on actual client activity
+    const recentActivity = validProjects.filter(p => {
+      const projectDate = new Date(p.created_at)
+      const threeMonthsAgo = subMonths(new Date(), 3)
+      return p.client_id === client.id && projectDate >= threeMonthsAgo
+    }).length
+    
+    const churnRate = recentActivity > 0 ? 0.05 : 0.2 // Lower churn for active clients
+    
+    return (avgOrderValue * purchaseFrequency * grossMargin) / churnRate
+  })
+  
+  const previousCLTV = previousClientCLTVs.reduce((sum, cltv) => sum + cltv, 0) / previousClientCLTVs.length || 0
   
   return calculateTrendData(currentCLTV, previousCLTV)
 }

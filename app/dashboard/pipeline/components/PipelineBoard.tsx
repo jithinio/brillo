@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Badge } from "@/components/ui/badge"
+import { Loader } from "@/components/ui/loader"
 import {
   DndContext,
   DragEndEvent,
@@ -606,7 +607,7 @@ export function PipelineBoard({
                 variant="secondary" 
                 className="flex items-center gap-2 text-xs shadow-md border bg-white dark:bg-gray-800 dark:text-gray-200"
               >
-                <div className="w-3 h-3 border-2 border-gray-400 dark:border-gray-500 border-t-transparent rounded-full animate-spin" />
+                <Loader size="xs" variant="default" />
                 <span>Loading pipeline...</span>
               </Badge>
             </div>

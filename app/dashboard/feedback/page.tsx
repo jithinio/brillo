@@ -3,11 +3,12 @@
 import React, { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Loader } from "@/components/ui/loader"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Loader2, Send, MessageSquare } from "lucide-react"
+import { Send, MessageSquare } from "lucide-react"
 import { toast } from "sonner"
 import { PageHeader, PageContent } from "@/components/page-header"
 import { useAuth } from "@/components/auth-provider"
@@ -180,7 +181,7 @@ export default function FeedbackPage() {
                     >
                       {isSubmitting ? (
                         <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          <Loader size="sm" variant="default" className="mr-2" />
                           Sending...
                         </>
                       ) : (

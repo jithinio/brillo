@@ -13,6 +13,7 @@ import { toast } from 'sonner'
 import { useSettings } from '@/components/settings-provider'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import { PageHeader, PageContent, PageTitle } from '@/components/page-header'
+import { Loader } from '@/components/ui/loader'
 import { renderInvoiceHTML } from '@/lib/invoice-renderer'
 import { useQueryClient } from '@tanstack/react-query'
 import { CURRENCIES } from '@/lib/currency'
@@ -524,7 +525,7 @@ export default function InvoicePreviewPage() {
         <PageContent>
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+              <Loader size="xl" variant="primary" className="mx-auto" />
               <p className="mt-4 text-muted-foreground">Loading invoice...</p>
             </div>
           </div>
@@ -636,7 +637,7 @@ export default function InvoicePreviewPage() {
               ) : (
                 <div className="shadow-lg rounded-lg overflow-hidden border bg-white">
                   <div className="p-8 text-center text-muted-foreground">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                    <Loader size="xl" variant="primary" className="mx-auto mb-4" />
                     Rendering invoice preview...
                   </div>
                 </div>

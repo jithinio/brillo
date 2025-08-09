@@ -100,6 +100,33 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var saved = localStorage.getItem('brillo-subscription-cache');
+                  if (saved) {
+                    var parsed = JSON.parse(saved);
+                    var age = Date.now() - parsed.timestamp;
+                    if (age < 5 * 60 * 1000 && parsed.data && (parsed.data.planId === 'pro_monthly' || parsed.data.planId === 'pro_yearly')) {
+                      document.documentElement.setAttribute('data-user-plan', 'pro');
+                      console.log('🚀 INSTANT pro detection via script tag');
+                    } else {
+                      document.documentElement.setAttribute('data-user-plan', 'free');
+                    }
+                  } else {
+                    document.documentElement.setAttribute('data-user-plan', 'free');
+                  }
+                } catch (e) {
+                  document.documentElement.setAttribute('data-user-plan', 'free');
+                }
+              })();
+            `
+          }}
+        />
+      </head>
       <body className={`${inter.className} ${GeistMono.variable} ${inter.variable} ${roboto.variable} ${openSans.variable} ${lato.variable} ${poppins.variable} ${montserrat.variable} ${playfair.variable} ${merriweather.variable} ${sourceCodePro.variable} ${jetbrainsMono.variable} ${inconsolata.variable}`}>
         <ClientProviders>
           {children}

@@ -73,6 +73,7 @@ export const queryKeys = {
   
   // Analytics
   analytics: ['analytics'] as const,
+  analyticsData: (filters?: any) => [...queryKeys.analytics, 'data', filters] as const,
   projectAnalytics: (filters?: any) => [...queryKeys.analytics, 'projects', filters] as const,
   dashboardMetrics: () => [...queryKeys.analytics, 'dashboard'] as const,
   
@@ -95,7 +96,14 @@ export const cacheUtils = {
   
   // Invalidate all analytics
   invalidateAnalytics: (queryClient: QueryClient) => {
+    console.log('♻️ Cache: Invalidating analytics queries')
     queryClient.invalidateQueries({ queryKey: queryKeys.analytics })
+  },
+  
+  // Invalidate analytics data specifically 
+  invalidateAnalyticsData: (queryClient: QueryClient, filters?: any) => {
+    console.log('♻️ Cache: Invalidating analytics data', filters ? 'with filters' : 'all')
+    queryClient.invalidateQueries({ queryKey: queryKeys.analyticsData(filters) })
   },
   
   // Update project in cache optimistically

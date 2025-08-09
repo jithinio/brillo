@@ -5,13 +5,14 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Loader } from "@/components/ui/loader"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Save, Edit, Loader2, Camera, AlertCircle, Shield, Trash2 } from "lucide-react"
+import { Save, Edit, Camera, AlertCircle, Shield, Trash2 } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { useClients } from "@/hooks/use-clients"
@@ -548,7 +549,7 @@ export default function ProfilePage() {
                   Cancel
                 </Button>
                 <Button size="sm" onClick={updateProfile} disabled={saving}>
-                  {saving ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Save className="mr-1.5 h-4 w-4" />}
+                  {saving ? <Loader size="sm" variant="default" className="mr-1.5" /> : <Save className="mr-1.5 h-4 w-4" />}
                   Save Changes
                 </Button>
               </>
@@ -590,7 +591,7 @@ export default function ProfilePage() {
                     <div className="absolute bottom-0 right-0">
                       <Label htmlFor="avatar-upload" className="cursor-pointer">
                         <div className="flex items-center justify-center w-8 h-8 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors">
-                          {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+                          {uploading ? <Loader size="sm" variant="default" /> : <Camera className="h-4 w-4" />}
                         </div>
                       </Label>
                       <Input
@@ -970,7 +971,7 @@ export default function ProfilePage() {
               >
                 {isDeleting ? (
                   <>
-                    <Loader2 className="mr-1.5 h-4 w-4 animate-spin text-white" />
+                    <Loader size="sm" variant="default" className="mr-1.5 text-white" />
                     Deleting Account...
                   </>
                 ) : (

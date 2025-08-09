@@ -9,6 +9,7 @@ import { fetchPipelineProjects, fetchPipelineStages, calculateProjectPipelineMet
 import type { PipelineProject, PipelineStage, PipelineMetrics as PipelineMetricsType } from "@/lib/types/pipeline"
 import { Search, X, Plus, Crown } from "lucide-react"
 import { Input } from "@/components/ui/input"
+import { Loader } from "@/components/ui/loader"
 import { Button } from "@/components/ui/button"
 import { useCanPerformAction } from "@/components/over-limit-alert"
 import Link from "next/link"
@@ -172,7 +173,7 @@ export default function PipelinePage() {
               {/* Search Input */}
               <div className="relative w-[200px]">
                 {isSearching ? (
-                  <div className="absolute left-3 top-2 h-4 w-4 border-2 border-gray-300 dark:border-gray-600 border-t-primary rounded-full animate-spin" />
+                  <Loader size="sm" variant="primary" className="absolute left-3 top-2" />
                 ) : (
                   <Search className="absolute left-3 top-2 h-4 w-4 text-muted-foreground" />
                 )}

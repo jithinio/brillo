@@ -1,8 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import { Calendar, CreditCard, ExternalLink, Loader2, Package, Trash2, RefreshCw } from "lucide-react"
+import { Calendar, CreditCard, ExternalLink, Package, Trash2, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Loader } from "@/components/ui/loader"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
@@ -388,7 +389,7 @@ export function SubscriptionManagement() {
                   size="sm"
                 >
                   {isManaging ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    <Loader size="sm" variant="default" className="mr-2" />
                   ) : (
                     <CreditCard className="w-4 h-4 mr-2" />
                   )}
@@ -407,7 +408,7 @@ export function SubscriptionManagement() {
                     size="sm"
                   >
                     {isManaging ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      <Loader size="sm" variant="default" className="mr-2" />
                     ) : (
                       <RefreshCw className="w-4 h-4 mr-2" />
                     )}
@@ -463,7 +464,7 @@ export function SubscriptionManagement() {
               size="sm"
             >
               {isSyncing ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader size="sm" variant="default" className="mr-2" />
               ) : (
                 <RefreshCw className="w-4 h-4 mr-2" />
               )}
@@ -503,7 +504,7 @@ export function SubscriptionManagement() {
                 disabled={isRefreshingUsage || isLoading}
               >
                 {isRefreshingUsage ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader size="sm" variant="default" />
                 ) : (
                   <RefreshCw className="w-4 h-4" />
                 )}

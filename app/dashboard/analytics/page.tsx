@@ -10,7 +10,8 @@ import { Bar, BarChart, XAxis, YAxis, Line, LineChart } from "recharts"
 import { DollarSign, TrendingUp, TrendingDown, FileText, Users, Calendar, Activity, BarChart3, Wallet } from "lucide-react"
 
 import { PageHeader } from "@/components/page-header"
-import { useAnalyticsData, type AnalyticsFilters as AnalyticsFiltersType, type DateRange } from "@/hooks/use-analytics-data"
+import { Loader } from "@/components/ui/loader"
+import { useAnalyticsData, type AnalyticsFilters as AnalyticsFiltersType, type DateRange } from "@/hooks/use-unified-projects"
 
 import {
   calculateOverallRevenue,
@@ -86,6 +87,7 @@ export default function AnalyticsPage() {
     isLoading,
     error,
     refreshData,
+    refreshAnalytics,
     lastUpdated
   } = useAnalyticsData(filters)
 
@@ -198,7 +200,7 @@ export default function AnalyticsPage() {
                         variant="secondary" 
                         className="flex items-center gap-2 text-xs shadow-md border bg-white dark:bg-gray-800 dark:text-gray-200"
                       >
-                        <div className="w-3 h-3 border-2 border-gray-400 dark:border-gray-500 border-t-transparent rounded-full animate-spin" />
+                        <Loader size="xs" variant="default" />
                         <span>Loading filtered analytics...</span>
                       </Badge>
                     </div>
@@ -274,7 +276,7 @@ export default function AnalyticsPage() {
                       variant="secondary" 
                       className="flex items-center gap-2 text-xs shadow-md border bg-white dark:bg-gray-800 dark:text-gray-200"
                     >
-                      <div className="w-3 h-3 border-2 border-gray-400 dark:border-gray-500 border-t-transparent rounded-full animate-spin" />
+                      <Loader size="xs" variant="default" />
                       <span>Loading analytics...</span>
                     </Badge>
                   </div>

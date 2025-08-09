@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
-import { supabase } from '@/lib/supabase'
+// DEPRECATED: This hook is now redirected to the unified hook
+// This file will be removed after migration is complete
+import { useDashboardData as useUnifiedDashboardData, type DashboardProject } from '@/hooks/use-unified-projects'
 
 // Project interface for dashboard (simplified)
 export interface DashboardProject {
@@ -76,14 +77,10 @@ const setToCache = (data: { projects: DashboardProject[] }) => {
   }
 }
 
-// Main dashboard data hook
+// DEPRECATED: Redirected to unified hook - remove this file after confirming migration works
 export const useDashboardData = () => {
-  const [dashboardData, setDashboardData] = useState<DashboardData>({
-    projects: [],
-    isLoading: true,
-    error: null,
-    lastUpdated: null
-  })
+  return useUnifiedDashboardData()
+}
 
   // Fetch projects with optimized query for dashboard
   const fetchProjects = useCallback(async (): Promise<DashboardProject[]> => {
@@ -208,12 +205,17 @@ export const useDashboardData = () => {
       // Clear existing timer
       if (debounceTimer) clearTimeout(debounceTimer)
       
+      console.log('📊 Dashboard: Data change detected, scheduling refresh...')
+      
       // Only update if page is visible
       debounceTimer = setTimeout(() => {
         if (document.visibilityState === 'visible') {
+          // Invalidate React Query cache for projects (this will also trigger analytics updates)
+          queryClient.invalidateQueries({ queryKey: queryKeys.projects })
+          
           backgroundRefresh() // Use background refresh for real-time updates
         }
-      }, 1500) // Shorter debounce for dashboard
+      }, 1200) // Even faster debounce for dashboard
     }
 
     const projectsSubscription = supabase
@@ -229,7 +231,7 @@ export const useDashboardData = () => {
       if (debounceTimer) clearTimeout(debounceTimer)
       projectsSubscription.unsubscribe()
     }
-  }, [backgroundRefresh])
+  }, [backgroundRefresh, queryClient])
 
   // Periodic background refresh
   useEffect(() => {

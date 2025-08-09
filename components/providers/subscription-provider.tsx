@@ -4,7 +4,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, ReactNode, useMemo } from 'react'
 import { useAuth } from '@/components/auth-provider'
 import { SubscriptionPlan, UserSubscription, UsageLimits, FeatureAccess } from '@/lib/types/subscription'
-import { getPlan, checkLimits, canAccessFeature } from '@/lib/subscription-plans'
+import { getPlan, checkLimits, canAccessFeature, isProPlan } from '@/lib/subscription-plans'
 import { areSubscriptionsEnabled, isStripeConfigured } from '@/lib/config/environment'
 import { useSubscriptionPerformance } from '@/hooks/use-subscription-performance'
 
@@ -60,15 +60,20 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     invoices: { current: 0, limit: 'none', canCreate: false }
   })
 
+  // Start with loading state true to prevent hydration mismatch
   const [isLoading, setIsLoading] = useState(true)
+  const [loadingTimeout, setLoadingTimeout] = useState<NodeJS.Timeout | null>(null)
   const [error, setError] = useState<string | null>(null)
   
-  // Add subscription caching
+  // Initialize subscription cache (will be hydrated on client)
   const [subscriptionCache, setSubscriptionCache] = useState<{
     data: UserSubscription | null
     timestamp: number
     userId: string
   }>({ data: null, timestamp: 0, userId: '' })
+  
+  // Track if we've hydrated from localStorage yet
+  const [hasHydratedCache, setHasHydratedCache] = useState(false)
   
   // Add separate usage caching to prevent redundant API calls
   const [usageCache, setUsageCache] = useState<{
@@ -81,7 +86,32 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
   const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes cache
   const USAGE_CACHE_DURATION = 2 * 60 * 1000 // 2 minutes cache for usage (shorter since it changes more)
 
-  // Memoized feature access to prevent redundant calculations
+  // Add immediate cache lookup to reduce loading time
+  const [hasCheckedInitialCache, setHasCheckedInitialCache] = useState(false)
+
+  // Quick cached plan ID access for UI components (SSR-safe)
+  const getCachedPlanId = useCallback((): string => {
+    // During SSR or before hydration, always return 'free' to prevent mismatch
+    if (typeof window === 'undefined' || !hasHydratedCache) {
+      return 'free'
+    }
+    
+    // Return current subscription if not loading
+    if (!isLoading) return subscription.planId
+    
+    // Return cached subscription if available
+    if (subscriptionCache.data && subscriptionCache.userId === user?.id) {
+      const cacheAge = Date.now() - subscriptionCache.timestamp
+      if (cacheAge < CACHE_DURATION) {
+        return subscriptionCache.data.planId
+      }
+    }
+    
+    // Default to free
+    return 'free'
+  }, [isLoading, subscription.planId, subscriptionCache, user?.id, hasHydratedCache])
+
+  // Smart feature access that prioritizes cached pro detection
   const featureAccess = useMemo(() => ({
     invoicing: canAccessFeature(subscription.planId, 'invoicing'),
     advanced_analytics: canAccessFeature(subscription.planId, 'advanced_analytics'),
@@ -90,11 +120,17 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
   }), [subscription.planId])
 
   const hasAccess = useCallback((feature: keyof FeatureAccess): boolean => {
-    // Always enforce feature access regardless of configuration
-    // This ensures Pro features are protected even in dev/misconfigured environments
-    if (isLoading) return false  // Deny access during loading for security
+    // For known pro users (from cache), grant immediate access even during loading
+    const cachedPlanId = getCachedPlanId()
+    if (isLoading && isProPlan(cachedPlanId)) {
+      return canAccessFeature(cachedPlanId, feature)
+    }
+    
+    // For loading non-pro users, deny access for security
+    if (isLoading) return false
+    
     return featureAccess[feature]
-  }, [isLoading, featureAccess])
+  }, [isLoading, featureAccess, getCachedPlanId])
 
   const canCreate = (resource: 'projects' | 'clients' | 'invoices'): boolean => {
     // Always enforce limits regardless of configuration for consistency
@@ -126,6 +162,35 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     
     return { isOverLimit, restrictions }
   }
+
+  // New function to check initial cache without loading state
+  const checkInitialCache = useCallback(() => {
+    if (!user || hasCheckedInitialCache) return false
+    
+    const now = Date.now()
+    const isCacheValid = subscriptionCache.data && 
+      subscriptionCache.userId === user.id &&
+      (now - subscriptionCache.timestamp) < CACHE_DURATION
+
+    if (isCacheValid && subscriptionCache.data) {
+      console.log('🚀 Using initial cached subscription data (instant load)')
+      trackCacheHit()
+      setSubscription(subscriptionCache.data)
+      setIsLoading(false) // Set loading false immediately for cached data
+      setHasCheckedInitialCache(true)
+      
+      // Update usage in background - skip entirely for pro users
+      if (!isProPlan(subscriptionCache.data.planId)) {
+        setTimeout(() => updateUsageLimits(subscriptionCache.data.planId), 100)
+      } else {
+        console.log('⚡ Skipping background usage update for cached pro user')
+      }
+      return true
+    }
+    
+    setHasCheckedInitialCache(true)
+    return false
+  }, [user?.id, subscriptionCache.data, subscriptionCache.userId, subscriptionCache.timestamp, hasCheckedInitialCache, trackCacheHit])
 
   const loadSubscriptionData = async (force: boolean = false) => {
     if (!user) {
@@ -221,13 +286,33 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
         setSubscription(subscriptionData)
         
         // Cache the successful result
-        setSubscriptionCache({
+        const cacheData = {
           data: subscriptionData,
           timestamp: Date.now(),
           userId: user.id
-        })
+        }
+        setSubscriptionCache(cacheData)
         
-        await updateUsageLimits(subscriptionData.planId)
+        // Also save to localStorage for persistence across sessions
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem('brillo-subscription-cache', JSON.stringify(cacheData))
+          } catch (error) {
+            console.warn('Failed to save subscription cache to localStorage:', error)
+          }
+        }
+        
+        // Update html attribute for CSS-based hiding
+        if (typeof window !== 'undefined') {
+          document.documentElement.setAttribute('data-user-plan', isProPlan(subscriptionData.planId) ? 'pro' : 'free')
+        }
+
+        // Only update usage for non-pro plans to save API calls
+        if (!isProPlan(subscriptionData.planId)) {
+          await updateUsageLimits(subscriptionData.planId)
+        } else {
+          console.log('⚡ Skipping usage calculation for pro user during initial load')
+        }
         setError(null)
         endTiming('subscription_load', true)
         setIsLoading(false)
@@ -247,13 +332,28 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
       setSubscription(freeSubscription)
       
       // Cache the free plan result too
-      setSubscriptionCache({
+      const freeCacheData = {
         data: freeSubscription,
         timestamp: Date.now(),
         userId: user.id
-      })
+      }
+      setSubscriptionCache(freeCacheData)
       
-      await updateUsageLimits('free')
+      // Also save to localStorage for persistence across sessions
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('brillo-subscription-cache', JSON.stringify(freeCacheData))
+        } catch (error) {
+          console.warn('Failed to save subscription cache to localStorage:', error)
+        }
+      }
+      
+      // Update html attribute for free users
+      if (typeof window !== 'undefined') {
+        document.documentElement.setAttribute('data-user-plan', 'free')
+      }
+      
+      await updateUsageLimits('free') // Free users always need usage tracking
       setError(null)
       endTiming('subscription_load', true)
       setIsLoading(false)
@@ -269,7 +369,43 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
   const updateUsageLimits = async (planId: string, force: boolean = false) => {
     if (!user) return
     
-    // Check usage cache first (unless force refresh)
+    const plan = getPlan(planId)
+    
+    // 🚀 PERFORMANCE OPTIMIZATION: Skip API calls for pro users entirely
+    // Pro users have unlimited access, so we don't need to calculate actual usage
+    if (isProPlan(planId)) {
+      console.log('⚡ Skipping usage calculation for pro user - unlimited access')
+      const unlimitedUsage = {
+        projects: { 
+          current: 0, // We don't track actual usage for unlimited plans
+          limit: plan.limits.projects, 
+          canCreate: true // Always true for unlimited
+        },
+        clients: { 
+          current: 0, // We don't track actual usage for unlimited plans
+          limit: plan.limits.clients, 
+          canCreate: true // Always true for unlimited
+        },
+        invoices: { 
+          current: 0, // We don't track actual usage for unlimited plans
+          limit: plan.limits.invoices, 
+          canCreate: true // Always true for unlimited
+        }
+      }
+      
+      setUsage(unlimitedUsage)
+      
+      // Cache the unlimited usage (no API call needed)
+      setUsageCache({
+        data: unlimitedUsage,
+        timestamp: Date.now(),
+        userId: user.id,
+        planId: planId
+      })
+      return
+    }
+
+    // For free users, we need actual usage tracking
     const now = Date.now()
     const isUsageCacheValid = !force && 
       usageCache.data && 
@@ -278,16 +414,32 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
       (now - usageCache.timestamp) < USAGE_CACHE_DURATION
 
     if (isUsageCacheValid && usageCache.data) {
-      console.log('🎯 Using cached usage data')
+      console.log('🎯 Using cached usage data for free user')
       trackCacheHit()
       setUsage(usageCache.data)
       return
     }
 
-    const plan = getPlan(planId)
+    // Throttle API calls for free users only
+    const throttleKey = `usage-${user.id}-${planId}`
+    const lastCallTime = (window as any).__usageApiThrottle?.[throttleKey] || 0
+    const throttleDelay = 2000 // 2 seconds between calls
     
+    if (now - lastCallTime < throttleDelay && !force) {
+      console.log('🔄 Throttling usage API call for free user')
+      return
+    }
+
     try {
       trackCacheMiss()
+      console.log('📊 Fetching usage data for free user')
+      
+      // Set throttle timestamp
+      if (!(window as any).__usageApiThrottle) {
+        (window as any).__usageApiThrottle = {}
+      }
+      (window as any).__usageApiThrottle[throttleKey] = now
+
       const { supabase } = await import('@/lib/supabase')
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
@@ -333,7 +485,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
         })
       }
     } catch (err) {
-      console.error('Error checking usage:', err)
+      console.error('Error checking usage for free user:', err)
     }
   }
 
@@ -367,11 +519,21 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     setSubscription(updatedSubscription)
     
     // Update cache optimistically too
-    setSubscriptionCache({
+    const optimisticCacheData = {
       data: updatedSubscription,
       timestamp: Date.now(),
       userId: user?.id || ''
-    })
+    }
+    setSubscriptionCache(optimisticCacheData)
+    
+    // Also save to localStorage for persistence across sessions
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('brillo-subscription-cache', JSON.stringify(optimisticCacheData))
+      } catch (error) {
+        console.warn('Failed to save subscription cache to localStorage:', error)
+      }
+    }
     
     // Update usage limits if plan changed
     if (newSubscription.planId) {
@@ -387,23 +549,6 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     })
   }, [updateSubscriptionOptimistically])
 
-  // Quick cached plan ID access for UI components
-  const getCachedPlanId = useCallback((): string => {
-    // Return current subscription if not loading
-    if (!isLoading) return subscription.planId
-    
-    // Return cached subscription if available
-    if (subscriptionCache.data && subscriptionCache.userId === user?.id) {
-      const cacheAge = Date.now() - subscriptionCache.timestamp
-      if (cacheAge < CACHE_DURATION) {
-        return subscriptionCache.data.planId
-      }
-    }
-    
-    // Default to free
-    return 'free'
-  }, [isLoading, subscription.planId, subscriptionCache, user?.id])
-
   const refetchSubscription = useCallback((forceUsageCheck: boolean = false) => {
     if (user) {
       loadSubscriptionData(true)
@@ -413,11 +558,110 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     }
   }, [user, subscription.planId])
 
+  // Immediately set body attribute for CSS-based hiding on client mount
   useEffect(() => {
-    if (user && user.id) {
-      loadSubscriptionData(true)
+    if (typeof window !== 'undefined' && !hasHydratedCache) {
+      try {
+        const saved = localStorage.getItem('brillo-subscription-cache')
+        if (saved) {
+          const parsed = JSON.parse(saved)
+          const age = Date.now() - parsed.timestamp
+          // Only use cache if less than 5 minutes old
+          if (age < 5 * 60 * 1000) {
+            setSubscriptionCache(parsed)
+            
+            // INSTANT CSS-based hiding: Set html attribute immediately
+            if (isProPlan(parsed.data?.planId)) {
+              document.documentElement.setAttribute('data-user-plan', 'pro')
+              console.log('🚀 Instant pro user detection - CSS hiding activated')
+            } else {
+              document.documentElement.setAttribute('data-user-plan', 'free')
+            }
+          }
+        } else {
+          // No cache means likely free user
+          document.documentElement.setAttribute('data-user-plan', 'free')
+        }
+      } catch (error) {
+        console.warn('Failed to load subscription cache from localStorage:', error)
+        document.documentElement.setAttribute('data-user-plan', 'free')
+      }
+      setHasHydratedCache(true)
     }
+  }, [hasHydratedCache])
+
+  // Reset cache check flag when user changes
+  useEffect(() => {
+    setHasCheckedInitialCache(false)
   }, [user?.id])
+
+  // Add immediate effect to check cache on mount/user change
+  useEffect(() => {
+    const initializeSubscription = async () => {
+      // Wait for cache hydration before proceeding
+      if (!hasHydratedCache) return
+      
+      if (user && user.id) {
+        // Clear any existing timeout
+        if (loadingTimeout) {
+          clearTimeout(loadingTimeout)
+        }
+
+        // Set a fallback timeout to prevent infinite loading (10 seconds max)
+        const timeout = setTimeout(() => {
+          console.warn('⚠️ Subscription loading timeout - defaulting to free plan')
+          setIsLoading(false)
+          setSubscription({
+            planId: 'free',
+            status: 'active',
+            customerId: null,
+            subscriptionId: null,
+            currentPeriodEnd: null,
+            cancelAtPeriodEnd: false
+          })
+        }, 10000)
+        setLoadingTimeout(timeout)
+
+        // First, try to use cached data immediately
+        const hasCachedData = checkInitialCache()
+        
+        // If no cached data, load fresh data
+        if (!hasCachedData) {
+          await loadSubscriptionData(true)
+        }
+        
+        // Clear timeout if we finish loading
+        clearTimeout(timeout)
+        setLoadingTimeout(null)
+      } else if (!user) {
+        // Clear timeout when user logs out
+        if (loadingTimeout) {
+          clearTimeout(loadingTimeout)
+          setLoadingTimeout(null)
+        }
+        
+        // Reset state when user logs out
+        setIsLoading(false)
+        setSubscription({
+          planId: 'free',
+          status: 'active',
+          customerId: null,
+          subscriptionId: null,
+          currentPeriodEnd: null,
+          cancelAtPeriodEnd: false
+        })
+      }
+    }
+
+    initializeSubscription()
+
+    // Cleanup timeout on unmount
+    return () => {
+      if (loadingTimeout) {
+        clearTimeout(loadingTimeout)
+      }
+    }
+  }, [user?.id, hasHydratedCache])
 
   const value: SubscriptionContextType = {
     subscription,

@@ -9,7 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Check, ChevronsUpDown, X, Calendar, RefreshCw } from "lucide-react"
 import { cn } from "@/lib/utils"
-import type { DateRange, AnalyticsFilters } from "@/hooks/use-analytics-data"
+import type { DateRange, AnalyticsFilters } from "@/hooks/use-unified-projects"
 import type { Client } from "@/lib/analytics-calculations"
 import { format, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear, subMonths, subQuarters, subYears } from "date-fns"
 import { useSettings } from "@/components/settings-provider"
@@ -362,9 +362,10 @@ export function AnalyticsFilters({
               onClick={onRefresh}
               disabled={isLoading}
               className="h-8 border-dashed text-sm font-normal text-muted-foreground"
+              title={isLoading ? "Analytics refreshing..." : "Refresh analytics data"}
             >
               <RefreshCw className={cn("mr-1 h-3 w-3", isLoading && "animate-spin")} />
-              Refresh
+              {isLoading ? "Refreshing..." : "Refresh"}
             </Button>
           )}
           {hasActiveFilters && (

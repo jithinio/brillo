@@ -1,12 +1,14 @@
 "use client"
 
-import { ReactNode, memo } from "react"
+import { ReactNode, memo, useState, useEffect } from "react"
 import Link from "next/link"
 import { Crown } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Loader } from "@/components/ui/loader"
 import { useSubscription } from "@/components/providers/subscription-provider"
+import { canAccessFeature, isProPlan } from "@/lib/subscription-plans"
 import { cn } from "@/lib/utils"
 
 interface ProFeatureGateProps {
@@ -24,12 +26,36 @@ const ProFeatureGateComponent = ({
   className,
   showUpgrade = true 
 }: ProFeatureGateProps) => {
-  const { hasAccess, plan, isLoading } = useSubscription()
+  const { hasAccess, plan, isLoading, getCachedPlanId } = useSubscription()
+  
+  // Track if component has mounted on client (prevents hydration mismatch)
+  const [hasMounted, setHasMounted] = useState(false)
+  
+  useEffect(() => {
+    setHasMounted(true)
+  }, [])
+
+  // 🚀 PERFORMANCE: Instant pro user detection (SSR-safe)
+  const cachedPlanId = getCachedPlanId()
+  const isKnownProUser = hasMounted && 
+    (cachedPlanId === 'pro_monthly' || cachedPlanId === 'pro_yearly')
 
   const checkFeatureAccess = () => {
-    // During loading, deny access by default for security
-    // Only allow access if we have confirmed subscription status
-    if (isLoading) return false
+    // During SSR or before mount, always deny access to prevent hydration mismatch
+    if (!hasMounted) {
+      return false
+    }
+    
+    // Instant access for known pro users - no loading state needed
+    if (isKnownProUser) {
+      return canAccessFeature(cachedPlanId, feature)
+    }
+    
+    // For unknown users during loading, deny access for security
+    if (isLoading) {
+      return false
+    }
+    
     return hasAccess(feature)
   }
 
@@ -63,8 +89,10 @@ const ProFeatureGateComponent = ({
     }
   }
 
-  // Show secure loading state - don't show content until we confirm access
-  if (isLoading) {
+  // 🚀 ZERO LOADING for known pro users - completely skip all loading states
+  // Also handle pre-mount state to prevent hydration mismatch
+  if (!hasMounted || (isLoading && !isKnownProUser)) {
+    // Only show loading for non-pro users during initial load
     return (
       <div className={cn("w-full flex items-center justify-center min-h-[calc(100vh-4rem)] p-8", className)}>
         <Card className="border-dashed border-2 border-muted-foreground/20 bg-muted/10 w-full max-w-[400px]">
@@ -82,12 +110,14 @@ const ProFeatureGateComponent = ({
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center">
-            <div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto" />
+            <Loader size="md" variant="primary" className="text-amber-500 mx-auto" />
           </CardContent>
         </Card>
       </div>
     )
   }
+  
+  // Pro users never see loading - instant access
 
   if (checkFeatureAccess()) {
     return <>{children}</>

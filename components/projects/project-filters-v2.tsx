@@ -4,6 +4,7 @@ import * as React from "react"
 import { Filter, ChevronDown, Search, Plus, Calendar, Settings, CheckCircle, Users, X, Crown, Tag } from "lucide-react"
 import { ColumnViewFilter } from "./column-view-filter"
 import { Button } from "@/components/ui/button"
+import { Loader } from "@/components/ui/loader"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import {
@@ -128,7 +129,7 @@ export function ProjectFiltersV2({
         {/* Search Input */}
         <div className="relative w-[200px]">
           {isSearching ? (
-            <div className="absolute left-3 top-2 h-4 w-4 border-2 border-gray-300 dark:border-gray-600 border-t-primary rounded-full animate-spin" />
+            <Loader size="sm" variant="primary" className="absolute left-3 top-2" />
           ) : (
             <Search className="absolute left-3 top-2 h-4 w-4 text-muted-foreground" />
           )}

@@ -16,6 +16,7 @@ import {
 import { ChevronDown, Plus, Search, Eye, Edit, Send, Download, Trash2, CheckCircle, Clock, XCircle, Settings2, FileText } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { Loader } from "@/components/ui/loader"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   DropdownMenu,
@@ -192,7 +193,7 @@ export function DataTable<TData, TValue>({
       <div className="w-full space-y-4">
         <div className="h-96 flex items-center justify-center">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+            <Loader size="lg" variant="primary" className="mx-auto mb-2" />
             <p className="text-sm text-muted-foreground">Loading table preferences...</p>
           </div>
         </div>

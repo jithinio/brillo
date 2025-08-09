@@ -2,8 +2,9 @@
 
 import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Upload, Download, CheckCircle, AlertCircle, FileText, Loader2, Users, AlertTriangle } from "lucide-react"
+import { ArrowLeft, Upload, Download, CheckCircle, AlertCircle, FileText, Users, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Loader } from "@/components/ui/loader"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -1681,7 +1682,7 @@ Data Analytics Platform,on_hold,2024-02-15,2024-05-15,18000,3000,15000,USD,parti
               
               <div className={`flex items-center gap-2 ${step === 'importing' ? 'text-blue-600' : step === 'complete' ? 'text-green-600' : 'text-gray-400'}`}>
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step === 'importing' ? 'bg-blue-100 border-2 border-blue-600' : step === 'complete' ? 'bg-green-100 border-2 border-green-600' : 'bg-gray-100 border-2 border-gray-300'}`}>
-                  {step === 'complete' ? <CheckCircle className="h-4 w-4" /> : step === 'importing' ? <Loader2 className="h-4 w-4 animate-spin" /> : '3'}
+                  {step === 'complete' ? <CheckCircle className="h-4 w-4" /> : step === 'importing' ? <Loader size="sm" variant="primary" /> : '3'}
                 </div>
                 <span className="font-medium">Import</span>
               </div>
@@ -1931,7 +1932,7 @@ Data Analytics Platform,on_hold,2024-02-15,2024-05-15,18000,3000,15000,USD,parti
                   >
                     {isAnalyzingDuplicates && !hasClientData ? (
                       <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        <Loader size="sm" variant="primary" className="mr-2" />
                         Checking Duplicates...
                       </>
                     ) : (
@@ -1948,7 +1949,7 @@ Data Analytics Platform,on_hold,2024-02-15,2024-05-15,18000,3000,15000,USD,parti
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <Loader size="sm" variant="primary" />
                   Analyzing for Duplicates
                 </CardTitle>
                 <CardDescription>
@@ -1958,7 +1959,7 @@ Data Analytics Platform,on_hold,2024-02-15,2024-05-15,18000,3000,15000,USD,parti
               <CardContent className="space-y-4">
                 {currentOperation && (
                   <div className="text-sm text-gray-600 flex items-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader size="sm" variant="primary" />
                     {currentOperation}
                   </div>
                 )}
@@ -2031,7 +2032,7 @@ Data Analytics Platform,on_hold,2024-02-15,2024-05-15,18000,3000,15000,USD,parti
                     >
                       {isAnalyzingDuplicates ? (
                         <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          <Loader size="sm" variant="primary" className="mr-2" />
                           Checking Duplicates...
                         </>
                       ) : (
@@ -2184,7 +2185,7 @@ Data Analytics Platform,on_hold,2024-02-15,2024-05-15,18000,3000,15000,USD,parti
                   <Progress value={progress} className="w-full" />
                   {currentOperation && (
                     <div className="text-sm text-gray-600 mt-2 flex items-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <Loader size="sm" variant="primary" />
                       {currentOperation}
                     </div>
                   )}

@@ -7,6 +7,7 @@ import { GenericDataTable } from "./GenericDataTable"
 import { TableErrorBoundary } from "@/components/projects/ErrorBoundary"
 import { ColumnViewFilter } from "@/components/projects/column-view-filter"
 import { PageHeader } from "@/components/page-header"
+import { Loader } from "@/components/ui/loader"
 import { PageActionsMenu } from "@/components/page-actions-menu"
 import type { GenericEntity, DataHookReturn, TableFeatures, EntityActions } from "./types"
 import { useTablePreferences } from "@/hooks/use-table-preferences"
@@ -589,7 +590,7 @@ export function GenericTableWrapper<T extends GenericEntity>({
             {/* Search Input */}
             <div className="relative w-[200px]">
               {isSearching ? (
-                <div className="absolute left-3 top-2 h-4 w-4 border-2 border-gray-300 dark:border-gray-600 border-t-primary rounded-full animate-spin" />
+                <Loader size="sm" variant="primary" className="absolute left-3 top-2" />
               ) : (
                 <Search className="absolute left-3 top-2 h-4 w-4 text-muted-foreground" />
               )}
