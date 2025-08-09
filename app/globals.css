@@ -100,7 +100,7 @@ html[data-user-plan="pro"] .pro-element-badge {
   --chart-3: oklch(0.40 0.07 227.18);
   --chart-4: oklch(0.83 0.17 81.03);
   --chart-5: oklch(0.77 0.17 65.36);
-  --sidebar: oklch(0.9881 0 0);
+  --sidebar: oklch(0.9868 0.0028 128.49);
   --sidebar-foreground: oklch(0.14 0.00 285.86);
   --sidebar-primary: oklch(0.21 0.01 285.93);
   --sidebar-primary-foreground: oklch(0.99 0 0);
