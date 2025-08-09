@@ -54,6 +54,7 @@ interface CreateProjectData {
   start_date?: string | null
   due_date?: string | null
   notes?: string
+  status?: string
   project_type: 'fixed' | 'recurring' | 'hourly'
   total_budget?: number
   auto_calculate_total?: boolean
@@ -73,6 +74,7 @@ interface FixedProjectFormData {
   start_date: string
   due_date: string
   notes: string
+  status?: string
   project_type: 'fixed'
   total_budget: number
 }
@@ -85,6 +87,7 @@ interface RecurringProjectFormData {
   start_date: string
   due_date: string
   notes: string
+  status?: string
   project_type: 'recurring'
   recurring_frequency: string
   recurring_amount: number
@@ -98,6 +101,7 @@ interface HourlyProjectFormData {
   start_date: string
   due_date: string
   notes: string
+  status?: string
   project_type: 'hourly'
   hourly_rate_new: number
   estimated_hours: number
@@ -276,6 +280,7 @@ const StatusField = ({ data, setData }: { data: any, setData: any }) => (
         <SelectItem value="on_hold">On Hold</SelectItem>
         <SelectItem value="completed">Completed</SelectItem>
         <SelectItem value="cancelled">Cancelled</SelectItem>
+        <SelectItem value="due">Due</SelectItem>
       </SelectContent>
     </Select>
   </div>
@@ -501,6 +506,7 @@ export function EnhancedAddProjectDialog({
     start_date: "",
     due_date: "",
     notes: "",
+    status: "active",
     project_type: 'fixed',
     total_budget: 0
   })
@@ -513,6 +519,7 @@ export function EnhancedAddProjectDialog({
     start_date: "",
     due_date: "",
     notes: "",
+    status: "active",
     project_type: 'recurring',
     recurring_frequency: 'monthly',
     recurring_amount: 0
@@ -526,6 +533,7 @@ export function EnhancedAddProjectDialog({
     start_date: "",
     due_date: "",
     notes: "",
+    status: "active",
     project_type: 'hourly',
     hourly_rate_new: 0,
     estimated_hours: 0,
@@ -556,6 +564,7 @@ export function EnhancedAddProjectDialog({
         start_date: editProject.start_date || "",
         due_date: editProject.due_date || "",
         notes: editProject.notes || "",
+        status: editProject.status || "active",
         // Add financial fields that were missing
         expenses: editProject.expenses || 0,
         payment_received: editProject.payment_received || editProject.received || 0,
@@ -677,6 +686,7 @@ export function EnhancedAddProjectDialog({
       start_date: "",
       due_date: "",
       notes: "",
+      status: "active",
       project_type: 'fixed',
       total_budget: 0
     })
@@ -689,6 +699,7 @@ export function EnhancedAddProjectDialog({
       start_date: "",
       due_date: "",
       notes: "",
+      status: "active",
       project_type: 'recurring',
       recurring_frequency: 'monthly',
       recurring_amount: 0
@@ -702,6 +713,7 @@ export function EnhancedAddProjectDialog({
       start_date: "",
       due_date: "",
       notes: "",
+      status: "active",
       project_type: 'hourly',
       hourly_rate_new: 0,
       estimated_hours: 0,

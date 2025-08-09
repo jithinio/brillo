@@ -142,6 +142,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!isSupabaseConfigured()) {
       logger.error("Supabase not configured - cannot sign out")
       setUser(null)
+      clearAllCaches()
       return
     }
 
@@ -149,6 +150,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Clear any cached authentication state
       setUser(null)
       setLoading(true)
+      
+      // Clear all caches before signing out
+      clearAllCaches()
       
       // Sign out from Supabase
       await supabase.auth.signOut()
@@ -158,8 +162,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       logger.error("Sign out error", error)
       // Force local sign out even if Supabase fails
       setUser(null)
+      clearAllCaches()
     } finally {
       setLoading(false)
+    }
+  }
+
+  // Comprehensive cache clearing function
+  const clearAllCaches = () => {
+    try {
+      // Clear all localStorage items that cache user data
+      const cacheKeys = [
+        'unified-projects-data',
+        'analytics-data', 
+        'dashboard-data',
+        'table-preferences',
+        'subscription-cache',
+        'usage-cache',
+        'company-settings',
+        'general-settings',
+        'company-info',
+        'company_logo',
+        'default_currency'
+      ]
+      
+      // Clear specific cache keys
+      cacheKeys.forEach(key => {
+        localStorage.removeItem(key)
+      })
+      
+      // Clear any cache keys with prefixes
+      const prefixesToClear = [
+        'fallback_setting_',
+        'rates_',
+        'currency_conversion_cache_',
+        'setting_'
+      ]
+      
+      // Get all localStorage keys and clear those matching prefixes
+      const allKeys = Object.keys(localStorage)
+      allKeys.forEach(key => {
+        prefixesToClear.forEach(prefix => {
+          if (key.startsWith(prefix)) {
+            localStorage.removeItem(key)
+          }
+        })
+      })
+      
+      // Dispatch a custom event to notify other components to clear their caches
+      window.dispatchEvent(new CustomEvent('auth-logout', { 
+        detail: { reason: 'User logged out - clearing all caches' } 
+      }))
+      
+      logger.authLog("All caches cleared on logout")
+    } catch (error) {
+      logger.error("Error clearing caches on logout", error)
     }
   }
 

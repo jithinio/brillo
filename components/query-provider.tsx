@@ -41,6 +41,21 @@ export function QueryProvider({ children }: QueryProviderProps) {
   // Create client instance only once
   const [queryClient] = React.useState(() => createQueryClient())
 
+  // Listen for logout events to clear React Query cache
+  React.useEffect(() => {
+    const handleLogout = () => {
+      console.log('🔄 React Query: Clearing all caches due to logout')
+      queryClient.clear()
+      queryClient.invalidateQueries()
+    }
+
+    window.addEventListener('auth-logout', handleLogout)
+    
+    return () => {
+      window.removeEventListener('auth-logout', handleLogout)
+    }
+  }, [queryClient])
+
   return (
     <QueryClientProvider client={queryClient}>
       {children}
@@ -150,5 +165,18 @@ export const cacheUtils = {
       },
       staleTime: 10 * 60 * 1000, // 10 minutes
     })
+  },
+  
+  // Clear all caches - useful for logout
+  clearAllCaches: (queryClient: QueryClient) => {
+    console.log('🔄 Cache Utils: Clearing all React Query caches')
+    queryClient.clear()
+    queryClient.invalidateQueries()
+  },
+  
+  // Reset all caches to initial state
+  resetCaches: (queryClient: QueryClient) => {
+    console.log('🔄 Cache Utils: Resetting all React Query caches')
+    queryClient.resetQueries()
   },
 } 

@@ -17,7 +17,7 @@ import {
 } from "@dnd-kit/core"
 import { PipelineColumn } from "./PipelineColumn"
 import { PipelineCard } from "./PipelineCard"
-import { updateProjectStage, groupProjectsByStage, convertProjectToActive, convertProjectToLost } from "@/lib/project-pipeline"
+import { updateProjectStage, groupProjectsByStage, convertProjectToActive, convertProjectToLost, deletePipelineProject } from "@/lib/project-pipeline"
 import type { PipelineProject, PipelineStage } from "@/lib/types/pipeline"
 import { toast } from "sonner"
 import confetti from 'canvas-confetti'
@@ -128,10 +128,11 @@ function ClosedColumn({ isDragging, onShowLostClients }: { isDragging: boolean, 
 }
 
 // Lost Client Card Component
-function LostClientCard({ project, onRestore, onEdit, onProjectUpdate, onRefreshLostClients }: { 
+function LostClientCard({ project, onRestore, onEdit, onDelete, onProjectUpdate, onRefreshLostClients }: { 
   project: PipelineProject, 
   onRestore: (projectId: string, stage: string) => void,
   onEdit: (project: PipelineProject) => void,
+  onDelete: (projectId: string) => void,
   onProjectUpdate: () => void,
   onRefreshLostClients: () => void
 }) {
@@ -139,6 +140,13 @@ function LostClientCard({ project, onRestore, onEdit, onProjectUpdate, onRefresh
 
   const handleRestore = (stage: string) => {
     onRestore(project.id, stage)
+  }
+
+  const handleDelete = () => {
+    const confirmed = window.confirm(`Are you sure you want to permanently delete "${project.name}"? This action cannot be undone.`)
+    if (confirmed) {
+      onDelete(project.id)
+    }
   }
 
   const handleCardClick = () => {
@@ -200,6 +208,11 @@ function LostClientCard({ project, onRestore, onEdit, onProjectUpdate, onRefresh
                   <DropdownMenuItem onClick={() => handleRestore('in discussion')}>
                     <RotateCcw className="mr-2 h-4 w-4" />
                     Restore to Discussion
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleDelete} className="text-destructive">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete Project
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -416,6 +429,28 @@ export function PipelineBoard({
     } catch (error) {
       console.error('Error restoring project:', error)
       toast.error('Failed to restore project')
+    }
+  }, [onProjectUpdate])
+
+  // Handle deleting lost clients permanently
+  const handleDeleteLostClient = useCallback(async (projectId: string) => {
+    try {
+      const success = await deletePipelineProject(projectId)
+      
+      if (success) {
+        // Remove from lost clients list immediately
+        setLostClients(prev => prev.filter(p => p.id !== projectId))
+        
+        // Refresh pipeline data (in case this affects other views)
+        onProjectUpdate()
+
+        toast.success('Project deleted permanently')
+      } else {
+        toast.error('Failed to delete project')
+      }
+    } catch (error) {
+      console.error('Error deleting project:', error)
+      toast.error('Failed to delete project')
     }
   }, [onProjectUpdate])
 
@@ -683,6 +718,7 @@ export function PipelineBoard({
                         project={project}
                         onRestore={handleRestoreLostClient}
                         onEdit={() => {}} // Not used anymore
+                        onDelete={handleDeleteLostClient}
                         onProjectUpdate={onProjectUpdate}
                         onRefreshLostClients={fetchLostClients}
                       />

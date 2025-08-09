@@ -257,6 +257,12 @@ const fetchProjectsPage = async (
 const updateProjectStatus = async ({ id, status }: { id: string; status: string }) => {
   console.log(`🔄 Updating project ${id} to status: ${status}`)
   
+  // Validate status value
+  const validStatuses = ['active', 'completed', 'on_hold', 'cancelled', 'pipeline', 'due']
+  if (!validStatuses.includes(status)) {
+    throw new Error(`Invalid status: ${status}. Valid statuses are: ${validStatuses.join(', ')}`)
+  }
+  
   // First, fetch the current project to check if it's recurring and has a due date
   const { data: currentProject, error: fetchError } = await supabase
     .from('projects')
@@ -304,7 +310,9 @@ const updateProjectStatus = async ({ id, status }: { id: string; status: string 
 
   if (error) {
     console.error('❌ Update failed:', error)
-    throw new Error(`Failed to update project: ${error.message}`)
+    console.error('❌ Error details:', JSON.stringify(error, null, 2))
+    console.error('❌ Update data that failed:', JSON.stringify(updateData, null, 2))
+    throw new Error(`Failed to update project: ${error.message || error.code || 'Unknown error'}`)
   }
 
   console.log('✅ Update successful:', data)
@@ -319,6 +327,7 @@ async function fetchDatabaseMetrics(): Promise<{
   completedProjects: number
   onHoldProjects: number
   cancelledProjects: number
+  dueProjects: number
   totalBudget: number
   totalExpenses: number
   totalReceived: number
@@ -359,6 +368,7 @@ async function fetchDatabaseMetrics(): Promise<{
     const completedProjects = validProjects.filter(p => p.status === 'completed').length
     const onHoldProjects = validProjects.filter(p => p.status === 'on_hold').length
     const cancelledProjects = validProjects.filter(p => p.status === 'cancelled').length
+    const dueProjects = validProjects.filter(p => p.status === 'due').length
     
     const totalBudget = validProjects.reduce((sum, p) => sum + (p.budget || p.total_budget || 0), 0)
     const totalExpenses = validProjects.reduce((sum, p) => sum + (p.expenses || 0), 0)
@@ -376,6 +386,7 @@ async function fetchDatabaseMetrics(): Promise<{
       completedProjects,
       onHoldProjects,
       cancelledProjects,
+      dueProjects,
       totalBudget,
       totalExpenses,
       totalReceived,
@@ -406,6 +417,7 @@ async function fetchFilteredMetrics(filters: ProjectFilters = {}): Promise<{
   completedProjects: number
   onHoldProjects: number
   cancelledProjects: number
+  dueProjects: number
   totalBudget: number
   totalExpenses: number
   totalReceived: number
@@ -467,6 +479,7 @@ async function fetchFilteredMetrics(filters: ProjectFilters = {}): Promise<{
     const completedProjects = projects?.filter(p => p.status === 'completed').length || 0
     const onHoldProjects = projects?.filter(p => p.status === 'on_hold').length || 0
     const cancelledProjects = projects?.filter(p => p.status === 'cancelled').length || 0
+    const dueProjects = projects?.filter(p => p.status === 'due').length || 0
     
     const totalBudget = projects?.reduce((sum, p) => sum + (p.budget || p.total_budget || 0), 0) || 0
     const totalExpenses = projects?.reduce((sum, p) => sum + (p.expenses || 0), 0) || 0
@@ -484,6 +497,7 @@ async function fetchFilteredMetrics(filters: ProjectFilters = {}): Promise<{
       completedProjects,
       onHoldProjects,
       cancelledProjects,
+      dueProjects,
       totalBudget,
       totalExpenses,
       totalReceived,

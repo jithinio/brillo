@@ -154,6 +154,15 @@ const STATUS_MAPPING: { [key: string]: string } = {
   'stalled': 'on_hold',
   'idle': 'on_hold',
   
+  // Due variants - projects that are past their due date or approaching deadlines
+  'due': 'due',
+  'overdue': 'due',
+  'late': 'due',
+  'expired': 'due',
+  'urgent': 'due',
+  'deadline': 'due',
+  'critical': 'due',
+  
   // Lost/cancelled variants - these will be filtered out from project pages
   'lost': 'cancelled',
   'cancelled': 'cancelled',
@@ -192,6 +201,7 @@ const STANDARD_STATUSES = [
   { value: 'completed', label: 'Completed' },
   { value: 'on_hold', label: 'On Hold' },
   { value: 'cancelled', label: 'Cancelled' },
+  { value: 'due', label: 'Due' },
 ]
 
 // Payment status mapping

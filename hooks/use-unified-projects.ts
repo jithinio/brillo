@@ -122,6 +122,35 @@ export const useUnifiedProjects = (filters?: ProjectFilters) => {
   // Performance monitoring
   const { trackRefresh, metrics: performanceMetrics } = useAnalyticsPerformance()
 
+  // Listen for logout events to clear cache
+  useEffect(() => {
+    const handleLogout = () => {
+      console.log('🔄 Unified Projects: Clearing cache due to logout')
+      
+      // Clear localStorage cache
+      try {
+        localStorage.removeItem(CACHE_KEY)
+      } catch (error) {
+        console.warn('Failed to clear unified projects localStorage cache:', error)
+      }
+      
+      // Reset state
+      setData({
+        projects: [],
+        clients: [],
+        isLoading: false,
+        error: null,
+        lastUpdated: null
+      })
+    }
+
+    window.addEventListener('auth-logout', handleLogout)
+    
+    return () => {
+      window.removeEventListener('auth-logout', handleLogout)
+    }
+  }, [])
+
   // Fetch projects with all fields
   const fetchProjects = useCallback(async (): Promise<UnifiedProject[]> => {
     const { data, error } = await supabase

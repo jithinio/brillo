@@ -27,28 +27,29 @@ export interface CompanySettings {
 
 export async function getCompanySettings(): Promise<CompanySettings | null> {
   try {
-
-    
     if (!isSupabaseConfigured()) {
       console.log('❌ Supabase not configured, cannot fetch settings')
       return null
     }
 
-    // Check session first
+    // Check session first - if no session, return null early
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-
     
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
-    if (authError) {
-      console.error('❌ Authentication error in getCompanySettings:', authError.message)
-      console.error('❌ Full auth error details:', authError)
+    if (sessionError) {
+      console.error('❌ Session error in getCompanySettings:', sessionError.message)
       return null
     }
     
+    if (!session) {
+      console.log('ℹ️ No active session found in getCompanySettings - user not authenticated')
+      return null
+    }
+    
+    // If we have a session, get the user from the session instead of calling getUser()
+    const user = session.user
+    
     if (!user) {
-      console.log('❌ No authenticated user found in getCompanySettings')
-      console.log('❌ User data from getUser():', user)
+      console.log('❌ No user found in session')
       return null
     }
     
@@ -93,15 +94,24 @@ export async function upsertCompanySettings(settings: Partial<CompanySettings>):
     
     console.log('✅ Supabase is configured, proceeding with save...')
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // Check session first - if no session, return null early
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
     
-    if (authError) {
-      console.error('❌ Authentication error:', authError)
+    if (sessionError) {
+      console.error('❌ Session error in upsertCompanySettings:', sessionError.message)
       return null
     }
     
+    if (!session) {
+      console.log('❌ No active session found in upsertCompanySettings - user not authenticated')
+      return null
+    }
+    
+    // If we have a session, get the user from the session
+    const user = session.user
+    
     if (!user) {
-      console.log('❌ No authenticated user found - user must be logged in to save settings')
+      console.log('❌ No user found in session')
       return null
     }
     
@@ -251,15 +261,24 @@ export async function updateCompanyLogo(logoUrl: string): Promise<boolean> {
       return false
     }
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // Check session first - if no session, return false early
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
     
-    if (authError) {
-      console.error('Authentication error:', authError)
+    if (sessionError) {
+      console.error('❌ Session error in updateCompanyLogo:', sessionError.message)
       return false
     }
     
+    if (!session) {
+      console.log('❌ No active session found in updateCompanyLogo - user not authenticated')
+      return false
+    }
+    
+    // If we have a session, get the user from the session
+    const user = session.user
+    
     if (!user) {
-      console.log('No authenticated user found')
+      console.log('❌ No user found in session')
       return false
     }
 
@@ -291,15 +310,24 @@ export async function uploadCompanyLogo(file: File): Promise<string | null> {
       return null
     }
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // Check session first - if no session, return null early
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
     
-    if (authError) {
-      console.error('Authentication error:', authError)
+    if (sessionError) {
+      console.error('❌ Session error in uploadCompanyLogo:', sessionError.message)
       return null
     }
     
+    if (!session) {
+      console.log('❌ No active session found in uploadCompanyLogo - user not authenticated')
+      return null
+    }
+    
+    // If we have a session, get the user from the session
+    const user = session.user
+    
     if (!user) {
-      console.log('No authenticated user found')
+      console.log('❌ No user found in session')
       return null
     }
 

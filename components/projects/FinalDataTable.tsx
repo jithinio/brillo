@@ -502,6 +502,12 @@ function FinalDataTableComponent({
                               <GitBranch className="mr-2 h-4 w-4 text-purple-500" />
                               Pipeline
                             </ContextMenuItem>
+                            <ContextMenuItem onClick={() => {
+                              updateStatus({ id: project.id, status: 'due' })
+                            }}>
+                              <Clock className="mr-2 h-4 w-4 text-orange-500" />
+                              Due
+                            </ContextMenuItem>
                           </ContextMenuSubContent>
                         </ContextMenuSub>
                         <ContextMenuSeparator />

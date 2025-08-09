@@ -412,6 +412,12 @@ export function DataTable<TData, TValue>({ columns, data, onAddProject, onBatchD
                               <XCircle className="mr-1.5 h-4 w-4 text-red-600" />
                               Cancelled
                             </ContextMenuItem>
+                            <ContextMenuItem 
+                              onClick={() => contextActions.onStatusChange(row.original, 'due')}
+                            >
+                              <Clock className="mr-1.5 h-4 w-4 text-orange-600" />
+                              Due
+                            </ContextMenuItem>
                           </ContextMenuSubContent>
                         </ContextMenuSub>
                         

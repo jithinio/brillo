@@ -86,6 +86,50 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
   const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes cache
   const USAGE_CACHE_DURATION = 2 * 60 * 1000 // 2 minutes cache for usage (shorter since it changes more)
 
+  // Listen for logout events to clear subscription cache
+  useEffect(() => {
+    const handleLogout = () => {
+      console.log('🔄 Subscription Provider: Clearing cache due to logout')
+      
+      // Clear subscription cache
+      setSubscriptionCache({ data: null, timestamp: 0, userId: '' })
+      setUsageCache({ data: null, timestamp: 0, userId: '', planId: '' })
+      
+      // Clear localStorage caches
+      try {
+        localStorage.removeItem('subscription-cache')
+        localStorage.removeItem('usage-cache')
+      } catch (error) {
+        console.warn('Failed to clear subscription localStorage cache:', error)
+      }
+      
+      // Reset to default state
+      setSubscription({
+        planId: 'free',
+        status: 'active',
+        customerId: null,
+        subscriptionId: null,
+        currentPeriodEnd: null,
+        cancelAtPeriodEnd: false
+      })
+      
+      setUsage({
+        projects: { current: 0, limit: 20, canCreate: true },
+        clients: { current: 0, limit: 10, canCreate: true },
+        invoices: { current: 0, limit: 'none', canCreate: false }
+      })
+      
+      setIsLoading(false)
+      setError(null)
+    }
+
+    window.addEventListener('auth-logout', handleLogout)
+    
+    return () => {
+      window.removeEventListener('auth-logout', handleLogout)
+    }
+  }, [])
+
   // Add immediate cache lookup to reduce loading time
   const [hasCheckedInitialCache, setHasCheckedInitialCache] = useState(false)
 

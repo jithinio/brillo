@@ -162,6 +162,12 @@ const statusConfig = {
     variant: "outline" as const,
     iconClassName: "text-sky-600",
   },
+  due: {
+    label: "Due",
+    icon: Clock,
+    variant: "outline" as const,
+    iconClassName: "text-orange-600",
+  },
 }
 
 interface ColumnActions {
@@ -474,6 +480,16 @@ function StatusCell({ project, actions }: { project: Project; actions: ColumnAct
             >
               <GitBranch className="mr-2 h-3 w-3 text-purple-500 flex-shrink-0" />
               <span className="whitespace-nowrap">Pipeline</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`justify-start h-8 focus:outline-none focus-visible:outline-none whitespace-nowrap ${project.status === 'due' ? 'bg-accent' : ''}`}
+              onClick={() => handleStatusChange('due')}
+              disabled={project.status === 'due'}
+            >
+              <Clock className="mr-2 h-3 w-3 text-orange-500 flex-shrink-0" />
+              <span className="whitespace-nowrap">Due</span>
             </Button>
           </div>
         </PopoverContent>

@@ -24,6 +24,7 @@ const data = {
       url: "/dashboard",
       icon: Gauge,
     },
+
     {
       title: "Clients",
       url: "/dashboard/clients",
@@ -42,6 +43,10 @@ const data = {
         {
           title: "Active",
           url: "/dashboard/projects/active",
+        },
+        {
+          title: "Due",
+          url: "/dashboard/projects/due",
         },
         {
           title: "Completed",

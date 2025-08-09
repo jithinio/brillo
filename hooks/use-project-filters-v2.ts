@@ -95,7 +95,7 @@ export function useProjectFiltersV2() {
   }, [updateFilters])
 
   // Toggle status
-  const toggleStatus = useCallback((status: 'active' | 'pipeline' | 'on_hold' | 'completed' | 'cancelled') => {
+  const toggleStatus = useCallback((status: 'active' | 'pipeline' | 'on_hold' | 'completed' | 'cancelled' | 'due') => {
     const newStatuses = urlFilters.status.includes(status)
       ? urlFilters.status.filter(s => s !== status)
       : [...urlFilters.status, status]

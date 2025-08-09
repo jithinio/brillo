@@ -169,6 +169,7 @@ const fetchProjects = async (filters: ProjectFilters = {}): Promise<ProjectsResp
     completedProjects: transformedProjects.filter(p => p.status === 'completed').length,
     onHoldProjects: transformedProjects.filter(p => p.status === 'on_hold').length,
     cancelledProjects: transformedProjects.filter(p => p.status === 'cancelled').length,
+    dueProjects: transformedProjects.filter(p => p.status === 'due').length,
     totalBudget: transformedProjects.reduce((sum, p) => sum + (p.budget || p.total_budget || 0), 0),
     totalExpenses: transformedProjects.reduce((sum, p) => sum + (p.expenses || 0), 0),
     totalReceived: transformedProjects.reduce((sum, p) => sum + (p.received || 0), 0),

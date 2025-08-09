@@ -58,6 +58,7 @@ const STATUS_OPTIONS = [
   { value: "on_hold", label: "On Hold" },
   { value: "completed", label: "Completed" },
   { value: "cancelled", label: "Cancelled" },
+  { value: "due", label: "Due" },
 ]
 
 const PROJECT_TYPE_OPTIONS = [

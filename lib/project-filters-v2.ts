@@ -4,7 +4,7 @@ import type { ReadonlyURLSearchParams } from 'next/navigation'
 
 // Define filter schema for validation
 export const ProjectFiltersSchema = z.object({
-  status: z.array(z.enum(['active', 'pipeline', 'on_hold', 'completed', 'cancelled'])).default([]),
+  status: z.array(z.enum(['active', 'pipeline', 'on_hold', 'completed', 'cancelled', 'due'])).default([]),
   client: z.array(z.string()).default([]),
   projectType: z.array(z.enum(['fixed', 'recurring', 'hourly'])).default([]),
   timePeriod: z.enum(['this_month', 'last_month', 'this_quarter', 'last_quarter', 'this_year', 'last_year']).nullable().default(null),

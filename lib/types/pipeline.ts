@@ -34,7 +34,7 @@ export interface PipelineProject {
   id: string
   name: string
   description?: string
-  status: 'active' | 'completed' | 'on_hold' | 'cancelled' | 'pipeline'
+  status: 'active' | 'completed' | 'on_hold' | 'cancelled' | 'pipeline' | 'due'
   pipeline_stage: string
   budget?: number
   currency?: string

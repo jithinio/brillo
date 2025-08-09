@@ -389,6 +389,14 @@ class CurrencyConversionCache {
 // Global cache instance
 export const currencyConversionCache = new CurrencyConversionCache()
 
+// Listen for logout events to clear currency cache
+if (typeof window !== 'undefined') {
+  window.addEventListener('auth-logout', () => {
+    console.log('🔄 Currency Cache: Clearing cache due to logout')
+    currencyConversionCache.clearCache()
+  })
+}
+
 /**
  * Optimized batch currency conversion with intelligent caching
  */

@@ -73,6 +73,37 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<AppSettings>(defaultSettings)
   const [isLoading, setIsLoading] = useState(false) // Start with false to prevent flash
 
+  // Listen for logout events to clear settings cache
+  useEffect(() => {
+    const handleLogout = () => {
+      console.log('🔄 Settings Provider: Clearing cache due to logout')
+      
+      // Reset to default settings
+      setSettings(defaultSettings)
+      
+      // Clear localStorage settings
+      try {
+        Object.keys(defaultSettings).forEach((key) => {
+          localStorage.removeItem(`setting_${key}`)
+        })
+        
+        // Clear company-related settings
+        localStorage.removeItem('company-settings')
+        localStorage.removeItem('general-settings')
+        localStorage.removeItem('company-info')
+        localStorage.removeItem('company_logo')
+      } catch (error) {
+        console.warn('Failed to clear settings localStorage cache:', error)
+      }
+    }
+
+    window.addEventListener('auth-logout', handleLogout)
+    
+    return () => {
+      window.removeEventListener('auth-logout', handleLogout)
+    }
+  }, [])
+
 
 
   useEffect(() => {
