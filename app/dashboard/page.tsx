@@ -574,7 +574,7 @@ const MetricCard = ({
   formatCurrency: (amount: number) => string
   isLoading?: boolean
 }) => (
-  <Card className="relative overflow-hidden border bg-transparent transition-all hover:shadow-sm h-full flex flex-col min-h-[140px]">
+  <Card className="relative overflow-hidden transition-all hover:shadow-sm h-full flex flex-col min-h-[140px]">
     <CardHeader className="p-6 pb-3">
       <div className="flex items-center justify-between">
         <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
@@ -769,7 +769,7 @@ const RevenueChart = ({
   const dynamicTrend = calculateDynamicTrend()
 
   return (
-  <Card className="border bg-transparent transition-all hover:shadow-sm">
+  <Card className="transition-all hover:shadow-sm">
     <CardHeader className="p-6 pb-3">
       <div className="flex items-center justify-between">
         <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -909,7 +909,7 @@ const YearlyBarChart = ({
   const yearlyData = generateYearlyData(projects)
   
   return (
-  <Card className="border bg-transparent transition-all hover:shadow-sm">
+  <Card className="transition-all hover:shadow-sm">
     <CardHeader className="p-6 pb-3">
       <div className="flex items-center justify-between">
         <CardTitle className="text-sm font-medium text-muted-foreground">

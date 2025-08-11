@@ -61,7 +61,7 @@ export function CashFlowChart({
   const totalNet = totalIncoming - totalOutgoing
 
   return (
-    <Card className="border bg-transparent w-full">
+    <Card className="w-full">
       <CardHeader className="p-6 pb-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">

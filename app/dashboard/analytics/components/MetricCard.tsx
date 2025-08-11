@@ -96,7 +96,7 @@ const MetricCard = ({
 
   if (error) {
     return (
-      <Card className={`relative overflow-hidden border bg-transparent ${styles.card}`}>
+      <Card className={`relative overflow-hidden ${styles.card}`}>
         <CardHeader className={styles.header}>
           <CardTitle className={`${styles.title} font-medium text-muted-foreground`}>
             {title}
@@ -112,7 +112,7 @@ const MetricCard = ({
   }
 
   return (
-    <Card className={`relative overflow-hidden border bg-transparent transition-all hover:shadow-sm h-full flex flex-col ${styles.card}`}>
+    <Card className={`relative overflow-hidden transition-all hover:shadow-sm h-full flex flex-col ${styles.card}`}>
       <CardHeader className={styles.header}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -241,7 +241,7 @@ export const MetricCardSkeleton = ({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' 
   const styles = sizeStyles[size]
 
   return (
-    <Card className={`relative overflow-hidden border bg-transparent ${styles.card}`}>
+    <Card className={`relative overflow-hidden ${styles.card}`}>
       <CardHeader className={styles.header}>
         <div className="flex items-center justify-between">
           <Skeleton className="h-4 w-24" />

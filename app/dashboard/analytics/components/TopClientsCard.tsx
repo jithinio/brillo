@@ -27,7 +27,7 @@ export function TopClientsCard({
   
   if (isLoading) {
     return (
-      <Card className="border bg-transparent">
+      <Card>
         <CardHeader className="p-6 pb-4">
           <div className="flex items-center gap-2">
             <Users className="h-4 w-4 text-muted-foreground" />
@@ -59,7 +59,7 @@ export function TopClientsCard({
 
   if (displayClients.length === 0) {
     return (
-      <Card className="border bg-transparent">
+      <Card>
         <CardHeader className="p-6 pb-4">
           <div className="flex items-center gap-2">
             <Users className="h-4 w-4 text-muted-foreground" />
