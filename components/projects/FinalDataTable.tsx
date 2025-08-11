@@ -594,7 +594,7 @@ function FinalDataTableComponent({
                 {columns.map((column: any, colIndex: number) => (
                   <div
                     key={`footer-${column.id || colIndex}`}
-                    className={`px-3 text-sm font-medium flex-shrink-0 flex items-center h-11 ${(column.accessorKey || column.id) !== 'select' ? 'border-r border-gray-200/80 dark:border-gray-700/80' : ''}`}
+                    className={`px-3 text-sm font-normal flex-shrink-0 flex items-center h-11 ${(column.accessorKey || column.id) !== 'select' ? 'border-r border-gray-200/80 dark:border-gray-700/80' : ''}`}
                     style={{ 
                       width: column.size ? `${column.size}px` : 'auto',
                       minWidth: column.minSize ? `${column.minSize}px` : 'auto',

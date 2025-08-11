@@ -98,11 +98,11 @@ interface ClientColumnConfig {
 const createFooterFunctions = () => ({
   totalClients: ({ table }: any) => {
     const aggregations = table.aggregations || {}
-    return <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{aggregations.totalClients || 0}</span>
+    return <span className="text-sm font-normal text-muted-foreground">{aggregations.totalClients || 0}</span>
   },
   totalProjects: ({ table }: any) => {
     const aggregations = table.aggregations || {}
-    return <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{aggregations.totalProjects || 0}</span>
+    return <span className="text-sm font-normal text-muted-foreground">{aggregations.totalProjects || 0}</span>
   }
 })
 

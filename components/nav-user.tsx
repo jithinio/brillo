@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { BadgeCheck, ChevronsUpDown, LogOut, Sparkles, Moon, Sun, Monitor, Palette, Settings2, User, CreditCard, Crown, MessageSquare } from "lucide-react"
+import { BadgeCheck, MoreVertical, LogOut, Sparkles, Moon, Sun, Monitor, Palette, Settings2, User, CreditCard, Crown, MessageSquare } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { useSubscription } from "@/components/providers/subscription-provider"
 import { isProPlan } from "@/lib/subscription-plans"
@@ -115,7 +115,7 @@ export function NavUser() {
                 <span className="truncate font-semibold text-foreground">{currentUser.name}</span>
                 <span className="truncate text-xs text-foreground">{currentUser.email}</span>
               </div>
-              <ChevronsUpDown className="ml-auto h-4 w-4" />
+              <MoreVertical className="ml-auto h-4 w-4" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent

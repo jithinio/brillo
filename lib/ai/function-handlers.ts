@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import type { FunctionCall } from './claude-provider'
 import { formatCurrency } from '@/lib/currency'
+import { getDateRangeForPeriod, filterProjectsByDateRange, getProjectRelevantDate } from '@/lib/date-filtering-utils'
 
 export interface FunctionResult {
   success: boolean
@@ -78,6 +79,18 @@ export class BusinessFunctionHandler {
           return await this.generateInvoice(functionCall.arguments)
         case 'search_projects':
           return await this.searchProjects(functionCall.arguments)
+        case 'get_expense_analytics':
+          return await this.getExpenseAnalytics(functionCall.arguments)
+        case 'get_profit_analytics':
+          return await this.getProfitAnalytics(functionCall.arguments)
+        case 'get_overdue_invoices':
+          return await this.getOverdueInvoices(functionCall.arguments)
+        case 'get_cash_flow':
+          return await this.getCashFlow(functionCall.arguments)
+        case 'get_project_deadlines':
+          return await this.getProjectDeadlines(functionCall.arguments)
+        case 'get_payment_status':
+          return await this.getPaymentStatus(functionCall.arguments)
         default:
           throw new Error(`Unknown function: ${functionCall.name}`)
       }
@@ -264,61 +277,95 @@ export class BusinessFunctionHandler {
       throw new Error(`Database error: ${error.message}`)
     }
 
-    // Calculate revenue based on period
-    const now = new Date()
-    let startDate: Date
-    let periodLabel: string
+    // Get standardized date range
+    const dateRange = getDateRangeForPeriod(period || 'current-month')
+    
+    console.log(`Filtering projects for ${dateRange.periodLabel}: ${dateRange.startDate.toISOString()} to ${dateRange.endDate.toISOString()}`)
 
-    switch (period) {
-      case 'current-month':
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1)
-        periodLabel = 'this month'
-        break
-      case 'last-month':
-        startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-        periodLabel = 'last month'
-        break
-      case 'current-quarter':
-        const quarterStart = Math.floor(now.getMonth() / 3) * 3
-        startDate = new Date(now.getFullYear(), quarterStart, 1)
-        periodLabel = 'this quarter'
-        break
-      case 'current-year':
-        startDate = new Date(now.getFullYear(), 0, 1)
-        periodLabel = 'this year'
-        break
-      default:
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1)
-        periodLabel = 'this month'
-    }
 
-    const periodProjects = projects.filter(p => {
-      const createdAt = new Date(p.created_at)
-      return createdAt >= startDate
-    })
 
-    const totalRevenue = periodProjects.reduce((sum, p) => sum + (p.payment_received || 0), 0)
-    const totalBudget = periodProjects.reduce((sum, p) => sum + (p.budget || p.total_budget || 0), 0)
+    // Get all projects in period for revenue calculation (using general context for date filtering)
+    // Exclude pipeline and cancelled projects from revenue
+    const periodProjects = filterProjectsByDateRange(projects, dateRange, 'general', ['pipeline', 'cancelled'])
+
+    console.log(`Date range: ${dateRange.startDate.toISOString()} to ${dateRange.endDate.toISOString()}`)
+    console.log(`Found ${periodProjects.length} projects for ${dateRange.periodLabel}:`, periodProjects.map(p => ({
+      name: p.name,
+      total_budget: p.total_budget || p.budget,
+      payment_received: p.payment_received,
+      created_at: p.created_at,
+      start_date: p.start_date,
+      relevantDate: getProjectRelevantDate(p, 'general')
+    })))
+
+    // Revenue = total project value (using total_budget field) for the period
+    const totalRevenue = periodProjects.reduce((sum, p) => sum + (p.total_budget || p.budget || 0), 0)
+    
+    // Actual payments received
+    const totalPaymentsReceived = periodProjects.reduce((sum, p) => sum + (p.payment_received || 0), 0)
+    
+    // Outstanding = total_budget - received for projects in period
+    const totalOutstanding = periodProjects.reduce((sum, p) => {
+      const budget = p.total_budget || p.budget || 0
+      const received = p.payment_received || 0
+      return sum + (budget - received)
+    }, 0)
+    
     const completedProjects = periodProjects.filter(p => p.status === 'completed').length
+    const paidProjectsCount = periodProjects.filter(p => p.payment_received > 0).length
+
+    console.log(`Revenue calculation for ${dateRange.periodLabel}: Revenue=${totalRevenue}, PaymentsReceived=${totalPaymentsReceived}, Outstanding=${totalOutstanding}`)
 
     const analytics = {
-      period: periodLabel,
+      period: dateRange.periodLabel,
       totalRevenue,
-      totalBudget,
+      totalBudget: totalRevenue, // Revenue is now the total budget
+      totalPaymentsReceived,
+      totalOutstanding,
       projectCount: periodProjects.length,
+      paidProjectsCount,
       completedProjects,
-      averageProjectValue: periodProjects.length > 0 ? totalBudget / periodProjects.length : 0,
-      revenueRealization: totalBudget > 0 ? (totalRevenue / totalBudget) * 100 : 0
+      averageProjectValue: periodProjects.length > 0 ? totalRevenue / periodProjects.length : 0,
+      revenueRealization: totalRevenue > 0 ? (totalPaymentsReceived / totalRevenue) * 100 : 0,
+      collectionRate: periodProjects.length > 0 ? (paidProjectsCount / periodProjects.length) * 100 : 0
     }
 
     const formattedTotalRevenue = await this.formatUserCurrency(totalRevenue)
-    const formattedTotalBudget = await this.formatUserCurrency(totalBudget)
+    const formattedTotalPaymentsReceived = await this.formatUserCurrency(totalPaymentsReceived)
+    const formattedTotalOutstanding = await this.formatUserCurrency(totalOutstanding)
     const formattedAvgValue = await this.formatUserCurrency(analytics.averageProjectValue)
 
+    // If no revenue for current period, provide helpful context
+    let message = formattedTotalRevenue
+    if (totalRevenue === 0) {
+      // Check if there are any projects at all
+      const allProjects = projects.filter(p => (p.total_budget || p.budget) > 0)
+      
+      if (allProjects.length > 0) {
+        const allTimeRevenue = allProjects.reduce((sum, p) => sum + (p.total_budget || p.budget || 0), 0)
+        const formattedAllTimeRevenue = await this.formatUserCurrency(allTimeRevenue)
+        message = `Your ${dateRange.periodLabel} revenue is ${formattedTotalRevenue}. 
+
+Note: You have ${formattedAllTimeRevenue} in total project value across all time from ${allProjects.length} projects. No projects fall within ${dateRange.periodLabel}.`
+      } else {
+        message = `Your ${dateRange.periodLabel} revenue is ${formattedTotalRevenue}.
+
+Note: No projects with budgets found. Revenue is calculated based on total project value (budget) for the period.`
+      }
+    }
+
+    // Return concise data - let Claude decide how to present it based on context
     return {
       success: true,
-      data: analytics,
-      message: `📊 Revenue Analytics for ${periodLabel}:\n\n• **Total Revenue**: ${formattedTotalRevenue}\n• **Total Budget**: ${formattedTotalBudget}\n• **Projects**: ${periodProjects.length} (${completedProjects} completed)\n• **Average Project Value**: ${formattedAvgValue}\n• **Revenue Realization**: ${analytics.revenueRealization.toFixed(1)}%`
+      data: {
+        ...analytics,
+        formattedRevenue: formattedTotalRevenue,
+        formattedBudget: formattedTotalRevenue, // Revenue is now total budget
+        formattedPaymentsReceived: formattedTotalPaymentsReceived,
+        formattedOutstanding: formattedTotalOutstanding,
+        formattedAvgValue: formattedAvgValue
+      },
+      message
     }
   }
 
@@ -356,10 +403,10 @@ export class BusinessFunctionHandler {
         }
       }
       acc[stage].count += 1
-      acc[stage].value += project.budget || project.total_budget || 0
+      acc[stage].value += project.total_budget || project.budget || 0
       acc[stage].projects.push({
         name: project.name,
-        budget: project.budget || project.total_budget || 0,
+        budget: project.total_budget || project.budget || 0,
         client: project.clients?.name || 'No client assigned'
       })
       return acc
@@ -418,7 +465,7 @@ export class BusinessFunctionHandler {
     const analytics = clients.map(client => {
       const projects = client.projects || []
       const totalRevenue = projects.reduce((sum: number, p: any) => sum + (p.payment_received || 0), 0)
-      const totalBudget = projects.reduce((sum: number, p: any) => sum + (p.budget || p.total_budget || 0), 0)
+      const totalBudget = projects.reduce((sum: number, p: any) => sum + (p.total_budget || p.budget || 0), 0)
       const completedProjects = projects.filter((p: any) => p.status === 'completed').length
 
       return {
@@ -578,7 +625,7 @@ export class BusinessFunctionHandler {
       'pipeline': 'Pipeline'
     }
 
-    const formattedBudget = await this.formatUserCurrency(data.budget || data.total_budget || 0)
+    const formattedBudget = await this.formatUserCurrency(data.total_budget || data.budget || 0)
 
     return {
       success: true,
@@ -702,7 +749,7 @@ export class BusinessFunctionHandler {
       }
     }
 
-    const totalValue = projects.reduce((sum, p) => sum + (p.budget || p.total_budget || 0), 0)
+    const totalValue = projects.reduce((sum, p) => sum + (p.total_budget || p.budget || 0), 0)
     const totalReceived = projects.reduce((sum, p) => sum + (p.payment_received || 0), 0)
 
     const showingLimit = projects.length === 10 ? " (showing top 10)" : ""
@@ -747,6 +794,489 @@ export class BusinessFunctionHandler {
     return {
       success: true,
       data: projects,
+      message
+    }
+  }
+
+  private async getExpenseAnalytics(args: any): Promise<FunctionResult> {
+    const { period, category, includeBreakdown } = args
+
+    const { data: projects, error } = await this.supabase
+      .from('projects')
+      .select('*')
+      .eq('user_id', this.userId)
+
+    if (error) {
+      throw new Error(`Database error: ${error.message}`)
+    }
+
+    // Get standardized date range
+    const dateRange = getDateRangeForPeriod(period || 'current-month')
+    
+    // Filter projects using expense context
+    const periodProjects = filterProjectsByDateRange(projects, dateRange, 'expense')
+
+    const totalExpenses = periodProjects.reduce((sum, p) => sum + (p.expenses || 0), 0)
+    const projectsWithExpenses = periodProjects.filter(p => p.expenses && p.expenses > 0)
+
+    const formattedTotalExpenses = await this.formatUserCurrency(totalExpenses)
+
+    let message = `💸 Expense Analytics for ${dateRange.periodLabel}:\n\n`
+    message += `**Total Expenses**: ${formattedTotalExpenses}\n`
+    message += `**Projects with expenses**: ${projectsWithExpenses.length} of ${periodProjects.length}\n`
+
+    if (includeBreakdown && projectsWithExpenses.length > 0) {
+      message += `\n**Top expense projects:**\n`
+      const topExpenseProjects = projectsWithExpenses
+        .sort((a, b) => (b.expenses || 0) - (a.expenses || 0))
+        .slice(0, 5)
+      
+      for (const project of topExpenseProjects) {
+        const expenseAmount = await this.formatUserCurrency(project.expenses || 0)
+        message += `• ${project.name}: ${expenseAmount}\n`
+      }
+    }
+
+    return {
+      success: true,
+      data: {
+        period: dateRange.periodLabel,
+        totalExpenses,
+        projectCount: periodProjects.length,
+        projectsWithExpenses: projectsWithExpenses.length,
+        formattedExpenses: formattedTotalExpenses
+      },
+      message
+    }
+  }
+
+  private async getProfitAnalytics(args: any): Promise<FunctionResult> {
+    const { period, includeMargins } = args
+
+    // Get revenue data
+    const revenueResult = await this.getRevenueAnalytics({ period })
+    const expenseResult = await this.getExpenseAnalytics({ period })
+
+    if (!revenueResult.success || !expenseResult.success) {
+      return {
+        success: false,
+        error: 'Failed to calculate profit analytics',
+        message: 'Unable to retrieve revenue or expense data'
+      }
+    }
+
+    const revenue = revenueResult.data.totalRevenue
+    const expenses = expenseResult.data.totalExpenses
+    const profit = revenue - expenses
+    const profitMargin = revenue > 0 ? (profit / revenue) * 100 : 0
+
+    const formattedRevenue = await this.formatUserCurrency(revenue)
+    const formattedExpenses = await this.formatUserCurrency(expenses)
+    const formattedProfit = await this.formatUserCurrency(profit)
+
+    let message = `📊 Profit/Loss Analysis for ${revenueResult.data.period}:\n\n`
+    message += `**Revenue**: ${formattedRevenue}\n`
+    message += `**Expenses**: ${formattedExpenses}\n`
+    message += `**Net Profit**: ${formattedProfit} ${profit < 0 ? '(Loss)' : ''}\n`
+    
+    if (includeMargins) {
+      message += `**Profit Margin**: ${profitMargin.toFixed(1)}%\n`
+      
+      if (profitMargin < 10) {
+        message += `\n⚠️ Low profit margin - consider reviewing expenses or pricing`
+      } else if (profitMargin > 30) {
+        message += `\n✅ Excellent profit margin!`
+      }
+    }
+
+    return {
+      success: true,
+      data: {
+        period: revenueResult.data.period,
+        revenue,
+        expenses,
+        profit,
+        profitMargin,
+        formattedRevenue,
+        formattedExpenses,
+        formattedProfit
+      },
+      message
+    }
+  }
+
+  private async getOverdueInvoices(args: any): Promise<FunctionResult> {
+    const { includePending, clientId, sortBy = 'age' } = args
+
+    let query = this.supabase
+      .from('invoices')
+      .select(`
+        *,
+        projects (
+          name,
+          client_id
+        ),
+        clients (
+          name,
+          company,
+          email
+        )
+      `)
+      .eq('user_id', this.userId)
+
+    if (!includePending) {
+      query = query.in('status', ['overdue', 'unpaid'])
+    } else {
+      query = query.in('status', ['pending', 'overdue', 'unpaid'])
+    }
+
+    if (clientId) {
+      query = query.eq('client_id', clientId)
+    }
+
+    const { data: invoices, error } = await query
+
+    if (error) {
+      throw new Error(`Database error: ${error.message}`)
+    }
+
+    const now = new Date()
+    const overdueInvoices = invoices.filter(invoice => {
+      const dueDate = new Date(invoice.due_date)
+      return dueDate < now && invoice.status !== 'paid'
+    }).map(invoice => {
+      const daysOverdue = Math.floor((now.getTime() - new Date(invoice.due_date).getTime()) / (1000 * 60 * 60 * 24))
+      return { ...invoice, daysOverdue }
+    })
+
+    // Sort based on preference
+    if (sortBy === 'age') {
+      overdueInvoices.sort((a, b) => b.daysOverdue - a.daysOverdue)
+    } else if (sortBy === 'amount') {
+      overdueInvoices.sort((a, b) => b.amount - a.amount)
+    }
+
+    const totalOverdue = overdueInvoices.reduce((sum, inv) => sum + inv.amount, 0)
+    const formattedTotalOverdue = await this.formatUserCurrency(totalOverdue)
+
+    let message = `⚠️ Overdue Invoices Summary:\n\n`
+    message += `**Total Overdue**: ${formattedTotalOverdue}\n`
+    message += `**Count**: ${overdueInvoices.length} invoice${overdueInvoices.length !== 1 ? 's' : ''}\n\n`
+
+    if (overdueInvoices.length > 0) {
+      message += `**Details:**\n`
+      for (let i = 0; i < Math.min(overdueInvoices.length, 10); i++) {
+        const invoice = overdueInvoices[i]
+        const formattedAmount = await this.formatUserCurrency(invoice.amount)
+        message += `${i + 1}. Invoice #${invoice.id.slice(-6)}\n`
+        message += `   • Client: ${invoice.clients?.name || 'Unknown'}\n`
+        message += `   • Amount: ${formattedAmount}\n`
+        message += `   • Days overdue: ${invoice.daysOverdue}\n`
+        if (invoice.projects?.name) {
+          message += `   • Project: ${invoice.projects.name}\n`
+        }
+        message += `\n`
+      }
+
+      if (overdueInvoices.length > 10) {
+        message += `... and ${overdueInvoices.length - 10} more\n`
+      }
+
+      message += `\n💡 Would you like me to draft follow-up emails for these clients?`
+    } else {
+      message = `✅ Great news! You have no overdue invoices.`
+    }
+
+    return {
+      success: true,
+      data: {
+        overdueInvoices,
+        totalOverdue,
+        count: overdueInvoices.length,
+        formattedTotalOverdue
+      },
+      message
+    }
+  }
+
+  private async getCashFlow(args: any): Promise<FunctionResult> {
+    const { period, includeProjections } = args
+
+    // Get standardized date range
+    const dateRange = getDateRangeForPeriod(period || 'current-month')
+
+    // Get projects and invoices
+    const [projectsRes, invoicesRes] = await Promise.all([
+      this.supabase
+        .from('projects')
+        .select('*')
+        .eq('user_id', this.userId),
+      this.supabase
+        .from('invoices')
+        .select('*')
+        .eq('user_id', this.userId)
+    ])
+
+    if (projectsRes.error || invoicesRes.error) {
+      throw new Error('Database error retrieving cash flow data')
+    }
+
+    const projects = projectsRes.data || []
+    const invoices = invoicesRes.data || []
+
+    // Calculate incoming cash (paid invoices)
+    const incomingCash = invoices.filter(inv => {
+      const paymentDate = inv.payment_date ? new Date(inv.payment_date) : null
+      return paymentDate && paymentDate >= dateRange.startDate && paymentDate <= dateRange.endDate && inv.status === 'paid'
+    }).reduce((sum, inv) => sum + inv.amount, 0)
+
+    // Calculate outgoing cash (expenses) using standardized filtering
+    const expenseProjects = filterProjectsByDateRange(projects, dateRange, 'expense')
+    const outgoingCash = expenseProjects.reduce((sum, p) => sum + (p.expenses || 0), 0)
+
+    const netCashFlow = incomingCash - outgoingCash
+
+    const formattedIncoming = await this.formatUserCurrency(incomingCash)
+    const formattedOutgoing = await this.formatUserCurrency(outgoingCash)
+    const formattedNet = await this.formatUserCurrency(netCashFlow)
+
+    let message = `💰 Cash Flow Analysis for ${dateRange.periodLabel}:\n\n`
+    message += `**Incoming**: ${formattedIncoming}\n`
+    message += `**Outgoing**: ${formattedOutgoing}\n`
+    message += `**Net Cash Flow**: ${formattedNet} ${netCashFlow < 0 ? '⚠️' : '✅'}\n`
+
+    if (includeProjections && (period === 'next-month' || period === 'next-quarter')) {
+      // Calculate expected income from pending invoices
+      const expectedIncome = invoices.filter(inv => {
+        const dueDate = new Date(inv.due_date)
+        return dueDate >= dateRange.startDate && dueDate <= dateRange.endDate && inv.status !== 'paid'
+      }).reduce((sum, inv) => sum + inv.amount, 0)
+
+      const formattedExpected = await this.formatUserCurrency(expectedIncome)
+      message += `\n**📈 Projections:**\n`
+      message += `• Expected income: ${formattedExpected}\n`
+      message += `• Projected net: ${await this.formatUserCurrency(expectedIncome - outgoingCash)}\n`
+    }
+
+    return {
+      success: true,
+      data: {
+        period: dateRange.periodLabel,
+        incomingCash,
+        outgoingCash,
+        netCashFlow,
+        formattedIncoming,
+        formattedOutgoing,
+        formattedNet
+      },
+      message
+    }
+  }
+
+  private async getProjectDeadlines(args: any): Promise<FunctionResult> {
+    const { daysAhead = 30, includeOverdue = true, status = 'active' } = args
+
+    let query = this.supabase
+      .from('projects')
+      .select(`
+        *,
+        clients (
+          name,
+          company
+        )
+      `)
+      .eq('user_id', this.userId)
+
+    if (status === 'active') {
+      query = query.eq('status', 'active')
+    }
+
+    const { data: projects, error } = await query
+
+    if (error) {
+      throw new Error(`Database error: ${error.message}`)
+    }
+
+    const now = new Date()
+    const futureDate = new Date(now.getTime() + daysAhead * 24 * 60 * 60 * 1000)
+
+    // Filter projects with due dates
+    const projectsWithDeadlines = projects.filter(p => p.due_date)
+    
+    // Categorize projects
+    const overdueProjects = includeOverdue ? projectsWithDeadlines.filter(p => {
+      const dueDate = new Date(p.due_date)
+      return dueDate < now && p.status !== 'completed'
+    }) : []
+
+    const upcomingProjects = projectsWithDeadlines.filter(p => {
+      const dueDate = new Date(p.due_date)
+      return dueDate >= now && dueDate <= futureDate
+    })
+
+    // Sort by due date
+    overdueProjects.sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
+    upcomingProjects.sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
+
+    let message = `📅 Project Deadlines:\n\n`
+
+    if (overdueProjects.length > 0) {
+      message += `⚠️ **Overdue Projects** (${overdueProjects.length}):\n`
+      for (const project of overdueProjects.slice(0, 5)) {
+        const daysOverdue = Math.floor((now.getTime() - new Date(project.due_date).getTime()) / (1000 * 60 * 60 * 24))
+        const budget = await this.formatUserCurrency(project.total_budget || project.budget || 0)
+        message += `• ${project.name} - ${daysOverdue} days overdue\n`
+        message += `  Client: ${project.clients?.name || 'No client'} | Budget: ${budget}\n\n`
+      }
+      if (overdueProjects.length > 5) {
+        message += `... and ${overdueProjects.length - 5} more overdue\n`
+      }
+      message += `\n`
+    }
+
+    if (upcomingProjects.length > 0) {
+      message += `📆 **Upcoming Deadlines** (next ${daysAhead} days):\n`
+      for (const project of upcomingProjects.slice(0, 5)) {
+        const daysUntilDue = Math.floor((new Date(project.due_date).getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+        const budget = await this.formatUserCurrency(project.total_budget || project.budget || 0)
+        message += `• ${project.name} - Due in ${daysUntilDue} days (${new Date(project.due_date).toLocaleDateString()})\n`
+        message += `  Client: ${project.clients?.name || 'No client'} | Budget: ${budget}\n\n`
+      }
+      if (upcomingProjects.length > 5) {
+        message += `... and ${upcomingProjects.length - 5} more upcoming\n`
+      }
+    }
+
+    if (overdueProjects.length === 0 && upcomingProjects.length === 0) {
+      message = `✅ No project deadlines in the next ${daysAhead} days!`
+    }
+
+    return {
+      success: true,
+      data: {
+        overdueProjects,
+        upcomingProjects,
+        totalOverdue: overdueProjects.length,
+        totalUpcoming: upcomingProjects.length
+      },
+      message
+    }
+  }
+
+  private async getPaymentStatus(args: any): Promise<FunctionResult> {
+    const { period, groupBy = 'status' } = args
+
+    let query = this.supabase
+      .from('projects')
+      .select(`
+        *,
+        clients (
+          name,
+          company
+        )
+      `)
+      .eq('user_id', this.userId)
+
+    const { data: projects, error } = await query
+
+    if (error) {
+      throw new Error(`Database error: ${error.message}`)
+    }
+
+    // Filter by period if not all-time
+    let filteredProjects = projects
+    if (period !== 'all-time') {
+      const dateRange = getDateRangeForPeriod(period || 'current-month')
+      filteredProjects = filterProjectsByDateRange(projects, dateRange, 'general')
+    }
+
+    // Calculate payment metrics
+    const totalBudget = filteredProjects.reduce((sum, p) => sum + (p.total_budget || p.budget || 0), 0)
+    const totalReceived = filteredProjects.reduce((sum, p) => sum + (p.payment_received || 0), 0)
+    const totalPending = filteredProjects.reduce((sum, p) => sum + (p.payment_pending || 0), 0)
+    const totalOutstanding = totalBudget - totalReceived
+
+    const paidInFull = filteredProjects.filter(p => {
+      const budget = p.total_budget || p.budget || 0
+      return budget > 0 && p.payment_received >= budget
+    }).length
+
+    const partiallyPaid = filteredProjects.filter(p => {
+      const budget = p.total_budget || p.budget || 0
+      return p.payment_received > 0 && p.payment_received < budget
+    }).length
+
+    const unpaid = filteredProjects.filter(p => {
+      const budget = p.total_budget || p.budget || 0
+      return budget > 0 && (!p.payment_received || p.payment_received === 0)
+    }).length
+
+    const formattedTotalBudget = await this.formatUserCurrency(totalBudget)
+    const formattedTotalReceived = await this.formatUserCurrency(totalReceived)
+    const formattedTotalOutstanding = await this.formatUserCurrency(totalOutstanding)
+
+    const collectionRate = totalBudget > 0 ? (totalReceived / totalBudget) * 100 : 0
+
+    let message = `💳 Payment Status Summary (${period}):\n\n`
+    message += `**Total Contract Value**: ${formattedTotalBudget}\n`
+    message += `**Total Received**: ${formattedTotalReceived}\n`
+    message += `**Outstanding**: ${formattedTotalOutstanding}\n`
+    message += `**Collection Rate**: ${collectionRate.toFixed(1)}%\n\n`
+
+    message += `**Payment Breakdown**:\n`
+    message += `✅ Paid in full: ${paidInFull} projects\n`
+    message += `⏳ Partially paid: ${partiallyPaid} projects\n`
+    message += `❌ Unpaid: ${unpaid} projects\n`
+
+    if (groupBy === 'client' && totalOutstanding > 0) {
+      // Group outstanding by client
+      const clientOutstanding = new Map<string, { name: string; amount: number; count: number }>()
+      
+      filteredProjects.forEach(p => {
+        const outstanding = (p.total_budget || p.budget || 0) - (p.payment_received || 0)
+        if (outstanding > 0 && p.clients) {
+          const clientKey = p.client_id
+          if (!clientOutstanding.has(clientKey)) {
+            clientOutstanding.set(clientKey, {
+              name: p.clients.name,
+              amount: 0,
+              count: 0
+            })
+          }
+          const client = clientOutstanding.get(clientKey)!
+          client.amount += outstanding
+          client.count += 1
+        }
+      })
+
+      if (clientOutstanding.size > 0) {
+        message += `\n**Top Clients with Outstanding Payments**:\n`
+        const sortedClients = Array.from(clientOutstanding.values())
+          .sort((a, b) => b.amount - a.amount)
+          .slice(0, 5)
+
+        for (const client of sortedClients) {
+          const formattedAmount = await this.formatUserCurrency(client.amount)
+          message += `• ${client.name}: ${formattedAmount} (${client.count} project${client.count !== 1 ? 's' : ''})\n`
+        }
+      }
+    }
+
+    return {
+      success: true,
+      data: {
+        period,
+        totalBudget,
+        totalReceived,
+        totalOutstanding,
+        collectionRate,
+        paidInFull,
+        partiallyPaid,
+        unpaid,
+        formattedTotalBudget,
+        formattedTotalReceived,
+        formattedTotalOutstanding
+      },
       message
     }
   }

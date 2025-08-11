@@ -15,6 +15,7 @@ interface Message {
   role: "user" | "assistant"
   timestamp: Date
   isTyping?: boolean
+  isStreaming?: boolean
 }
 
 export function ChatInterface() {
@@ -104,7 +105,7 @@ export function ChatInterface() {
         className={`${
           isActive 
             ? "p-4 border-t bg-background/80 backdrop-blur-sm" 
-            : "p-6"
+            : "p-4"
         }`}
       >
         <ChatInput

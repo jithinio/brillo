@@ -770,42 +770,42 @@ export function ProjectsTableWrapper({
         footer = ({ table }: any) => {
           const total = table.aggregations?.totalProjects || 0
           return total > 0 ? (
-            <span className="text-black dark:text-white font-medium">{total}</span>
+            <span className="text-muted-foreground font-normal">{total}</span>
           ) : null
         }
       } else if (columnKey === 'status') {
         footer = ({ table }: any) => {
           const active = table.aggregations?.activeCount || 0
           return active > 0 ? (
-            <span className="text-black dark:text-white font-medium">{active}</span>
+            <span className="text-muted-foreground font-normal">{active}</span>
           ) : null
         }
       } else if (columnKey === 'total_budget' || columnKey === 'budget') {
         footer = ({ table }: any) => {
           const total = table.aggregations?.totalBudget || 0
           return total > 0 ? (
-            <span className="text-black dark:text-white font-medium">{formatCurrencyAbbreviated(total)}</span>
+            <span className="text-muted-foreground font-normal">{formatCurrencyAbbreviated(total)}</span>
           ) : null
         }
       } else if (columnKey === 'expenses') {
         footer = ({ table }: any) => {
           const total = table.aggregations?.totalExpenses || 0
           return total > 0 ? (
-            <span className="text-black dark:text-white font-medium">{formatCurrencyAbbreviated(total)}</span>
+            <span className="text-muted-foreground font-normal">{formatCurrencyAbbreviated(total)}</span>
           ) : null
         }
       } else if (columnKey === 'received') {
         footer = ({ table }: any) => {
           const total = table.aggregations?.totalReceived || 0
           return total > 0 ? (
-            <span className="text-black dark:text-white font-medium">{formatCurrencyAbbreviated(total)}</span>
+            <span className="text-muted-foreground font-normal">{formatCurrencyAbbreviated(total)}</span>
           ) : null
         }
       } else if (columnKey === 'pending') {
         footer = ({ table }: any) => {
           const total = table.aggregations?.totalPending || 0
           return total > 0 ? (
-            <span className="text-black dark:text-white font-medium">{formatCurrencyAbbreviated(total)}</span>
+            <span className="text-muted-foreground font-normal">{formatCurrencyAbbreviated(total)}</span>
           ) : null
         }
       }

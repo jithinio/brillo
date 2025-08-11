@@ -65,25 +65,25 @@ function ProjectTypeCell({ project }: { project: Project }) {
         return {
           icon: DollarSign,
           label: 'Fixed',
-          color: 'bg-emerald-100 text-emerald-800 ring-emerald-700/20'
+          color: 'bg-emerald-50 text-emerald-800 ring-emerald-700/20'
         }
       case 'recurring':
         return {
           icon: Repeat,
           label: 'Recurring',
-          color: 'bg-sky-100 text-sky-800 ring-sky-700/20'
+          color: 'bg-sky-50 text-sky-800 ring-sky-700/20'
         }
       case 'hourly':
         return {
           icon: Timer,
           label: 'Hourly',
-          color: 'bg-violet-100 text-violet-800 ring-violet-700/20'
+          color: 'bg-violet-50 text-violet-800 ring-violet-700/20'
         }
       default:
         return {
           icon: DollarSign,
           label: 'Fixed',
-          color: 'bg-slate-100 text-slate-800 ring-slate-700/20'
+          color: 'bg-slate-50 text-slate-800 ring-slate-700/20'
         }
     }
   }
@@ -92,7 +92,7 @@ function ProjectTypeCell({ project }: { project: Project }) {
   const Icon = config.icon
 
   return (
-    <Badge variant="outline" className={`${config.color} border-0 ring-1 ring-inset text-xs font-medium`}>
+    <Badge variant="outline" className={`${config.color} border-0 ring-1 ring-inset text-sm font-normal`}>
       <Icon className="w-3 h-3 mr-1.5" />
       {config.label}
     </Badge>

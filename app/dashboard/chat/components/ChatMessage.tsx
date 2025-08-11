@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent } from "@/components/ui/card"
@@ -14,6 +15,7 @@ interface Message {
   content: string
   role: "user" | "assistant"
   timestamp: Date
+  isStreaming?: boolean
   actions?: Array<{
     type: "button" | "link"
     label: string
@@ -28,6 +30,40 @@ interface ChatMessageProps {
 
 export function ChatMessage({ message }: ChatMessageProps) {
   const isUser = message.role === "user"
+  const [displayedContent, setDisplayedContent] = useState("")
+  const [isTyping, setIsTyping] = useState(false)
+  const [hasStartedTyping, setHasStartedTyping] = useState(false)
+  
+  useEffect(() => {
+    // For user messages, show immediately
+    if (isUser) {
+      setDisplayedContent(message.content)
+      return
+    }
+    
+    // For assistant messages, type out the content only once
+    if (!hasStartedTyping && message.content) {
+      setHasStartedTyping(true)
+      setIsTyping(true)
+      
+      let currentIndex = 0
+      const targetContent = message.content
+      const chunkSize = 3 // Type 3 characters at a time for smoother animation
+      
+      const typingInterval = setInterval(() => {
+        if (currentIndex < targetContent.length) {
+          const nextIndex = Math.min(currentIndex + chunkSize, targetContent.length)
+          setDisplayedContent(targetContent.slice(0, nextIndex))
+          currentIndex = nextIndex
+        } else {
+          clearInterval(typingInterval)
+          setIsTyping(false)
+        }
+      }, 20) // 20ms per chunk for smooth animation
+      
+      return () => clearInterval(typingInterval)
+    }
+  }, [message.content, isUser]) // Removed hasStartedTyping from dependencies
   
   const copyToClipboard = () => {
     navigator.clipboard.writeText(message.content)
@@ -86,7 +122,14 @@ export function ChatMessage({ message }: ChatMessageProps) {
           )}>
             <CardContent className="p-4">
               <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                {message.content}
+                {displayedContent}
+                {(isTyping || message.isStreaming) && !isUser && (
+                  <motion.span
+                    className="inline-block w-0.5 h-4 bg-current ml-0.5 -mb-0.5"
+                    animate={{ opacity: [1, 0] }}
+                    transition={{ repeat: Infinity, duration: 0.8 }}
+                  />
+                )}
               </div>
             </CardContent>
           </Card>

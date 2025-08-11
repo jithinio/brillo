@@ -80,7 +80,7 @@ const FooterCell = ({ value, label }: { value: number | string; label?: string }
 )
 
 const CurrencyFooterCell = ({ value }: { value: number }) => (
-  <div className="text-right font-mono text-sm font-medium text-gray-900 dark:text-gray-100">
+  <div className="text-right font-mono text-sm font-normal text-muted-foreground">
     {formatCurrencyAbbreviated(value)}
   </div>
 )
@@ -89,7 +89,7 @@ const CurrencyFooterCell = ({ value }: { value: number }) => (
 const createFooterFunctions = () => ({
   totalInvoices: ({ table }: any) => {
     const aggregations = table.aggregations || {}
-    return <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{aggregations.totalInvoices || 0}</span>
+    return <span className="text-sm font-normal text-muted-foreground">{aggregations.totalInvoices || 0}</span>
   },
   totalAmount: ({ table }: any) => {
     const aggregations = table.aggregations || {}

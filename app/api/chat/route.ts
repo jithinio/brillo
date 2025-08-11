@@ -151,7 +151,26 @@ export async function POST(request: NextRequest) {
         ? `Function ${claudeResponse.functionCall.name} executed successfully. Result: ${functionResult.message}`
         : `Function ${claudeResponse.functionCall.name} failed. Error: ${functionResult.message}`
       
-      // Get Claude's analysis of the function result
+      // For simple queries, let Claude format the response concisely
+      const isSimpleQuery = message.toLowerCase().match(/^(what('s| is)|show|tell me|how much|get).*?(revenue|mrr|income)/) && 
+                          claudeResponse.functionCall.name === 'get_revenue_analytics'
+      
+      if (isSimpleQuery && functionResult.success && functionResult.data) {
+        // For simple revenue queries, just return the formatted revenue
+        return NextResponse.json({
+          response: `Your current month revenue is ${functionResult.data.formattedRevenue}`,
+          functionExecuted: {
+            name: claudeResponse.functionCall.name,
+            success: functionResult.success,
+            data: functionResult.data,
+            error: functionResult.error
+          },
+          usage: claudeResponse.usage,
+          timestamp: new Date().toISOString(),
+        })
+      }
+      
+      // Get Claude's analysis of the function result for complex queries
       const followUpMessages = [
         ...messages,
         {
@@ -171,9 +190,7 @@ export async function POST(request: NextRequest) {
       if (!functionResult.success) {
         combinedResponse = finalResponse.content
       } else {
-        combinedResponse = claudeResponse.content 
-          ? `${claudeResponse.content}\n\n${functionResult.message}\n\n${finalResponse.content}`
-          : `${functionResult.message}\n\n${finalResponse.content}`
+        combinedResponse = finalResponse.content // Let Claude format based on the new concise prompt
       }
       
       return NextResponse.json({

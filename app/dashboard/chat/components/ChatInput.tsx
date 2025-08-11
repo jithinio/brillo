@@ -5,7 +5,7 @@ import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card } from "@/components/ui/card"
-import { Send, Mic, Plus } from "lucide-react"
+import { ArrowUp, Plus } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface ChatInputProps {
@@ -24,6 +24,8 @@ const QUICK_ACTIONS = [
 export function ChatInput({ onSendMessage, isActive, disabled }: ChatInputProps) {
   const [message, setMessage] = useState("")
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const sendButtonRef = useRef<HTMLButtonElement>(null)
+  const baseHeightRef = useRef<number>(40) // default to 40px to match h-10
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -31,7 +33,8 @@ export function ChatInput({ onSendMessage, isActive, disabled }: ChatInputProps)
       onSendMessage(message.trim())
       setMessage("")
       if (textareaRef.current) {
-        textareaRef.current.style.height = "auto"
+        textareaRef.current.style.height = `${baseHeightRef.current}px`
+        textareaRef.current.style.lineHeight = `${baseHeightRef.current}px`
       }
     }
   }
@@ -46,10 +49,16 @@ export function ChatInput({ onSendMessage, isActive, disabled }: ChatInputProps)
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setMessage(e.target.value)
     
-    // Auto-resize textarea
+    // Auto-resize: keep at one-line height until content wraps to 2 lines
     const textarea = e.target
-    textarea.style.height = "auto"
-    textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`
+    const baseHeight = baseHeightRef.current
+    textarea.style.height = `${baseHeight}px`
+    textarea.style.lineHeight = `${baseHeight}px`
+    const nextHeight = Math.min(textarea.scrollHeight, 120)
+    if (nextHeight > baseHeight + 1) {
+      textarea.style.height = `${nextHeight}px`
+      textarea.style.lineHeight = `1.25rem`
+    }
   }
 
   const handleQuickAction = (action: string) => {
@@ -57,10 +66,29 @@ export function ChatInput({ onSendMessage, isActive, disabled }: ChatInputProps)
   }
 
   useEffect(() => {
+    // Sync base height to the send button height if available
+    const buttonHeight = sendButtonRef.current?.clientHeight
+    if (buttonHeight && buttonHeight > 0) {
+      baseHeightRef.current = buttonHeight
+    }
     if (!isActive && textareaRef.current) {
+      textareaRef.current.style.height = `${baseHeightRef.current}px`
+      textareaRef.current.style.lineHeight = `${baseHeightRef.current}px`
       textareaRef.current.focus()
     }
   }, [isActive])
+
+  // Ensure initial height matches the send button on first mount
+  useEffect(() => {
+    const buttonHeight = sendButtonRef.current?.clientHeight
+    if (buttonHeight && buttonHeight > 0) {
+      baseHeightRef.current = buttonHeight
+    }
+    if (textareaRef.current) {
+      textareaRef.current.style.height = `${baseHeightRef.current}px`
+      textareaRef.current.style.lineHeight = `${baseHeightRef.current}px`
+    }
+  }, [])
 
   return (
     <div className="w-full max-w-4xl mx-auto">
@@ -94,13 +122,13 @@ export function ChatInput({ onSendMessage, isActive, disabled }: ChatInputProps)
         transition={{ duration: 0.3, ease: "easeInOut" }}
       >
         <Card className={cn(
-          "relative",
+          "relative bg-background",
           isActive 
             ? "border-border shadow-sm transition-all duration-200" 
-            : "chat-input-large border-2 border-border/60 shadow-lg hover:shadow-xl hover:border-border",
+            : "border border-border/60 shadow-md",
           disabled && "opacity-60"
         )}>
-          <form onSubmit={handleSubmit} className="p-4">
+          <form onSubmit={handleSubmit} className="p-3">
             <div className="flex items-end gap-3">
               {/* Main Input */}
               <div className="flex-1 relative">
@@ -115,8 +143,7 @@ export function ChatInput({ onSendMessage, isActive, disabled }: ChatInputProps)
                       : "What would you like to know about your business?"
                   }
                   className={cn(
-                    "min-h-[40px] max-h-[120px] resize-none border-0 focus-visible:ring-0 text-base",
-                    !isActive && "text-lg"
+                    "h-auto min-h-0 max-h-[120px] resize-none border-0 focus-visible:ring-0 focus-visible:border-transparent outline-none shadow-none bg-transparent text-base px-0 py-0"
                   )}
                   disabled={disabled}
                 />
@@ -126,25 +153,15 @@ export function ChatInput({ onSendMessage, isActive, disabled }: ChatInputProps)
 
               {/* Action Buttons */}
               <div className="flex gap-2">
-                {/* Voice Input Button */}
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-10 w-10 shrink-0"
-                  disabled={disabled}
-                >
-                  <Mic className="h-4 w-4" />
-                </Button>
-
                 {/* Send Button */}
                 <Button
                   type="submit"
                   disabled={!message.trim() || disabled}
-                  className="h-10 w-10 shrink-0"
+                  className="h-10 w-10 shrink-0 rounded-full"
                   size="icon"
+                  ref={sendButtonRef}
                 >
-                  <Send className="h-4 w-4" />
+                  <ArrowUp className="h-4 w-4" />
                 </Button>
               </div>
             </div>

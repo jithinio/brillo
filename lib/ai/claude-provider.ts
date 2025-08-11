@@ -112,7 +112,7 @@ export const BUSINESS_FUNCTIONS: BusinessFunction[] = [
       properties: {
         period: {
           type: "string",
-          enum: ["current-month", "last-month", "current-quarter", "current-year"],
+          enum: ["current-month", "last-month", "current-quarter", "current-year", "last-year"],
           description: "The time period for revenue analysis"
         },
         includeProjections: {
@@ -231,51 +231,179 @@ export const BUSINESS_FUNCTIONS: BusinessFunction[] = [
       },
       required: ["projectId", "amount"]
     }
+  },
+  {
+    name: "get_expense_analytics",
+    description: "Get expense analytics and breakdown by category or period",
+    parameters: {
+      type: "object",
+      properties: {
+        period: {
+          type: "string",
+          enum: ["current-month", "last-month", "current-quarter", "current-year", "last-year"],
+          description: "Time period for expense analysis"
+        },
+        category: {
+          type: "string",
+          description: "Filter by expense category (optional)"
+        },
+        includeBreakdown: {
+          type: "boolean",
+          description: "Include detailed category breakdown"
+        }
+      },
+      required: ["period"]
+    }
+  },
+  {
+    name: "get_profit_analytics",
+    description: "Get profit/loss analysis (revenue minus expenses)",
+    parameters: {
+      type: "object",
+      properties: {
+        period: {
+          type: "string",
+          enum: ["current-month", "last-month", "current-quarter", "current-year", "last-year"],
+          description: "Time period for profit analysis"
+        },
+        includeMargins: {
+          type: "boolean",
+          description: "Include profit margin calculations"
+        }
+      },
+      required: ["period"]
+    }
+  },
+  {
+    name: "get_overdue_invoices",
+    description: "Get list of overdue/unpaid invoices",
+    parameters: {
+      type: "object",
+      properties: {
+        includePending: {
+          type: "boolean",
+          description: "Include pending (not yet due) invoices"
+        },
+        clientId: {
+          type: "string",
+          description: "Filter by specific client (optional)"
+        },
+        sortBy: {
+          type: "string",
+          enum: ["age", "amount", "client"],
+          description: "Sort order for results"
+        }
+      },
+      required: []
+    }
+  },
+  {
+    name: "get_cash_flow",
+    description: "Get cash flow analysis (money in vs money out)",
+    parameters: {
+      type: "object",
+      properties: {
+        period: {
+          type: "string",
+          enum: ["current-month", "last-month", "current-quarter", "next-month", "next-quarter"],
+          description: "Time period for cash flow analysis"
+        },
+        includeProjections: {
+          type: "boolean",
+          description: "Include projections based on pipeline and pending invoices"
+        }
+      },
+      required: ["period"]
+    }
+  },
+  {
+    name: "get_project_deadlines",
+    description: "Get upcoming project deadlines and overdue projects",
+    parameters: {
+      type: "object",
+      properties: {
+        daysAhead: {
+          type: "number",
+          description: "Number of days to look ahead (default: 30)"
+        },
+        includeOverdue: {
+          type: "boolean",
+          description: "Include overdue projects"
+        },
+        status: {
+          type: "string",
+          enum: ["active", "all"],
+          description: "Filter by project status"
+        }
+      },
+      required: []
+    }
+  },
+  {
+    name: "get_payment_status",
+    description: "Get payment status summary for projects",
+    parameters: {
+      type: "object",
+      properties: {
+        period: {
+          type: "string",
+          enum: ["all-time", "current-month", "current-quarter", "current-year"],
+          description: "Time period for payment status"
+        },
+        groupBy: {
+          type: "string",
+          enum: ["client", "project", "status"],
+          description: "Group results by client, project, or payment status"
+        }
+      },
+      required: ["period"]
+    }
   }
 ]
 
 export class ClaudeProvider {
   private buildSystemPrompt(userContext?: string): string {
-    return `You are Brillo AI, an intelligent business assistant integrated into a business management platform. You have access to real-time data and can perform actions through function calls.
+    return `You are Brillo AI, a concise and efficient business assistant. You have direct access to real-time business data through functions.
 
-YOUR ROLE:
-You are a knowledgeable business advisor who helps users understand their business performance, manage operations, and make data-driven decisions. You have direct access to their business data through functions.
+CRITICAL RULES:
+1. BE CONCISE: Give direct answers. For simple queries (like "what's my revenue"), provide ONLY the requested information.
+2. When users ask for specific metrics, respond with just the number/data they asked for, not analysis unless requested.
+3. Use functions to get real data - never make up information.
+4. Only provide analysis, insights, or recommendations when explicitly asked or when the query clearly requires it.
 
-CAPABILITIES:
-• Query and analyze business data (clients, projects, revenue, pipeline)
-• Create and update business records (clients, projects, invoices)
-• Provide insights and recommendations based on actual data
-• Help with business planning and strategy
+RESPONSE GUIDELINES:
+• Revenue query → "Your [period] revenue is ₹X" (specify time period)
+• Project count → "You have X active projects"
+• Client search → List matching results concisely
+• Creation tasks → Confirm completion with essential details only
+• Revenue = total project value (budgets) for the period
+• Payment received = actual money collected
 
-CRITICAL INSTRUCTIONS:
-1. When users ask about specific data (e.g., "Bruno's projects", "revenue this month"), ALWAYS use the appropriate function to get real data. Never make up information.
-
-2. Be conversational and helpful. Don't just execute functions - explain what you're doing and provide insights on the results.
-
-3. After retrieving data, analyze it and provide useful insights:
-   - Identify trends or patterns
-   - Highlight important metrics
-   - Suggest next actions
-   - Answer the implicit questions behind the explicit ones
-
-4. If a search returns no results, help the user understand why and suggest alternatives.
-
-5. For complex queries, break them down and use multiple function calls if needed.
+For complex questions or when users ask for analysis:
+• Break down the information clearly
+• Provide actionable insights
+• Suggest relevant next steps
 
 CURRENT CONTEXT:
 ${userContext || 'User is accessing the business management dashboard.'}
 
 AVAILABLE FUNCTIONS:
-- search_projects: Find projects by name or client
-- create_client: Add new clients
-- create_project: Create new projects
-- get_revenue_analytics: Analyze revenue by period
-- get_pipeline_status: View sales pipeline
-- get_client_analytics: Analyze client performance
-- update_project_status: Change project status
+- search_projects: Find projects
+- create_client: Add clients
+- create_project: Create projects
+- get_revenue_analytics: Get revenue data (total project value)
+- get_expense_analytics: Track expenses
+- get_profit_analytics: Revenue minus expenses
+- get_pipeline_status: View pipeline
+- get_client_analytics: Client metrics
+- update_project_status: Update status
 - generate_invoice: Create invoices
+- get_overdue_invoices: Unpaid/overdue invoices
+- get_cash_flow: Money in vs out
+- get_project_deadlines: Due dates & overdue
+- get_payment_status: Payment tracking
 
-Remember: You're not just a function executor - you're a business advisor. Provide value through insights, not just data retrieval.`
+Remember: Default to brevity. Expand only when the user's question requires it.`
   }
 
   async chat(
