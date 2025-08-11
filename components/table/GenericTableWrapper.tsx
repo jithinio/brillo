@@ -542,7 +542,7 @@ export function GenericTableWrapper<T extends GenericEntity>({
   }, [searchQuery, timePeriod, relationship, onFiltersChange])
 
   return (
-    <div className={cn("w-full h-screen flex flex-col bg-gray-50/30 dark:bg-gray-950", className)}>
+    <div className={cn("w-full h-screen flex flex-col bg-muted/30", className)}>
       <AnimatePresence>
         {resizeTooltip && (
           <motion.div
@@ -550,7 +550,7 @@ export function GenericTableWrapper<T extends GenericEntity>({
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
             transition={{ duration: 0.1 }}
-            className="fixed z-50 px-2 py-1 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded shadow-lg pointer-events-none"
+            className="fixed z-50 px-2 py-1 bg-popover text-popover-foreground text-xs rounded shadow-lg pointer-events-none"
             style={{
               left: resizeTooltip.x - 20,
               top: resizeTooltip.y,
@@ -577,10 +577,10 @@ export function GenericTableWrapper<T extends GenericEntity>({
         {/* Metrics Component */}
         {metricsComponent && (
           <>
-            <div className="border-t border-gray-200 dark:border-gray-700">
+            <div className="border-t border-border">
               {metricsComponent}
             </div>
-            <div className="border-b border-gray-200 dark:border-gray-700"></div>
+            <div className="border-b border-border"></div>
           </>
         )}
 
@@ -612,7 +612,7 @@ export function GenericTableWrapper<T extends GenericEntity>({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="absolute right-1 top-0.5 h-6 w-6 p-0 hover:bg-gray-100"
+                  className="absolute right-1 top-0.5 h-6 w-6 p-0 hover:bg-muted"
                   onClick={() => setSearchQuery("")}
                 >
                   <X className="h-3 w-3" />
@@ -629,10 +629,10 @@ export function GenericTableWrapper<T extends GenericEntity>({
                     size="sm"
                     className={cn(
                       "h-8 border-dashed transition-colors text-sm font-normal text-muted-foreground",
-                      timePeriod && "border-gray-600 dark:border-gray-400 bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"
+                      timePeriod && "border-muted-foreground bg-muted text-muted-foreground"
                     )}
                   >
-                    <Calendar className={cn("mr-1 h-3 w-3", timePeriod ? "text-gray-600 dark:text-gray-400" : "text-muted-foreground")} />
+                    <Calendar className={cn("mr-1 h-3 w-3", timePeriod ? "text-muted-foreground" : "text-muted-foreground")} />
                     {timePeriod ? getTimePeriodLabel(timePeriod) : "Period"}
                   </Button>
                 </PopoverTrigger>
@@ -668,10 +668,10 @@ export function GenericTableWrapper<T extends GenericEntity>({
                     size="sm"
                     className={cn(
                       "h-8 border-dashed transition-colors text-sm font-normal text-muted-foreground",
-                      relationship.length > 0 && "border-gray-600 dark:border-gray-400 bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"
+                      relationship.length > 0 && "border-muted-foreground bg-muted text-muted-foreground"
                     )}
                   >
-                    <RotateCcw className={cn("mr-1 h-3 w-3", relationship.length > 0 ? "text-gray-600 dark:text-gray-400" : "text-muted-foreground")} />
+                    <RotateCcw className={cn("mr-1 h-3 w-3", relationship.length > 0 ? "text-muted-foreground" : "text-muted-foreground")} />
                     {relationship.length > 0 ? `Relationship (${relationship.length})` : "Relationship"}
                   </Button>
                 </PopoverTrigger>
@@ -715,7 +715,7 @@ export function GenericTableWrapper<T extends GenericEntity>({
                   setTimePeriod(null)
                   setRelationship([])
                 }}
-                className="h-8 text-sm font-normal text-muted-foreground hover:text-gray-800 dark:hover:text-gray-200"
+                className="h-8 text-sm font-normal text-muted-foreground hover:text-foreground"
               >
                 Clear all
               </Button>

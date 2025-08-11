@@ -195,7 +195,7 @@ export default function PipelinePage() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="absolute right-1 top-0.5 h-6 w-6 p-0 hover:bg-gray-100"
+                    className="absolute right-1 top-0.5 h-6 w-6 p-0 hover:bg-muted"
                     onClick={() => setSearchQuery("")}
                   >
                     <X className="h-3 w-3" />
@@ -209,7 +209,7 @@ export default function PipelinePage() {
                   variant="ghost"
                   size="sm"
                   onClick={() => setSearchQuery("")}
-                  className="h-8 text-sm font-normal text-muted-foreground hover:text-gray-800 dark:hover:text-gray-200"
+                  className="h-8 text-sm font-normal text-muted-foreground hover:text-foreground"
                 >
                   Clear
                 </Button>

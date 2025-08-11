@@ -60,7 +60,7 @@ const clientStatusConfig = {
     label: "Closed",
     icon: Clock,
     variant: "outline" as const,
-    iconClassName: "text-gray-400",
+    iconClassName: "text-muted-foreground",
   },
 }
 
@@ -172,7 +172,7 @@ export function createClientColumns(columnConfig: ClientColumnConfig): ColumnDef
               avatarUrl={client.avatar_url}
               size="sm"
             />
-            <span className="font-medium truncate text-gray-900 dark:text-gray-100 hover:underline" title={name}>
+            <span className="font-medium truncate text-foreground hover:underline" title={name}>
               {name}
             </span>
           </div>

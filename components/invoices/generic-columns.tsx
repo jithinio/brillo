@@ -35,7 +35,7 @@ const invoiceStatusConfig = {
     label: "Draft",
     icon: Clock,
     variant: "outline" as const,
-    iconClassName: "text-gray-500",
+    iconClassName: "text-muted-foreground",
   },
   sent: {
     label: "Sent",
@@ -59,7 +59,7 @@ const invoiceStatusConfig = {
     label: "Cancelled",
     icon: XCircle,
     variant: "outline" as const,
-    iconClassName: "text-gray-400",
+    iconClassName: "text-muted-foreground",
   },
 }
 
@@ -73,7 +73,7 @@ interface InvoiceColumnConfig {
 
 // Footer cell components
 const FooterCell = ({ value, label }: { value: number | string; label?: string }) => (
-  <div className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center justify-between">
+  <div className="text-sm font-medium text-foreground flex items-center justify-between">
     {label && <span className="text-xs text-muted-foreground mr-2">{label}</span>}
     <span>{value}</span>
   </div>

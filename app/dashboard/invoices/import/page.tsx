@@ -441,26 +441,26 @@ export default function InvoiceImportPage() {
           {/* Progress Steps */}
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <div className={`flex items-center gap-2 ${step === 'upload' ? 'text-blue-600' : step === 'mapping' || step === 'client-confirm' || step === 'importing' || step === 'complete' ? 'text-green-600' : 'text-gray-400'}`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step === 'mapping' || step === 'client-confirm' || step === 'importing' || step === 'complete' ? 'bg-green-100 border-2 border-green-600' : 'bg-gray-100 border-2 border-gray-300'}`}>
+              <div className={`flex items-center gap-2 ${step === 'upload' ? 'text-blue-600' : step === 'mapping' || step === 'client-confirm' || step === 'importing' || step === 'complete' ? 'text-green-600' : 'text-muted-foreground'}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step === 'mapping' || step === 'client-confirm' || step === 'importing' || step === 'complete' ? 'bg-green-100 border-2 border-green-600' : 'bg-muted border-2 border-border'}`}>
                   {step === 'mapping' || step === 'client-confirm' || step === 'importing' || step === 'complete' ? <CheckCircle className="h-4 w-4" /> : '1'}
                 </div>
                 <span className="font-medium">Upload</span>
               </div>
               
-              <div className={`w-8 h-0.5 ${step === 'mapping' || step === 'client-confirm' || step === 'importing' || step === 'complete' ? 'bg-green-600' : 'bg-gray-300'}`} />
+              <div className={`w-8 h-0.5 ${step === 'mapping' || step === 'client-confirm' || step === 'importing' || step === 'complete' ? 'bg-green-600' : 'bg-border'}`} />
               
-              <div className={`flex items-center gap-2 ${step === 'mapping' ? 'text-blue-600' : step === 'client-confirm' || step === 'importing' || step === 'complete' ? 'text-green-600' : 'text-gray-400'}`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step === 'mapping' ? 'bg-blue-100 border-2 border-blue-600' : step === 'client-confirm' || step === 'importing' || step === 'complete' ? 'bg-green-100 border-2 border-green-600' : 'bg-gray-100 border-2 border-gray-300'}`}>
+              <div className={`flex items-center gap-2 ${step === 'mapping' ? 'text-blue-600' : step === 'client-confirm' || step === 'importing' || step === 'complete' ? 'text-green-600' : 'text-muted-foreground'}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step === 'mapping' ? 'bg-blue-100 border-2 border-blue-600' : step === 'client-confirm' || step === 'importing' || step === 'complete' ? 'bg-green-100 border-2 border-green-600' : 'bg-muted border-2 border-border'}`}>
                   {step === 'client-confirm' || step === 'importing' || step === 'complete' ? <CheckCircle className="h-4 w-4" /> : '2'}
                 </div>
                 <span className="font-medium">Map Fields</span>
               </div>
               
-              <div className={`w-8 h-0.5 ${step === 'importing' || step === 'complete' ? 'bg-green-600' : 'bg-gray-300'}`} />
+              <div className={`w-8 h-0.5 ${step === 'importing' || step === 'complete' ? 'bg-green-600' : 'bg-border'}`} />
               
-              <div className={`flex items-center gap-2 ${step === 'importing' ? 'text-blue-600' : step === 'complete' ? 'text-green-600' : 'text-gray-400'}`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step === 'importing' ? 'bg-blue-100 border-2 border-blue-600' : step === 'complete' ? 'bg-green-100 border-2 border-green-600' : 'bg-gray-100 border-2 border-gray-300'}`}>
+              <div className={`flex items-center gap-2 ${step === 'importing' ? 'text-blue-600' : step === 'complete' ? 'text-green-600' : 'text-muted-foreground'}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step === 'importing' ? 'bg-blue-100 border-2 border-blue-600' : step === 'complete' ? 'bg-green-100 border-2 border-green-600' : 'bg-muted border-2 border-border'}`}>
                   {step === 'complete' ? <CheckCircle className="h-4 w-4" /> : step === 'importing' ? <Loader size="sm" variant="primary" /> : '3'}
                 </div>
                 <span className="font-medium">Import</span>
@@ -478,10 +478,10 @@ export default function InvoiceImportPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                  <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
+                  <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                   <div className="space-y-2">
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-muted-foreground">
                       Click to select a CSV file or drag and drop
                     </p>
                     <Input
@@ -496,8 +496,8 @@ export default function InvoiceImportPage() {
                 
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm text-gray-600">Need a sample file?</span>
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Need a sample file?</span>
                   </div>
                   <Button variant="outline" size="sm" onClick={downloadSample}>
                     <Download className="mr-2 h-4 w-4" />
@@ -527,7 +527,7 @@ export default function InvoiceImportPage() {
                       <div key={index} className="flex items-center gap-4 p-4 border rounded-lg">
                         <div className="flex-1">
                           <Label className="text-sm font-medium">{mapping.csvField}</Label>
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-muted-foreground mt-1">
                             Sample: {csvData.rows[0]?.[csvData.headers.indexOf(mapping.csvField)] || 'N/A'}
                           </p>
                         </div>
@@ -555,7 +555,7 @@ export default function InvoiceImportPage() {
                               Mapped
                             </Badge>
                           ) : (
-                            <Badge variant="outline" className="text-gray-400">
+                            <Badge variant="outline" className="text-muted-foreground">
                               Unmapped
                             </Badge>
                           )}
@@ -583,7 +583,7 @@ export default function InvoiceImportPage() {
                         <div key={index} className="flex items-center gap-4 p-4 border rounded-lg">
                           <div className="flex-1">
                             <Label className="text-sm font-medium">{mapping.csvField}</Label>
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs text-muted-foreground mt-1">
                               Sample: {csvData.rows[0]?.[csvData.headers.indexOf(mapping.csvField)] || 'N/A'}
                             </p>
                           </div>
@@ -611,7 +611,7 @@ export default function InvoiceImportPage() {
                                 Mapped
                               </Badge>
                             ) : (
-                              <Badge variant="outline" className="text-gray-400">
+                              <Badge variant="outline" className="text-muted-foreground">
                                 Unmapped
                               </Badge>
                             )}
@@ -665,11 +665,11 @@ export default function InvoiceImportPage() {
                       {detectedClients.slice(0, 5).map((client, index) => (
                         <div key={index} className="flex items-center justify-between py-1">
                           <span className="text-sm">{client.name}</span>
-                          <span className="text-xs text-gray-500">{client.company}</span>
+                          <span className="text-xs text-muted-foreground">{client.company}</span>
                         </div>
                       ))}
                       {detectedClients.length > 5 && (
-                        <div className="text-xs text-gray-500 mt-2">
+                        <div className="text-xs text-muted-foreground mt-2">
                           + {detectedClients.length - 5} more clients
                         </div>
                       )}
@@ -735,9 +735,9 @@ export default function InvoiceImportPage() {
                         <div className="text-2xl font-bold text-red-600">{importResults.invoices.errors}</div>
                         <div className="text-sm text-red-600">Errors</div>
                       </div>
-                      <div className="text-center p-4 bg-gray-50 rounded-lg">
-                        <div className="text-2xl font-bold text-gray-600">{importResults.invoices.total}</div>
-                        <div className="text-sm text-gray-600">Total</div>
+                      <div className="text-center p-4 bg-muted rounded-lg">
+                        <div className="text-2xl font-bold text-muted-foreground">{importResults.invoices.total}</div>
+                        <div className="text-sm text-muted-foreground">Total</div>
                       </div>
                     </div>
                   </div>
@@ -754,9 +754,9 @@ export default function InvoiceImportPage() {
                           <div className="text-2xl font-bold text-red-600">{importResults.clients.errors}</div>
                           <div className="text-sm text-red-600">Errors</div>
                         </div>
-                        <div className="text-center p-4 bg-gray-50 rounded-lg">
-                          <div className="text-2xl font-bold text-gray-600">{importResults.clients.total}</div>
-                          <div className="text-sm text-gray-600">Total</div>
+                        <div className="text-center p-4 bg-muted rounded-lg">
+                          <div className="text-2xl font-bold text-muted-foreground">{importResults.clients.total}</div>
+                          <div className="text-sm text-muted-foreground">Total</div>
                         </div>
                       </div>
                     </div>
@@ -773,7 +773,7 @@ export default function InvoiceImportPage() {
                           <p key={index} className="text-sm">{error}</p>
                         ))}
                         {errors.length > 5 && (
-                          <p className="text-sm text-gray-500">+ {errors.length - 5} more errors</p>
+                          <p className="text-sm text-muted-foreground">+ {errors.length - 5} more errors</p>
                         )}
                       </div>
                     </AlertDescription>

@@ -1834,24 +1834,24 @@ export default function GenerateInvoicePage() {
           )}
 
           {/* Modern Summary Card */}
-          <Card className="border border-gray-200 shadow-sm bg-background">            
+          <Card className="border border-border shadow-sm bg-background">            
             <CardContent className="p-6">
               {/* Header with Icon */}
               <div className="flex justify-between items-start mb-6">
                 <div className="space-y-3">
-                  <div className="bg-gray-50 border border-gray-200 rounded-full p-2.5 w-fit shadow-sm">
-                    <Receipt className="h-5 w-5 text-gray-600" />
+                  <div className="bg-muted border border-border rounded-full p-2.5 w-fit shadow-sm">
+                    <Receipt className="h-5 w-5 text-muted-foreground" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-medium text-gray-900">Invoice summary</h3>
-                    <p className="text-sm text-gray-500 mt-1">Review the details below</p>
+                    <h3 className="text-lg font-medium text-foreground">Invoice summary</h3>
+                    <p className="text-sm text-muted-foreground mt-1">Review the details below</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm text-gray-500">Invoice number</p>
-                  <p className="text-sm font-medium text-gray-900 font-mono">{invoiceNumber || "Will be generated"}</p>
+                  <p className="text-sm text-muted-foreground">Invoice number</p>
+                  <p className="text-sm font-medium text-foreground font-mono">{invoiceNumber || "Will be generated"}</p>
                   {!isEditMode && isPreviewNumber && invoiceNumber && (
-                    <p className="text-xs text-gray-500 mt-0.5">(Preview)</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">(Preview)</p>
                   )}
                 </div>
               </div>
@@ -1861,10 +1861,10 @@ export default function GenerateInvoicePage() {
                 {selectedClient && (
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-sm text-gray-500">Bill to</p>
-                      <p className="font-medium text-gray-900">{selectedClient.name}</p>
+                      <p className="text-sm text-muted-foreground">Bill to</p>
+                      <p className="font-medium text-foreground">{selectedClient.name}</p>
                       {selectedClient.company && (
-                        <p className="text-sm text-gray-600">{selectedClient.company}</p>
+                        <p className="text-sm text-muted-foreground">{selectedClient.company}</p>
                       )}
                     </div>
                   </div>
@@ -1872,13 +1872,13 @@ export default function GenerateInvoicePage() {
 
                 <div className="flex justify-between items-start text-sm">
                   <div>
-                    <p className="text-gray-500">Issue date</p>
-                    <p className="text-gray-900 font-medium">{formatDate(invoiceDate)}</p>
+                    <p className="text-muted-foreground">Issue date</p>
+                    <p className="text-foreground font-medium">{formatDate(invoiceDate)}</p>
                   </div>
                   {dueDate && (
                     <div>
-                      <p className="text-gray-500">Due date</p>
-                      <p className="text-gray-900 font-medium">{formatDate(dueDate)}</p>
+                      <p className="text-muted-foreground">Due date</p>
+                      <p className="text-foreground font-medium">{formatDate(dueDate)}</p>
                     </div>
                   )}
                 </div>
@@ -1887,22 +1887,22 @@ export default function GenerateInvoicePage() {
               {/* Invoice Items */}
               {items.length > 0 && (
                 <div className="mb-6">
-                  <div className="border-t border-dotted border-gray-300 -mx-6 mb-4"></div>
-                  <h4 className="text-sm font-medium text-gray-900 mb-3">Items</h4>
+                  <div className="border-t border-dotted border-border -mx-6 mb-4"></div>
+                  <h4 className="text-sm font-medium text-foreground mb-3">Items</h4>
                   <div className="space-y-3">
                     {items.map((item, index) => (
                       <div key={item.id} className="flex justify-between items-center">
                         <div className="flex items-center space-x-4 flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">
+                          <p className="text-sm font-medium text-foreground truncate">
                             {item.description || `Item ${index + 1}`}
                           </p>
-                          <span className="text-xs text-gray-400">•</span>
-                          <p className="text-xs text-gray-500 shrink-0">
+                          <span className="text-xs text-muted-foreground">•</span>
+                          <p className="text-xs text-muted-foreground shrink-0">
                             {item.quantity} × {formatCurrency(item.rate, clientCurrency)}
                           </p>
                         </div>
                         <div className="ml-4 shrink-0">
-                          <p className="text-sm font-medium tabular-nums text-gray-900">
+                          <p className="text-sm font-medium tabular-nums text-foreground">
                             {formatCurrency(item.quantity * item.rate, clientCurrency)}
                           </p>
                         </div>
@@ -1914,24 +1914,24 @@ export default function GenerateInvoicePage() {
 
               {/* Amount Breakdown */}
               <div>
-                <div className="border-t border-dotted border-gray-300 -mx-6 mb-6"></div>
+                <div className="border-t border-dotted border-border -mx-6 mb-6"></div>
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Subtotal</span>
+                    <span className="text-sm text-muted-foreground">Subtotal</span>
                     <span className="text-sm font-medium tabular-nums">{formatCurrency(calculateSubtotal(), clientCurrency)}</span>
                   </div>
                   
                   {taxEnabled && (
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">{settings.taxName} ({customTaxRate}%)</span>
+                      <span className="text-sm text-muted-foreground">{settings.taxName} ({customTaxRate}%)</span>
                       <span className="text-sm font-medium tabular-nums">{formatCurrency(calculateTax(), clientCurrency)}</span>
                     </div>
                   )}
                   
-                  <div className="border-t border-gray-100 pt-3 mt-3">
+                  <div className="border-t border-border pt-3 mt-3">
                     <div className="flex justify-between items-center">
-                      <span className="text-base font-medium text-gray-900">Total</span>
-                      <span className="text-lg font-semibold tabular-nums text-gray-900">
+                      <span className="text-base font-medium text-foreground">Total</span>
+                      <span className="text-lg font-semibold tabular-nums text-foreground">
                         {formatCurrency(calculateTotal(), clientCurrency)}
                       </span>
                     </div>
@@ -1940,14 +1940,14 @@ export default function GenerateInvoicePage() {
               </div>
 
               {/* Status */}
-              <div className="mt-6 pt-4 border-t border-gray-100">
+              <div className="mt-6 pt-4 border-t border-border">
                 <div className="flex items-center justify-center">
                   <div className="flex items-center space-x-2 text-sm transition-all duration-300">
                     <div className={`w-2 h-2 rounded-full transition-colors duration-300 ${
-                      isReadyToGenerate() ? 'bg-green-400' : 'bg-gray-300'
+                      isReadyToGenerate() ? 'bg-green-400' : 'bg-muted'
                     }`}></div>
                     <span className={`transition-colors duration-300 ${
-                      isReadyToGenerate() ? 'text-green-600 font-medium' : 'text-gray-500'
+                      isReadyToGenerate() ? 'text-green-600 font-medium' : 'text-muted-foreground'
                     }`}>
                       {isReadyToGenerate() ? 'Ready to generate' : 'Complete all fields to generate'}
                     </span>
@@ -2105,10 +2105,10 @@ export default function GenerateInvoicePage() {
                   <Check className="h-5 w-5 text-green-600" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900">
+                  <h3 className="text-lg font-medium text-foreground">
                     {isEditMode ? "Invoice Updated Successfully!" : "Invoice Generated Successfully!"}
                   </h3>
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="text-sm text-muted-foreground mt-1">
                     {isEditMode 
                       ? "Your invoice has been updated and is ready to download or send" 
                       : "Your invoice is ready to download or send"
@@ -2117,8 +2117,8 @@ export default function GenerateInvoicePage() {
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-sm text-gray-500">Invoice number</p>
-                <p className="text-sm font-medium text-gray-900 font-mono">{generatedInvoiceData?.invoiceNumber}</p>
+                <p className="text-sm text-muted-foreground">Invoice number</p>
+                <p className="text-sm font-medium text-foreground font-mono">{generatedInvoiceData?.invoiceNumber}</p>
               </div>
             </div>
 
@@ -2128,23 +2128,23 @@ export default function GenerateInvoicePage() {
                 <div className="space-y-4">
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-sm text-gray-500">Bill to</p>
-                      <p className="font-medium text-gray-900">{generatedInvoiceData.client.name}</p>
+                      <p className="text-sm text-muted-foreground">Bill to</p>
+                      <p className="font-medium text-foreground">{generatedInvoiceData.client.name}</p>
                       {generatedInvoiceData.client.company && (
-                        <p className="text-sm text-gray-600">{generatedInvoiceData.client.company}</p>
+                        <p className="text-sm text-muted-foreground">{generatedInvoiceData.client.company}</p>
                       )}
                     </div>
                   </div>
 
                   <div className="flex justify-between items-start text-sm">
                     <div>
-                      <p className="text-gray-500">Issue date</p>
-                      <p className="text-gray-900 font-medium">{formatDate(new Date(generatedInvoiceData.invoiceDate))}</p>
+                      <p className="text-muted-foreground">Issue date</p>
+                      <p className="text-foreground font-medium">{formatDate(new Date(generatedInvoiceData.invoiceDate))}</p>
                     </div>
                     {generatedInvoiceData.dueDate && (
                       <div>
-                        <p className="text-gray-500">Due date</p>
-                        <p className="text-gray-900 font-medium">{formatDate(new Date(generatedInvoiceData.dueDate))}</p>
+                        <p className="text-muted-foreground">Due date</p>
+                        <p className="text-foreground font-medium">{formatDate(new Date(generatedInvoiceData.dueDate))}</p>
                       </div>
                     )}
                   </div>
@@ -2153,22 +2153,22 @@ export default function GenerateInvoicePage() {
                 {/* Invoice Items */}
                 {generatedInvoiceData.items.length > 0 && (
                   <div>
-                    <div className="border-t border-dotted border-gray-300 -mx-6 mb-4"></div>
-                    <h4 className="text-sm font-medium text-gray-900 mb-3">Items</h4>
+                    <div className="border-t border-dotted border-border -mx-6 mb-4"></div>
+                    <h4 className="text-sm font-medium text-foreground mb-3">Items</h4>
                     <div className="space-y-3">
                       {generatedInvoiceData.items.map((item: any, index: number) => (
                         <div key={index} className="flex justify-between items-center">
                           <div className="flex items-center space-x-4 flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 truncate">
+                            <p className="text-sm font-medium text-foreground truncate">
                               {item.description || `Item ${index + 1}`}
                             </p>
-                            <span className="text-xs text-gray-400">•</span>
-                            <p className="text-xs text-gray-500 shrink-0">
+                            <span className="text-xs text-muted-foreground">•</span>
+                            <p className="text-xs text-muted-foreground shrink-0">
                               {item.quantity} × {formatCurrency(item.rate, generatedInvoiceData.currency)}
                             </p>
                           </div>
                           <div className="ml-4 shrink-0">
-                            <p className="text-sm font-medium tabular-nums text-gray-900">
+                            <p className="text-sm font-medium tabular-nums text-foreground">
                               {formatCurrency(item.quantity * item.rate, generatedInvoiceData.currency)}
                             </p>
                           </div>
@@ -2180,24 +2180,24 @@ export default function GenerateInvoicePage() {
 
                 {/* Amount Breakdown */}
                 <div>
-                  <div className="border-t border-dotted border-gray-300 -mx-6 mb-6"></div>
+                  <div className="border-t border-dotted border-border -mx-6 mb-6"></div>
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Subtotal</span>
+                      <span className="text-sm text-muted-foreground">Subtotal</span>
                       <span className="text-sm font-medium tabular-nums">{formatCurrency(generatedInvoiceData.subtotal, generatedInvoiceData.currency)}</span>
                     </div>
                     
                     {generatedInvoiceData.taxEnabled && (
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">{generatedInvoiceData.taxName} ({generatedInvoiceData.taxRate}%)</span>
+                        <span className="text-sm text-muted-foreground">{generatedInvoiceData.taxName} ({generatedInvoiceData.taxRate}%)</span>
                         <span className="text-sm font-medium tabular-nums">{formatCurrency(generatedInvoiceData.tax, generatedInvoiceData.currency)}</span>
                       </div>
                     )}
                     
-                    <div className="border-t border-gray-100 pt-3 mt-3">
+                    <div className="border-t border-border pt-3 mt-3">
                       <div className="flex justify-between items-center">
-                        <span className="text-base font-medium text-gray-900">Total</span>
-                        <span className="text-lg font-semibold tabular-nums text-gray-900">
+                        <span className="text-base font-medium text-foreground">Total</span>
+                        <span className="text-lg font-semibold tabular-nums text-foreground">
                           {formatCurrency(generatedInvoiceData.total, generatedInvoiceData.currency)}
                         </span>
                       </div>

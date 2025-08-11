@@ -1177,7 +1177,7 @@ export function EnhancedAddProjectDialog({
           </form>
         </div>
         
-        <DialogFooter className="flex-shrink-0 border-t border-gray-200 dark:border-gray-700 pt-4 mt-0">
+        <DialogFooter className="flex-shrink-0 border-t border-border pt-4 mt-0">
           <Button type="button" variant="outline" onClick={handleClose}>
             Cancel
           </Button>

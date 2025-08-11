@@ -80,7 +80,7 @@ const statusConfig = {
   cancelled: {
     label: "Cancelled",
     variant: "outline" as const,
-    iconClassName: "text-gray-400",
+    iconClassName: "text-muted-foreground",
   },
 }
 
@@ -101,7 +101,7 @@ const clientStatusConfig = {
     label: "Closed",
     icon: Clock,
     variant: "outline" as const,
-    iconClassName: "text-gray-400",
+    iconClassName: "text-muted-foreground",
   },
 }
 
@@ -155,7 +155,7 @@ function ClientStatusCell({ client, actions }: { client: Client; actions: Column
     <div className="min-w-[120px]">
       <Popover open={isOpen} onOpenChange={setIsOpen}>
         <PopoverTrigger asChild>
-          <Badge variant={config.variant} className="cursor-pointer hover:bg-slate-100 transition-colors font-normal text-sm focus:outline-none focus-visible:outline-none">
+          <Badge variant={config.variant} className="cursor-pointer hover:bg-muted transition-colors font-normal text-sm focus:outline-none focus-visible:outline-none">
             <Icon className={`mr-1.5 h-3 w-3 ${config.iconClassName}`} />
             {config.label}
           </Badge>
@@ -189,7 +189,7 @@ function ClientStatusCell({ client, actions }: { client: Client; actions: Column
               onClick={() => handleStatusChange('closed')}
               disabled={client.status === 'closed'}
             >
-              <Clock className="mr-2 h-3 w-3 text-gray-400" />
+              <Clock className="mr-2 h-3 w-3 text-muted-foreground" />
               Closed
             </Button>
           </div>
@@ -425,7 +425,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Client>[] {
                   variant={statusConfig[project.status as keyof typeof statusConfig]?.variant || "outline"}
                   className="text-xs shrink-0 text-zinc-700 font-medium"
                 >
-                  <div className={`w-2 h-2 rounded-full mr-1.5 ${statusConfig[project.status as keyof typeof statusConfig]?.iconClassName?.replace('text-', 'bg-') || 'bg-gray-400'}`}></div>
+                  <div className={`w-2 h-2 rounded-full mr-1.5 ${statusConfig[project.status as keyof typeof statusConfig]?.iconClassName?.replace('text-', 'bg-') || 'bg-muted'}`}></div>
                   {statusConfig[project.status as keyof typeof statusConfig]?.label || project.status}
                 </Badge>
                 <span 

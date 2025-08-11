@@ -1101,7 +1101,7 @@ export default function CustomizeInvoicePage() {
                   <tr key={index} style={{ 
                     borderTop: index === 0 ? 'none' : `1px solid ${template.borderColor}60`,
                     transition: 'background-color 0.2s'
-                  }} className="hover:bg-gray-50">
+                  }} className="hover:bg-muted/50">
                     <td className="px-4 py-4">
                       <div style={{ fontWeight: '500' }}>{item.description}</div>
                       {template.showItemDetails && item.details && (
@@ -1548,7 +1548,7 @@ export default function CustomizeInvoicePage() {
               </TabsList>
 
               <TabsContent value="template" className="space-y-6">
-                <Card className="border-gray-200 shadow-sm">
+                <Card className="border-border shadow-sm">
                   <CardHeader className="pb-4">
                     <CardTitle className="text-base font-medium">Invoice Templates</CardTitle>
                     <CardDescription className="text-sm">Choose a design inspired by leading companies</CardDescription>
@@ -1567,7 +1567,7 @@ export default function CustomizeInvoicePage() {
                               "flex cursor-pointer flex-col rounded-lg border-2 p-4 transition-all hover:shadow-md hover:border-primary/50",
                             template.templateId === tmpl.id
                               ? "border-primary bg-primary/5 shadow-sm"
-                                : "border-gray-200"
+                                : "border-border"
                           )}
                         >
                           <div className="flex items-center justify-between mb-1">
@@ -1586,13 +1586,13 @@ export default function CustomizeInvoicePage() {
                   </CardContent>
                 </Card>
 
-                <Card className="border-gray-200 shadow-sm">
+                <Card className="border-border shadow-sm">
                   <CardHeader className="pb-4">
                     <CardTitle className="text-base font-medium">Display Options</CardTitle>
                     <CardDescription className="text-sm">Choose what information to display</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                    <div className="flex items-center justify-between py-3 border-b border-border">
                       <div className="space-y-0.5">
                         <Label htmlFor="show-logo" className="text-sm font-normal cursor-pointer">Company Logo</Label>
                         <p className="text-xs text-muted-foreground">Display your company logo on invoices</p>
@@ -1604,7 +1604,7 @@ export default function CustomizeInvoicePage() {
                       />
                       </div>
 
-                    <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                    <div className="flex items-center justify-between py-3 border-b border-border">
                       <div className="space-y-0.5">
                         <Label htmlFor="show-invoice-number" className="text-sm font-normal cursor-pointer">Invoice Number</Label>
                         <p className="text-xs text-muted-foreground">Show unique invoice identifier</p>
@@ -1616,7 +1616,7 @@ export default function CustomizeInvoicePage() {
                       />
                             </div>
 
-                    <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                    <div className="flex items-center justify-between py-3 border-b border-border">
                       <div className="space-y-0.5">
                         <Label htmlFor="show-dates" className="text-sm font-normal cursor-pointer">Invoice & Due Dates</Label>
                         <p className="text-xs text-muted-foreground">Display issue and payment due dates</p>
@@ -1628,7 +1628,7 @@ export default function CustomizeInvoicePage() {
                       />
                         </div>
 
-                    <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                    <div className="flex items-center justify-between py-3 border-b border-border">
                       <div className="space-y-0.5">
                         <Label htmlFor="show-tax-id" className="text-sm font-normal cursor-pointer">Tax ID</Label>
                         <p className="text-xs text-muted-foreground">Show company tax identification number</p>
@@ -1640,7 +1640,7 @@ export default function CustomizeInvoicePage() {
                       />
                             </div>
 
-                    <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                    <div className="flex items-center justify-between py-3 border-b border-border">
                       <div className="space-y-0.5">
                         <Label htmlFor="show-item-details" className="text-sm font-normal cursor-pointer">Item Details</Label>
                         <p className="text-xs text-muted-foreground">Show detailed descriptions for line items</p>
@@ -1652,7 +1652,7 @@ export default function CustomizeInvoicePage() {
                       />
                         </div>
 
-                    <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                    <div className="flex items-center justify-between py-3 border-b border-border">
                       <div className="space-y-0.5">
                         <Label htmlFor="show-payment-terms" className="text-sm font-normal cursor-pointer">Payment Terms</Label>
                         <p className="text-xs text-muted-foreground">Display payment terms and conditions</p>
@@ -1680,7 +1680,7 @@ export default function CustomizeInvoicePage() {
               </TabsContent>
 
               <TabsContent value="style" className="space-y-6">
-                <Card className="border-gray-200 shadow-sm">
+                <Card className="border-border shadow-sm">
                   <CardHeader className="pb-4">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-base font-medium">Logo & Branding</CardTitle>
@@ -1722,7 +1722,7 @@ export default function CustomizeInvoicePage() {
                   </CardContent>
                 </Card>
 
-                <Card className="border-gray-200 shadow-sm">
+                <Card className="border-border shadow-sm">
                   <CardHeader className="pb-4">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-base font-medium">Typography</CardTitle>
@@ -1796,7 +1796,7 @@ export default function CustomizeInvoicePage() {
                   </CardContent>
                 </Card>
 
-                <Card className="border-gray-200 shadow-sm">
+                <Card className="border-border shadow-sm">
                   <CardHeader className="pb-4">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-base font-medium">Colors</CardTitle>
@@ -1817,7 +1817,7 @@ export default function CustomizeInvoicePage() {
                               "w-8 h-8 rounded-full cursor-pointer border-2 transition-all hover:scale-110",
                               template.backgroundColor === preset.color 
                                 ? "border-primary ring-2 ring-primary/20" 
-                                : "border-gray-200 hover:border-gray-300"
+                                : "border-border hover:border-muted-foreground"
                             )}
                             style={{ backgroundColor: preset.color }}
                             title={preset.id.charAt(0).toUpperCase() + preset.id.slice(1).replace('-', ' ')}
@@ -1912,7 +1912,7 @@ export default function CustomizeInvoicePage() {
                   </CardContent>
                 </Card>
 
-                <Card className="border-gray-200 shadow-sm">
+                <Card className="border-border shadow-sm">
                   <CardHeader className="pb-4">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-base font-medium">Layout</CardTitle>
@@ -1943,13 +1943,13 @@ export default function CustomizeInvoicePage() {
                   </div>
 
           <div className="lg:col-span-3">
-            <Card className="border-gray-200 shadow-sm">
+            <Card className="border-border shadow-sm">
               <CardHeader className="pb-4">
                 <CardTitle className="text-base font-medium">Live Preview</CardTitle>
                 <CardDescription className="text-sm">See your invoice design in real-time</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="bg-white border rounded-lg shadow-sm overflow-hidden">
+                <div className="bg-background border rounded-lg shadow-sm overflow-hidden">
                   {renderInvoice()}
                 </div>
               </CardContent>

@@ -78,7 +78,7 @@ const statusConfig = {
     label: "Draft",
     icon: Clock,
     variant: "outline" as const,
-    iconClassName: "text-gray-500",
+    iconClassName: "text-muted-foreground",
   },
   sent: {
     label: "Sent",
@@ -102,7 +102,7 @@ const statusConfig = {
     label: "Cancelled",
     icon: XCircle,
     variant: "outline" as const,
-    iconClassName: "text-gray-400",
+    iconClassName: "text-muted-foreground",
   },
 }
 
@@ -476,7 +476,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
                       onClick={() => actions.onStatusChange(invoice, 'draft')}
                       disabled={invoice.status === 'draft'}
                     >
-                      <Clock className="mr-2 h-4 w-4 text-gray-600" />
+                      <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
                       Draft
                     </DropdownMenuItem>
                     <DropdownMenuItem 
@@ -504,7 +504,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
                       onClick={() => actions.onStatusChange(invoice, 'cancelled')}
                       disabled={invoice.status === 'cancelled'}
                     >
-                      <XCircle className="mr-2 h-4 w-4 text-gray-600" />
+                      <XCircle className="mr-2 h-4 w-4 text-muted-foreground" />
                       Cancelled
                     </DropdownMenuItem>
                   </DropdownMenuSubContent>

@@ -295,17 +295,17 @@ function FinalDataTableComponent({
             }}
             className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50 pointer-events-auto"
           >
-            <div className="flex items-center gap-3 px-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full shadow-lg backdrop-blur-sm">
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            <div className="flex items-center gap-3 px-4 py-2.5 bg-background border border-border rounded-full shadow-lg backdrop-blur-sm">
+              <span className="text-sm font-medium text-foreground">
                 {selectedProjects.length} selected
               </span>
-              <div className="w-px h-4 bg-gray-300 dark:bg-gray-600" />
+              <div className="w-px h-4 bg-border" />
               <div className="flex items-center gap-2">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setRowSelection({})}
-                  className="h-7 px-3 text-xs hover:bg-gray-100 dark:hover:bg-gray-700"
+                  className="h-7 px-3 text-xs hover:bg-muted"
                 >
                   Clear
                 </Button>
@@ -325,13 +325,13 @@ function FinalDataTableComponent({
       </AnimatePresence>
 
       {/* Table Container with div-based sticky structure */}
-      <div ref={tableRef} className="flex-1 overflow-auto relative border-l border-gray-200/80 dark:border-gray-700/80 custom-scrollbar table-container">
+      <div ref={tableRef} className="flex-1 overflow-auto relative border-l border-border custom-scrollbar table-container">
         {/* Table Loading Overlay - Only show for initial loads, not refetches */}
         {(preferencesLoading || !preferencesLoaded || (isLoading && !hasLoadedOnce && projects.length === 0)) && (
-          <div className="absolute inset-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-background/95 backdrop-blur-sm z-50 flex items-center justify-center">
             <Badge 
               variant="secondary" 
-              className="flex items-center gap-2 text-xs shadow-md border bg-white dark:bg-gray-800 dark:text-gray-200"
+              className="flex items-center gap-2 text-xs shadow-md border bg-background text-foreground"
             >
               <Loader size="xs" variant="default" />
               <span>Loading...</span>
@@ -343,12 +343,12 @@ function FinalDataTableComponent({
         <div className="table-content-wrapper">
           <div className="inline-block min-w-full" style={{ width: `${tableWidth}px` }}>
             {/* Sticky Table Header */}
-            <div className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-t border-b border-gray-200/80 dark:border-gray-700/80">
+            <div className="sticky top-0 z-10 bg-background border-t border-b border-border">
               <div className="flex" style={{ width: `${tableWidth}px` }}>
                 {columns.map((column: any, colIndex: number) => (
                   <div
                     key={`header-${column.id || colIndex}`}
-                    className={`flex-shrink-0 px-3 font-normal text-muted-foreground text-sm flex items-center gap-2 select-none h-11 relative group ${(column.accessorKey || column.id) !== 'select' ? 'border-r border-gray-200/80 dark:border-gray-700/80' : ''}`}
+                    className={`flex-shrink-0 px-3 font-normal text-muted-foreground text-sm flex items-center gap-2 select-none h-11 relative group ${(column.accessorKey || column.id) !== 'select' ? 'border-r border-border' : ''}`}
                     style={{ 
                       width: column.size ? `${column.size}px` : 'auto',
                       minWidth: column.minSize ? `${column.minSize}px` : 'auto',
@@ -397,7 +397,7 @@ function FinalDataTableComponent({
             </div>
 
             {/* Table Body - Div-based */}
-            <div className="bg-white dark:bg-gray-900 relative" data-table-body>
+            <div className="bg-background relative" data-table-body>
               {projects.length === 0 ? (
                 <div className="p-12 text-center">
                   <div className="text-muted-foreground">No projects found.</div>
@@ -408,7 +408,7 @@ function FinalDataTableComponent({
                     <ContextMenu key={project.id}>
                       <ContextMenuTrigger asChild>
                         <motion.div
-                          className="flex border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors group cursor-default h-11"
+                          className="flex border-b border-border hover:bg-muted/50 transition-colors group cursor-default h-11"
                           initial={{ opacity: 0, y: 5 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ duration: 0.15, delay: Math.min(index * 0.01, 0.3) }}
@@ -416,7 +416,7 @@ function FinalDataTableComponent({
                           {columns.map((column: any, colIndex: number) => (
                             <div
                               key={`${project.id}-${column.id || colIndex}`}
-                              className={`px-3 text-sm flex-shrink-0 flex items-center h-11 ${(column.accessorKey || column.id) !== 'select' ? 'border-r border-gray-200/80 dark:border-gray-700/80' : ''}`}
+                              className={`px-3 text-sm flex-shrink-0 flex items-center h-11 ${(column.accessorKey || column.id) !== 'select' ? 'border-r border-border' : ''}`}
                               style={{ 
                                 width: column.size ? `${column.size}px` : 'auto',
                                 minWidth: column.minSize ? `${column.minSize}px` : 'auto',
@@ -556,7 +556,7 @@ function FinalDataTableComponent({
                       >
                         <Badge 
                           variant="secondary" 
-                          className="flex items-center gap-2 text-xs shadow-lg border bg-white/95 dark:bg-gray-800/95 infinite-scroll-loader"
+                          className="flex items-center gap-2 text-xs shadow-lg border bg-background/95 infinite-scroll-loader"
                         >
                           <Loader size="xs" variant="default" />
                           <span>Loading more projects...</span>
@@ -571,7 +571,7 @@ function FinalDataTableComponent({
                       <div className="absolute left-1/2 transform -translate-x-1/2 z-10" style={{ top: '6px' }}>
                         <Badge 
                           variant="outline" 
-                          className="flex items-center gap-1 text-xs bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-gray-300/50"
+                          className="flex items-center gap-1 text-xs bg-background/80 backdrop-blur-sm border-border/50"
                         >
                           <Check className="w-2 h-2" />
                           <span className="text-xs">All loaded</span>
@@ -589,12 +589,12 @@ function FinalDataTableComponent({
             </div>
 
             {/* Sticky Footer with Aggregations */}
-            <div className="sticky-footer bg-white dark:bg-gray-900 border-t border-gray-200/80 dark:border-gray-700/80 h-11 shadow-sm">
+            <div className="sticky-footer bg-background border-t border-border h-11 shadow-sm">
               <div className="flex h-full" style={{ width: `${tableWidth}px` }}>
                 {columns.map((column: any, colIndex: number) => (
                   <div
                     key={`footer-${column.id || colIndex}`}
-                    className={`px-3 text-sm font-normal flex-shrink-0 flex items-center h-11 ${(column.accessorKey || column.id) !== 'select' ? 'border-r border-gray-200/80 dark:border-gray-700/80' : ''}`}
+                    className={`px-3 text-sm font-normal flex-shrink-0 flex items-center h-11 ${(column.accessorKey || column.id) !== 'select' ? 'border-r border-border' : ''}`}
                     style={{ 
                       width: column.size ? `${column.size}px` : 'auto',
                       minWidth: column.minSize ? `${column.minSize}px` : 'auto',

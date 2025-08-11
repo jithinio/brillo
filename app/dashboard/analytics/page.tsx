@@ -166,7 +166,7 @@ export default function AnalyticsPage() {
 
   return (
     <AdvancedAnalyticsGate>
-      <div className="w-full h-screen flex flex-col bg-gray-50/30 dark:bg-gray-950">
+      <div className="w-full h-screen flex flex-col bg-muted/30">
       {/* Page Header - Not sticky */}
       <PageHeader
         title="Analytics"
@@ -195,10 +195,10 @@ export default function AnalyticsPage() {
                 <div className="space-y-6 relative">
                   {/* Badge Loader for Filtered Analytics - Only show for initial loads */}
                   {isLoading && (!filteredProjects.length && !filteredClients.length) && (
-                    <div className="absolute inset-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm z-40 flex items-center justify-center">
+                    <div className="absolute inset-0 bg-background/95 backdrop-blur-sm z-40 flex items-center justify-center">
                       <Badge 
                         variant="secondary" 
-                        className="flex items-center gap-2 text-xs shadow-md border bg-white dark:bg-gray-800 dark:text-gray-200"
+                        className="flex items-center gap-2 text-xs shadow-md border bg-background text-foreground"
                       >
                         <Loader size="xs" variant="default" />
                         <span>Loading filtered analytics...</span>
@@ -271,10 +271,10 @@ export default function AnalyticsPage() {
               <div className="space-y-8 relative">
                 {/* Badge Loader for Global Analytics - Only show for initial loads */}
                 {isLoading && (!projects.length && !clients.length) && (
-                  <div className="absolute inset-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm z-40 flex items-center justify-center">
+                  <div className="absolute inset-0 bg-background/95 backdrop-blur-sm z-40 flex items-center justify-center">
                     <Badge 
                       variant="secondary" 
-                      className="flex items-center gap-2 text-xs shadow-md border bg-white dark:bg-gray-800 dark:text-gray-200"
+                      className="flex items-center gap-2 text-xs shadow-md border bg-background text-foreground"
                     >
                       <Loader size="xs" variant="default" />
                       <span>Loading analytics...</span>

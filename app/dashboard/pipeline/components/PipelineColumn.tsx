@@ -39,7 +39,7 @@ export function PipelineColumn({ column, onProjectUpdate, isDragging }: Pipeline
   return (
     <Card 
       ref={setNodeRef}
-      className={`flex-1 min-w-80 h-full max-h-full flex flex-col bg-transparent transition-colors rounded-none border-y border-r border-gray-200 dark:border-gray-700 border-l-0 first:border-l ${
+      className={`flex-1 min-w-80 h-full max-h-full flex flex-col bg-transparent transition-colors rounded-none border-y border-r border-border border-l-0 first:border-l ${
         isOver ? 'shadow-sm' : ''
       }`}
       style={{

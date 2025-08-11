@@ -69,7 +69,7 @@ const ClientDialogForm = React.memo(({
 }) => (
   <div className="space-y-6">
     {/* Avatar Section */}
-    <div className="flex items-center gap-6 pb-6 border-b border-gray-200 dark:border-gray-700">
+    <div className="flex items-center gap-6 pb-6 border-b border-border">
       <Avatar className="h-24 w-24">
         {avatarPreview ? (
           <AvatarImage src={avatarPreview} alt={formData.name} />
@@ -150,7 +150,7 @@ const ClientDialogForm = React.memo(({
     </div>
 
     {/* Contact Information */}
-    <div className="space-y-4 pt-6 border-t border-gray-200 dark:border-gray-700">
+    <div className="space-y-4 pt-6 border-t border-border">
           <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="email" className="text-sm font-medium">
@@ -180,7 +180,7 @@ const ClientDialogForm = React.memo(({
     </div>
 
     {/* Address Information */}
-    <div className="space-y-4 pt-6 border-t border-gray-200 dark:border-gray-700">
+    <div className="space-y-4 pt-6 border-t border-border">
       <div className="space-y-4">
         <div className="grid grid-cols-1 gap-4">
           <div className="space-y-2">
@@ -250,7 +250,7 @@ const ClientDialogForm = React.memo(({
     </div>
 
     {/* Additional Information */}
-    <div className="space-y-4 pt-6 border-t border-gray-200 dark:border-gray-700">
+    <div className="space-y-4 pt-6 border-t border-border">
       <div className="space-y-2">
         <Label htmlFor="notes" className="text-sm font-medium">
           Notes
@@ -971,7 +971,7 @@ export default function ClientsPage() {
             />
               </div>
 
-          <DialogFooter className="flex-shrink-0 border-t border-gray-200 dark:border-gray-700 pt-4">
+          <DialogFooter className="flex-shrink-0 border-t border-border pt-4">
             <div className="flex justify-end gap-3 w-full">
               <Button 
                 variant="outline" 
@@ -1014,7 +1014,7 @@ export default function ClientsPage() {
               />
             </div>
 
-          <DialogFooter className="flex-shrink-0 border-t border-gray-200 dark:border-gray-700 pt-4">
+          <DialogFooter className="flex-shrink-0 border-t border-border pt-4">
             <div className="flex justify-end gap-3 w-full">
               <Button 
                 variant="outline" 

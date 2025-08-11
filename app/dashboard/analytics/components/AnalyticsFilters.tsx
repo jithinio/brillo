@@ -144,12 +144,11 @@ export function AnalyticsFilters({
     setQuickPeriodValue("")
   }
 
-  // Check if any filters are active
+  // Check if any filters are active (exclude default states)
   const hasActiveFilters = Boolean(
     filters.dateRange || 
     (filters.clientIds && filters.clientIds.length > 0) || 
-    (filters.projectStatuses && filters.projectStatuses.length > 0) ||
-    quickPeriodValue
+    (filters.projectStatuses && filters.projectStatuses.length > 0)
   )
 
   return (
@@ -385,28 +384,8 @@ export function AnalyticsFilters({
       {/* Active Filter Badges */}
       {hasActiveFilters && (
         <div className="flex items-center gap-1 flex-wrap">
-
-
-          {/* Quick Period Badge */}
-          {quickPeriodValue && (
-            <Badge variant="secondary" className="h-6 px-2 text-xs">
-              {quickPeriodValue}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="ml-1 h-3 w-3 p-0 hover:bg-transparent"
-                onClick={() => {
-                  setQuickPeriodValue("")
-                  handleDateRangeChange(undefined)
-                }}
-              >
-                <X className="h-2 w-2" />
-              </Button>
-            </Badge>
-          )}
-
-          {/* Client Badges */}
-          {selectedClients.map((client) => (
+          {/* Client Badges - Only show when specific clients are selected */}
+          {filters.clientIds && filters.clientIds.length > 0 && selectedClients.map((client) => (
             <Badge key={client.id} variant="secondary" className="h-6 px-2 text-xs">
               {client.name}
               <Button
@@ -420,8 +399,8 @@ export function AnalyticsFilters({
             </Badge>
           ))}
 
-          {/* Status Badges */}
-          {selectedStatuses.map((status) => (
+          {/* Status Badges - Only show when specific statuses are selected */}
+          {filters.projectStatuses && filters.projectStatuses.length > 0 && selectedStatuses.map((status) => (
             <Badge key={status.value} variant="secondary" className="h-6 px-2 text-xs">
               {status.label}
               <Button
@@ -434,6 +413,24 @@ export function AnalyticsFilters({
               </Button>
             </Badge>
           ))}
+
+          {/* Date Range Badge - Only show when custom date range is set */}
+          {filters.dateRange && (
+            <Badge variant="secondary" className="h-6 px-2 text-xs">
+              {formatDate(filters.dateRange.start)} - {formatDate(filters.dateRange.end)}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="ml-1 h-3 w-3 p-0 hover:bg-transparent"
+                onClick={() => {
+                  handleDateRangeChange(undefined)
+                  setQuickPeriodValue("")
+                }}
+              >
+                <X className="h-2 w-2" />
+              </Button>
+            </Badge>
+          )}
         </div>
       )}
     </div>

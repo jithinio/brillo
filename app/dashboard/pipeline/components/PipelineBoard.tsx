@@ -155,7 +155,7 @@ function LostClientCard({ project, onRestore, onEdit, onDelete, onProjectUpdate,
 
   return (
     <>
-      <Card className="group transition-all border bg-white dark:bg-gray-800 hover:shadow-md cursor-pointer">
+      <Card className="group transition-all border bg-background hover:shadow-md cursor-pointer">
       <CardContent className="p-4">
         <div className="space-y-3">
           {/* Header with Status Badge */}
@@ -163,7 +163,7 @@ function LostClientCard({ project, onRestore, onEdit, onDelete, onProjectUpdate,
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <h3 
-                  className="font-medium text-sm truncate cursor-pointer hover:text-blue-600 transition-colors text-gray-900 dark:text-gray-100"
+                  className="font-medium text-sm truncate cursor-pointer hover:text-primary transition-colors text-foreground"
                   onClick={handleCardClick}
                 >
                   {project.name}
@@ -173,7 +173,7 @@ function LostClientCard({ project, onRestore, onEdit, onDelete, onProjectUpdate,
                 </Badge>
               </div>
               {project.clients && (
-                <div className="flex items-center text-xs text-gray-600 dark:text-gray-400">
+                <div className="flex items-center text-xs text-muted-foreground">
                   <User className="w-3 h-3 mr-1" />
                   <span className="truncate">{project.clients.name}</span>
                 </div>
@@ -224,11 +224,11 @@ function LostClientCard({ project, onRestore, onEdit, onDelete, onProjectUpdate,
           {/* Budget */}
           {project.budget && (
             <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center text-gray-600 dark:text-gray-400">
+              <div className="flex items-center text-muted-foreground">
                 <DollarSign className="w-3 h-3 mr-1" />
                 <span>Budget</span>
               </div>
-              <span className="font-medium text-gray-900 dark:text-gray-100">
+              <span className="font-medium text-foreground">
                 {formatLargeNumber(project.budget || 0, getCurrencySymbol())}
               </span>
             </div>
@@ -238,8 +238,8 @@ function LostClientCard({ project, onRestore, onEdit, onDelete, onProjectUpdate,
           {project.deal_probability !== undefined && (
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-gray-600 dark:text-gray-400">Deal Probability</span>
-                <span className="font-medium text-gray-900 dark:text-gray-100">
+                <span className="text-muted-foreground">Deal Probability</span>
+                <span className="font-medium text-foreground">
                   {project.deal_probability}%
                 </span>
               </div>
@@ -252,7 +252,7 @@ function LostClientCard({ project, onRestore, onEdit, onDelete, onProjectUpdate,
 
           {/* Notes */}
           {project.pipeline_notes && (
-                      <div className="text-xs bg-gray-50 dark:bg-gray-800 p-2 rounded border text-gray-600 dark:text-gray-400">
+                      <div className="text-xs bg-muted p-2 rounded border text-muted-foreground">
             {project.pipeline_notes}
           </div>
         )}
@@ -637,10 +637,10 @@ export function PipelineBoard({
         <div className="flex gap-0 h-full max-h-full overflow-x-auto overflow-y-hidden relative">
           {/* Loading Overlay - Badge loader like tables */}
           {loading && (
-            <div className="absolute inset-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-background/95 backdrop-blur-sm z-50 flex items-center justify-center">
               <Badge 
                 variant="secondary" 
-                className="flex items-center gap-2 text-xs shadow-md border bg-white dark:bg-gray-800 dark:text-gray-200"
+                className="flex items-center gap-2 text-xs shadow-md border bg-background text-foreground"
               >
                 <Loader size="xs" variant="default" />
                 <span>Loading pipeline...</span>

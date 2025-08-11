@@ -148,7 +148,7 @@ export function ProjectFiltersV2({
             <Button
               variant="ghost"
               size="sm"
-              className="absolute right-1 top-0.5 h-6 w-6 p-0 hover:bg-gray-100"
+              className="absolute right-1 top-0.5 h-6 w-6 p-0 hover:bg-muted"
               onClick={() => updateSearch("")}
             >
               <X className="h-3 w-3" />
@@ -171,7 +171,7 @@ export function ProjectFiltersV2({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-8 border-dashed transition-colors text-sm font-normal text-muted-foreground hover:text-gray-800 dark:hover:text-gray-200 hover:border-gray-600 dark:hover:border-gray-400"
+                  className="h-8 border-dashed transition-colors text-sm font-normal text-muted-foreground hover:text-foreground hover:border-muted-foreground"
                 >
                   <Settings className="mr-1 h-3 w-3 text-muted-foreground" />
                   View
@@ -222,13 +222,13 @@ export function ProjectFiltersV2({
                   size="sm"
                   className={cn(
                     "h-8 border-dashed transition-colors text-sm font-normal text-muted-foreground",
-                    filters.status.length > 0 && "border-gray-600 dark:border-gray-400 bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"
+                    filters.status.length > 0 && "border-muted-foreground bg-muted text-muted-foreground"
                   )}
                 >
-                                      <CheckCircle className={cn("mr-1 h-3 w-3", filters.status.length > 0 ? "text-gray-600 dark:text-gray-400" : "text-muted-foreground")} />
+                                      <CheckCircle className={cn("mr-1 h-3 w-3", filters.status.length > 0 ? "text-muted-foreground" : "text-muted-foreground")} />
                   Status
                   {filters.status.length > 0 && (
-                      <Badge variant="secondary" className="ml-1 h-4 px-1 text-xs font-normal bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                      <Badge variant="secondary" className="ml-1 h-4 px-1 text-xs font-normal bg-muted text-muted-foreground">
                       {filters.status.length}
                     </Badge>
                   )}
@@ -267,13 +267,13 @@ export function ProjectFiltersV2({
                 size="sm"
                 className={cn(
                   "h-8 border-dashed transition-colors text-sm font-normal text-muted-foreground",
-                  filters.projectType.length > 0 && "border-gray-600 dark:border-gray-400 bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"
+                  filters.projectType.length > 0 && "border-muted-foreground bg-muted text-muted-foreground"
                 )}
               >
-                <Tag className={cn("mr-1 h-3 w-3", filters.projectType.length > 0 ? "text-gray-600 dark:text-gray-400" : "text-muted-foreground")} />
+                <Tag className={cn("mr-1 h-3 w-3", filters.projectType.length > 0 ? "text-muted-foreground" : "text-muted-foreground")} />
                 Type
                 {filters.projectType.length > 0 && (
-                  <Badge variant="secondary" className="ml-1 h-4 px-1 text-xs font-normal bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                  <Badge variant="secondary" className="ml-1 h-4 px-1 text-xs font-normal bg-muted text-muted-foreground">
                     {filters.projectType.length}
                   </Badge>
                 )}
@@ -311,13 +311,13 @@ export function ProjectFiltersV2({
                 size="sm"
                 className={cn(
                   "h-8 border-dashed transition-colors text-sm font-normal text-muted-foreground",
-                  filters.client.length > 0 && "border-gray-600 dark:border-gray-400 bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"
+                  filters.client.length > 0 && "border-muted-foreground bg-muted text-muted-foreground"
                 )}
               >
-                <Users className={cn("mr-1 h-3 w-3", filters.client.length > 0 ? "text-gray-600 dark:text-gray-400" : "text-muted-foreground")} />
+                <Users className={cn("mr-1 h-3 w-3", filters.client.length > 0 ? "text-muted-foreground" : "text-muted-foreground")} />
                 Client
                 {filters.client.length > 0 && (
-                  <Badge variant="secondary" className="ml-1 h-4 px-1 text-xs font-normal bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                  <Badge variant="secondary" className="ml-1 h-4 px-1 text-xs font-normal bg-muted text-muted-foreground">
                     {filters.client.length}
                   </Badge>
                 )}
@@ -362,10 +362,10 @@ export function ProjectFiltersV2({
                 size="sm"
                 className={cn(
                   "h-8 border-dashed transition-colors text-sm font-normal text-muted-foreground",
-                  filters.timePeriod && "border-gray-600 dark:border-gray-400 bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"
+                  filters.timePeriod && "border-muted-foreground bg-muted text-muted-foreground"
                 )}
               >
-                                  <Calendar className={cn("mr-1 h-3 w-3", filters.timePeriod ? "text-gray-600 dark:text-gray-400" : "text-muted-foreground")} />
+                                  <Calendar className={cn("mr-1 h-3 w-3", filters.timePeriod ? "text-muted-foreground" : "text-muted-foreground")} />
                 {filters.timePeriod ? getTimePeriodLabel(filters.timePeriod) : "Period"}
               </Button>
             </PopoverTrigger>
@@ -397,7 +397,7 @@ export function ProjectFiltersV2({
               variant="ghost"
               size="sm"
               onClick={clearFilters}
-              className="h-8 text-sm font-normal text-muted-foreground hover:text-gray-800 dark:hover:text-gray-200"
+              className="h-8 text-sm font-normal text-muted-foreground hover:text-foreground"
             >
               Clear all
             </Button>

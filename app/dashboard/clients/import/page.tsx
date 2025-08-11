@@ -409,10 +409,10 @@ export default function ClientImportPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
+                <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                 <div className="space-y-2">
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-muted-foreground">
                     Click to select a CSV file or drag and drop
                   </p>
                   <Input
@@ -427,8 +427,8 @@ export default function ClientImportPage() {
               
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-gray-400" />
-                  <span className="text-sm text-gray-600">Need a sample file?</span>
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Need a sample file?</span>
                 </div>
                 <Button variant="outline" size="sm" onClick={downloadSample}>
                   <Download className="mr-2 h-4 w-4" />
@@ -509,7 +509,7 @@ export default function ClientImportPage() {
                 </div>
                 <Progress value={progress} className="w-full" />
                 {currentOperation && (
-                  <div className="text-sm text-gray-600 mt-2 flex items-center gap-2">
+                  <div className="text-sm text-muted-foreground mt-2 flex items-center gap-2">
                     <Loader size="sm" variant="primary" />
                     {currentOperation}
                   </div>

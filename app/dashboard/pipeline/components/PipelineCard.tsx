@@ -111,10 +111,10 @@ export function PipelineCard({ project, onProjectUpdate, isDragging }: PipelineC
             style={isCardDragging ? undefined : style}
             className={`group cursor-grab transition-all border ${
               isCardDragging 
-                ? 'opacity-50 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 cursor-not-allowed shadow-lg' 
+                ? 'opacity-50 bg-background border-muted cursor-not-allowed shadow-lg' 
                 : isDragging 
-                  ? 'opacity-90 bg-white dark:bg-gray-800' 
-                  : 'bg-white dark:bg-gray-800'
+                  ? 'opacity-90 bg-background' 
+                  : 'bg-background'
             }`}
             {...listeners}
             {...attributes}
@@ -126,7 +126,7 @@ export function PipelineCard({ project, onProjectUpdate, isDragging }: PipelineC
               <div className="min-w-0 flex-1">
                 <h3 
                   className={`font-medium text-sm truncate ${
-                    isCardDragging ? 'text-gray-500' : 'text-gray-900'
+                    isCardDragging ? 'text-muted-foreground' : 'text-foreground'
                   }`}
                 >
                   <span 
@@ -137,7 +137,7 @@ export function PipelineCard({ project, onProjectUpdate, isDragging }: PipelineC
                   </span>
                 </h3>
                 {project.clients && (
-                  <div className="flex items-center text-xs text-gray-600 mt-1">
+                  <div className="flex items-center text-xs text-muted-foreground mt-1">
                     <User className="w-3 h-3 mr-1" />
                     <span className="truncate">{project.clients.name}</span>
                   </div>
@@ -181,12 +181,12 @@ export function PipelineCard({ project, onProjectUpdate, isDragging }: PipelineC
             {/* Budget / Potential Value */}
             {project.budget && (
               <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center text-gray-600">
+                <div className="flex items-center text-muted-foreground">
                   <DollarSign className="w-3 h-3 mr-1" />
                   <span>Budget</span>
                 </div>
                 <span className={`font-medium ${
-                  isCardDragging ? 'text-gray-500' : 'text-gray-900'
+                  isCardDragging ? 'text-muted-foreground' : 'text-foreground'
                 }`}>
                   {formatLargeNumber(project.budget, getCurrencySymbol(project.currency))}
                   {project.currency && project.currency !== 'USD' && (
@@ -203,9 +203,9 @@ export function PipelineCard({ project, onProjectUpdate, isDragging }: PipelineC
             {/* Deal Probability */}
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-gray-600">Deal Probability</span>
+                <span className="text-muted-foreground">Deal Probability</span>
                 <span className={`font-medium ${
-                  isCardDragging ? 'text-gray-500' : 'text-gray-900'
+                  isCardDragging ? 'text-muted-foreground' : 'text-foreground'
                 }`}>
                   {project.deal_probability}%
                 </span>
@@ -218,8 +218,8 @@ export function PipelineCard({ project, onProjectUpdate, isDragging }: PipelineC
 
             {/* Notes */}
             {project.pipeline_notes && (
-              <div className={`text-xs bg-gray-50/50 p-2 rounded border ${
-                isCardDragging ? 'text-gray-500' : 'text-gray-600'
+              <div className={`text-xs bg-muted/50 p-2 rounded border ${
+                isCardDragging ? 'text-muted-foreground' : 'text-muted-foreground'
               }`}>
                 {project.pipeline_notes}
               </div>

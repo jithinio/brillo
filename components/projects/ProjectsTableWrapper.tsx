@@ -1427,7 +1427,7 @@ export function ProjectsTableWrapper({
   }
 
   return (
-    <div className="w-full h-screen flex flex-col bg-gray-50/30 dark:bg-gray-950">
+    <div className="w-full h-screen flex flex-col bg-muted/30">
       {/* Resize Tooltip */}
       <AnimatePresence>
         {resizeTooltip && (
@@ -1436,7 +1436,7 @@ export function ProjectsTableWrapper({
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
             transition={{ duration: 0.1 }}
-            className="fixed z-50 px-2 py-1 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded shadow-lg pointer-events-none"
+            className="fixed z-50 px-2 py-1 bg-popover text-popover-foreground text-xs rounded shadow-lg pointer-events-none">
             style={{
               left: resizeTooltip.x - 20,
               top: resizeTooltip.y,
@@ -1483,25 +1483,25 @@ export function ProjectsTableWrapper({
         {/* Summary Cards */}
         {showSummaryCards && (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-0 w-full border-t border-gray-200 dark:border-gray-700">
-              <div className="px-6 py-4 border-r border-gray-200 dark:border-gray-700 last:border-r-0">
-                <div className="text-lg font-medium text-black dark:text-white">{summaryMetrics.totalProjects}</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-0 w-full border-t border-border">
+              <div className="px-6 py-4 border-r border-border last:border-r-0">
+                <div className="text-lg font-medium text-foreground">{summaryMetrics.totalProjects}</div>
                 <h3 className="text-xs font-medium text-muted-foreground mt-1">Total Projects</h3>
               </div>
-              <div className="px-6 py-4 border-r border-gray-200 dark:border-gray-700 last:border-r-0">
-                <div className="text-lg font-medium text-black dark:text-white">{summaryMetrics.activeProjects}</div>
+              <div className="px-6 py-4 border-r border-border last:border-r-0">
+                <div className="text-lg font-medium text-foreground">{summaryMetrics.activeProjects}</div>
                 <h3 className="text-xs font-medium text-muted-foreground mt-1">Active Projects</h3>
               </div>
-              <div className="px-6 py-4 border-r border-gray-200 dark:border-gray-700 last:border-r-0">
-                <div className="text-lg font-medium text-black dark:text-white">{formatCurrencyAbbreviated(summaryMetrics.totalReceived)}</div>
+              <div className="px-6 py-4 border-r border-border last:border-r-0">
+                <div className="text-lg font-medium text-foreground">{formatCurrencyAbbreviated(summaryMetrics.totalReceived)}</div>
                 <h3 className="text-xs font-medium text-muted-foreground mt-1">Total Received</h3>
               </div>
-              <div className="px-6 py-4 border-r border-gray-200 dark:border-gray-700 last:border-r-0">
-                <div className="text-lg font-medium text-black dark:text-white">{formatCurrencyAbbreviated(summaryMetrics.totalPending)}</div>
+              <div className="px-6 py-4 border-r border-border last:border-r-0">
+                <div className="text-lg font-medium text-foreground">{formatCurrencyAbbreviated(summaryMetrics.totalPending)}</div>
                 <h3 className="text-xs font-medium text-muted-foreground mt-1">Total Pending</h3>
               </div>
             </div>
-            <div className="border-b border-gray-200 dark:border-gray-700"></div>
+            <div className="border-b border-border"></div>
           </>
         )}
 

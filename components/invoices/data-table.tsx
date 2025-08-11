@@ -392,7 +392,7 @@ export function DataTable<TData, TValue>({
                             <ContextMenuItem 
                               onClick={() => contextActions.onStatusChange(row.original, 'draft')}
                             >
-                              <FileText className="mr-1.5 h-4 w-4 text-gray-600" />
+                              <FileText className="mr-1.5 h-4 w-4 text-muted-foreground" />
                               Draft
                             </ContextMenuItem>
                             <ContextMenuItem 

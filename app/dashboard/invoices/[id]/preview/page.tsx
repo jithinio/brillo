@@ -635,7 +635,7 @@ export default function InvoicePreviewPage() {
                   }}
                 />
               ) : (
-                <div className="shadow-lg rounded-lg overflow-hidden border bg-white">
+                <div className="shadow-lg rounded-lg overflow-hidden border bg-background">
                   <div className="p-8 text-center text-muted-foreground">
                     <Loader size="xl" variant="primary" className="mx-auto mb-4" />
                     Rendering invoice preview...
