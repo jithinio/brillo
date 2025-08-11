@@ -234,7 +234,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Client>[] {
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="h-auto p-0 font-medium"
+            className="h-auto p-0 font-normal"
           >
             Name
             <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
@@ -273,7 +273,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Client>[] {
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="h-auto p-0 font-medium"
+            className="h-auto p-0 font-normal"
           >
             Company
             <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
@@ -303,7 +303,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Client>[] {
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="h-auto p-0 font-medium"
+            className="h-auto p-0 font-normal"
           >
             Email
             <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
@@ -370,7 +370,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Client>[] {
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="h-auto p-0 font-medium"
+            className="h-auto p-0 font-normal"
           >
             Status
             <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
@@ -461,7 +461,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Client>[] {
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="h-auto p-0 font-medium"
+            className="h-auto p-0 font-normal"
           >
             Client Since
             <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />

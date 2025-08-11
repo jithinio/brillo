@@ -29,7 +29,7 @@ export function SortableHeader({
         <PopoverTrigger asChild>
           <Button
             variant="ghost"
-            className="h-auto p-0 font-medium text-sm hover:bg-transparent focus:outline-none flex items-center"
+            className="h-auto p-0 font-normal text-sm hover:bg-transparent focus:outline-none flex items-center"
             style={{ gap: '6px' }}
           >
             {Icon && (
@@ -43,7 +43,7 @@ export function SortableHeader({
                 }} 
               />
             )}
-            <span className="text-sm font-medium">{children}</span>
+            <span className="text-sm font-normal">{children}</span>
             {sortDirection && (
               <span className="ml-1">
                 {sortDirection === 'asc' ? '↑' : '↓'}

@@ -93,7 +93,7 @@ function ProjectTypeCell({ project }: { project: Project }) {
 
   return (
     <Badge variant="outline" className={`${config.color} border-0 ring-1 ring-inset text-sm font-normal`}>
-      <Icon className="w-3 h-3 mr-1.5" />
+      <Icon className="w-3 h-3 mr-1" />
       {config.label}
     </Badge>
   )
@@ -205,7 +205,7 @@ function SortableHeader({
         <PopoverTrigger asChild>
           <Button
             variant="ghost"
-            className="h-auto p-0 font-medium text-sm hover:bg-transparent focus:outline-none flex items-center"
+            className="h-auto p-0 font-normal text-sm hover:bg-transparent focus:outline-none flex items-center"
             style={{ gap: '6px' }}
           >
             <Icon 
@@ -217,7 +217,7 @@ function SortableHeader({
                 minHeight: '12px'
               }} 
             />
-            <span className="text-sm font-medium">{children}</span>
+            <span className="text-sm font-normal">{children}</span>
           </Button>
         </PopoverTrigger>
         <PopoverContent 
@@ -425,7 +425,7 @@ function StatusCell({ project, actions }: { project: Project; actions: ColumnAct
       <Popover open={isOpen} onOpenChange={setIsOpen}>
         <PopoverTrigger asChild>
           <Badge variant={config.variant} className="cursor-pointer hover:bg-slate-100 transition-colors font-normal text-sm focus:outline-none focus-visible:outline-none whitespace-nowrap min-w-fit">
-            <Icon className={`mr-1.5 h-3 w-3 ${config.iconClassName} flex-shrink-0`} />
+            <Icon className={`mr-1 h-3 w-3 ${config.iconClassName} flex-shrink-0`} />
             <span className="whitespace-nowrap">{config.label}</span>
           </Badge>
         </PopoverTrigger>

@@ -348,7 +348,7 @@ function FinalDataTableComponent({
                 {columns.map((column: any, colIndex: number) => (
                   <div
                     key={`header-${column.id || colIndex}`}
-                    className={`flex-shrink-0 px-3 font-medium text-gray-700 dark:text-gray-300 text-sm flex items-center gap-2 select-none h-11 relative group ${(column.accessorKey || column.id) !== 'select' ? 'border-r border-gray-200/80 dark:border-gray-700/80' : ''}`}
+                    className={`flex-shrink-0 px-3 font-normal text-muted-foreground text-sm flex items-center gap-2 select-none h-11 relative group ${(column.accessorKey || column.id) !== 'select' ? 'border-r border-gray-200/80 dark:border-gray-700/80' : ''}`}
                     style={{ 
                       width: column.size ? `${column.size}px` : 'auto',
                       minWidth: column.minSize ? `${column.minSize}px` : 'auto',

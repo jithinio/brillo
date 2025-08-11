@@ -305,7 +305,7 @@ function GenericDataTableComponent<T extends GenericEntity>({
                 {columns.map((column: any, colIndex: number) => (
                   <div
                     key={column.id || colIndex}
-                    className={`px-3 text-sm font-medium text-gray-700 dark:text-gray-300 flex-shrink-0 flex items-center h-11 relative group ${
+                    className={`px-3 text-sm font-normal text-muted-foreground flex-shrink-0 flex items-center h-11 relative group ${
                       (column.accessorKey || column.id) !== 'select' ? 'border-r border-gray-200/80 dark:border-gray-700/80' : ''
                     }`}
                     style={{ 

@@ -153,7 +153,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="h-auto p-0 font-medium"
+            className="h-auto p-0 font-normal"
           >
             Invoice #
             <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
@@ -188,7 +188,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="h-auto p-0 font-medium"
+            className="h-auto p-0 font-normal"
           >
             Client
             <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
@@ -253,7 +253,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="h-auto p-0 font-medium"
+            className="h-auto p-0 font-normal"
           >
             Status
             <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
@@ -274,7 +274,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
           <div className="min-w-[100px]">
             <Badge 
               variant={config.variant}
-              className="text-zinc-700 font-medium"
+              className="text-zinc-700 font-normal text-sm"
             >
               <Icon className={`mr-1.5 h-3 w-3 ${config.iconClassName}`} />
               {config.label}
@@ -292,7 +292,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="h-auto p-0 font-medium"
+            className="h-auto p-0 font-normal"
           >
             Amount
             <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
@@ -337,7 +337,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="h-auto p-0 font-medium"
+            className="h-auto p-0 font-normal"
           >
             Issue Date
             <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -369,7 +369,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="h-auto p-0 font-medium"
+            className="h-auto p-0 font-normal"
           >
             Due Date
             <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
@@ -416,7 +416,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="h-auto p-0 font-medium"
+            className="h-auto p-0 font-normal"
           >
             Created
             <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />

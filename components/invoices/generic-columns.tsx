@@ -224,7 +224,7 @@ export function createInvoiceColumns(columnConfig: InvoiceColumnConfig): ColumnD
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Badge variant={config.variant} className="flex items-center space-x-1 cursor-pointer">
+              <Badge variant={config.variant} className="flex items-center space-x-1 cursor-pointer font-normal text-sm">
                 <Icon className={`h-3 w-3 ${config.iconClassName}`} />
                 <span>{config.label}</span>
               </Badge>
