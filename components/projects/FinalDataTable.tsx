@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { motion, AnimatePresence } from "framer-motion"
+
 import { Badge } from "@/components/ui/badge"
 import { Loader } from "@/components/ui/loader"
 import { Button } from "@/components/ui/button"
@@ -30,6 +30,17 @@ import {
 import { toast } from "sonner"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { formatCurrencyAbbreviated } from "../../lib/currency-utils"
+
+// Position constants for floating indicators
+const BADGE_POSITION = {
+  bottom: '24px',
+  right: '24px'
+}
+
+const LOADER_POSITION = {
+  bottom: '24px',
+  right: '24px'
+}
 
 // Custom scrollbar styles with performance optimizations
 const scrollbarStyles = `
@@ -281,19 +292,9 @@ function FinalDataTableComponent({
       <style dangerouslySetInnerHTML={{ __html: scrollbarStyles }} />
       
       {/* Floating Batch Selection Toolbar */}
-      <AnimatePresence>
-        {selectedProjects.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 8, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.98 }}
-            transition={{ 
-              type: "spring", 
-              duration: 0.08, 
-              stiffness: 500, 
-              damping: 20 
-            }}
-            className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50 pointer-events-auto"
+      {selectedProjects.length > 0 && (
+        <div
+          className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50 pointer-events-auto"
           >
             <div className="flex items-center gap-3 px-4 py-2.5 bg-background border border-border rounded-full shadow-lg backdrop-blur-sm">
               <span className="text-sm font-medium text-foreground">
@@ -320,9 +321,8 @@ function FinalDataTableComponent({
                 </Button>
               </div>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+        </div>
+      )}
 
       {/* Table Container with div-based sticky structure */}
       <div ref={tableRef} className="flex-1 overflow-auto relative border-l border-border custom-scrollbar table-container">
@@ -331,10 +331,10 @@ function FinalDataTableComponent({
           <div className="absolute inset-0 bg-background/95 backdrop-blur-sm z-50 flex items-center justify-center">
             <Badge 
               variant="secondary" 
-              className="flex items-center gap-2 h-4 px-1 text-xs font-normal bg-muted text-muted-foreground"
+              className="flex items-center gap-2 text-xs shadow-md border bg-background text-foreground"
             >
               <Loader size="xs" variant="default" />
-              <span>Loading...</span>
+              <span>Loading projects...</span>
             </Badge>
           </div>
         )}
@@ -407,14 +407,7 @@ function FinalDataTableComponent({
                   {projects.map((project: any, index: number) => (
                     <ContextMenu key={project.id}>
                       <ContextMenuTrigger asChild>
-                        <motion.div
-                          className={`flex hover:bg-muted/50 transition-colors group cursor-default h-11 ${
-                            index === projects.length - 1 ? 'border-b-0' : 'border-b border-border'
-                          }`}
-                          initial={{ opacity: 0, y: 5 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.15, delay: Math.min(index * 0.01, 0.3) }}
-                        >
+                        <div className="flex hover:bg-muted/50 transition-colors group cursor-default h-11 border-b border-border">
                           {columns.map((column: any, colIndex: number) => (
                             <div
                               key={`${project.id}-${column.id || colIndex}`}
@@ -448,7 +441,7 @@ function FinalDataTableComponent({
                               }
                             </div>
                           ))}
-                        </motion.div>
+                        </div>
                       </ContextMenuTrigger>
                       <ContextMenuContent className="w-48">
                         <ContextMenuItem onClick={() => onEditProject(project)}>
@@ -544,33 +537,11 @@ function FinalDataTableComponent({
                       </ContextMenuContent>
                     </ContextMenu>
                   ))}
-                  
-                  {/* Infinite Scroll Loading Indicator */}
-                  {/* Fixed positioned smooth loading indicator */}
-                  <AnimatePresence>
-                    {isFetchingNextPage && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 10 }}
-                        transition={{ duration: 0.2, ease: "easeOut" }}
-                        className="absolute bottom-16 left-1/2 transform -translate-x-1/2 z-30 pointer-events-none"
-                      >
-                        <Badge 
-                          variant="secondary" 
-                          className="flex items-center gap-2 text-xs shadow-lg border bg-background/95 infinite-scroll-loader"
-                        >
-                          <Loader size="xs" variant="default" />
-                          <span>Loading more projects...</span>
-                        </Badge>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                  
-                  {/* Subtle end indicator without layout shift - only show after pagination */}
+
+                  {/* All loaded indicator - positioned relative to table end */}
                   {!hasNextPage && projects.length > 0 && !isFetchingNextPage && hasLoadedNextPage && (
-                    <div className="h-0 relative">
-                      <div className="absolute left-1/2 transform -translate-x-1/2 z-10" style={{ top: '6px' }}>
+                                            <div className="h-12 relative">
+                      <div className="absolute z-10" style={BADGE_POSITION}>
                         <Badge 
                           variant="outline" 
                           className="flex items-center gap-1 text-xs bg-background/80 backdrop-blur-sm border-border/50"
@@ -583,7 +554,7 @@ function FinalDataTableComponent({
                   )}
 
                   {/* Invisible spacer for proper scrolling detection - only when needed */}
-                  {(hasNextPage || isFetchingNextPage || hasLoadedNextPage) && (
+                  {(hasNextPage || isFetchingNextPage) && (
                     <div className="h-8 w-full" data-table-body />
                   )}
                 </>
@@ -609,13 +580,27 @@ function FinalDataTableComponent({
               </div>
             </div>
 
-            {/* Spacer to ensure footer has proper positioning space - only when needed */}
-            {(hasNextPage || isFetchingNextPage || hasLoadedNextPage) && (
-              <div style={{ height: '1px', minHeight: '1px' }} />
-            )}
+
           </div>
         </div>
+
       </div>
+
+      {/* Loading and completion indicators */}
+      {isFetchingNextPage && (
+        <div
+          className="fixed z-50 pointer-events-none"
+          style={LOADER_POSITION}
+        >
+          <Badge 
+            variant="secondary" 
+            className="flex items-center gap-2 text-xs shadow-lg border bg-background/95"
+          >
+            <Loader size="xs" variant="default" />
+            <span>Loading more projects...</span>
+          </Badge>
+        </div>
+      )}
     </div>
   )
 }

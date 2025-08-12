@@ -17,6 +17,7 @@ import { ChevronDown, Search, Settings2, Edit, FileText, Trash2, CheckCircle, Cl
 
 import { Button } from "@/components/ui/button"
 import { Loader } from "@/components/ui/loader"
+import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   DropdownMenu,
@@ -206,10 +207,13 @@ export function DataTable<TData, TValue>({ columns, data, onAddProject, onBatchD
     return (
       <div className="w-full max-w-full space-y-4">
         <div className="h-96 flex items-center justify-center">
-          <div className="text-center">
-            <Loader size="lg" variant="primary" className="mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">Loading table preferences...</p>
-          </div>
+          <Badge 
+            variant="secondary" 
+            className="flex items-center gap-2 text-xs shadow-md border bg-background text-foreground"
+          >
+            <Loader size="xs" variant="default" />
+            <span>Loading table preferences...</span>
+          </Badge>
         </div>
       </div>
     )

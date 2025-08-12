@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { motion, AnimatePresence } from "framer-motion"
+
 import { Badge } from "@/components/ui/badge"
 import { Loader } from "@/components/ui/loader"
 import { Button } from "@/components/ui/button"
@@ -19,6 +19,17 @@ import {
 import { toast } from "sonner"
 import { formatCurrencyAbbreviated } from "@/lib/currency-utils"
 import { GenericEntity, GenericTableProps, TableFeatures } from "./types"
+
+// Position constants for floating indicators
+const BADGE_POSITION = {
+  bottom: '24px',
+  right: '24px'
+}
+
+const LOADER_POSITION = {
+  bottom: '24px',
+  right: '24px'
+}
 
 // Import the same scrollbar styles from FinalDataTable
 const scrollbarStyles = `
@@ -233,22 +244,9 @@ function GenericDataTableComponent<T extends GenericEntity>({
       <style dangerouslySetInnerHTML={{ __html: scrollbarStyles }} />
       
       {/* Batch Selection Toolbar */}
-      {enabledFeatures.batchOperations && (
-        <AnimatePresence>
-          {selectedItems.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 8, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 8, scale: 0.98 }}
-              transition={{ 
-                type: "spring", 
-                duration: 0.08, 
-                stiffness: 500, 
-                damping: 20 
-              }}
-              className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50 pointer-events-auto"
-            >
-              <div className="flex items-center gap-3 px-4 py-2.5 bg-background border border-border rounded-full shadow-lg backdrop-blur-sm">
+      {enabledFeatures.batchOperations && selectedItems.length > 0 && (
+        <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50 pointer-events-auto">
+          <div className="flex items-center gap-3 px-4 py-2.5 bg-background border border-border rounded-full shadow-lg backdrop-blur-sm">
                 <span className="text-sm font-medium text-foreground">
                   {selectedItems.length} selected
                 </span>
@@ -274,10 +272,8 @@ function GenericDataTableComponent<T extends GenericEntity>({
                     </Button>
                   )}
                 </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+          </div>
+        </div>
       )}
 
       {/* Table Container */}
@@ -369,14 +365,7 @@ function GenericDataTableComponent<T extends GenericEntity>({
                   {data.map((item: T, index: number) => (
                     <ContextMenu key={item.id}>
                       <ContextMenuTrigger asChild>
-                        <motion.div
-                          className={`flex hover:bg-muted/50 transition-colors group cursor-default h-11 ${
-                            index === data.length - 1 ? 'border-b-0' : 'border-b border-border'
-                          }`}
-                          initial={{ opacity: 0, y: 5 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.15, delay: Math.min(index * 0.01, 0.3) }}
-                        >
+                        <div className="flex hover:bg-muted/50 transition-colors group cursor-default h-11 border-b border-border">
                           {columns.map((column: any, colIndex: number) => (
                             <div
                               key={`${item.id}-${column.id || colIndex}`}
@@ -406,7 +395,7 @@ function GenericDataTableComponent<T extends GenericEntity>({
                                   : column.accessorKey ? item[column.accessorKey] : null}
                             </div>
                           ))}
-                        </motion.div>
+                        </div>
                       </ContextMenuTrigger>
                       
                       {/* Context Menu */}
@@ -518,31 +507,11 @@ function GenericDataTableComponent<T extends GenericEntity>({
                   {/* Infinite Scroll Indicators */}
                   {enabledFeatures.infiniteScroll && (
                     <>
-                      {/* Fixed positioned smooth loading indicator */}
-                      <AnimatePresence>
-                        {isFetchingNextPage && (
-                          <motion.div
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 10 }}
-                            transition={{ duration: 0.2, ease: "easeOut" }}
-                            className="absolute bottom-16 left-1/2 transform -translate-x-1/2 z-30 pointer-events-none"
-                          >
-                            <Badge 
-                              variant="secondary" 
-                              className="flex items-center gap-2 text-xs shadow-lg border bg-background/95 infinite-scroll-loader"
-                            >
-                              <Loader size="xs" variant="default" />
-                              <span>Loading more {entityType}...</span>
-                            </Badge>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
                       
-                      {/* Subtle end indicator without layout shift */}
+                      {/* All loaded indicator - positioned relative to table end */}
                       {!hasNextPage && data.length > 0 && !isFetchingNextPage && (
-                        <div className="h-0 relative">
-                          <div className="absolute left-1/2 transform -translate-x-1/2 z-10" style={{ top: '6px' }}>
+                        <div className="h-12 relative">
+                          <div className="absolute z-10" style={BADGE_POSITION}>
                             <Badge 
                               variant="outline" 
                               className="flex items-center gap-1 text-xs bg-background/80 backdrop-blur-sm border-border/50"
@@ -554,8 +523,10 @@ function GenericDataTableComponent<T extends GenericEntity>({
                         </div>
                       )}
 
-                      {/* Invisible spacer for proper scrolling detection */}
-                      <div className="h-8 w-full" data-table-body />
+                      {/* Invisible spacer for proper scrolling detection - only when needed */}
+                      {(hasNextPage || isFetchingNextPage) && (
+                        <div className="h-8 w-full" data-table-body />
+                      )}
                     </>
                   )}
                 </>
@@ -600,7 +571,24 @@ function GenericDataTableComponent<T extends GenericEntity>({
             )}
           </div>
         </div>
+
       </div>
+
+      {/* Loading and completion indicators */}
+      {enabledFeatures.infiniteScroll && isFetchingNextPage && (
+        <div
+          className="fixed z-50 pointer-events-none"
+          style={LOADER_POSITION}
+        >
+          <Badge 
+            variant="secondary" 
+            className="flex items-center gap-2 text-xs shadow-lg border bg-background/95"
+          >
+            <Loader size="xs" variant="default" />
+            <span>Loading more {entityType}...</span>
+          </Badge>
+        </div>
+      )}
     </div>
   )
 }

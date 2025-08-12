@@ -1560,25 +1560,42 @@ export default function CustomizeInvoicePage() {
                       className="grid grid-cols-2 gap-3"
                     >
                       {invoiceTemplates.map((tmpl) => (
-                        <div key={tmpl.id}>
+                        <div key={tmpl.id} className="relative">
+                          <RadioGroupItem
+                            value={tmpl.id}
+                            id={tmpl.id}
+                            className="sr-only"
+                          />
                           <Label
                             htmlFor={tmpl.id}
-                          className={cn(
-                              "flex cursor-pointer flex-col rounded-lg border-2 p-4 transition-all hover:shadow-md hover:border-primary/50",
-                            template.templateId === tmpl.id
-                              ? "border-primary bg-primary/5 shadow-sm"
+                            className={cn(
+                              "block cursor-pointer rounded-lg border-2 p-4 transition-all hover:shadow-md hover:border-primary/50 relative",
+                              template.templateId === tmpl.id
+                                ? "border-primary bg-primary/5 shadow-sm"
                                 : "border-border"
-                          )}
-                        >
-                          <div className="flex items-center justify-between mb-1">
-                            <h3 className="font-medium text-sm">{tmpl.name}</h3>
-                              <RadioGroupItem
-                                value={tmpl.id}
-                                id={tmpl.id}
-                                className="h-4 w-4"
-                              />
-                    </div>
-                            <p className="text-xs text-muted-foreground">{tmpl.description}</p>
+                            )}
+                          >
+                            {/* Radio button at top-left */}
+                            <div className="flex items-start gap-3">
+                              <div 
+                                className={cn(
+                                  "h-4 w-4 rounded-full border-2 transition-all flex-shrink-0 mt-0.5",
+                                  template.templateId === tmpl.id
+                                    ? "border-primary bg-primary"
+                                    : "border-input bg-transparent"
+                                )}
+                              >
+                                {template.templateId === tmpl.id && (
+                                  <div className="h-full w-full rounded-full bg-white scale-50 transform" />
+                                )}
+                              </div>
+                              
+                              {/* Title and description stacked vertically */}
+                              <div className="flex flex-col space-y-1">
+                                <h3 className="font-medium text-sm">{tmpl.name}</h3>
+                                <p className="text-xs text-muted-foreground">{tmpl.description}</p>
+                              </div>
+                            </div>
                           </Label>
                         </div>
                       ))}
