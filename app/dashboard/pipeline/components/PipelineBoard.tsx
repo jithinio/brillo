@@ -648,20 +648,34 @@ export function PipelineBoard({
             </div>
           )}
 
-          {/* Render stage columns */}
-          {columns.length > 0 && (
-            columns.map((column) => (
-              <PipelineColumn
-                key={column.id}
-                column={column}
-                onProjectUpdate={onProjectUpdate}
-                isDragging={isDragging}
-              />
-            ))
-          )}
-          
-          {/* Closed Column - always at the end */}
-          <ClosedColumn isDragging={isDragging} onShowLostClients={handleShowLostClients} />
+          {/* Render stage columns or empty state */}
+          {columns.length > 0 ? (
+            <>
+              {columns.map((column) => (
+                <PipelineColumn
+                  key={column.id}
+                  column={column}
+                  onProjectUpdate={onProjectUpdate}
+                  isDragging={isDragging}
+                />
+              ))}
+              
+              {/* Closed Column - only show when we have stages */}
+              <ClosedColumn isDragging={isDragging} onShowLostClients={handleShowLostClients} />
+            </>
+          ) : !loading ? (
+            <div className="flex-1 flex items-center justify-center p-8">
+              <div className="text-center space-y-4">
+                <div className="text-lg font-medium text-foreground">Setting up your pipeline...</div>
+                <div className="text-sm text-muted-foreground max-w-md">
+                  We're creating your default pipeline stages. This should just take a moment.
+                </div>
+                <div className="flex justify-center">
+                  <Loader size="sm" variant="primary" />
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <DragOverlay dropAnimation={null}>

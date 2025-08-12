@@ -13,9 +13,79 @@ export async function fetchPipelineStages(): Promise<PipelineStage[]> {
       return []
     }
 
+    // If no stages found, initialize default stages for new user
+    if (!data || data.length === 0) {
+      console.log('No pipeline stages found, initializing defaults')
+      const defaultStages = await initializeDefaultPipelineStages()
+      return defaultStages
+    }
+
     return data || []
   } catch (error) {
     console.error('Error fetching pipeline stages:', error)
+    return []
+  }
+}
+
+async function initializeDefaultPipelineStages(): Promise<PipelineStage[]> {
+  try {
+    // Get current user
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    
+    if (userError || !user) {
+      console.error('Error getting user for pipeline initialization:', userError)
+      return []
+    }
+
+    // Default pipeline stages for new users
+    const defaultStages = [
+      {
+        user_id: user.id,
+        name: 'Lead',
+        order_index: 1,
+        color: '#3b82f6', // Blue
+        default_probability: 10
+      },
+      {
+        user_id: user.id,
+        name: 'Qualified',
+        order_index: 2,
+        color: '#8b5cf6', // Purple
+        default_probability: 25
+      },
+      {
+        user_id: user.id,
+        name: 'Proposal',
+        order_index: 3,
+        color: '#f59e0b', // Amber
+        default_probability: 50
+      },
+      {
+        user_id: user.id,
+        name: 'Negotiation',
+        order_index: 4,
+        color: '#10b981', // Emerald
+        default_probability: 75
+      }
+    ]
+
+    console.log('Creating default pipeline stages for user:', user.id)
+    
+    const { data, error } = await supabase
+      .from('pipeline_stages')
+      .insert(defaultStages)
+      .select('*')
+      .order('order_index', { ascending: true })
+
+    if (error) {
+      console.error('Error creating default pipeline stages:', error)
+      return []
+    }
+
+    console.log('Default pipeline stages created successfully:', data?.length)
+    return data || []
+  } catch (error) {
+    console.error('Error initializing default pipeline stages:', error)
     return []
   }
 }

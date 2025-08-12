@@ -50,8 +50,28 @@ export default function PipelinePage() {
       setProjects(projectsData)
       setStages(stagesData)
       
-      // Calculate metrics after loading data
-      await calculateMetrics(projectsData, stagesData)
+      // If stages were just initialized (new user), the data might be empty
+      // We need to refresh after a short delay to see the newly created stages
+      if (stagesData.length === 0) {
+        console.log('No stages found, will retry loading in 1 second...')
+        setTimeout(async () => {
+          try {
+            const [retryProjectsData, retryStagesData] = await Promise.all([
+              fetchPipelineProjects(),
+              fetchPipelineStages()
+            ])
+            
+            setProjects(retryProjectsData)
+            setStages(retryStagesData)
+            await calculateMetrics(retryProjectsData, retryStagesData)
+          } catch (retryError) {
+            console.error('Error on retry loading pipeline data:', retryError)
+          }
+        }, 1000)
+      } else {
+        // Calculate metrics after loading data
+        await calculateMetrics(projectsData, stagesData)
+      }
     } catch (error) {
       console.error('Error loading pipeline data:', error)
     } finally {
