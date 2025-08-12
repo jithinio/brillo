@@ -408,7 +408,9 @@ function FinalDataTableComponent({
                     <ContextMenu key={project.id}>
                       <ContextMenuTrigger asChild>
                         <motion.div
-                          className="flex border-b border-border hover:bg-muted/50 transition-colors group cursor-default h-11"
+                          className={`flex hover:bg-muted/50 transition-colors group cursor-default h-11 ${
+                            index === projects.length - 1 ? 'border-b-0' : 'border-b border-border'
+                          }`}
                           initial={{ opacity: 0, y: 5 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ duration: 0.15, delay: Math.min(index * 0.01, 0.3) }}
@@ -589,7 +591,7 @@ function FinalDataTableComponent({
             </div>
 
             {/* Sticky Footer with Aggregations */}
-            <div className="sticky-footer bg-background border-t border-border h-11 shadow-sm">
+            <div className="sticky-footer bg-background border-t border-b border-border h-11">
               <div className="flex h-full" style={{ width: `${tableWidth}px` }}>
                 {columns.map((column: any, colIndex: number) => (
                   <div
