@@ -65,22 +65,22 @@ const statusConfig = {
   active: {
     label: "Active",
     variant: "outline" as const,
-    iconClassName: "text-green-500",
+    iconClassName: "text-blue-500",
   },
   completed: {
     label: "Completed",
     variant: "outline" as const,
-    iconClassName: "text-blue-500",
+    iconClassName: "text-green-500",
   },
   on_hold: {
     label: "On Hold",
     variant: "outline" as const,
-    iconClassName: "text-yellow-500",
+    iconClassName: "text-amber-500",
   },
   cancelled: {
     label: "Cancelled",
     variant: "outline" as const,
-    iconClassName: "text-muted-foreground",
+    iconClassName: "text-rose-500",
   },
 }
 
@@ -89,13 +89,13 @@ const clientStatusConfig = {
     label: "Active",
     icon: CheckCircle,
     variant: "outline" as const,
-    iconClassName: "text-green-500",
+    iconClassName: "text-blue-500",
   },
   pipeline: {
     label: "Pipeline",
     icon: GitBranch,
     variant: "outline" as const,
-    iconClassName: "text-purple-500",
+    iconClassName: "text-sky-500",
   },
   closed: {
     label: "Closed",

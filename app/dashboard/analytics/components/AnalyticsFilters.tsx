@@ -386,7 +386,7 @@ export function AnalyticsFilters({
         <div className="flex items-center gap-1 flex-wrap">
           {/* Client Badges - Only show when specific clients are selected */}
           {filters.clientIds && filters.clientIds.length > 0 && selectedClients.map((client) => (
-            <Badge key={client.id} variant="secondary" className="h-6 px-2 text-xs">
+            <Badge key={client.id} variant="secondary" className="h-4 px-1 text-xs font-normal bg-muted text-muted-foreground">
               {client.name}
               <Button
                 variant="ghost"
@@ -401,7 +401,7 @@ export function AnalyticsFilters({
 
           {/* Status Badges - Only show when specific statuses are selected */}
           {filters.projectStatuses && filters.projectStatuses.length > 0 && selectedStatuses.map((status) => (
-            <Badge key={status.value} variant="secondary" className="h-6 px-2 text-xs">
+            <Badge key={status.value} variant="secondary" className="h-4 px-1 text-xs font-normal bg-muted text-muted-foreground">
               {status.label}
               <Button
                 variant="ghost"
@@ -416,7 +416,7 @@ export function AnalyticsFilters({
 
           {/* Date Range Badge - Only show when custom date range is set */}
           {filters.dateRange && (
-            <Badge variant="secondary" className="h-6 px-2 text-xs">
+            <Badge variant="secondary" className="h-4 px-1 text-xs font-normal bg-muted text-muted-foreground">
               {formatDate(filters.dateRange.start)} - {formatDate(filters.dateRange.end)}
               <Button
                 variant="ghost"

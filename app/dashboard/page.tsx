@@ -579,7 +579,7 @@ const MetricCard = ({
       <div className="flex items-center justify-between">
         <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
         <Select value={period} onValueChange={onPeriodChange}>
-          <SelectTrigger className="h-7 text-xs min-w-0 w-auto rounded-lg shadow-xs border-muted">
+          <SelectTrigger className="h-8 border-dashed transition-colors text-sm font-normal text-muted-foreground min-w-0 w-auto">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -780,7 +780,7 @@ const RevenueChart = ({
         </CardTitle>
         <div className="flex items-center gap-2">
           <Select value={type} onValueChange={onTypeChange}>
-            <SelectTrigger className="h-7 text-xs min-w-0 w-auto rounded-lg shadow-xs border-muted">
+            <SelectTrigger className="h-8 border-dashed transition-colors text-sm font-normal text-muted-foreground min-w-0 w-auto">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -789,7 +789,7 @@ const RevenueChart = ({
             </SelectContent>
           </Select>
           <Select value={period} onValueChange={onPeriodChange}>
-            <SelectTrigger className="h-7 text-xs min-w-0 w-auto rounded-lg shadow-xs border-muted">
+            <SelectTrigger className="h-8 border-dashed transition-colors text-sm font-normal text-muted-foreground min-w-0 w-auto">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -916,7 +916,7 @@ const YearlyBarChart = ({
           Yearly {type === 'revenue' ? 'Revenue' : 'Expenses'}
         </CardTitle>
         <Select value={type} onValueChange={onTypeChange}>
-          <SelectTrigger className="h-7 text-xs min-w-0 w-auto rounded-lg shadow-xs border-muted">
+          <SelectTrigger className="h-8 border-dashed transition-colors text-sm font-normal text-muted-foreground min-w-0 w-auto">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

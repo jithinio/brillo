@@ -331,7 +331,7 @@ function FinalDataTableComponent({
           <div className="absolute inset-0 bg-background/95 backdrop-blur-sm z-50 flex items-center justify-center">
             <Badge 
               variant="secondary" 
-              className="flex items-center gap-2 text-xs shadow-md border bg-background text-foreground"
+              className="flex items-center gap-2 h-4 px-1 text-xs font-normal bg-muted text-muted-foreground"
             >
               <Loader size="xs" variant="default" />
               <span>Loading...</span>
@@ -475,31 +475,31 @@ function FinalDataTableComponent({
                             <ContextMenuItem onClick={() => {
                               updateStatus({ id: project.id, status: 'active' })
                             }}>
-                              <Clock className="mr-2 h-4 w-4 text-green-500" />
+                              <Clock className="mr-2 h-4 w-4 text-blue-500" />
                               Active
                             </ContextMenuItem>
                             <ContextMenuItem onClick={() => {
                               updateStatus({ id: project.id, status: 'completed' })
                             }}>
-                              <CheckCircle className="mr-2 h-4 w-4 text-blue-500" />
+                              <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
                               Completed
                             </ContextMenuItem>
                             <ContextMenuItem onClick={() => {
                               updateStatus({ id: project.id, status: 'on_hold' })
                             }}>
-                              <Pause className="mr-2 h-4 w-4 text-yellow-500" />
+                              <Pause className="mr-2 h-4 w-4 text-amber-500" />
                               On Hold
                             </ContextMenuItem>
                             <ContextMenuItem onClick={() => {
                               updateStatus({ id: project.id, status: 'cancelled' })
                             }}>
-                              <XCircle className="mr-2 h-4 w-4 text-red-500" />
+                              <XCircle className="mr-2 h-4 w-4 text-rose-500" />
                               Cancelled
                             </ContextMenuItem>
                             <ContextMenuItem onClick={() => {
                               updateStatus({ id: project.id, status: 'pipeline' })
                             }}>
-                              <GitBranch className="mr-2 h-4 w-4 text-purple-500" />
+                              <GitBranch className="mr-2 h-4 w-4 text-sky-500" />
                               Pipeline
                             </ContextMenuItem>
                             <ContextMenuItem onClick={() => {

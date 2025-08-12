@@ -85,12 +85,8 @@ export function ChatWidgets() {
               </div>
               <div className="flex items-center gap-2">
                 <Badge 
-                  variant={revenue.trend === 'up' ? 'default' : 'secondary'}
-                  className={cn(
-                    "h-5",
-                    revenue.trend === 'up' && "bg-green-100 text-green-700 hover:bg-green-100",
-                    revenue.trend === 'down' && "bg-red-100 text-red-700 hover:bg-red-100"
-                  )}
+                  variant="secondary"
+                  className="h-4 px-1 text-xs font-normal bg-muted text-muted-foreground"
                 >
                   {revenue.trend === 'up' ? (
                     <TrendingUp className="h-3 w-3 mr-1" />
@@ -128,12 +124,12 @@ export function ChatWidgets() {
                 {formatCurrency(payments.amount, payments.currency)}
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className="h-5">
+                <Badge variant="secondary" className="h-4 px-1 text-xs font-normal bg-muted text-muted-foreground">
                   <Clock className="h-3 w-3 mr-1" />
                   {payments.dueCount} due
                 </Badge>
                 {payments.overdueCount > 0 && (
-                  <Badge variant="destructive" className="h-5">
+                  <Badge variant="secondary" className="h-4 px-1 text-xs font-normal bg-muted text-muted-foreground">
                     {payments.overdueCount} overdue
                   </Badge>
                 )}
@@ -166,7 +162,7 @@ export function ChatWidgets() {
                 {formatCurrency(pipeline.totalValue, pipeline.currency)}
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant="secondary" className="h-5">
+                <Badge variant="secondary" className="h-4 px-1 text-xs font-normal bg-muted text-muted-foreground">
                   <Users className="h-3 w-3 mr-1" />
                   {pipeline.activeDeals} deals
                 </Badge>

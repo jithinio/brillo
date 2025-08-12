@@ -391,31 +391,31 @@ export function DataTable<TData, TValue>({ columns, data, onAddProject, onBatchD
                             <ContextMenuItem 
                               onClick={() => contextActions.onStatusChange(row.original, 'active')}
                             >
-                              <Clock className="mr-1.5 h-4 w-4 text-green-600" />
+                              <Clock className="mr-1.5 h-4 w-4 text-blue-500" />
                               Active
                             </ContextMenuItem>
                             <ContextMenuItem 
                               onClick={() => contextActions.onStatusChange(row.original, 'completed')}
                             >
-                              <CheckCircle className="mr-1.5 h-4 w-4 text-blue-600" />
+                              <CheckCircle className="mr-1.5 h-4 w-4 text-green-500" />
                               Completed
                             </ContextMenuItem>
                             <ContextMenuItem 
                               onClick={() => contextActions.onStatusChange(row.original, 'on_hold')}
                             >
-                              <Pause className="mr-1.5 h-4 w-4 text-yellow-600" />
+                              <Pause className="mr-1.5 h-4 w-4 text-amber-500" />
                               On Hold
                             </ContextMenuItem>
                             <ContextMenuItem 
                               onClick={() => contextActions.onStatusChange(row.original, 'cancelled')}
                             >
-                              <XCircle className="mr-1.5 h-4 w-4 text-red-600" />
+                              <XCircle className="mr-1.5 h-4 w-4 text-rose-500" />
                               Cancelled
                             </ContextMenuItem>
                             <ContextMenuItem 
                               onClick={() => contextActions.onStatusChange(row.original, 'due')}
                             >
-                              <Clock className="mr-1.5 h-4 w-4 text-orange-600" />
+                              <Clock className="mr-1.5 h-4 w-4 text-orange-500" />
                               Due
                             </ContextMenuItem>
                           </ContextMenuSubContent>

@@ -83,7 +83,8 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     planId: string
   }>({ data: null, timestamp: 0, userId: '', planId: '' })
   
-  const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes cache
+  const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes cache for free users
+  const PRO_CACHE_DURATION = 24 * 60 * 60 * 1000 // 24 hours cache for pro users (more stable)
   const USAGE_CACHE_DURATION = 2 * 60 * 1000 // 2 minutes cache for usage (shorter since it changes more)
 
   // Listen for logout events to clear subscription cache
@@ -146,8 +147,13 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     // Return cached subscription if available
     if (subscriptionCache.data && subscriptionCache.userId === user?.id) {
       const cacheAge = Date.now() - subscriptionCache.timestamp
-      if (cacheAge < CACHE_DURATION) {
-        return subscriptionCache.data.planId
+      const cachedPlanId = subscriptionCache.data.planId
+      
+      // Use different cache durations: pro users get longer cache
+      const effectiveCacheDuration = isProPlan(cachedPlanId) ? PRO_CACHE_DURATION : CACHE_DURATION
+      
+      if (cacheAge < effectiveCacheDuration) {
+        return cachedPlanId
       }
     }
     
@@ -212,12 +218,17 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     if (!user || hasCheckedInitialCache) return false
     
     const now = Date.now()
+    const cachedPlanId = subscriptionCache.data?.planId
+    
+    // Use different cache durations: pro users get longer cache
+    const effectiveCacheDuration = isProPlan(cachedPlanId) ? PRO_CACHE_DURATION : CACHE_DURATION
+    
     const isCacheValid = subscriptionCache.data && 
       subscriptionCache.userId === user.id &&
-      (now - subscriptionCache.timestamp) < CACHE_DURATION
+      (now - subscriptionCache.timestamp) < effectiveCacheDuration
 
     if (isCacheValid && subscriptionCache.data) {
-      console.log('🚀 Using initial cached subscription data (instant load)')
+      console.log(`🚀 Using initial cached subscription data (instant load) - ${isProPlan(cachedPlanId) ? 'Pro user' : 'Free user'} cache`)
       trackCacheHit()
       setSubscription(subscriptionCache.data)
       setIsLoading(false) // Set loading false immediately for cached data
@@ -252,13 +263,18 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
 
     // Check cache first (unless force refresh)
     const now = Date.now()
+    const cachedPlanId = subscriptionCache.data?.planId
+    
+    // Use different cache durations: pro users get longer cache
+    const effectiveCacheDuration = isProPlan(cachedPlanId) ? PRO_CACHE_DURATION : CACHE_DURATION
+    
     const isCacheValid = !force && 
       subscriptionCache.data && 
       subscriptionCache.userId === user.id &&
-      (now - subscriptionCache.timestamp) < CACHE_DURATION
+      (now - subscriptionCache.timestamp) < effectiveCacheDuration
 
     if (isCacheValid && subscriptionCache.data) {
-      console.log('🎯 Using cached subscription data')
+      console.log(`🎯 Using cached subscription data - ${isProPlan(cachedPlanId) ? 'Pro user' : 'Free user'} cache`)
       trackCacheHit()
       setSubscription(subscriptionCache.data)
       await updateUsageLimits(subscriptionCache.data.planId)
@@ -610,14 +626,19 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
         if (saved) {
           const parsed = JSON.parse(saved)
           const age = Date.now() - parsed.timestamp
-          // Only use cache if less than 5 minutes old
-          if (age < 5 * 60 * 1000) {
+          const cachedPlanId = parsed.data?.planId
+          
+          // Use different cache durations: pro users get longer cache
+          const effectiveCacheDuration = isProPlan(cachedPlanId) ? PRO_CACHE_DURATION : CACHE_DURATION
+          
+          // Only use cache if still valid
+          if (age < effectiveCacheDuration) {
             setSubscriptionCache(parsed)
             
             // INSTANT CSS-based hiding: Set html attribute immediately
-            if (isProPlan(parsed.data?.planId)) {
+            if (isProPlan(cachedPlanId)) {
               document.documentElement.setAttribute('data-user-plan', 'pro')
-              console.log('🚀 Instant pro user detection - CSS hiding activated')
+              console.log('🚀 Instant pro user detection - CSS hiding activated (24h cache)')
             } else {
               document.documentElement.setAttribute('data-user-plan', 'free')
             }

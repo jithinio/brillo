@@ -91,8 +91,20 @@ const ProFeatureGateComponent = ({
 
   // 🚀 ZERO LOADING for known pro users - completely skip all loading states
   // Also handle pre-mount state to prevent hydration mismatch
-  if (!hasMounted || (isLoading && !isKnownProUser)) {
-    // Only show loading for non-pro users during initial load
+  // Additional check: if user has any pro subscription in localStorage, never show loading
+  const hasProInLocalStorage = hasMounted && typeof window !== 'undefined' && (() => {
+    try {
+      const saved = localStorage.getItem('brillo-subscription-cache')
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        return parsed.data?.planId === 'pro_monthly' || parsed.data?.planId === 'pro_yearly'
+      }
+    } catch (e) {}
+    return false
+  })()
+
+  if (!hasMounted || (isLoading && !isKnownProUser && !hasProInLocalStorage)) {
+    // Only show loading for definitively non-pro users during initial load
     return (
       <div className={cn("w-full flex items-center justify-center min-h-[calc(100vh-4rem)] p-8", className)}>
         <Card className="border-dashed border-2 border-muted-foreground/20 bg-muted/10 w-full max-w-[400px]">

@@ -123,7 +123,7 @@ const MetricCard = ({
           </div>
           {period && onPeriodChange && periodOptions && (
             <Select value={period} onValueChange={onPeriodChange}>
-              <SelectTrigger className="h-7 text-xs min-w-0 w-auto rounded-lg shadow-xs border-muted">
+              <SelectTrigger className="h-8 border-dashed transition-colors text-sm font-normal text-muted-foreground min-w-0 w-auto">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

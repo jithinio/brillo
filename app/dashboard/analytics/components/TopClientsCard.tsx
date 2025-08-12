@@ -92,7 +92,7 @@ export function TopClientsCard({
               {title}
             </CardTitle>
           </div>
-          <Badge variant="secondary" className="text-xs">
+          <Badge variant="secondary" className="h-4 px-1 text-xs font-normal bg-muted text-muted-foreground">
             {displayClients.length} clients
           </Badge>
         </div>

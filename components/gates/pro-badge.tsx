@@ -86,9 +86,9 @@ export function ProBadge({
       case 'default':
         return 'bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 hover:from-amber-600 hover:to-orange-600'
       case 'outline':
-        return 'border-amber-500 text-amber-600 bg-transparent hover:bg-amber-50'
+        return 'border-amber-500 text-amber-600 bg-transparent hover:bg-amber-50 dark:border-amber-400 dark:text-amber-400 dark:hover:bg-amber-950/20'
       case 'minimal':
-        return 'bg-amber-100 text-amber-700 border-0 hover:bg-amber-200'
+        return 'bg-amber-100 text-amber-700 border-0 hover:bg-amber-200 dark:bg-amber-950/30 dark:text-amber-300 dark:hover:bg-amber-950/50'
       default:
         return 'bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0'
     }

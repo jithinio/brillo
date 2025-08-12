@@ -65,25 +65,25 @@ function ProjectTypeCell({ project }: { project: Project }) {
         return {
           icon: DollarSign,
           label: 'Fixed',
-          color: 'bg-emerald-50 text-emerald-800 ring-emerald-700/20'
+          color: 'bg-emerald-50 text-emerald-800 ring-emerald-700/20 dark:bg-emerald-950/30 dark:text-emerald-300 dark:ring-emerald-800/30'
         }
       case 'recurring':
         return {
           icon: Repeat,
           label: 'Recurring',
-          color: 'bg-sky-50 text-sky-800 ring-sky-700/20'
+          color: 'bg-sky-50 text-sky-800 ring-sky-700/20 dark:bg-sky-950/30 dark:text-sky-300 dark:ring-sky-800/30'
         }
       case 'hourly':
         return {
           icon: Timer,
           label: 'Hourly',
-          color: 'bg-violet-50 text-violet-800 ring-violet-700/20'
+          color: 'bg-violet-50 text-violet-800 ring-violet-700/20 dark:bg-violet-950/30 dark:text-violet-300 dark:ring-violet-800/30'
         }
       default:
         return {
           icon: DollarSign,
           label: 'Fixed',
-          color: 'bg-slate-50 text-slate-800 ring-slate-700/20'
+          color: 'bg-slate-50 text-slate-800 ring-slate-700/20 dark:bg-slate-800/30 dark:text-slate-300 dark:ring-slate-700/30'
         }
     }
   }
@@ -136,37 +136,37 @@ const statusConfig = {
     label: "Active",
     icon: Clock,
     variant: "outline" as const,
-    iconClassName: "text-emerald-600",
+    iconClassName: "text-blue-500",
   },
   completed: {
     label: "Completed",
     icon: CheckCircle,
     variant: "outline" as const,
-    iconClassName: "text-slate-600",
+    iconClassName: "text-green-500",
   },
   on_hold: {
     label: "On Hold",
     icon: Pause,
     variant: "outline" as const,
-    iconClassName: "text-amber-600",
+    iconClassName: "text-amber-500",
   },
   cancelled: {
     label: "Cancelled",
     icon: XCircle,
     variant: "outline" as const,
-    iconClassName: "text-rose-600",
+    iconClassName: "text-rose-500",
   },
   pipeline: {
     label: "Pipeline",
     icon: GitBranch,
     variant: "outline" as const,
-    iconClassName: "text-sky-600",
+    iconClassName: "text-sky-500",
   },
   due: {
     label: "Due",
     icon: Clock,
     variant: "outline" as const,
-    iconClassName: "text-orange-600",
+    iconClassName: "text-orange-500",
   },
 }
 
@@ -438,7 +438,7 @@ function StatusCell({ project, actions }: { project: Project; actions: ColumnAct
               onClick={() => handleStatusChange('active')}
               disabled={project.status === 'active'}
             >
-              <Clock className="mr-2 h-3 w-3 text-green-500 flex-shrink-0" />
+              <Clock className="mr-2 h-3 w-3 text-blue-500 flex-shrink-0" />
               <span className="whitespace-nowrap">Active</span>
             </Button>
             <Button
@@ -448,7 +448,7 @@ function StatusCell({ project, actions }: { project: Project; actions: ColumnAct
               onClick={() => handleStatusChange('completed')}
               disabled={project.status === 'completed'}
             >
-              <CheckCircle className="mr-2 h-3 w-3 text-blue-500 flex-shrink-0" />
+              <CheckCircle className="mr-2 h-3 w-3 text-green-500 flex-shrink-0" />
               <span className="whitespace-nowrap">Completed</span>
             </Button>
             <Button
@@ -458,7 +458,7 @@ function StatusCell({ project, actions }: { project: Project; actions: ColumnAct
               onClick={() => handleStatusChange('on_hold')}
               disabled={project.status === 'on_hold'}
             >
-              <Pause className="mr-2 h-3 w-3 text-yellow-500 flex-shrink-0" />
+              <Pause className="mr-2 h-3 w-3 text-amber-500 flex-shrink-0" />
               <span className="whitespace-nowrap">On Hold</span>
             </Button>
             <Button
@@ -468,7 +468,7 @@ function StatusCell({ project, actions }: { project: Project; actions: ColumnAct
               onClick={() => handleStatusChange('cancelled')}
               disabled={project.status === 'cancelled'}
             >
-              <XCircle className="mr-2 h-3 w-3 text-red-500 flex-shrink-0" />
+              <XCircle className="mr-2 h-3 w-3 text-rose-500 flex-shrink-0" />
               <span className="whitespace-nowrap">Cancelled</span>
             </Button>
             <Button
