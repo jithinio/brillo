@@ -166,7 +166,7 @@ export default function AnalyticsPage() {
 
   return (
     <AdvancedAnalyticsGate>
-      <div className="w-full h-screen flex flex-col bg-muted/30">
+      <div className="w-full h-screen flex flex-col">
       {/* Page Header - Not sticky */}
       <PageHeader
         title="Analytics"

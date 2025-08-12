@@ -89,12 +89,12 @@ html[data-user-plan="pro"] .pro-element-badge {
   --secondary-foreground: oklch(0.4268 0.0090 132.5173);
   --muted: oklch(0.9868 0.0028 128.4921);
   --muted-foreground: oklch(0.5875 0.0115 131.4371);
-  --accent: oklch(0.9424 0.0074 132.4168);
+  --accent: oklch(0.9549 0.0013 106.4243);
   --accent-foreground: oklch(0.1617 0.0044 128.7697);
   --destructive: oklch(0.6368 0.2078 25.3313);
   --destructive-foreground: oklch(0.9868 0.0028 128.4921);
   --border: oklch(0.9344 0.0057 128.5289);
-  --input: oklch(1.0000 0 0);
+  --input: oklch(0.9344 0.0057 128.5289);
   --ring: oklch(0.7559 0.0104 125.7276);
   --chart-1: oklch(0.6495 0.2199 36.4948);
   --chart-2: oklch(0.6019 0.1066 184.1028);
@@ -135,7 +135,7 @@ html[data-user-plan="pro"] .pro-element-badge {
   --primary: oklch(0.8305 0.1687 134.5390);
   --primary-foreground: oklch(0.1617 0.0044 128.7697);
   --secondary: oklch(0.2419 0.0082 169.6131);
-  --secondary-foreground: oklch(0.9911 0 0);
+  --secondary-foreground: oklch(0.9418 0.0029 128.4940);
   --muted: oklch(0.2829 0.0056 121.8103);
   --muted-foreground: oklch(0.6246 0.0113 131.4246);
   --accent: oklch(0.2826 0.0101 151.4572);

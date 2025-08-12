@@ -542,7 +542,7 @@ export function GenericTableWrapper<T extends GenericEntity>({
   }, [searchQuery, timePeriod, relationship, onFiltersChange])
 
   return (
-    <div className={cn("w-full h-screen flex flex-col bg-muted/30", className)}>
+    <div className={cn("w-full h-screen flex flex-col", className)}>
       <AnimatePresence>
         {resizeTooltip && (
           <motion.div

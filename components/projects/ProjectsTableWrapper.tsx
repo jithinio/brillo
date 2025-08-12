@@ -1427,7 +1427,7 @@ export function ProjectsTableWrapper({
   }
 
   return (
-    <div className="w-full h-screen flex flex-col bg-muted/30">
+    <div className="w-full h-screen flex flex-col">
       {/* Resize Tooltip */}
       <AnimatePresence>
         {resizeTooltip && (
