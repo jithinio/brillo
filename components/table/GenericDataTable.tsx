@@ -278,8 +278,8 @@ function GenericDataTableComponent<T extends GenericEntity>({
 
       {/* Table Container */}
       <div ref={tableRef} className="flex-1 overflow-auto relative border-l border-border custom-scrollbar table-container">
-        {/* Loading Overlay - Only show for initial loads, not refetches */}
-        {(preferencesLoading || !preferencesLoaded || (isLoading && !hasLoadedOnce && data.length === 0)) && (
+        {/* Loading Overlay - Only show for preferences loading, not for data loading since we have skeleton rows */}
+        {(preferencesLoading || !preferencesLoaded) && (
           <div className="absolute inset-0 bg-background/95 backdrop-blur-sm z-50 flex items-center justify-center">
             <Badge 
               variant="secondary" 
@@ -356,7 +356,34 @@ function GenericDataTableComponent<T extends GenericEntity>({
 
             {/* Table Body */}
             <div className="bg-background relative" data-table-body>
-              {data.length === 0 ? (
+              {/* Show skeleton rows during initial loading to prevent layout shift */}
+              {(isLoading && !hasLoadedOnce && data.length === 0) ? (
+                <>
+                  {Array.from({ length: 10 }).map((_, index) => (
+                    <div key={`skeleton-${index}`} className="flex h-11 border-b border-border animate-pulse">
+                      {columns.map((column: any, colIndex: number) => (
+                        <div
+                          key={`skeleton-${index}-${column.id || colIndex}`}
+                          className={`px-3 flex-shrink-0 flex items-center h-11 ${
+                            (column.accessorKey || column.id) !== 'select' ? 'border-r border-border' : ''
+                          }`}
+                          style={{ 
+                            width: column.size ? `${column.size}px` : 'auto',
+                            minWidth: column.minSize ? `${column.minSize}px` : 'auto',
+                            maxWidth: column.maxSize ? `${column.maxSize}px` : 'auto'
+                          }}
+                        >
+                          {(column.accessorKey || column.id) === 'select' ? (
+                            <div className="w-4 h-4 bg-muted rounded" />
+                          ) : (
+                            <div className="h-4 bg-muted rounded w-full max-w-[80%]" />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </>
+              ) : data.length === 0 ? (
                 <div className="p-12 text-center">
                   <div className="text-muted-foreground">No {entityType} found.</div>
                 </div>
