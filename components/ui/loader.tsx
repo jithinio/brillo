@@ -18,10 +18,10 @@ const sizeClasses = {
 }
 
 const variantClasses = {
-  default: "text-gray-400 dark:text-gray-500",
+  default: "text-muted-foreground",
   primary: "text-primary",
   muted: "text-muted-foreground",
-  light: "text-gray-300 dark:text-gray-600"
+  light: "text-muted-foreground/60"
 }
 
 function Loader({ 

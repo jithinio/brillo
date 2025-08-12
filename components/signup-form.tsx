@@ -193,7 +193,7 @@ export function SignupForm({ className, ...props }: React.ComponentProps<"div">)
                   </div>
                 </div>
                 {error && <div className="text-sm text-destructive">{error}</div>}
-                {success && <div className="text-sm text-green-600">{success}</div>}
+                {success && <div className="text-sm text-green-600 dark:text-green-400">{success}</div>}
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? "Creating account..." : "Create account"}
                 </Button>

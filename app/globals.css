@@ -430,3 +430,139 @@ code:not([class*="language-"]), pre:not([class*="language-"]) {
 .dark .chat-widget:hover {
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
 }
+
+/* Input autofill styling overrides - Enhanced */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+input:-webkit-autofill:valid,
+input:-webkit-autofill:focus-visible,
+input[data-slot="input"]:-webkit-autofill,
+input[data-slot="input"]:-webkit-autofill:hover,
+input[data-slot="input"]:-webkit-autofill:focus,
+input[data-slot="input"]:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px oklch(var(--background)) inset !important;
+  -webkit-text-fill-color: oklch(var(--foreground)) !important;
+  box-shadow: 0 0 0 1000px oklch(var(--background)) inset !important;
+  color: oklch(var(--foreground)) !important;
+  background-color: oklch(var(--background)) !important;
+  background-image: none !important;
+  border-color: oklch(var(--border)) !important;
+  transition: background-color 5000s ease-in-out 0s, color 5000s ease-in-out 0s !important;
+  caret-color: oklch(var(--foreground)) !important;
+}
+
+/* Dark mode autofill overrides - Enhanced */
+.dark input:-webkit-autofill,
+.dark input:-webkit-autofill:hover,
+.dark input:-webkit-autofill:focus,
+.dark input:-webkit-autofill:active,
+.dark input:-webkit-autofill:valid,
+.dark input:-webkit-autofill:focus-visible,
+.dark input[data-slot="input"]:-webkit-autofill,
+.dark input[data-slot="input"]:-webkit-autofill:hover,
+.dark input[data-slot="input"]:-webkit-autofill:focus,
+.dark input[data-slot="input"]:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px oklch(var(--background)) inset !important;
+  -webkit-text-fill-color: oklch(var(--foreground)) !important;
+  box-shadow: 0 0 0 1000px oklch(var(--background)) inset !important;
+  color: oklch(var(--foreground)) !important;
+  background-color: oklch(var(--background)) !important;
+  background-image: none !important;
+  border-color: oklch(var(--border)) !important;
+  caret-color: oklch(var(--foreground)) !important;
+}
+
+/* Input focus ring styling */
+input:focus-visible {
+  outline: none;
+  border-color: oklch(var(--ring)) !important;
+  box-shadow: 0 0 0 3px oklch(var(--ring) / 0.5) !important;
+}
+
+/* Ensure consistent styling for form inputs */
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="text"]:focus {
+  background-color: oklch(var(--background)) !important;
+  color: oklch(var(--foreground)) !important;
+  border-color: oklch(var(--ring)) !important;
+}
+
+/* Additional autofill overrides for stubborn browsers */
+input[type="email"]:-webkit-autofill,
+input[type="password"]:-webkit-autofill,
+input[type="text"]:-webkit-autofill,
+input[autocomplete]:-webkit-autofill,
+input[autocomplete="email"]:-webkit-autofill,
+input[autocomplete="current-password"]:-webkit-autofill,
+input[autocomplete="new-password"]:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px oklch(var(--background)) inset !important;
+  -webkit-text-fill-color: oklch(var(--foreground)) !important;
+  background-color: oklch(var(--background)) !important;
+  background-image: none !important;
+  color: oklch(var(--foreground)) !important;
+}
+
+/* Force override any autofill background */
+*:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px oklch(var(--background)) inset !important;
+  -webkit-text-fill-color: oklch(var(--foreground)) !important;
+}
+
+.dark *:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px oklch(var(--background)) inset !important;
+  -webkit-text-fill-color: oklch(var(--foreground)) !important;
+}
+
+/* Simple autofill overrides */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px oklch(var(--background)) inset !important;
+  -webkit-text-fill-color: oklch(var(--foreground)) !important;
+  background-color: oklch(var(--background)) !important;
+  color: oklch(var(--foreground)) !important;
+}
+
+/* Dark mode autofill overrides */
+.dark input:-webkit-autofill,
+.dark input:-webkit-autofill:hover,
+.dark input:-webkit-autofill:focus,
+.dark input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px oklch(var(--background)) inset !important;
+  -webkit-text-fill-color: oklch(var(--foreground)) !important;
+  background-color: oklch(var(--background)) !important;
+  color: oklch(var(--foreground)) !important;
+}
+
+/* 1Password theme detection override - Force correct colors regardless of 1Password's theme detection */
+input[data-com-onepassword-filled="light"],
+input[data-com-onepassword-filled="dark"],
+input[data-com-onepassword-filled] {
+  background-color: oklch(var(--background)) !important;
+  background: oklch(var(--background)) !important;
+  background-image: none !important;
+  color: oklch(var(--foreground)) !important;
+  -webkit-text-fill-color: oklch(var(--foreground)) !important;
+  -webkit-box-shadow: 0 0 0 1000px oklch(var(--background)) inset !important;
+  box-shadow: inset 0 0 0 1000px oklch(var(--background)) !important;
+}
+
+/* Dark mode - Force override 1Password's light theme detection */
+.dark input[data-com-onepassword-filled="light"],
+.dark input[data-com-onepassword-filled="dark"],
+.dark input[data-com-onepassword-filled] {
+  background-color: oklch(var(--background)) !important;
+  background: oklch(var(--background)) !important;
+  background-image: none !important;
+  color: oklch(var(--foreground)) !important;
+  -webkit-text-fill-color: oklch(var(--foreground)) !important;
+  -webkit-box-shadow: 0 0 0 1000px oklch(var(--background)) inset !important;
+  box-shadow: inset 0 0 0 1000px oklch(var(--background)) !important;
+  border-color: oklch(var(--border)) !important;
+}
+
+

@@ -35,12 +35,12 @@ export function NavUser() {
       <SidebarMenu>
         <SidebarMenuItem>
           <SidebarMenuButton size="lg" className="border border-border opacity-60">
-            <div className="h-8 w-8 rounded-lg bg-gray-200 animate-pulse" />
+            <div className="h-8 w-8 rounded-lg bg-muted animate-pulse" />
             <div className="grid flex-1 text-left text-sm leading-tight">
-              <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
-              <div className="h-3 w-32 bg-gray-200 rounded animate-pulse mt-1" />
+              <div className="h-4 w-24 bg-muted rounded animate-pulse" />
+              <div className="h-3 w-32 bg-muted rounded animate-pulse mt-1" />
             </div>
-            <div className="ml-auto h-4 w-4 bg-gray-200 rounded animate-pulse" />
+            <div className="ml-auto h-4 w-4 bg-muted rounded animate-pulse" />
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>

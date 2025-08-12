@@ -276,7 +276,7 @@ export default function PricingPage() {
                     <div className="pt-4 border-t space-y-2">
                       {plan.limitations.map((limitation, index) => (
                         <div key={index} className="flex items-center gap-3 text-sm text-muted-foreground">
-                          <div className="w-5 h-5 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                          <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center">
                             <span className="text-xs">×</span>
                           </div>
                           {limitation}
