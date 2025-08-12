@@ -1283,9 +1283,9 @@ export default function GenerateInvoicePage() {
       // Get company information from settings
       let companyInfo = {
         companyName: settings.companyName || "Your Company",
-        companyAddress: "123 Business St\nCity, State 12345\nUnited States",
-        companyEmail: "contact@yourcompany.com", 
-        companyPhone: "+1 (555) 123-4567",
+        companyAddress: settings.companyAddress || "123 Business St\nCity, State 12345\nUnited States",
+        companyEmail: settings.companyEmail || "contact@yourcompany.com", 
+        companyPhone: settings.companyPhone || "+1 (555) 123-4567",
       }
 
       // Load company info from settings

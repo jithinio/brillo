@@ -156,10 +156,10 @@ export default function InvoicePreviewPage() {
     // Get company info from settings or localStorage
     let companyInfo = {
       companyName: settings.companyName || 'Your Company',
-      companyAddress: '123 Business St\nCity, State 12345',
-      companyEmail: 'contact@yourcompany.com',
-      companyPhone: '+1 (555) 123-4567',
-      companyTaxId: '',
+      companyAddress: settings.companyAddress || '123 Business St\nCity, State 12345',
+      companyEmail: settings.companyEmail || 'contact@yourcompany.com',
+      companyPhone: settings.companyPhone || '+1 (555) 123-4567',
+      companyTaxId: settings.companyRegistration || settings.taxId || '',
       logoUrl: settings.companyLogo || ''
     }
     

@@ -170,11 +170,11 @@ export default function CustomizeInvoicePage() {
     // Use settings provider data
     const updatedCompanyInfo = {
       name: settings.companyName || 'Your Company',
-      email: companyInfo.email,
-      phone: companyInfo.phone,
-      address: companyInfo.address,
-      website: companyInfo.website,
-      taxId: companyInfo.taxId
+      email: settings.companyEmail || companyInfo.email,
+      phone: settings.companyPhone || companyInfo.phone,
+      address: settings.companyAddress || companyInfo.address,
+      website: settings.companyWebsite || companyInfo.website,
+      taxId: settings.companyRegistration || settings.taxId || companyInfo.taxId
     }
 
     // Load from localStorage if available (from settings page)
@@ -194,7 +194,7 @@ export default function CustomizeInvoicePage() {
     }
 
     setCompanyInfo(updatedCompanyInfo)
-  }, [settings.companyName])
+  }, [settings.companyName, settings.companyEmail, settings.companyPhone, settings.companyAddress, settings.companyWebsite, settings.companyRegistration, settings.taxId])
 
   const invoiceData = {
     number: 'INV-2024-001',
