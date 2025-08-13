@@ -82,7 +82,7 @@ async function handleSubscriptionCreated(subscription: any) {
       })
       .eq('id', userId)
 
-    logger.subscriptionLog('Subscription created', { userId, planId, subscriptionId: subscription.id })
+    logger.info('Subscription created', { userId, planId, subscriptionId: subscription.id }, 'SUBSCRIPTION')
   } catch (error) {
     logger.error('Error handling subscription created', error)
     throw error
@@ -120,11 +120,11 @@ async function handleSubscriptionUpdated(subscription: any) {
       })
       .eq('id', subscription.metadata.userId)
 
-    logger.subscriptionLog('Subscription updated', { 
+    logger.info('Subscription updated', { 
       userId: subscription.metadata.userId, 
       planId, 
       status: subscription.status 
-    })
+    }, 'SUBSCRIPTION')
   } catch (error) {
     logger.error('Error handling subscription updated', error)
     throw error
@@ -158,10 +158,10 @@ async function handleSubscriptionCanceled(subscription: any) {
       })
       .eq('id', subscription.metadata.userId)
 
-    logger.subscriptionLog('Subscription canceled', { 
+    logger.info('Subscription canceled', { 
       userId: subscription.metadata.userId,
       subscriptionId: subscription.id 
-    })
+    }, 'SUBSCRIPTION')
   } catch (error) {
     logger.error('Error handling subscription canceled', error)
     throw error
@@ -240,12 +240,12 @@ async function handleCustomerStateChanged(data: any) {
         })
         .eq('id', userId)
       
-      logger.subscriptionLog('Customer state updated with active subscription', { 
+      logger.info('Customer state updated with active subscription', { 
         userId, 
         customerId,
         planId,
         subscriptionId: subscription.id
-      })
+      }, 'SUBSCRIPTION')
     } else {
       // No active subscriptions - set to free
       await supabase
@@ -261,10 +261,10 @@ async function handleCustomerStateChanged(data: any) {
         })
         .eq('id', userId)
       
-      logger.subscriptionLog('Customer state updated - no active subscription', { 
+      logger.info('Customer state updated - no active subscription', { 
         userId, 
         customerId
-      })
+      }, 'SUBSCRIPTION')
     }
   } catch (error) {
     logger.error('Error handling customer state change', error)

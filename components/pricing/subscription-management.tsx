@@ -62,9 +62,10 @@ export function SubscriptionManagement() {
 
         if (data.portalUrl) {
           toast.success('Opening billing portal...')
-          // For Polar, we need to pass the auth token
+          // For Polar, we need to pass the auth token as a query parameter
           if (provider === 'polar') {
-            window.location.href = data.portalUrl + '?token=' + encodeURIComponent(session.access_token)
+            const portalUrlWithToken = data.portalUrl + '?token=' + encodeURIComponent(session.access_token)
+            window.open(portalUrlWithToken, '_blank')
           } else {
             window.open(data.portalUrl, '_blank')
           }

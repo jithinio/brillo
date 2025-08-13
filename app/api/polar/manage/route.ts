@@ -77,10 +77,10 @@ async function handleCancelSubscription(profile: any, polar: any) {
       })
       .eq('id', profile.id)
 
-    logger.subscriptionLog('Subscription set to cancel', { 
+    logger.info('Subscription set to cancel', { 
       userId: profile.id,
       subscriptionId: profile.polar_subscription_id 
-    })
+    }, 'SUBSCRIPTION')
 
     return NextResponse.json({ 
       success: true,
@@ -139,10 +139,10 @@ async function handleResumeSubscription(profile: any, polar: any) {
       })
       .eq('id', profile.id)
 
-    logger.subscriptionLog('Subscription resumed', { 
+    logger.info('Subscription resumed', { 
       userId: profile.id,
       subscriptionId: profile.polar_subscription_id 
-    })
+    }, 'SUBSCRIPTION')
 
     return NextResponse.json({ 
       success: true,

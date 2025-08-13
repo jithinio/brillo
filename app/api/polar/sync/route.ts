@@ -97,11 +97,11 @@ export async function POST(request: NextRequest) {
           })
           .eq('id', userId)
 
-        logger.subscriptionLog('Subscription synced from Polar', { 
+        logger.info('Subscription synced from Polar', { 
           userId, 
           planId,
           status: polarSubscription.status
-        })
+        }, 'SUBSCRIPTION')
 
         return NextResponse.json({ 
           success: true,

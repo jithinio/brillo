@@ -9,13 +9,22 @@ export const GET = CustomerPortal({
   server: POLAR_CONFIG.sandbox ? "sandbox" : "production",
   
   getCustomerId: async (req: NextRequest) => {
-    // Get the authorization header
+    // Get the token from either query parameter or authorization header
+    const { searchParams } = new URL(req.url)
+    const queryToken = searchParams.get('token')
     const authHeader = req.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new Error('No authorization token provided')
+    
+    let token: string | null = null
+    
+    if (queryToken) {
+      token = queryToken
+    } else if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.replace('Bearer ', '')
     }
     
-    const token = authHeader.replace('Bearer ', '')
+    if (!token) {
+      throw new Error('No authorization token provided')
+    }
     
     // Create Supabase client
     const supabase = createClient(
