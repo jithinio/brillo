@@ -97,23 +97,51 @@ async function handleCancelSubscription(profile: any, polar: any) {
 }
 
 async function handleCustomerPortal(profile: any, polar: any) {
-  if (!profile.polar_customer_id) {
-    return NextResponse.json({ error: 'No customer found' }, { status: 404 })
-  }
-
   try {
-    // With the NextJS adapter, we'll redirect to the portal endpoint
-    const baseUrl = process.env.NEXT_PUBLIC_URL || process.env.VERCEL_URL || 'http://localhost:3000'
-    const portalUrl = `${baseUrl}/api/polar/portal`
+    // Check if user has a polar_customer_id
+    if (!profile.polar_customer_id) {
+      logger.warn('No Polar customer ID found for user', { userId: profile.id })
+      
+      // Try to find the customer by email as fallback
+      const { data: { user: authUser } } = await supabase.auth.admin.getUserById(profile.id)
+      
+      if (!authUser?.email) {
+        return NextResponse.json({ 
+          error: 'No customer account found. Please contact support.',
+          details: 'No customer ID or email found for portal access.'
+        }, { status: 404 })
+      }
+      
+      // For now, if no customer ID exists, return a helpful error
+      return NextResponse.json({ 
+        error: 'No customer account found',
+        details: 'You need to have an active subscription to access the billing portal. Please contact support if you believe this is an error.',
+        suggestion: 'Try syncing your subscription data first from the Settings page.'
+      }, { status: 404 })
+    }
 
-    return NextResponse.json({ portalUrl })
+    // Use the NextJS adapter portal endpoint with proper customer ID
+    const baseUrl = process.env.NEXT_PUBLIC_URL || process.env.VERCEL_URL || 'http://localhost:3000'
+    const portalUrl = `${baseUrl}/api/polar/portal?customer_id=${encodeURIComponent(profile.polar_customer_id)}`
+    
+    logger.info('Generated portal URL for customer', { 
+      userId: profile.id, 
+      customerId: profile.polar_customer_id,
+      portalUrl 
+    })
+
+    return NextResponse.json({ 
+      portalUrl,
+      message: 'Opening billing portal...',
+      success: true 
+    })
 
   } catch (error) {
     logger.error('Failed to create portal session:', error)
-    return NextResponse.json(
-      { error: 'Failed to create portal session' },
-      { status: 500 }
-    )
+    return NextResponse.json({
+      error: 'Failed to create billing portal session',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 })
   }
 }
 

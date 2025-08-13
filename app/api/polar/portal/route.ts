@@ -9,8 +9,16 @@ export const GET = CustomerPortal({
   server: POLAR_CONFIG.sandbox ? "sandbox" : "production",
   
   getCustomerId: async (req: NextRequest) => {
-    // Get the token from either query parameter or authorization header
     const { searchParams } = new URL(req.url)
+    
+    // First check if customer_id is provided directly in the query
+    const directCustomerId = searchParams.get('customer_id')
+    if (directCustomerId) {
+      console.log('Using direct customer ID from query:', directCustomerId)
+      return directCustomerId
+    }
+    
+    // Otherwise, authenticate and get customer ID from user profile
     const queryToken = searchParams.get('token')
     const authHeader = req.headers.get('authorization')
     
@@ -23,7 +31,7 @@ export const GET = CustomerPortal({
     }
     
     if (!token) {
-      throw new Error('No authorization token provided')
+      throw new Error('No authorization token or customer ID provided')
     }
     
     // Create Supabase client
@@ -59,6 +67,7 @@ export const GET = CustomerPortal({
       throw new Error('No Polar customer ID found')
     }
     
+    console.log('Using customer ID from user profile:', profile.polar_customer_id)
     return profile.polar_customer_id
   },
 })

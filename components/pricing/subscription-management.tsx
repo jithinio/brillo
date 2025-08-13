@@ -56,19 +56,24 @@ export function SubscriptionManagement() {
         const data = await response.json()
 
         if (!response.ok) {
-          toast.error(data.error || 'Failed to create billing portal session')
+          console.error('Portal error response:', data)
+          const errorMessage = data.error || 'Failed to create billing portal session'
+          const errorDetails = data.details || data.suggestion
+          
+          if (errorDetails) {
+            toast.error(`${errorMessage}: ${errorDetails}`)
+          } else {
+            toast.error(errorMessage)
+          }
           return
         }
 
         if (data.portalUrl) {
           toast.success('Opening billing portal...')
-          // For Polar, we need to pass the auth token as a query parameter
-          if (provider === 'polar') {
-            const portalUrlWithToken = data.portalUrl + '?token=' + encodeURIComponent(session.access_token)
-            window.open(portalUrlWithToken, '_blank')
-          } else {
-            window.open(data.portalUrl, '_blank')
-          }
+          // Open portal URL directly - customer ID is already included
+          window.open(data.portalUrl, '_blank')
+        } else {
+          toast.error('No portal URL received from server')
         }
         return
       }
