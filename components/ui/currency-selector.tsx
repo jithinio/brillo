@@ -108,7 +108,10 @@ export function CurrencySelector({
                   key={currency.code}
                   value={currency.code}
                   onSelect={(currentValue) => {
-                    onValueChange(currentValue === value ? "" : currentValue.toUpperCase())
+                    // Don't allow deselecting currency - always keep a valid value
+                    if (currentValue !== value) {
+                      onValueChange(currentValue.toUpperCase())
+                    }
                     setOpen(false)
                   }}
                 >

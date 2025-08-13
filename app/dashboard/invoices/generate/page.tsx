@@ -26,6 +26,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useRouter } from "next/navigation"
 import { ClientAvatar } from "@/components/ui/client-avatar"
+import { CurrencySelector } from "@/components/ui/currency-selector"
 import { InvoicingGate } from "@/components/gates/pro-feature-gate"
 
 
@@ -51,7 +52,7 @@ export default function GenerateInvoicePage() {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
   const [invoiceDate, setInvoiceDate] = useState<Date>(new Date())
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined)
-  const [clientCurrency, setClientCurrency] = useState(settings.defaultCurrency)
+  const [clientCurrency, setClientCurrency] = useState(settings.defaultCurrency || 'USD')
   const [notes, setNotes] = useState("")
   const [paymentTerms, setPaymentTerms] = useState("Net 30")
   const [items, setItems] = useState<InvoiceItem[]>([{ id: "1", description: "", quantity: 1, rate: 0 }])
@@ -186,7 +187,8 @@ export default function GenerateInvoicePage() {
     if (!isEditMode && !editInvoiceId) {
       setTaxEnabled(settings.autoCalculateTax)
       setCustomTaxRate(settings.taxRate.toString())
-      setClientCurrency(settings.defaultCurrency)
+      // Ensure we always have a valid currency
+      setClientCurrency(settings.defaultCurrency || 'USD')
     }
   }, [settings.autoCalculateTax, settings.taxRate, settings.defaultCurrency, isEditMode, editInvoiceId])
 
@@ -681,6 +683,15 @@ export default function GenerateInvoicePage() {
   }
 
   const handleSaveDraft = async () => {
+    console.log('DRAFT SAVE - Function called with:', {
+      selectedClient: selectedClient ? { id: selectedClient.id, name: selectedClient.name } : null,
+      invoiceDate: invoiceDate,
+      clientCurrency: clientCurrency,
+      items: items.length,
+      taxEnabled: taxEnabled,
+      customTaxRate: customTaxRate
+    })
+    
     if (!selectedClient) {
       toast.error("Please select a client before saving the draft")
       return
@@ -694,8 +705,27 @@ export default function GenerateInvoicePage() {
     setIsSavingDraft(true)
     
     try {
+      // Calculate totals first with error handling
+      let subtotal, tax, total
+      try {
+        subtotal = calculateSubtotal()
+        tax = calculateTax()
+        total = calculateTotal()
+        console.log('DRAFT SAVE - Calculations completed:', { subtotal, tax, total })
+      } catch (calcError) {
+        console.error('DRAFT SAVE - Error in calculations:', calcError)
+        throw new Error('Error calculating invoice totals. Please check your items and tax settings.')
+      }
+      
       // Generate invoice number if not already generated
       let finalInvoiceNumber = invoiceNumber
+      
+      console.log('DRAFT SAVE - Starting invoice number generation:', {
+        currentInvoiceNumber: invoiceNumber,
+        isEditMode: isEditMode,
+        selectedCurrency: clientCurrency,
+        clientSelected: !!selectedClient
+      })
       
       if (!isEditMode) {
         const now = new Date()
@@ -733,10 +763,6 @@ export default function GenerateInvoicePage() {
         }
       }
       
-      const subtotal = calculateSubtotal()
-      const tax = calculateTax()
-      const total = calculateTotal()
-      
       // Save invoice to database or add to session storage for demo
       if (isSupabaseConfigured()) {
         console.log('Saving draft to Supabase...')
@@ -756,8 +782,13 @@ export default function GenerateInvoicePage() {
         const validatedTotal = Number(total) || 0
         const validatedTaxRate = Number(taxRatePercent) || 0
         
-        // Ensure currency is valid (check against supported currencies)
+        // Validate currency code
         const validatedCurrency = clientCurrency && CURRENCIES[clientCurrency] ? clientCurrency : 'USD'
+        
+        // Log validation for debugging
+        if (!clientCurrency || !CURRENCIES[clientCurrency]) {
+          console.warn(`Invalid currency "${clientCurrency}" detected, falling back to USD`)
+        }
         
         // Prepare invoice data matching exact database schema
         const invoiceInsertData = {
@@ -777,7 +808,43 @@ export default function GenerateInvoicePage() {
           terms: String(paymentTerms || '').substring(0, 500) // Limit terms length
         }
 
+        // Additional validation before database insert
+        if (!invoiceInsertData.client_id) {
+          throw new Error('Client ID is required but missing')
+        }
+        if (!invoiceInsertData.user_id) {
+          throw new Error('User ID is required but missing')
+        }
+        if (!invoiceInsertData.invoice_number) {
+          throw new Error('Invoice number is required but missing')
+        }
+        if (!invoiceInsertData.issue_date) {
+          throw new Error('Issue date is required but missing')
+        }
+        if (!invoiceInsertData.due_date) {
+          throw new Error('Due date is required but missing')
+        }
+        
         console.log('Draft invoice insert data:', invoiceInsertData)
+        console.log('Draft data types check:', {
+          invoice_number: typeof invoiceInsertData.invoice_number,
+          client_id: typeof invoiceInsertData.client_id,
+          user_id: typeof invoiceInsertData.user_id,
+          amount: typeof invoiceInsertData.amount,
+          tax_rate: typeof invoiceInsertData.tax_rate,
+          tax_amount: typeof invoiceInsertData.tax_amount,
+          total_amount: typeof invoiceInsertData.total_amount,
+          currency: typeof invoiceInsertData.currency,
+          status: typeof invoiceInsertData.status,
+          issue_date: typeof invoiceInsertData.issue_date,
+          due_date: typeof invoiceInsertData.due_date
+        })
+        console.log('Draft currency validation check:', {
+          selectedCurrency: clientCurrency,
+          validatedCurrency: validatedCurrency,
+          isInCurrenciesObject: CURRENCIES[clientCurrency] ? 'YES' : 'NO',
+          willUseSelectedCurrency: clientCurrency ? 'YES' : 'NO (fallback to USD)'
+        })
 
         // Insert the main invoice record
         const { data: invoiceData, error: invoiceError } = await supabase
@@ -794,28 +861,56 @@ export default function GenerateInvoicePage() {
             hint: invoiceError.hint,
             code: invoiceError.code
           })
+          console.error('Draft invoice data being inserted:', invoiceInsertData)
           
           // Handle specific database constraint errors
           let errorMessage = 'Failed to save draft'
           
           if (invoiceError.code === '23505') {
             if (invoiceError.message?.includes('invoice_number')) {
-              errorMessage = 'Invoice number already exists. Please use a different invoice number.'
+              errorMessage = 'Draft invoice number already exists. Please try again.'
             } else {
-              errorMessage = 'Duplicate entry detected. Please check your invoice data.'
+              errorMessage = 'Duplicate entry detected. Please check your draft data.'
             }
           } else if (invoiceError.code === '23503') {
             if (invoiceError.message?.includes('client_id')) {
-              errorMessage = 'Selected client not found. Please select a valid client.'
+              errorMessage = 'Selected client not found. Please refresh the page and select a valid client.'
             } else if (invoiceError.message?.includes('project_id')) {
-              errorMessage = 'Selected project not found. Please select a valid project.'
+              errorMessage = 'Selected project not found. Please select a valid project or remove project selection.'
+            } else if (invoiceError.message?.includes('user_id')) {
+              errorMessage = 'Authentication error. Please log out and log back in.'
             } else {
-              errorMessage = 'Invalid reference in invoice data. Please check all selections.'
+              errorMessage = 'Invalid reference in draft data. Please check all selections.'
             }
           } else if (invoiceError.code === '23514') {
-            errorMessage = 'Invoice data validation failed. Please check all field values.'
-          } else if (invoiceError.message) {
-            errorMessage += `: ${invoiceError.message}`
+            // This is a CHECK constraint violation
+            if (invoiceError.message?.includes('amount')) {
+              errorMessage = 'Draft amounts must be valid positive numbers. Please check all amount fields.'
+            } else if (invoiceError.message?.includes('tax_rate')) {
+              errorMessage = 'Tax rate must be a valid percentage between 0 and 100.'
+            } else if (invoiceError.message?.includes('status')) {
+              errorMessage = 'Invalid draft status. Please contact support.'
+            } else if (invoiceError.message?.includes('currency')) {
+              errorMessage = 'Invalid currency code. Please select a valid currency from the dropdown.'
+            } else {
+              errorMessage = 'Draft data validation failed. Please check all field values are valid.'
+            }
+          } else if (invoiceError.code === '22P02') {
+            // Invalid input syntax error
+            errorMessage = 'Invalid data format in draft. Please check dates and numeric values.'
+          } else if (invoiceError.code === '23502') {
+            // NOT NULL violation
+            errorMessage = 'Required fields are missing from draft. Please fill in all required information.'
+          } else {
+            // Generic error with detailed info
+            const errorDetails = []
+            if (invoiceError.message) errorDetails.push(invoiceError.message)
+            if (invoiceError.details) errorDetails.push(invoiceError.details)
+            if (invoiceError.hint) errorDetails.push(invoiceError.hint)
+            
+            if (errorDetails.length > 0) {
+              errorMessage += `: ${errorDetails.join(' | ')}`
+            }
           }
           
           throw new Error(errorMessage)
@@ -1040,8 +1135,13 @@ export default function GenerateInvoicePage() {
         const validStatuses = ['draft', 'sent', 'paid', 'overdue', 'cancelled']
         const validatedStatus = 'sent' // Always use 'sent' for new invoices
         
-        // Ensure currency is valid (check against supported currencies)
+        // Validate currency code
         const validatedCurrency = clientCurrency && CURRENCIES[clientCurrency] ? clientCurrency : 'USD'
+        
+        // Log validation for debugging
+        if (!clientCurrency || !CURRENCIES[clientCurrency]) {
+          console.warn(`Invalid currency "${clientCurrency}" detected, falling back to USD`)
+        }
         
         // Prepare invoice data matching exact database schema
         const invoiceInsertData = {
@@ -1097,9 +1197,9 @@ export default function GenerateInvoicePage() {
         })
         console.log('Currency validation check:', {
           selectedCurrency: clientCurrency,
-          isSupported: CURRENCIES[clientCurrency] ? 'YES' : 'NO',
           validatedCurrency: validatedCurrency,
-          allSupportedCurrencies: Object.keys(CURRENCIES)
+          isInCurrenciesObject: CURRENCIES[clientCurrency] ? 'YES' : 'NO',
+          willUseSelectedCurrency: clientCurrency ? 'YES' : 'NO (fallback to USD)'
         })
 
         // Insert or update the main invoice record
@@ -1754,21 +1854,11 @@ export default function GenerateInvoicePage() {
 
               <div className="space-y-2">
                 <Label htmlFor="clientCurrency">Client Currency</Label>
-                <Select value={clientCurrency} onValueChange={setClientCurrency}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(CURRENCIES).map(([code, config]) => (
-                      <SelectItem key={code} value={code}>
-                        <div className="flex items-center space-x-2">
-                          <span className="font-mono">{config.symbol}</span>
-                          <span>{config.name} ({code})</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <CurrencySelector
+                  value={clientCurrency}
+                  onValueChange={setClientCurrency}
+                  placeholder="Select currency"
+                />
               </div>
 
               {/* Tax Settings */}

@@ -1,20 +1,15 @@
-import { formatPhoneNumber } from './currency'
+import { formatPhoneNumber, CURRENCIES, formatCurrency as formatCurrencyUtil } from './currency'
 
 export async function renderInvoiceHTML(invoice: any, template: any, userDateFormat?: string): Promise<string> {
-  // Get currency symbol
+  // Get currency symbol using the centralized CURRENCIES object
   const getCurrencySymbol = (currency: string) => {
-    const symbols: { [key: string]: string } = {
-      USD: '$',
-      EUR: '€',
-      GBP: '£',
-      JPY: '¥',
-      AUD: 'A$',
-      CAD: 'C$',
-      CHF: 'Fr',
-      CNY: '¥',
-      INR: '₹',
-    }
-    return symbols[currency] || '$'
+    const currencyConfig = CURRENCIES[currency]
+    return currencyConfig?.symbol || '$'
+  }
+
+  // Format currency amounts properly
+  const formatCurrency = (amount: number, currency: string) => {
+    return formatCurrencyUtil(amount, currency)
   }
 
   // Format date according to user preference
@@ -454,9 +449,9 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
                     ` : ''}
                   </td>
                   <td style="text-align: right; padding: 16px 0; border-bottom: 1px solid ${template.borderColor}; -webkit-print-color-adjust: exact; print-color-adjust: exact;">${item.quantity}</td>
-                  <td style="text-align: right; padding: 16px 0; border-bottom: 1px solid ${template.borderColor}; -webkit-print-color-adjust: exact; print-color-adjust: exact;">${getCurrencySymbol(invoiceData.currency)}${item.rate.toFixed(2)}</td>
+                  <td style="text-align: right; padding: 16px 0; border-bottom: 1px solid ${template.borderColor}; -webkit-print-color-adjust: exact; print-color-adjust: exact;">${formatCurrency(item.rate, invoiceData.currency)}</td>
                   <td style="text-align: right; padding: 16px 0; font-weight: 500; border-bottom: 1px solid ${template.borderColor}; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
-                    ${getCurrencySymbol(invoiceData.currency)}${item.amount.toFixed(2)}
+                    ${formatCurrency(item.amount, invoiceData.currency)}
                   </td>
                 </tr>
               `).join('')}
@@ -469,16 +464,16 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
           <div style="width: 256px;">
             <div style="display: flex; justify-content: space-between; padding: 8px 0;">
               <span style="color: ${template.secondaryColor};">Subtotal</span>
-              <span>${getCurrencySymbol(invoiceData.currency)}${invoiceData.subtotal.toFixed(2)}</span>
+              <span>${formatCurrency(invoiceData.subtotal, invoiceData.currency)}</span>
             </div>
             <div style="display: flex; justify-content: space-between; padding: 8px 0;">
               <span style="color: ${template.secondaryColor};">Tax</span>
-              <span>${getCurrencySymbol(invoiceData.currency)}${invoiceData.tax.toFixed(2)}</span>
+              <span>${formatCurrency(invoiceData.tax, invoiceData.currency)}</span>
             </div>
             <div style="display: flex; justify-content: space-between; padding: 12px 0; margin-top: 8px; border-top: 2px solid ${template.primaryColor}; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
               <span style="font-weight: 600;">Total</span>
               <span style="font-weight: 600; font-size: 18px; color: ${template.accentColor};">
-                ${getCurrencySymbol(invoiceData.currency)}${invoiceData.total.toFixed(2)}
+                ${formatCurrency(invoiceData.total, invoiceData.currency)}
               </span>
             </div>
           </div>
@@ -590,11 +585,11 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
                     </div>
                   ` : ''}
                   <div style="color: ${template.secondaryColor}; font-size: 14px; margin-top: 8px;">
-                    ${item.quantity} × ${getCurrencySymbol(invoiceData.currency)}${item.rate.toFixed(2)}
+                    ${item.quantity} × ${formatCurrency(item.rate, invoiceData.currency)}
                   </div>
                 </div>
                 <div style="font-weight: 600; font-size: 18px; color: ${template.primaryColor};">
-                  ${getCurrencySymbol(invoiceData.currency)}${item.amount.toFixed(2)}
+                  ${formatCurrency(item.amount, invoiceData.currency)}
                 </div>
               </div>
             </div>
@@ -607,7 +602,7 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
             <div>
               <div style="font-size: 14px; opacity: 0.8; margin-bottom: 8px;">Total Amount</div>
               <div style="font-size: 36px; font-weight: 700; letter-spacing: -0.02em;">
-                ${getCurrencySymbol(invoiceData.currency)}${invoiceData.total.toFixed(2)}
+                ${formatCurrency(invoiceData.total, invoiceData.currency)}
               </div>
             </div>
             ${template.showPaymentTerms ? `
@@ -753,9 +748,9 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
                   ` : ''}
                 </div>
                 <div style="text-align: right; font-weight: 500;">${item.quantity}</div>
-                <div style="text-align: right; font-weight: 500;">${getCurrencySymbol(invoiceData.currency)}${item.rate.toFixed(2)}</div>
+                <div style="text-align: right; font-weight: 500;">${formatCurrency(item.rate, invoiceData.currency)}</div>
                 <div style="text-align: right; font-weight: 700; color: ${template.primaryColor};">
-                  ${getCurrencySymbol(invoiceData.currency)}${item.amount.toFixed(2)}
+                  ${formatCurrency(item.amount, invoiceData.currency)}
                 </div>
               </div>
             `).join('')}
@@ -768,16 +763,16 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
             <div style="padding: 24px;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                 <span style="color: ${template.secondaryColor}; font-size: 14px;">Subtotal</span>
-                <span style="font-weight: 500; font-size: 16px;">${getCurrencySymbol(invoiceData.currency)}${invoiceData.subtotal.toFixed(2)}</span>
+                <span style="font-weight: 500; font-size: 16px;">${formatCurrency(invoiceData.subtotal, invoiceData.currency)}</span>
               </div>
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                 <span style="color: ${template.secondaryColor}; font-size: 14px;">Tax (10%)</span>
-                <span style="font-weight: 500; font-size: 16px;">${getCurrencySymbol(invoiceData.currency)}${invoiceData.tax.toFixed(2)}</span>
+                <span style="font-weight: 500; font-size: 16px;">${formatCurrency(invoiceData.tax, invoiceData.currency)}</span>
               </div>
               <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 16px; border-top: 2px solid ${template.borderColor};">
                 <span style="font-weight: 700; font-size: 18px; color: ${template.primaryColor};">Total Due</span>
                 <span style="font-weight: 800; font-size: 24px; color: ${template.accentColor};">
-                  ${getCurrencySymbol(invoiceData.currency)}${invoiceData.total.toFixed(2)}
+                  ${formatCurrency(invoiceData.total, invoiceData.currency)}
                 </span>
               </div>
             </div>
@@ -916,8 +911,8 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
                         ` : ''}
                       </td>
                       <td style="padding: 16px; text-align: center; border-bottom: ${index < invoiceData.items.length - 1 ? `1px solid ${template.borderColor}` : 'none'}; -webkit-print-color-adjust: exact; print-color-adjust: exact;">${item.quantity}</td>
-                      <td style="padding: 16px; text-align: right; border-bottom: ${index < invoiceData.items.length - 1 ? `1px solid ${template.borderColor}` : 'none'}; -webkit-print-color-adjust: exact; print-color-adjust: exact;">${getCurrencySymbol(invoiceData.currency)}${item.rate.toFixed(2)}</td>
-                      <td style="padding: 16px; text-align: right; font-weight: 500; border-bottom: ${index < invoiceData.items.length - 1 ? `1px solid ${template.borderColor}` : 'none'}; -webkit-print-color-adjust: exact; print-color-adjust: exact;">${getCurrencySymbol(invoiceData.currency)}${item.amount.toFixed(2)}</td>
+                      <td style="padding: 16px; text-align: right; border-bottom: ${index < invoiceData.items.length - 1 ? `1px solid ${template.borderColor}` : 'none'}; -webkit-print-color-adjust: exact; print-color-adjust: exact;">${formatCurrency(item.rate, invoiceData.currency)}</td>
+                      <td style="padding: 16px; text-align: right; font-weight: 500; border-bottom: ${index < invoiceData.items.length - 1 ? `1px solid ${template.borderColor}` : 'none'}; -webkit-print-color-adjust: exact; print-color-adjust: exact;">${formatCurrency(item.amount, invoiceData.currency)}</td>
                     </tr>
                   `).join('')}
                 </tbody>
@@ -932,17 +927,17 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
                 <div style="margin-bottom: 12px;">
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                     <span style="color: ${template.secondaryColor}; font-size: 14px;">Subtotal</span>
-                    <span style="font-size: 15px; font-weight: 500;">${getCurrencySymbol(invoiceData.currency)}${invoiceData.subtotal.toFixed(2)}</span>
+                    <span style="font-size: 15px; font-weight: 500;">${formatCurrency(invoiceData.subtotal, invoiceData.currency)}</span>
                   </div>
                   <div style="display: flex; justify-content: space-between; align-items: center;">
                     <span style="color: ${template.secondaryColor}; font-size: 14px;">Tax (10%)</span>
-                    <span style="font-size: 15px; font-weight: 500;">${getCurrencySymbol(invoiceData.currency)}${invoiceData.tax.toFixed(2)}</span>
+                    <span style="font-size: 15px; font-weight: 500;">${formatCurrency(invoiceData.tax, invoiceData.currency)}</span>
                   </div>
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding-top: 16px; border-top: 2px solid ${template.accentColor}30;">
                   <span style="font-weight: 700; font-size: 16px; color: ${template.primaryColor};">Total</span>
                   <span style="font-weight: 700; font-size: 22px; color: ${template.accentColor};">
-                    ${getCurrencySymbol(invoiceData.currency)}${invoiceData.total.toFixed(2)}
+                    ${formatCurrency(invoiceData.total, invoiceData.currency)}
                   </span>
                 </div>
               </div>
@@ -1098,7 +1093,7 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
                     </div>
                     <div style="color: ${template.primaryColor}; text-align: center;">${item.quantity}</div>
                     <div style="color: ${template.primaryColor}; text-align: right; font-weight: 500;">
-                      ${getCurrencySymbol(invoiceData.currency)}${item.amount.toFixed(2)}
+                      ${formatCurrency(item.amount, invoiceData.currency)}
                     </div>
                   </div>
                 `).join('')}
@@ -1112,7 +1107,7 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
                     Total
                   </div>
                   <div style="font-size: 24px; font-weight: 700; color: ${template.primaryColor}; text-align: right;">
-                    ${getCurrencySymbol(invoiceData.currency)}${invoiceData.total.toFixed(2)}
+                    ${formatCurrency(invoiceData.total, invoiceData.currency)}
                   </div>
                 </div>
               </div>
