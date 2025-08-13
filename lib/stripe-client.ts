@@ -1,9 +1,14 @@
-// Stripe client configuration
+// Stripe client configuration (now using Polar)
 import Stripe from 'stripe'
-import { STRIPE_CONFIG } from './config/environment'
+import { STRIPE_CONFIG, FEATURE_FLAGS, isPolarConfigured } from './config/environment'
+import * as PolarClient from './polar-client'
 
-// Server-side Stripe client
+// Server-side Stripe client (redirects to Polar when enabled)
 export function createStripeClient() {
+  if (FEATURE_FLAGS.USE_POLAR) {
+    throw new Error('Stripe is disabled. Please use Polar client instead.')
+  }
+  
   if (!STRIPE_CONFIG.secretKey) {
     throw new Error('STRIPE_SECRET_KEY is required for Stripe operations')
   }
@@ -14,14 +19,21 @@ export function createStripeClient() {
   })
 }
 
-// Legacy Polar client (deprecated - returns null)
+// Polar client (now the primary payment processor)
 export function createPolarClient() {
-  console.warn('⚠️ createPolarClient is deprecated. Use createStripeClient instead.')
+  if (FEATURE_FLAGS.USE_POLAR) {
+    return PolarClient.createPolarClient()
+  }
+  console.warn('⚠️ Polar is not enabled. Using Stripe instead.')
   return null
 }
 
-// Helper to check if Stripe is available
+// Helper to check if payment processor is available
 export async function isStripeAvailable(): Promise<boolean> {
+  if (FEATURE_FLAGS.USE_POLAR) {
+    return PolarClient.isPolarAvailable()
+  }
+  
   try {
     const stripe = createStripeClient()
     await stripe.products.list({ limit: 1 })
@@ -32,8 +44,11 @@ export async function isStripeAvailable(): Promise<boolean> {
   }
 }
 
-// Legacy Polar availability check (always returns false)
+// Polar availability check
 export async function isPolarAvailable(): Promise<boolean> {
+  if (FEATURE_FLAGS.USE_POLAR) {
+    return PolarClient.isPolarAvailable()
+  }
   return false
 }
 
@@ -68,19 +83,19 @@ export function verifyPolarWebhook(
   return false
 }
 
-// Price IDs mapping
+// Price IDs mapping (Stripe)
 export const STRIPE_PRICE_IDS = {
   PRO_MONTHLY: STRIPE_CONFIG.priceIds.proMonthly,
   PRO_YEARLY: STRIPE_CONFIG.priceIds.proYearly,
 } as const
 
-// Legacy Polar product IDs (deprecated)
-export const POLAR_PRODUCT_IDS = {
+// Polar product IDs (now active)
+export const POLAR_PRODUCT_IDS = FEATURE_FLAGS.USE_POLAR ? PolarClient.POLAR_PRODUCT_IDS : {
   PRO_MONTHLY: '',
   PRO_YEARLY: '',
 } as const
 
-// Helper to create Stripe checkout session
+// Helper to create checkout session (Stripe or Polar)
 export async function createCheckoutSession(
   priceId: string,
   userId: string,
@@ -88,6 +103,19 @@ export async function createCheckoutSession(
   successUrl?: string,
   cancelUrl?: string
 ) {
+  // Use Polar if enabled
+  if (FEATURE_FLAGS.USE_POLAR) {
+    // Map Stripe price ID to Polar product ID
+    let productId = priceId
+    if (priceId === STRIPE_PRICE_IDS.PRO_MONTHLY) {
+      productId = POLAR_PRODUCT_IDS.PRO_MONTHLY
+    } else if (priceId === STRIPE_PRICE_IDS.PRO_YEARLY) {
+      productId = POLAR_PRODUCT_IDS.PRO_YEARLY
+    }
+    
+    return PolarClient.createCheckoutSession(productId, userId, userEmail, successUrl)
+  }
+  
   const stripe = createStripeClient()
 
   try {
@@ -145,8 +173,13 @@ export async function createCheckoutSession(
   }
 }
 
-// Helper to get or create Stripe customer
+// Helper to get or create customer (Stripe or Polar)
 export async function getOrCreateStripeCustomer(userId: string, email: string, name?: string) {
+  // Use Polar if enabled
+  if (FEATURE_FLAGS.USE_POLAR) {
+    return PolarClient.getOrCreatePolarCustomer(userId, email, name)
+  }
+  
   const stripe = createStripeClient()
 
   try {
@@ -166,8 +199,13 @@ export async function getOrCreateStripeCustomer(userId: string, email: string, n
   }
 }
 
-// Helper to create billing portal session
+// Helper to create billing portal session (Stripe or Polar)
 export async function createBillingPortalSession(customerId: string, returnUrl: string) {
+  // Use Polar if enabled
+  if (FEATURE_FLAGS.USE_POLAR) {
+    return PolarClient.createCustomerPortalSession(customerId)
+  }
+  
   const stripe = createStripeClient()
 
   try {

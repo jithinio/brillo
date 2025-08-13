@@ -12,7 +12,7 @@ import { toast } from "sonner"
 import { SubscriptionSkeleton } from "@/components/subscription/subscription-skeleton"
 
 export function SubscriptionManagement() {
-  const { subscription, plan, usage, isLoading, refetchSubscription, getCachedPlanId } = useSubscription()
+  const { subscription, plan, usage, isLoading, refetchSubscription, getCachedPlanId, provider } = useSubscription()
   const [isManaging, setIsManaging] = useState(false)
   const [isRefreshingUsage, setIsRefreshingUsage] = useState(false)
   
@@ -33,16 +33,24 @@ export function SubscriptionManagement() {
       if (!session) {
         throw new Error('Authentication required')
       }
+      
+      // Get user ID from session
+      const userId = session.user?.id
+      if (!userId) {
+        toast.error('User information not found. Please log in again.')
+        return
+      }
 
       // Handle portal action separately - return early
       if (action === 'portal') {
-        const response = await fetch('/api/stripe/manage', {
+        const portalEndpoint = provider === 'polar' ? '/api/polar/manage' : '/api/stripe/manage'
+        const response = await fetch(portalEndpoint, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${session.access_token}`
           },
-          body: JSON.stringify({ action: 'portal' })
+          body: JSON.stringify({ action: 'portal', userId })
         })
 
         const data = await response.json()
@@ -54,18 +62,24 @@ export function SubscriptionManagement() {
 
         if (data.portalUrl) {
           toast.success('Opening billing portal...')
-          window.open(data.portalUrl, '_blank')
+          // For Polar, we need to pass the auth token
+          if (provider === 'polar') {
+            window.location.href = data.portalUrl + '?token=' + encodeURIComponent(session.access_token)
+          } else {
+            window.open(data.portalUrl, '_blank')
+          }
         }
         return
       }
 
-      const response = await fetch('/api/stripe/manage', {
+      const endpoint = provider === 'polar' ? '/api/polar/manage' : '/api/stripe/manage'
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`
         },
-        body: JSON.stringify({ action })
+        body: JSON.stringify({ action, userId })
       })
       
       console.log('🔍 Response received:', {
@@ -158,18 +172,29 @@ export function SubscriptionManagement() {
         console.log('✅ Session refreshed successfully')
       }
       
-      // Call Stripe sync endpoint
-      const syncUrl = '/api/stripe/sync'
+      // Get user ID from session
+      const userId = session.user?.id
+      if (!userId) {
+        console.error('❌ No user ID found in session')
+        toast.error('User information not found. Please log in again.')
+        return
+      }
+      
+      // Call sync endpoint (Polar or Stripe based on provider)
+      const syncUrl = provider === 'polar' ? '/api/polar/sync' : '/api/stripe/sync'
       console.log('🔄 Making sync request to:', syncUrl)
       console.log('🔄 Auth token (first 50 chars):', session.access_token.substring(0, 50))
       console.log('🔄 Current URL:', window.location.href)
+      console.log('🔄 Provider:', provider)
+      console.log('🔄 User ID:', userId)
       
       const response = await fetch(syncUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json'
-        }
+        },
+        body: JSON.stringify({ userId })
       })
       
       console.log('🔍 Sync response received:', {

@@ -1,9 +1,17 @@
-// Stripe checkout route
+// Stripe checkout route (redirects to Polar when enabled)
 import { NextRequest, NextResponse } from "next/server"
 import { createStripeClient, STRIPE_PRICE_IDS } from "@/lib/stripe-client"
 import { createClient } from "@supabase/supabase-js"
+import { FEATURE_FLAGS } from "@/lib/config/environment"
 
 export async function GET(req: NextRequest) {
+  // Redirect to Polar checkout if enabled
+  if (FEATURE_FLAGS.USE_POLAR) {
+    const url = new URL(req.url)
+    url.pathname = '/api/polar-checkout'
+    return NextResponse.redirect(url)
+  }
+  
   try {
     const { searchParams } = new URL(req.url)
     const planId = searchParams.get("plan")

@@ -1,9 +1,25 @@
-// Stripe subscription management API route
+// Stripe subscription management API route (redirects to Polar when enabled)
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createStripeClient } from '@/lib/stripe-client'
+import { FEATURE_FLAGS } from '@/lib/config/environment'
 
 export async function POST(request: NextRequest) {
+  // Redirect to Polar manage if enabled
+  if (FEATURE_FLAGS.USE_POLAR) {
+    const url = new URL(request.url)
+    url.pathname = '/api/polar/manage'
+    const polarResponse = await fetch(url.toString(), {
+      method: 'POST',
+      headers: request.headers,
+      body: await request.text()
+    })
+    return new NextResponse(polarResponse.body, {
+      status: polarResponse.status,
+      headers: polarResponse.headers
+    })
+  }
+  
   try {
     // Create supabase client with request context for authentication
     const supabase = createClient(

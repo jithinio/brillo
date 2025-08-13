@@ -1,11 +1,11 @@
-// Stripe-only subscription provider
+// Stripe/Polar subscription provider
 'use client'
 
 import React, { createContext, useContext, useEffect, useState, useCallback, ReactNode, useMemo } from 'react'
 import { useAuth } from '@/components/auth-provider'
 import { SubscriptionPlan, UserSubscription, UsageLimits, FeatureAccess } from '@/lib/types/subscription'
 import { getPlan, checkLimits, canAccessFeature, isProPlan } from '@/lib/subscription-plans'
-import { areSubscriptionsEnabled, isStripeConfigured } from '@/lib/config/environment'
+import { areSubscriptionsEnabled, isStripeConfigured, isPolarConfigured, FEATURE_FLAGS } from '@/lib/config/environment'
 import { useSubscriptionPerformance } from '@/hooks/use-subscription-performance'
 
 interface SubscriptionContextType {
@@ -19,7 +19,7 @@ interface SubscriptionContextType {
   getOverLimitStatus: () => { isOverLimit: boolean; restrictions: string[] }
   upgrade: (planId: string) => Promise<void>
   refetchSubscription: (forceUsageCheck?: boolean) => void
-  provider: 'stripe' | null
+  provider: 'stripe' | 'polar' | null
   // Optimistic updates
   updateSubscriptionOptimistically: (newSubscription: Partial<UserSubscription>) => void
   optimisticUpgrade: (planId: string) => void
@@ -329,14 +329,14 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
       }
 
       // Check if user has a subscription in the database
-      // Note: Client-side Stripe config check may fail due to server-only env vars, 
-      // but server-side Stripe functionality works correctly
+      // Note: Client-side Stripe/Polar config check may fail due to server-only env vars, 
+      // but server-side payment functionality works correctly
       if (profile && (profile.subscription_plan_id === 'pro_monthly' || profile.subscription_plan_id === 'pro_yearly')) {
         const subscriptionData = {
           planId: profile.subscription_plan_id,
           status: profile.subscription_status || 'active',
-          customerId: profile.stripe_customer_id,
-          subscriptionId: profile.stripe_subscription_id,
+          customerId: FEATURE_FLAGS.USE_POLAR ? profile.polar_customer_id : profile.stripe_customer_id,
+          subscriptionId: FEATURE_FLAGS.USE_POLAR ? profile.polar_subscription_id : profile.stripe_subscription_id,
           currentPeriodEnd: profile.subscription_current_period_end ? new Date(profile.subscription_current_period_end) : null,
           cancelAtPeriodEnd: profile.cancel_at_period_end || false
         }
@@ -559,7 +559,8 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
       }
       
       const baseUrl = window.location.origin
-      const checkoutUrl = `${baseUrl}/api/stripe-checkout?plan=${planId}&uid=${user.id}`
+      const checkoutEndpoint = FEATURE_FLAGS.USE_POLAR ? '/api/polar-checkout' : '/api/stripe-checkout'
+      const checkoutUrl = `${baseUrl}${checkoutEndpoint}?plan=${planId}&uid=${user.id}`
       
       window.location.href = checkoutUrl
       
@@ -739,7 +740,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     getOverLimitStatus,
     upgrade,
     refetchSubscription,
-    provider: 'stripe',
+    provider: FEATURE_FLAGS.USE_POLAR ? 'polar' : 'stripe',
     // Optimistic updates
     updateSubscriptionOptimistically,
     optimisticUpgrade,
