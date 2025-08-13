@@ -14,6 +14,7 @@ export function UpgradeSuccessHandler() {
   const { user } = useAuth()
   const { refetchSubscription, optimisticUpgrade, subscription } = useSubscription()
   const hasProcessed = useRef(false)
+  const hasShownToast = useRef(false)
   const [showLoader, setShowLoader] = useState(false)
 
   useEffect(() => {
@@ -146,9 +147,13 @@ export function UpgradeSuccessHandler() {
   // Handle loader completion
   const handleLoaderComplete = () => {
     setShowLoader(false)
-    toast.success('🎉 Welcome to Brillo Pro! All features are now active.', {
-      duration: 5000,
-    })
+    // Prevent duplicate toasts
+    if (!hasShownToast.current) {
+      hasShownToast.current = true
+      toast.success('🎉 Welcome to Brillo Pro! All features are now active.', {
+        duration: 5000,
+      })
+    }
   }
 
   return <UpgradeLoader isVisible={showLoader} onComplete={handleLoaderComplete} />

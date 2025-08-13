@@ -2,155 +2,236 @@
 
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Crown, Check, Sparkles, Zap, Shield, BarChart } from 'lucide-react'
+import { Loader } from '@/components/ui/loader'
+import { Sparkles, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface UpgradeLoaderProps {
   isVisible: boolean
-  onComplete?: () => void
+  onComplete: () => void
+  className?: string
 }
 
 const features = [
-  { icon: Crown, text: "Unlocking Pro features", delay: 0.5 },
-  { icon: Sparkles, text: "Enabling AI enhancements", delay: 1 },
-  { icon: Shield, text: "Activating advanced security", delay: 1.5 },
-  { icon: BarChart, text: "Setting up analytics", delay: 2 },
-  { icon: Zap, text: "Optimizing performance", delay: 2.5 },
+  "Unlocking unlimited projects...",
+  "Activating advanced analytics...", 
+  "Enabling premium integrations...",
+  "Setting up pro features...",
+  "Finalizing your upgrade..."
 ]
 
-export function UpgradeLoader({ isVisible, onComplete }: UpgradeLoaderProps) {
-  const [currentFeature, setCurrentFeature] = useState(0)
-  const [isCompleting, setIsCompleting] = useState(false)
+export function UpgradeLoader({ isVisible, onComplete, className }: UpgradeLoaderProps) {
+  const [currentFeatureIndex, setCurrentFeatureIndex] = useState(0)
+  const [isComplete, setIsComplete] = useState(false)
+  const [showCheckmark, setShowCheckmark] = useState(false)
 
   useEffect(() => {
-    if (!isVisible) {
-      setCurrentFeature(0)
-      setIsCompleting(false)
-      return
-    }
+    if (!isVisible) return
 
-    // Animate through features
-    const interval = setInterval(() => {
-      setCurrentFeature((prev) => {
-        if (prev >= features.length - 1) {
-          setIsCompleting(true)
-          clearInterval(interval)
-          
-          // Complete after a short delay
+    const featureInterval = setInterval(() => {
+      setCurrentFeatureIndex((prev) => {
+        const next = prev + 1
+        if (next >= features.length) {
+          setIsComplete(true)
+          clearInterval(featureInterval)
+          // Show checkmark animation
           setTimeout(() => {
-            onComplete?.()
-          }, 1000)
-          
+            setShowCheckmark(true)
+            // Complete after showing checkmark
+            setTimeout(() => {
+              onComplete()
+            }, 1200)
+          }, 500)
           return prev
         }
-        return prev + 1
+        return next
       })
-    }, 600)
+    }, 800)
 
-    return () => clearInterval(interval)
+    return () => clearInterval(featureInterval)
   }, [isVisible, onComplete])
+
+  // Reset state when loader becomes visible
+  useEffect(() => {
+    if (isVisible) {
+      setCurrentFeatureIndex(0)
+      setIsComplete(false)
+      setShowCheckmark(false)
+    }
+  }, [isVisible])
 
   return (
     <AnimatePresence>
       {isVisible && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.3 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm"
-        >
+        <div className="fixed inset-0 z-50 bg-background/98 backdrop-blur-sm">
           <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.9, opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="relative max-w-md w-full mx-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ 
+              duration: 0.3,
+              ease: "easeOut"
+            }}
+            className={cn(
+              "fixed inset-0 flex items-center justify-center p-4",
+              className
+            )}
           >
-            {/* Main content */}
-            <div className="bg-card border rounded-lg shadow-2xl p-8 text-center space-y-6">
-              {/* Animated icon */}
-              <div className="relative mx-auto w-20 h-20">
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                  className="absolute inset-0"
-                >
-                  <div className="w-full h-full rounded-full bg-gradient-to-r from-primary/20 to-primary/10" />
-                </motion.div>
-                <div className="absolute inset-2 bg-gradient-to-r from-primary to-primary/80 rounded-full flex items-center justify-center">
-                  <Crown className="w-8 h-8 text-white" />
-                </div>
-              </div>
-
-              {/* Title */}
-              <div>
-                <h2 className="text-2xl font-bold mb-2">
-                  {isCompleting ? "You're all set!" : "Upgrading to Pro"}
-                </h2>
-                <p className="text-muted-foreground">
-                  {isCompleting 
-                    ? "Your Pro features are now active" 
-                    : "Setting up your enhanced experience..."
-                  }
-                </p>
-              </div>
-
-              {/* Features list */}
-              <div className="space-y-3 text-left">
-                {features.map((feature, index) => {
-                  const Icon = feature.icon
-                  const isActive = index <= currentFeature
-                  const isComplete = index < currentFeature || isCompleting
-
-                  return (
-                    <motion.div
-                      key={index}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ 
-                        opacity: isActive ? 1 : 0.3, 
-                        x: 0 
-                      }}
-                      transition={{ delay: feature.delay * 0.2 }}
-                      className={cn(
-                        "flex items-center gap-3 transition-all duration-300",
-                        isActive && "text-foreground",
-                        !isActive && "text-muted-foreground/50"
+            <div className="max-w-md w-full text-center">
+              <div className="space-y-6">
+                {/* Loader Icon with Crown/Checkmark */}
+                <div className="flex justify-center relative h-12 w-12 mx-auto">
+                  {/* Static loader circle container to prevent layout shift */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <AnimatePresence mode="wait">
+                      {showCheckmark ? (
+                        <motion.div
+                          key="checkmark-loader"
+                          initial={{ scale: 1, opacity: 1 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          className="relative h-12 w-12 flex items-center justify-center"
+                        >
+                          {/* Orange gradient circle background */}
+                          <motion.div
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            transition={{ 
+                              duration: 0.4,
+                              ease: "easeOut"
+                            }}
+                            className="absolute inset-0 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full"
+                          />
+                          {/* White checkmark inside */}
+                          <motion.div
+                            initial={{ scale: 0, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            transition={{ 
+                              delay: 0.2,
+                              type: "spring",
+                              stiffness: 400,
+                              damping: 20
+                            }}
+                            className="relative z-10 flex items-center justify-center"
+                          >
+                            <Check className="h-6 w-6 text-white stroke-[3]" />
+                          </motion.div>
+                        </motion.div>
+                      ) : (
+                        <motion.div
+                          key="crown-loader"
+                          initial={{ scale: 1, opacity: 1 }}
+                          exit={{ scale: 1, opacity: 0 }}
+                          transition={{ duration: 0.3 }}
+                          className="relative h-12 w-12 flex items-center justify-center"
+                        >
+                          {/* Primary loader circle */}
+                          <Loader size="xl" variant="primary" className="absolute" />
+                          {/* Sparkles inside */}
+                          <motion.div
+                            initial={{ scale: 0, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            transition={{ delay: 0.2, duration: 0.4 }}
+                            className="relative z-10"
+                          >
+                            <Sparkles className="h-6 w-6 text-primary fill-primary" />
+                          </motion.div>
+                        </motion.div>
                       )}
-                    >
-                      <div className={cn(
-                        "flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300",
-                        isComplete && "bg-green-500 text-white",
-                        isActive && !isComplete && "bg-primary/20 text-primary",
-                        !isActive && "bg-muted text-muted-foreground"
-                      )}>
-                        {isComplete ? (
-                          <Check className="w-4 h-4" />
-                        ) : (
-                          <Icon className="w-4 h-4" />
-                        )}
-                      </div>
-                      <span className="text-sm font-medium">{feature.text}</span>
-                    </motion.div>
-                  )
-                })}
-              </div>
-
-              {/* Loading indicator */}
-              {!isCompleting && (
-                <div className="flex items-center justify-center gap-2">
-                  <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </AnimatePresence>
+                  </div>
                 </div>
-              )}
+                
+                {/* Animated Content */}
+                <div className="space-y-2 min-h-[4rem] flex flex-col justify-center">
+                  <AnimatePresence mode="wait">
+                    {showCheckmark ? (
+                      <motion.div
+                        key="complete"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.4 }}
+                        className="text-center"
+                      >
+                        <h2 className="text-xl font-semibold text-orange-600">
+                          Upgrade Complete!
+                        </h2>
+                        <p className="text-muted-foreground mt-1">
+                          Welcome to Brillo Pro! 🎉
+                        </p>
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="loading"
+                        initial={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="text-center"
+                      >
+                        <h2 className="text-xl font-semibold text-foreground">
+                          Upgrading to Pro
+                        </h2>
+                        <div className="h-6 flex items-center justify-center mt-1">
+                          <AnimatePresence mode="wait">
+                            <motion.p
+                              key={currentFeatureIndex}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -10 }}
+                              transition={{ 
+                                duration: 0.3,
+                                ease: "easeInOut"
+                              }}
+                              className="text-muted-foreground"
+                            >
+                              {features[currentFeatureIndex]}
+                            </motion.p>
+                          </AnimatePresence>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+                
+                {/* Progress indicator */}
+                <div className="min-h-[2.5rem] flex flex-col justify-center">
+                  {!showCheckmark && (
+                    <motion.div 
+                      className="space-y-2"
+                      initial={{ opacity: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <div className="flex justify-center space-x-1">
+                        {features.map((_, index) => (
+                          <div
+                            key={index}
+                            className="h-1.5 w-8 rounded-full bg-muted overflow-hidden"
+                          >
+                            <motion.div
+                              className="h-full bg-primary rounded-full"
+                              initial={{ width: "0%" }}
+                              animate={{ 
+                                width: index <= currentFeatureIndex ? "100%" : "0%"
+                              }}
+                              transition={{ 
+                                duration: 0.4,
+                                ease: "easeInOut",
+                                delay: index <= currentFeatureIndex ? index * 0.1 : 0
+                              }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {currentFeatureIndex + 1} of {features.length}
+                      </p>
+                    </motion.div>
+                  )}
+                </div>
+              </div>
             </div>
-
-            {/* Decorative elements */}
-            <div className="absolute -top-10 -left-10 w-20 h-20 bg-primary/10 rounded-full blur-2xl" />
-            <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-primary/5 rounded-full blur-3xl" />
           </motion.div>
-        </motion.div>
+        </div>
       )}
     </AnimatePresence>
   )
