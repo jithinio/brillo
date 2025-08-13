@@ -747,25 +747,34 @@ export default function GenerateInvoicePage() {
           throw new Error('User authentication required to save drafts')
         }
         
-        // Calculate tax rate as percentage
-        const taxRatePercent = taxEnabled ? parseFloat(customTaxRate) : 0
+        // Calculate tax rate as percentage and ensure it's a valid number
+        const taxRatePercent = taxEnabled ? parseFloat(customTaxRate) || 0 : 0
+        
+        // Validate and sanitize all numeric values for draft
+        const validatedSubtotal = Number(subtotal) || 0
+        const validatedTax = Number(tax) || 0
+        const validatedTotal = Number(total) || 0
+        const validatedTaxRate = Number(taxRatePercent) || 0
+        
+        // Ensure currency is valid (3-letter code)
+        const validatedCurrency = clientCurrency && clientCurrency.length === 3 ? clientCurrency : 'USD'
         
         // Prepare invoice data matching exact database schema
         const invoiceInsertData = {
-          invoice_number: finalInvoiceNumber,
-          client_id: selectedClient.id,
-          project_id: selectedProject?.id || null,
-          user_id: userData.user.id, // Required for user-specific invoice numbering
-          amount: subtotal,
-          tax_rate: taxRatePercent,
-          tax_amount: tax,
-          total_amount: total,
-          currency: clientCurrency, // Include the selected currency for this invoice
+          invoice_number: String(finalInvoiceNumber).substring(0, 100), // Limit length
+          client_id: String(selectedClient.id),
+          project_id: selectedProject?.id ? String(selectedProject.id) : null,
+          user_id: String(userData.user.id),
+          amount: validatedSubtotal,
+          tax_rate: validatedTaxRate,
+          tax_amount: validatedTax,
+          total_amount: validatedTotal,
+          currency: validatedCurrency,
           status: 'draft', // Save as draft
           issue_date: formatDateForDatabase(invoiceDate),
           due_date: formatDateForDatabase(dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
-          notes: notes || '',
-          terms: paymentTerms || ''
+          notes: String(notes || '').substring(0, 1000), // Limit notes length
+          terms: String(paymentTerms || '').substring(0, 500) // Limit terms length
         }
 
         console.log('Draft invoice insert data:', invoiceInsertData)
@@ -1018,31 +1027,74 @@ export default function GenerateInvoicePage() {
           throw new Error('User authentication required to create invoices')
         }
         
-        // Calculate tax rate as percentage
-        const taxRatePercent = taxEnabled ? parseFloat(customTaxRate) : 0
+        // Calculate tax rate as percentage and ensure it's a valid number
+        const taxRatePercent = taxEnabled ? parseFloat(customTaxRate) || 0 : 0
+        
+        // Validate and sanitize all numeric values
+        const validatedSubtotal = Number(subtotal) || 0
+        const validatedTax = Number(tax) || 0
+        const validatedTotal = Number(total) || 0
+        const validatedTaxRate = Number(taxRatePercent) || 0
+        
+        // Ensure status is valid (common database enum values)
+        const validStatuses = ['draft', 'sent', 'paid', 'overdue', 'cancelled']
+        const validatedStatus = 'sent' // Always use 'sent' for new invoices
+        
+        // Ensure currency is valid (3-letter code)
+        const validatedCurrency = clientCurrency && clientCurrency.length === 3 ? clientCurrency : 'USD'
         
         // Prepare invoice data matching exact database schema
         const invoiceInsertData = {
-          invoice_number: finalInvoiceNumber,
-          client_id: selectedClient.id,
-          project_id: selectedProject?.id || null, // Include selected project if any
-          user_id: userData.user.id, // Required for user-specific invoice numbering
-          amount: subtotal,
-          tax_rate: taxRatePercent,
-          tax_amount: tax,
-          total_amount: total,
-          currency: clientCurrency, // Include the selected currency for this invoice
-          status: 'sent', // Start as sent, can be changed to 'draft' later
-          issue_date: formatDateForDatabase(invoiceDate), // DATE format (YYYY-MM-DD)
-          due_date: formatDateForDatabase(dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)), // DATE format
-          notes: notes || '',
-          terms: paymentTerms || ''
+          invoice_number: String(finalInvoiceNumber).substring(0, 100), // Limit length
+          client_id: String(selectedClient.id),
+          project_id: selectedProject?.id ? String(selectedProject.id) : null,
+          user_id: String(userData.user.id),
+          amount: validatedSubtotal,
+          tax_rate: validatedTaxRate,
+          tax_amount: validatedTax,
+          total_amount: validatedTotal,
+          currency: validatedCurrency,
+          status: validatedStatus,
+          issue_date: formatDateForDatabase(invoiceDate),
+          due_date: formatDateForDatabase(dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
+          notes: String(notes || '').substring(0, 1000), // Limit notes length
+          terms: String(paymentTerms || '').substring(0, 500) // Limit terms length
         }
 
+        // Additional validation before database insert
+        if (!invoiceInsertData.client_id) {
+          throw new Error('Client ID is required but missing')
+        }
+        if (!invoiceInsertData.user_id) {
+          throw new Error('User ID is required but missing')
+        }
+        if (!invoiceInsertData.invoice_number) {
+          throw new Error('Invoice number is required but missing')
+        }
+        if (invoiceInsertData.amount <= 0) {
+          throw new Error('Invoice amount must be greater than zero')
+        }
+        if (!invoiceInsertData.issue_date) {
+          throw new Error('Issue date is required but missing')
+        }
+        if (!invoiceInsertData.due_date) {
+          throw new Error('Due date is required but missing')
+        }
+        
         console.log('Invoice insert data:', invoiceInsertData)
-        console.log('Selected client:', selectedClient)
-        console.log('Selected project:', selectedProject)
-        console.log('Items:', items)
+        console.log('Data types check:', {
+          invoice_number: typeof invoiceInsertData.invoice_number,
+          client_id: typeof invoiceInsertData.client_id,
+          user_id: typeof invoiceInsertData.user_id,
+          amount: typeof invoiceInsertData.amount,
+          tax_rate: typeof invoiceInsertData.tax_rate,
+          tax_amount: typeof invoiceInsertData.tax_amount,
+          total_amount: typeof invoiceInsertData.total_amount,
+          currency: typeof invoiceInsertData.currency,
+          status: typeof invoiceInsertData.status,
+          issue_date: typeof invoiceInsertData.issue_date,
+          due_date: typeof invoiceInsertData.due_date
+        })
 
         // Insert or update the main invoice record
         let invoiceData
@@ -1079,35 +1131,55 @@ export default function GenerateInvoicePage() {
             hint: invoiceError.hint,
             code: invoiceError.code
           })
+          console.error('Invoice data being inserted:', invoiceInsertData)
           
           // Handle specific database constraint errors
           let errorMessage = `Failed to ${isEditMode ? 'update' : 'save'} invoice`
           
           if (invoiceError.code === '23505') {
             if (invoiceError.message?.includes('invoice_number')) {
-              errorMessage = 'Invoice number already exists. Please use a different invoice number.'
+              errorMessage = 'Invoice number already exists. Please try again.'
             } else {
               errorMessage = 'Duplicate entry detected. Please check your invoice data.'
             }
           } else if (invoiceError.code === '23503') {
             if (invoiceError.message?.includes('client_id')) {
-              errorMessage = 'Selected client not found. Please select a valid client.'
+              errorMessage = 'Selected client not found. Please refresh the page and select a valid client.'
             } else if (invoiceError.message?.includes('project_id')) {
-              errorMessage = 'Selected project not found. Please select a valid project.'
+              errorMessage = 'Selected project not found. Please select a valid project or remove project selection.'
+            } else if (invoiceError.message?.includes('user_id')) {
+              errorMessage = 'Authentication error. Please log out and log back in.'
             } else {
               errorMessage = 'Invalid reference in invoice data. Please check all selections.'
             }
           } else if (invoiceError.code === '23514') {
-            errorMessage = 'Invoice data validation failed. Please check all field values.'
+            // This is a CHECK constraint violation
+            if (invoiceError.message?.includes('amount')) {
+              errorMessage = 'Invoice amounts must be valid positive numbers. Please check all amount fields.'
+            } else if (invoiceError.message?.includes('tax_rate')) {
+              errorMessage = 'Tax rate must be a valid percentage between 0 and 100.'
+            } else if (invoiceError.message?.includes('status')) {
+              errorMessage = 'Invalid invoice status. Please contact support.'
+            } else if (invoiceError.message?.includes('currency')) {
+              errorMessage = 'Invalid currency code. Please select a valid currency.'
+            } else {
+              errorMessage = 'Invoice data validation failed. Please check all field values are valid.'
+            }
+          } else if (invoiceError.code === '22P02') {
+            // Invalid input syntax error
+            errorMessage = 'Invalid data format. Please check dates and numeric values.'
+          } else if (invoiceError.code === '23502') {
+            // NOT NULL violation
+            errorMessage = 'Required fields are missing. Please fill in all required information.'
           } else {
-            if (invoiceError.message) {
-              errorMessage += `: ${invoiceError.message}`
-            }
-            if (invoiceError.details) {
-              errorMessage += ` (${invoiceError.details})`
-            }
-            if (invoiceError.hint) {
-              errorMessage += ` - ${invoiceError.hint}`
+            // Generic error with detailed info
+            const errorDetails = []
+            if (invoiceError.message) errorDetails.push(invoiceError.message)
+            if (invoiceError.details) errorDetails.push(invoiceError.details)
+            if (invoiceError.hint) errorDetails.push(invoiceError.hint)
+            
+            if (errorDetails.length > 0) {
+              errorMessage += `: ${errorDetails.join(' | ')}`
             }
           }
           
