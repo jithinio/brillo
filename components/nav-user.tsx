@@ -22,7 +22,7 @@ import { Loader } from "@/components/ui/loader"
 import Link from "next/link"
 
 export function NavUser() {
-  const { user, signOut, loading: authLoading } = useAuth()
+  const { user, signOut, loading: authLoading, getCachedUser } = useAuth()
   const { isMobile } = useSidebar()
   const { theme, setTheme } = useTheme()
   const { subscription, isLoading, getCachedPlanId } = useSubscription()
@@ -30,8 +30,12 @@ export function NavUser() {
   // Use the provider's cached plan ID for immediate rendering
   const optimisticPlanId = getCachedPlanId()
 
-  // Show loading state during auth loading to prevent "Demo User" flash
-  if (authLoading) {
+  // Get cached user to prevent loading flash
+  const cachedUser = getCachedUser()
+  const displayUser = user || cachedUser
+
+  // Only show loading state if we have no user data at all
+  if (authLoading && !displayUser) {
     return (
       <SidebarMenu>
         <SidebarMenuItem>
@@ -48,12 +52,12 @@ export function NavUser() {
     )
   }
 
-  // Fallback user data if no user is available after loading
-  const currentUser = user
+  // Use displayUser (which includes cached data) to generate user info
+  const currentUser = displayUser
     ? {
-        name: user.user_metadata?.full_name || user.email?.split("@")[0] || "User",
-        email: user.email || "user@example.com",
-        avatar: user.user_metadata?.avatar_url || null,
+        name: displayUser.user_metadata?.full_name || displayUser.email?.split("@")[0] || "User",
+        email: displayUser.email || "user@example.com",
+        avatar: displayUser.user_metadata?.avatar_url || null,
       }
     : {
         name: "Demo User",

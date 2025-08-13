@@ -105,47 +105,10 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
-                try {
-                  // Check for new unified cache key format first
-                  var cacheKeys = Object.keys(localStorage).filter(function(key) {
-                    return key.startsWith('brillo-sub-cache-');
-                  });
-                  
-                  var foundPlan = null;
-                  var mostRecentTimestamp = 0;
-                  
-                  // Find the most recent valid cache entry
-                  for (var i = 0; i < cacheKeys.length; i++) {
-                    var saved = localStorage.getItem(cacheKeys[i]);
-                    if (saved) {
-                      try {
-                        var parsed = JSON.parse(saved);
-                        var age = Date.now() - parsed.timestamp;
-                        // 10 minute cache validity (increased for better reliability)
-                        if (age < 10 * 60 * 1000 && parsed.data && parsed.data.planId && parsed.timestamp > mostRecentTimestamp) {
-                          mostRecentTimestamp = parsed.timestamp;
-                          foundPlan = parsed.data.planId;
-                        }
-                      } catch (parseError) {
-                        // Skip invalid entries
-                      }
-                    }
-                  }
-                  
-                  // Only set attribute if we found a valid plan
-                  // Don't default to anything - let components handle unknown state
-                  if (foundPlan) {
-                    var isPro = foundPlan === 'pro_monthly' || foundPlan === 'pro_yearly';
-                    document.documentElement.setAttribute('data-user-plan', isPro ? 'pro' : 'free');
-                  } else {
-                    // Set loading state to prevent any flashing
-                    document.documentElement.setAttribute('data-user-plan', 'loading');
-                  }
-                  
-                } catch (e) {
-                  // On error, set loading state rather than defaulting to free
-                  document.documentElement.setAttribute('data-user-plan', 'loading');
-                }
+                // 🚀 ZERO-FLASH APPROACH: Using conditional rendering
+                // Pro elements are conditionally rendered in React components
+                // No DOM elements exist for pro users - complete elimination of flashing
+                console.log('🚀 Zero-flash: Using conditional rendering approach');
               })();
             `
           }}

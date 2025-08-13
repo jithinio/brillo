@@ -14,12 +14,41 @@ import { SidebarUsageSkeleton } from "@/components/subscription/subscription-ske
 
 export function SidebarUsageOverview() {
   const { subscription, usage, plan, isLoading, refetchSubscription } = useSubscription()
+  
+  // 🚀 EARLY RETURN: Don't render anything for non-free users
+  // This is the FIRST check - before any state initialization
+  if (!isLoading && subscription?.planId && subscription.planId !== 'free') {
+    console.log('❌ SidebarUsageOverview: Early return for non-free user:', subscription.planId)
+    return null
+  }
+  
   const [previousCounts, setPreviousCounts] = useState({ projects: 0, clients: 0 })
   const [cachedUsage, setCachedUsage] = useState<typeof usage | null>(null)
   const [isInitialized, setIsInitialized] = useState(false)
+  const [shouldRender, setShouldRender] = useState(false)
+  const [isVisible, setIsVisible] = useState(false)
   const subscriptionsRef = useRef<any[]>([])
   const { user } = useAuth()
   const pathname = usePathname()
+
+  // Progressive loading effect - only render for free users after page load
+  useEffect(() => {
+    if (!isLoading && subscription?.planId) {
+      console.log('🔍 SidebarUsageOverview: Checking subscription plan:', subscription.planId)
+      // Only render for confirmed free users
+      if (subscription.planId === 'free') {
+        console.log('✅ SidebarUsageOverview: Rendering for free user')
+        setShouldRender(true)
+        // Add delay for progressive loading effect
+        setTimeout(() => setIsVisible(true), 200)
+      } else {
+        console.log('❌ SidebarUsageOverview: NOT rendering for pro user:', subscription.planId)
+        setShouldRender(false)
+        setIsVisible(false)
+      }
+      // For pro users or any other plan, never render
+    }
+  }, [isLoading, subscription?.planId])
 
   // Persistent cache key for localStorage
   const getCacheKey = () => user?.id ? `sidebar-usage-${user.id}` : null
@@ -250,8 +279,13 @@ export function SidebarUsageOverview() {
     }
   }, [displayUsage?.projects?.current, displayUsage?.clients?.current, previousCounts, isOnRelevantPage, cachedUsage])
   
-  // CSS handles all visibility logic now via data-user-plan attribute
-  // Component just renders and lets CSS decide visibility
+  // Don't render anything during loading or for non-free users
+  if (!shouldRender) {
+    console.log('🚫 SidebarUsageOverview: NOT rendering - shouldRender:', shouldRender, 'isLoading:', isLoading, 'planId:', subscription?.planId)
+    return null
+  }
+  
+  console.log('🎯 SidebarUsageOverview: RENDERING for user with plan:', subscription?.planId)
 
   // Extract data with robust fallbacks
   const clientsUsed = displayUsage?.clients?.current ?? 0
@@ -276,7 +310,9 @@ export function SidebarUsageOverview() {
   const usingCachedData = displayUsage === cachedUsage && cachedUsage !== null
   
   return (
-    <Card className="mb-2 pro-element-usage-card">
+    <Card className={`mb-2 transition-all duration-300 ease-out ${
+      isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
+    }`}>
       <CardContent className="p-3 space-y-4">
         <div className="flex items-center justify-between">
           <span className="text-xs font-medium">Free Plan</span>
@@ -338,7 +374,11 @@ export function SidebarUsageOverview() {
 
         {/* Upgrade/Manage Button */}
         {!isLoading && (
-          isProPlan(subscription.planId) ? (
+          (() => {
+            const isPro = isProPlan(subscription.planId)
+            console.log('🔍 Button logic: planId=', subscription.planId, 'isPro=', isPro)
+            return isPro
+          })() ? (
             <Button 
               asChild 
               size="sm" 

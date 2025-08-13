@@ -317,11 +317,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
         // Cache the successful result
         SubscriptionCache.set(user.id, subscriptionData)
         
-        // Update html attribute for CSS-based hiding
-        if (typeof window !== 'undefined') {
-          document.documentElement.setAttribute('data-user-plan', isProPlan(subscriptionData.planId) ? 'pro' : 'free')
-          console.log(`✅ Updated data-user-plan to ${isProPlan(subscriptionData.planId) ? 'pro' : 'free'} after loading`)
-        }
+        console.log(`✅ Subscription loaded: ${isProPlan(subscriptionData.planId) ? 'Pro' : 'Free'} user (conditional rendering)`)
 
         // Only update usage for non-pro plans to save API calls
         if (!isProPlan(subscriptionData.planId)) {
@@ -351,11 +347,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
       // Cache the free plan result too
       SubscriptionCache.set(user.id, freeSubscription)
       
-      // Update html attribute for free users
-      if (typeof window !== 'undefined') {
-        document.documentElement.setAttribute('data-user-plan', 'free')
-        console.log('✅ Updated data-user-plan to free after loading')
-      }
+      console.log('✅ Subscription loaded: Free user (conditional rendering)')
       
       await updateUsageLimits('free') // Free users always need usage tracking
       setError(null)
@@ -503,15 +495,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
       SubscriptionCache.set(user.id, updatedSubscription)
     }
     
-    // CRITICAL: Update CSS attribute for instant UI updates
-    if (typeof window !== 'undefined' && newSubscription.planId) {
-      if (isProPlan(newSubscription.planId)) {
-        document.documentElement.setAttribute('data-user-plan', 'pro')
-        console.log('🚀 CSS attribute updated to pro for instant hiding')
-      } else {
-        document.documentElement.setAttribute('data-user-plan', 'free')
-      }
-    }
+    console.log(`🚀 Optimistic update: ${isProPlan(newSubscription.planId || 'free') ? 'Pro' : 'Free'} user (conditional rendering)`)
     
     // Update usage limits if plan changed
     if (newSubscription.planId) {
@@ -568,19 +552,10 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     }
   }, [])
 
-  // Immediately set body attribute for CSS-based hiding on client mount
+  // Log subscription status for debugging (conditional rendering approach)
   useEffect(() => {
-    if (typeof window !== 'undefined' && hasMounted) {
-      // Only update if we have a confirmed plan
-      if (!isLoading && subscription.planId) {
-        const isPro = isProPlan(subscription.planId)
-        document.documentElement.setAttribute('data-user-plan', isPro ? 'pro' : 'free')
-        console.log(`🚀 Setting data-user-plan to ${isPro ? 'pro' : 'free'} after loading`)
-      }
-      // If still loading and no inline script set the attribute, set to loading
-      else if (isLoading && !document.documentElement.getAttribute('data-user-plan')) {
-        document.documentElement.setAttribute('data-user-plan', 'loading')
-      }
+    if (hasMounted && !isLoading && subscription.planId) {
+      console.log(`🚀 Zero-flash: Subscription confirmed for ${isProPlan(subscription.planId) ? 'Pro' : 'Free'} user`)
     }
   }, [hasMounted, isLoading, subscription.planId])
 

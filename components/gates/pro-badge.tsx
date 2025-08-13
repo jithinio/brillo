@@ -3,7 +3,10 @@
 import { Crown, Sparkles } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { useSubscription } from "@/components/providers/subscription-provider"
+import { isProPlan } from "@/lib/subscription-plans"
 import { cn } from "@/lib/utils"
+import { useState, useEffect } from "react"
 
 interface ProBadgeProps {
   feature?: 'invoicing' | 'advanced_analytics' | 'invoice_customization' | 'api_access'
@@ -22,8 +25,33 @@ export function ProBadge({
   showTooltip = true,
   tooltipContent
 }: ProBadgeProps) {
-  // CSS handles all visibility logic now via data-user-plan attribute
-  // Component just renders and lets CSS decide visibility
+  const { subscription, isLoading, hasAccess } = useSubscription()
+  const [shouldRender, setShouldRender] = useState(false)
+  const [isVisible, setIsVisible] = useState(false)
+
+  // Progressive loading effect - only render for free users after page load
+  useEffect(() => {
+    if (!isLoading && subscription?.planId) {
+      // Only render for confirmed free users
+      if (subscription.planId === 'free') {
+        setShouldRender(true)
+        // Add slight delay for progressive loading effect
+        setTimeout(() => setIsVisible(true), 100)
+      }
+      // For pro users or any other plan, never render
+    }
+  }, [isLoading, subscription?.planId])
+
+  // Don't render anything during loading or for non-free users
+  if (!shouldRender) {
+    return null
+  }
+
+  // Check feature access for free users
+  const hasFeatureAccess = feature ? hasAccess(feature) : false
+  if (hasFeatureAccess) {
+    return null // Don't show badge if user has access to the feature
+  }
 
   const getSizeClasses = () => {
     switch (size) {
@@ -90,7 +118,9 @@ export function ProBadge({
       className={cn(
         getSizeClasses(),
         getVariantClasses(),
-        'inline-flex items-center gap-1 font-medium transition-colors cursor-default pro-element-badge',
+        'inline-flex items-center gap-1 font-medium transition-all cursor-default',
+        isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1',
+        'duration-300 ease-out',
         className
       )}
     >

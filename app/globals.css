@@ -3,48 +3,15 @@
 
 @source '../*.{js,ts,jsx,tsx,mdx}';
 
-/* 🚀 INSTANT PRO USER OPTIMIZATIONS - Prevent flashing of pro elements */
+/* 🚀 ZERO-FLASH APPROACH: Using conditional rendering instead of CSS hiding */
+/* Pro elements are now conditionally rendered in React components */
+/* This eliminates any possibility of flashing since DOM elements don't exist for pro users */
 
-/* Default: Completely hide pro elements until we know the user's plan */
-/* This prevents any rendering/flashing for pro users */
-.pro-element-usage-card,
-.pro-element-badge {
-  display: none !important;
-}
-
-/* Show pro elements ONLY for confirmed free users */
-/* We explicitly show elements only when we know it's a free user */
-html[data-user-plan="free"] .pro-element-usage-card {
-  display: block !important;
-  opacity: 1;
-  visibility: visible;
-}
-
-html[data-user-plan="free"] .pro-element-badge {
-  display: inline-flex !important; /* Badges should be inline-flex */
-  opacity: 1;
-  visibility: visible;
-}
-
-/* Ensure pro elements stay hidden for pro users */
-html[data-user-plan="pro"] .pro-element-usage-card,
-html[data-user-plan="pro"] .pro-element-badge {
-  display: none !important;
-}
-
-/* Add loading state - keep hidden during determination */
-html[data-user-plan="loading"] .pro-element-usage-card,
-html[data-user-plan="loading"] .pro-element-badge,
-html:not([data-user-plan]) .pro-element-usage-card,
-html:not([data-user-plan]) .pro-element-badge {
-  display: none !important;
-}
-
-/* Additional performance optimizations */
+/* Performance optimizations for animations */
 @media (prefers-reduced-motion: reduce) {
-  .pro-element-usage-card,
-  .pro-element-badge {
+  * {
     transition: none !important;
+    animation: none !important;
   }
 }
 

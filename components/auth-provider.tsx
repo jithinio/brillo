@@ -5,13 +5,16 @@ import { createContext, useContext, useEffect, useState } from "react"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import type { User } from "@supabase/supabase-js"
 import { logger } from "@/lib/logger"
+import { LogoutOverlay } from "@/components/logout-overlay"
 
 interface AuthContextType {
   user: User | null
   loading: boolean
+  signingOut: boolean
   signOut: () => Promise<void>
   signIn: (email: string, password: string) => Promise<{ error?: any }>
   signUp: (email: string, password: string, userData?: any) => Promise<{ error?: any }>
+  getCachedUser: () => User | null
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -39,6 +42,65 @@ function createMockUser(email: string): User {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [signingOut, setSigningOut] = useState(false)
+  const [hasMounted, setHasMounted] = useState(false)
+
+  // Cache user data to prevent menu flash on refresh
+  const getCachedUser = (): User | null => {
+    if (typeof window === 'undefined' || !hasMounted) return null
+    
+    try {
+      const cachedUserData = localStorage.getItem('auth-user-cache')
+      if (cachedUserData) {
+        return JSON.parse(cachedUserData)
+      }
+    } catch (error) {
+      logger.error("Error reading cached user data", error)
+    }
+    return null
+  }
+
+  const setCachedUser = (user: User | null) => {
+    if (typeof window === 'undefined') return
+    
+    try {
+      if (user) {
+        // Cache essential user data for UI persistence
+        const userCache = {
+          id: user.id,
+          email: user.email,
+          created_at: user.created_at,
+          updated_at: user.updated_at,
+          aud: user.aud,
+          role: user.role,
+          email_confirmed_at: user.email_confirmed_at,
+          user_metadata: user.user_metadata,
+          app_metadata: user.app_metadata
+        }
+        localStorage.setItem('auth-user-cache', JSON.stringify(userCache))
+      } else {
+        localStorage.removeItem('auth-user-cache')
+      }
+    } catch (error) {
+      logger.error("Error caching user data", error)
+    }
+  }
+
+  useEffect(() => {
+    setHasMounted(true)
+  }, [])
+
+  // Check cache immediately on mount to prevent flash
+  useEffect(() => {
+    if (hasMounted && loading) {
+      const cachedUser = getCachedUser()
+      if (cachedUser) {
+        setUser(cachedUser)
+        setLoading(false)
+        logger.authLog("Using cached user data to prevent menu flash")
+      }
+    }
+  }, [hasMounted, loading])
 
   useEffect(() => {
     const initializeAuth = async () => {
@@ -53,11 +115,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const {
           data: { session },
         } = await supabase.auth.getSession()
-        setUser(session?.user ?? null)
+        const currentUser = session?.user ?? null
+        setUser(currentUser)
+        setCachedUser(currentUser) // Cache the user data
         logger.authLog("Authentication initialized successfully")
       } catch (error) {
         logger.error("Auth initialization error", error)
         setUser(null)
+        setCachedUser(null)
       }
       setLoading(false)
     }
@@ -73,6 +138,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const currentUser = session?.user ?? null
         
         setUser(currentUser)
+        setCachedUser(currentUser) // Cache the user data on state change
         setLoading(false)
         
         // If user just signed in, trigger subscription sync
@@ -141,14 +207,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     if (!isSupabaseConfigured()) {
       logger.error("Supabase not configured - cannot sign out")
-      setUser(null)
-      clearAllCaches()
+      setSigningOut(true)
+      
+      // Add a delay to show the logout overlay
+      setTimeout(() => {
+        setUser(null)
+        setCachedUser(null) // Clear user cache
+        clearAllCaches()
+        setSigningOut(false)
+      }, 1500)
       return
     }
 
     try {
+      setSigningOut(true) // Show logout overlay
+      
+      // Add a brief delay to ensure overlay is visible
+      await new Promise(resolve => setTimeout(resolve, 800))
+      
       // Clear any cached authentication state
       setUser(null)
+      setCachedUser(null) // Clear user cache
       setLoading(true)
       
       // Clear all caches before signing out
@@ -158,13 +237,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await supabase.auth.signOut()
       
       logger.authLog("User signed out successfully")
+      
+      // Add another brief delay before hiding overlay
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
     } catch (error) {
       logger.error("Sign out error", error)
       // Force local sign out even if Supabase fails
       setUser(null)
+      setCachedUser(null) // Clear user cache
       clearAllCaches()
     } finally {
       setLoading(false)
+      setSigningOut(false) // Hide logout overlay
     }
   }
 
@@ -173,6 +258,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       // Clear all localStorage items that cache user data
       const cacheKeys = [
+        'auth-user-cache', // Add auth cache to clearing
         'unified-projects-data',
         'analytics-data', 
         'dashboard-data',
@@ -220,7 +306,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  return <AuthContext.Provider value={{ user, loading, signOut, signIn, signUp }}>{children}</AuthContext.Provider>
+  return (
+    <AuthContext.Provider value={{ user, loading, signingOut, signOut, signIn, signUp, getCachedUser }}>
+      {children}
+      <LogoutOverlay isVisible={signingOut} />
+    </AuthContext.Provider>
+  )
 }
 
 export const useAuth = () => {
