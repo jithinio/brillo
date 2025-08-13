@@ -166,23 +166,49 @@ export async function syncPolarSubscription(customerId: string) {
     
     console.log('Listing subscriptions for organization:', organizationId)
     
-    // List all subscriptions for the organization
-    const subscriptionsResponse = await polar.subscriptions.list({
-      organizationId: organizationId,
-      limit: 100, // Increase limit to ensure we get all subscriptions
-    })
+    let subscriptionsData: any = null
     
-    console.log('Total subscriptions found:', subscriptionsResponse.items?.length || 0)
+    try {
+      // Try to use the SDK first
+      const subscriptionsResponse = await polar.subscriptions.list({
+        organizationId: organizationId,
+        limit: 100, // Increase limit to ensure we get all subscriptions
+      })
+      subscriptionsData = subscriptionsResponse
+    } catch (sdkError: any) {
+      // If SDK validation fails, try raw API call
+      console.warn('SDK validation failed, attempting raw API call:', sdkError.message)
+      
+      const response = await fetch(`${POLAR_CONFIG.sandbox ? 'https://sandbox.polar.sh' : 'https://api.polar.sh'}/v1/subscriptions?organization_id=${organizationId}&limit=100`, {
+        headers: {
+          'Authorization': `Bearer ${POLAR_CONFIG.accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      })
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
+      subscriptionsData = await response.json()
+    }
     
-    if (!subscriptionsResponse.items || subscriptionsResponse.items.length === 0) {
+    console.log('Total subscriptions found:', subscriptionsData.items?.length || 0)
+    
+    if (!subscriptionsData.items || subscriptionsData.items.length === 0) {
       console.log('No subscriptions found for organization')
       return null
     }
     
-    // Filter subscriptions by customer ID
-    const customerSubscriptions = subscriptionsResponse.items.filter((sub: any) => {
+    // Filter subscriptions by customer ID - check multiple possible fields
+    const customerSubscriptions = subscriptionsData.items.filter((sub: any) => {
       // Check if the subscription's user/customer matches our customer ID
-      return sub.userId === customerId || sub.customerId === customerId || sub.customer_id === customerId
+      const userIdMatch = sub.user_id === customerId || sub.userId === customerId
+      const customerIdMatch = sub.customer_id === customerId || sub.customerId === customerId
+      const customerDataIdMatch = sub.customer?.id === customerId
+      const externalIdMatch = sub.customer?.external_id === customerId
+      
+      return userIdMatch || customerIdMatch || customerDataIdMatch || externalIdMatch
     })
     
     console.log('Customer subscriptions found:', customerSubscriptions.length)
@@ -206,10 +232,10 @@ export async function syncPolarSubscription(customerId: string) {
     
     return {
       subscriptionId: activeSubscription.id,
-      productId: activeSubscription.productId || activeSubscription.product_id,
+      productId: activeSubscription.product_id || activeSubscription.productId || activeSubscription.product?.id,
       status: activeSubscription.status,
-      currentPeriodEnd: activeSubscription.currentPeriodEnd || activeSubscription.current_period_end || activeSubscription.ends_at,
-      cancelAtPeriodEnd: activeSubscription.cancelAtPeriodEnd || activeSubscription.cancel_at_period_end || false,
+      currentPeriodEnd: activeSubscription.current_period_end || activeSubscription.currentPeriodEnd || activeSubscription.ends_at,
+      cancelAtPeriodEnd: activeSubscription.cancel_at_period_end || activeSubscription.cancelAtPeriodEnd || false,
     }
   } catch (error: any) {
     console.error('Failed to sync Polar subscription:', error)
