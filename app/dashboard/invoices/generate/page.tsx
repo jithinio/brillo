@@ -649,6 +649,37 @@ export default function GenerateInvoicePage() {
            dueDate
   }
 
+  const getValidationErrors = () => {
+    const errors: string[] = []
+    
+    if (!selectedClient) {
+      errors.push("Client must be selected")
+    }
+    
+    if (items.length === 0) {
+      errors.push("At least one invoice item is required")
+    } else {
+      items.forEach((item, index) => {
+        if (!item.description.trim()) {
+          errors.push(`Item ${index + 1}: Description is required`)
+        }
+        if (item.rate <= 0) {
+          errors.push(`Item ${index + 1}: Rate must be greater than 0`)
+        }
+      })
+    }
+    
+    if (!invoiceDate) {
+      errors.push("Invoice date is required")
+    }
+    
+    if (!dueDate) {
+      errors.push("Due date is required")
+    }
+    
+    return errors
+  }
+
   const handleSaveDraft = async () => {
     if (!selectedClient) {
       toast.error("Please select a client before saving the draft")
@@ -875,7 +906,10 @@ export default function GenerateInvoicePage() {
 
   const handleGenerateInvoice = async () => {
     if (!isReadyToGenerate()) {
-      toast.error("Please complete all required fields before generating the invoice")
+      const errors = getValidationErrors()
+      toast.error("Cannot generate invoice", {
+        description: errors.join(", ")
+      })
       return
     }
 
@@ -1953,6 +1987,11 @@ export default function GenerateInvoicePage() {
                     </span>
                   </div>
                 </div>
+                {!isReadyToGenerate() && (
+                  <div className="mt-3 text-xs text-muted-foreground text-center">
+                    Missing: {getValidationErrors().join(", ")}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
