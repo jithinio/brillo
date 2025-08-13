@@ -43,9 +43,71 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // If no Polar customer ID, user has no subscription
+    // If no Polar customer ID, try to find subscription by email
     if (!profile.polar_customer_id) {
-      logger.info('No Polar customer ID found, setting to free plan')
+      logger.info('No Polar customer ID found, trying email lookup:', userId)
+      
+      try {
+        const { data: { user: authUser } } = await supabase.auth.admin.getUserById(userId)
+        
+        if (authUser?.email) {
+          logger.info('Attempting to find Polar subscription by email:', authUser.email)
+          
+          // Use syncPolarSubscription with email as fallback
+          const polarSubscription = await syncPolarSubscription(authUser.email)
+          
+          if (polarSubscription) {
+            // Map product ID to plan ID
+            let planId = 'free'
+            const { POLAR_PRODUCT_IDS } = await import('@/lib/polar-client')
+            
+            if (polarSubscription.productId === POLAR_PRODUCT_IDS.PRO_MONTHLY) {
+              planId = 'pro_monthly'
+            } else if (polarSubscription.productId === POLAR_PRODUCT_IDS.PRO_YEARLY) {
+              planId = 'pro_yearly'
+            }
+            
+            // Found subscription by email - update profile with full subscription data
+            await supabase
+              .from('profiles')
+              .update({
+                polar_customer_id: authUser.email, // Use email as customer ID reference
+                subscription_plan_id: planId,
+                subscription_status: polarSubscription.status,
+                polar_subscription_id: polarSubscription.subscriptionId,
+                subscription_current_period_end: polarSubscription.currentPeriodEnd,
+                cancel_at_period_end: polarSubscription.cancelAtPeriodEnd,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', userId)
+            
+            logger.info('Subscription synced from Polar by email', { 
+              userId, 
+              email: authUser.email,
+              planId,
+              status: polarSubscription.status
+            }, 'SUBSCRIPTION')
+            
+            return NextResponse.json({ 
+              success: true,
+              synced: true,
+              message: 'Subscription found and synced by email',
+              planId,
+              subscription: {
+                planId,
+                status: polarSubscription.status,
+                currentPeriodEnd: polarSubscription.currentPeriodEnd,
+                cancelAtPeriodEnd: polarSubscription.cancelAtPeriodEnd
+              }
+            })
+          }
+        }
+      } catch (emailSyncError) {
+        logger.error('Error syncing by email:', emailSyncError)
+      }
+      
+      // No subscription found - set to free plan
+      logger.info('No subscription found, setting to free plan')
       
       await supabase
         .from('profiles')
@@ -60,12 +122,10 @@ export async function POST(request: NextRequest) {
         .eq('id', userId)
 
       return NextResponse.json({ 
-        success: true,
-        subscription: {
-          planId: 'free',
-          status: 'inactive'
-        }
-      })
+        error: 'No subscription found',
+        details: 'User has no Polar customer ID and no subscription found by email',
+        synced: false
+      }, { status: 404 })
     }
 
     try {

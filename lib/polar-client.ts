@@ -65,14 +65,14 @@ export async function createCheckoutSession(
 
     // Create checkout session
     const checkout = await polar.checkouts.create({
-      productId: productId,
-      customerEmail: userEmail,
+      product_id: productId,
+      customer_email: userEmail,
       metadata: {
         userId: userId,
       },
-      successUrl: successUrl || `${process.env.NEXT_PUBLIC_URL}/dashboard?upgrade=success`,
-      customerId: customer?.id,
-    })
+      success_url: successUrl || `${process.env.NEXT_PUBLIC_URL}/dashboard?upgrade=success`,
+      customer_id: customer?.id,
+    } as any)
 
     return checkout.url
   } catch (error) {
@@ -87,7 +87,7 @@ export async function getOrCreatePolarCustomer(userId: string, email: string, na
 
   try {
     // Try to find existing customer by email
-    const customers = await polar.customers.list({
+    const customers = await (polar as any).customers.list({
       email: email,
       limit: 1,
     })
@@ -97,7 +97,7 @@ export async function getOrCreatePolarCustomer(userId: string, email: string, na
     }
 
     // Create new customer
-    const customer = await polar.customers.create({
+    const customer = await (polar as any).customers.create({
       email: email,
       name: name,
       metadata: {
@@ -117,7 +117,7 @@ export async function createCustomerPortalSession(customerId: string) {
   const polar = createPolarClient()
 
   try {
-    const session = await polar.customerSessions.create({
+    const session = await (polar as any).customerSessions.create({
       customerId: customerId,
     })
 
@@ -208,13 +208,56 @@ export async function syncPolarSubscription(customerId: string) {
       const customerDataIdMatch = sub.customer?.id === customerId
       const externalIdMatch = sub.customer?.external_id === customerId
       
+      console.log('Checking subscription:', {
+        subscriptionId: sub.id,
+        userIdMatch,
+        customerIdMatch,
+        customerDataIdMatch,
+        externalIdMatch,
+        customerId,
+        sub_user_id: sub.user_id,
+        sub_customer_id: sub.customer_id,
+        sub_customer: sub.customer
+      })
+      
       return userIdMatch || customerIdMatch || customerDataIdMatch || externalIdMatch
     })
     
     console.log('Customer subscriptions found:', customerSubscriptions.length)
     
     if (customerSubscriptions.length === 0) {
-      console.log('No subscriptions found for customer:', customerId)
+      console.log('No subscriptions found for customer ID, trying email search:', customerId)
+      
+      // If customer ID search failed, try searching by email in subscription metadata or customer data
+      const emailSubscriptions = subscriptionsData.items.filter((sub: any) => {
+        const customerEmail = sub.customer?.email
+        const metadataEmail = sub.metadata?.email || sub.metadata?.user_email
+        
+        return customerEmail === customerId || metadataEmail === customerId
+      })
+      
+      console.log('Email-based subscriptions found:', emailSubscriptions.length)
+      
+      if (emailSubscriptions.length > 0) {
+        // Use email-based results instead
+        const activeEmailSubscription = emailSubscriptions.find((sub: any) => 
+          sub.status === 'active' || sub.status === 'trialing'
+        )
+        
+        if (activeEmailSubscription) {
+          console.log('Found active subscription by email:', activeEmailSubscription)
+          
+          return {
+            subscriptionId: activeEmailSubscription.id,
+            productId: activeEmailSubscription.product_id || activeEmailSubscription.productId || activeEmailSubscription.product?.id,
+            status: activeEmailSubscription.status,
+            currentPeriodEnd: activeEmailSubscription.current_period_end || activeEmailSubscription.currentPeriodEnd || activeEmailSubscription.ends_at,
+            cancelAtPeriodEnd: activeEmailSubscription.cancel_at_period_end || activeEmailSubscription.cancelAtPeriodEnd || false,
+          }
+        }
+      }
+      
+      console.log('No subscriptions found for customer (ID or email):', customerId)
       return null
     }
     
@@ -258,7 +301,7 @@ export async function cancelPolarSubscription(subscriptionId: string) {
   const polar = createPolarClient()
 
   try {
-    await polar.subscriptions.cancel(subscriptionId)
+    await (polar as any).subscriptions.cancel(subscriptionId)
     return true
   } catch (error) {
     console.error('Failed to cancel subscription:', error)
@@ -271,7 +314,7 @@ export async function updatePolarSubscription(subscriptionId: string, cancelAtPe
   const polar = createPolarClient()
 
   try {
-    const subscription = await polar.subscriptions.update(subscriptionId, {
+    const subscription = await (polar as any).subscriptions.update(subscriptionId, {
       cancelAtPeriodEnd: cancelAtPeriodEnd,
     })
     return subscription
@@ -290,7 +333,7 @@ export async function getPolarProducts() {
       organizationId: POLAR_CONFIG.organizationId,
       isRecurring: true,
     })
-    return products.items || []
+    return (products as any).items || []
   } catch (error) {
     console.error('Failed to get products:', error)
     return []

@@ -45,6 +45,32 @@ export function UpgradeSuccessHandler() {
       console.log('🚀 Applying optimistic upgrade to:', planFromUrl)
       optimisticUpgrade(planFromUrl)
 
+      // 🚀 INSTANT CSS HIDING: Force HTML attribute update
+      if (typeof window !== 'undefined') {
+        document.documentElement.setAttribute('data-user-plan', 'pro')
+        console.log('🚀 Instant pro user CSS hiding activated')
+        
+        // Also update localStorage cache immediately with pro status
+        try {
+          const subscriptionCache = {
+            data: {
+              planId: planFromUrl,
+              status: 'active',
+              customerId: null,
+              subscriptionId: null,
+              currentPeriodEnd: null,
+              cancelAtPeriodEnd: false
+            },
+            timestamp: Date.now(),
+            userId: user?.id || ''
+          }
+          localStorage.setItem('brillo-subscription-cache', JSON.stringify(subscriptionCache))
+          console.log('🚀 Updated localStorage cache with pro status')
+        } catch (error) {
+          console.warn('Failed to update localStorage cache:', error)
+        }
+      }
+
       // Show immediate success message with pro features unlocked
       toast.success('🎉 Welcome to Brillo Pro! All features unlocked!', {
         duration: 4000,

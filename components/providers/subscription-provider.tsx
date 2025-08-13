@@ -562,7 +562,8 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
       const checkoutEndpoint = FEATURE_FLAGS.USE_POLAR ? '/api/polar-checkout' : '/api/stripe-checkout'
       const checkoutUrl = `${baseUrl}${checkoutEndpoint}?plan=${planId}&uid=${user.id}`
       
-      window.location.href = checkoutUrl
+      // Open checkout in new tab for better UX
+      window.open(checkoutUrl, '_blank')
       
     } catch (err) {
       console.error('Error starting upgrade:', err)

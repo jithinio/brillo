@@ -93,7 +93,7 @@ export const GET = async (req: NextRequest) => {
     // Use the Polar Checkout handler
     const handler = Checkout({
       accessToken: process.env.POLAR_ACCESS_TOKEN!,
-      successUrl: `${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/dashboard?upgrade=success`,
+      successUrl: `${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/dashboard?upgrade=success&plan=${planId}`,
       server: POLAR_CONFIG.sandbox ? "sandbox" : "production",
     })
     

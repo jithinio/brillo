@@ -29,11 +29,11 @@ export const POST = Webhooks({
   },
   
   onCheckoutCreated: async (data) => {
-    logger.info('Checkout created', { checkoutId: data.id })
+    logger.info('Checkout created', { checkoutId: (data as any).id })
   },
   
   onCheckoutUpdated: async (data) => {
-    logger.info('Checkout updated', { checkoutId: data.id, status: data.status })
+    logger.info('Checkout updated', { checkoutId: (data as any).id, status: (data as any).status })
   },
   
   onOrderCreated: async (data) => {
@@ -41,11 +41,11 @@ export const POST = Webhooks({
   },
   
   onCustomerCreated: async (data) => {
-    logger.info('Customer created', { customerId: data.id })
+    logger.info('Customer created', { customerId: (data as any).id })
   },
   
   onCustomerUpdated: async (data) => {
-    logger.info('Customer updated', { customerId: data.id })
+    logger.info('Customer updated', { customerId: (data as any).id })
   },
   
   // This is the key webhook for customer state management
@@ -207,20 +207,54 @@ async function handleCustomerStateChanged(data: any) {
       sub.status === 'active' || sub.status === 'trialing'
     ) || []
     
-    // Find user by email or metadata
-    let userId = data.metadata?.userId
+    // Find user by multiple methods
+    let userId = data.metadata?.userId || data.metadata?.supabaseUserId
+    
+    // If no metadata userId, try to find by customer external_id (which we set to user ID)
+    if (!userId && data.external_id) {
+      userId = data.external_id
+    }
     
     if (!userId && customerEmail) {
-      // Try to find user by email
-      const { data: userData } = await supabase.auth.admin.listUsers()
-      const user = userData?.users?.find(u => u.email === customerEmail)
-      userId = user?.id
+      // Try to find user by email in profiles table first (faster)
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', customerEmail)
+        .single()
+      
+      if (profileData) {
+        userId = profileData.id
+      } else {
+        // Fallback to auth admin query
+        try {
+          const { data: userData } = await supabase.auth.admin.listUsers()
+          const user = userData?.users?.find(u => u.email === customerEmail)
+          userId = user?.id
+        } catch (authError) {
+          logger.error('Error querying auth users:', authError)
+        }
+      }
     }
     
     if (!userId) {
-      logger.warn('No user found for customer state change', { customerId, email: customerEmail })
+      logger.warn('No user found for customer state change', { 
+        customerId, 
+        email: customerEmail,
+        external_id: data.external_id,
+        metadata: data.metadata
+      })
       return
     }
+    
+    logger.info('Found user for customer state change', { 
+      userId, 
+      customerId, 
+      email: customerEmail,
+      method: data.metadata?.userId ? 'metadata' : 
+              data.external_id ? 'external_id' : 
+              'email_lookup'
+    })
     
     // Update user profile with the latest customer state
     if (activeSubscriptions.length > 0) {
