@@ -10,6 +10,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useSubscription } from "@/components/providers/subscription-provider"
 import { toast } from "sonner"
 import { SubscriptionSkeleton } from "@/components/subscription/subscription-skeleton"
+import { SubscriptionRecovery } from "@/components/subscription-recovery"
 
 export function SubscriptionManagement() {
   const { subscription, plan, usage, isLoading, refetchSubscription, getCachedPlanId, provider } = useSubscription()
@@ -627,6 +628,13 @@ export function SubscriptionManagement() {
           </div>
         </CardContent>
       </Card>
+      )}
+      
+      {/* Recovery Tool - Only show if user appears to have lost pro access */}
+      {!isLoading && subscription.planId === 'free' && (
+        <div className="mt-6">
+          <SubscriptionRecovery />
+        </div>
       )}
     </div>
   )

@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
             await supabase
               .from('profiles')
               .update({
-                polar_customer_id: authUser.email, // Use email as customer ID reference
+                polar_customer_id: polarSubscription.customerId || authUser.email, // Use actual customer ID if available
                 subscription_plan_id: planId,
                 subscription_status: polarSubscription.status,
                 polar_subscription_id: polarSubscription.subscriptionId,
@@ -106,26 +106,50 @@ export async function POST(request: NextRequest) {
         logger.error('Error syncing by email:', emailSyncError)
       }
       
-      // No subscription found - set to free plan
-      logger.info('No subscription found, setting to free plan')
+      // No subscription found - but check if user already has subscription data
+      logger.info('No subscription found via sync')
       
-      await supabase
+      // Check current subscription status before clearing
+      const { data: currentProfile } = await supabase
         .from('profiles')
-        .update({
-          subscription_plan_id: 'free',
-          subscription_status: 'inactive',
-          polar_subscription_id: null,
-          subscription_current_period_end: null,
-          cancel_at_period_end: false,
-          updated_at: new Date().toISOString()
-        })
+        .select('subscription_plan_id, subscription_status, polar_subscription_id')
         .eq('id', userId)
-
-      return NextResponse.json({ 
-        error: 'No subscription found',
-        details: 'User has no Polar customer ID and no subscription found by email',
-        synced: false
-      }, { status: 404 })
+        .single()
+      
+      // Only clear if user is already on free plan or has no subscription
+      if (!currentProfile?.subscription_plan_id || currentProfile.subscription_plan_id === 'free') {
+        await supabase
+          .from('profiles')
+          .update({
+            subscription_plan_id: 'free',
+            subscription_status: 'inactive',
+            polar_subscription_id: null,
+            subscription_current_period_end: null,
+            cancel_at_period_end: false,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', userId)
+          
+        return NextResponse.json({ 
+          error: 'No subscription found',
+          details: 'User has no Polar customer ID and no subscription found by email',
+          synced: false
+        }, { status: 404 })
+      } else {
+        // User has existing subscription data - don't clear it!
+        logger.warn('⚠️ Sync failed but user has existing subscription data - preserving it', {
+          userId,
+          currentPlan: currentProfile.subscription_plan_id,
+          currentStatus: currentProfile.subscription_status
+        })
+        
+        return NextResponse.json({ 
+          error: 'Sync failed but existing subscription preserved',
+          details: 'Unable to sync with Polar, but keeping existing subscription data. Contact support if issues persist.',
+          preserved: true,
+          currentPlan: currentProfile.subscription_plan_id
+        }, { status: 404 })
+      }
     }
 
     try {
@@ -150,6 +174,7 @@ export async function POST(request: NextRequest) {
           .update({
             subscription_plan_id: planId,
             subscription_status: polarSubscription.status,
+            polar_customer_id: polarSubscription.customerId || profile.polar_customer_id, // Update customer ID if returned
             polar_subscription_id: polarSubscription.subscriptionId,
             subscription_current_period_end: polarSubscription.currentPeriodEnd,
             cancel_at_period_end: polarSubscription.cancelAtPeriodEnd,
@@ -176,29 +201,57 @@ export async function POST(request: NextRequest) {
           }
         })
       } else {
-        // No active subscription found
-        await supabase
+        // No active subscription found via API
+        logger.warn('No active subscription found for customer:', profile.polar_customer_id)
+        
+        // Check if this is a legitimate cancellation or API issue
+        const { data: currentProfile } = await supabase
           .from('profiles')
-          .update({
-            subscription_plan_id: 'free',
-            subscription_status: 'inactive',
-            polar_subscription_id: null,
-            subscription_current_period_end: null,
-            cancel_at_period_end: false,
-            updated_at: new Date().toISOString()
-          })
+          .select('subscription_plan_id, subscription_status')
           .eq('id', userId)
+          .single()
+        
+        // Only clear if user is already free or this looks like a real cancellation
+        if (!currentProfile?.subscription_plan_id || 
+            currentProfile.subscription_plan_id === 'free' ||
+            currentProfile.subscription_status === 'canceled') {
+          await supabase
+            .from('profiles')
+            .update({
+              subscription_plan_id: 'free',
+              subscription_status: 'inactive',
+              polar_subscription_id: null,
+              subscription_current_period_end: null,
+              cancel_at_period_end: false,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', userId)
 
-        return NextResponse.json({ 
-          success: true,
-          synced: true,
-          message: 'No active subscription found',
-          planId: 'free',
-          subscription: {
+          return NextResponse.json({ 
+            success: true,
+            synced: true,
+            message: 'No active subscription found',
             planId: 'free',
-            status: 'inactive'
-          }
-        })
+            subscription: {
+              planId: 'free',
+              status: 'inactive'
+            }
+          })
+        } else {
+          // Preserve existing subscription data
+          logger.warn('⚠️ API shows no subscription but user has pro plan - preserving data', {
+            userId,
+            currentPlan: currentProfile.subscription_plan_id
+          })
+          
+          return NextResponse.json({ 
+            warning: 'Subscription sync inconclusive',
+            message: 'Polar API returned no active subscription, but existing pro subscription preserved. This may be a temporary issue.',
+            preserved: true,
+            currentPlan: currentProfile.subscription_plan_id,
+            synced: false
+          })
+        }
       }
     } catch (error) {
       logger.error('Failed to sync Polar subscription:', error)

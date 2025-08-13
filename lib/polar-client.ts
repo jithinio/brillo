@@ -214,10 +214,12 @@ export async function syncPolarSubscription(customerId: string) {
         customerIdMatch,
         customerDataIdMatch,
         externalIdMatch,
-        customerId,
+        searchingFor: customerId,
         sub_user_id: sub.user_id,
         sub_customer_id: sub.customer_id,
-        sub_customer: sub.customer
+        sub_customer: sub.customer,
+        sub_customer_email: sub.customer?.email,
+        sub_metadata: sub.metadata
       })
       
       return userIdMatch || customerIdMatch || customerDataIdMatch || externalIdMatch
@@ -249,6 +251,7 @@ export async function syncPolarSubscription(customerId: string) {
           
           return {
             subscriptionId: activeEmailSubscription.id,
+            customerId: activeEmailSubscription.customer_id || activeEmailSubscription.customerId || activeEmailSubscription.customer?.id,
             productId: activeEmailSubscription.product_id || activeEmailSubscription.productId || activeEmailSubscription.product?.id,
             status: activeEmailSubscription.status,
             currentPeriodEnd: activeEmailSubscription.current_period_end || activeEmailSubscription.currentPeriodEnd || activeEmailSubscription.ends_at,
@@ -275,6 +278,7 @@ export async function syncPolarSubscription(customerId: string) {
     
     return {
       subscriptionId: activeSubscription.id,
+      customerId: activeSubscription.customer_id || activeSubscription.customerId || activeSubscription.customer?.id,
       productId: activeSubscription.product_id || activeSubscription.productId || activeSubscription.product?.id,
       status: activeSubscription.status,
       currentPeriodEnd: activeSubscription.current_period_end || activeSubscription.currentPeriodEnd || activeSubscription.ends_at,

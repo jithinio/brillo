@@ -99,25 +99,78 @@ async function handleCancelSubscription(profile: any, polar: any) {
 async function handleCustomerPortal(profile: any, polar: any) {
   try {
     // Check if user has a polar_customer_id
-    if (!profile.polar_customer_id) {
-      logger.warn('No Polar customer ID found for user', { userId: profile.id })
+    if (!profile.polar_customer_id || !profile.polar_subscription_id) {
+      logger.warn('Missing Polar IDs for user, attempting auto-sync', { 
+        userId: profile.id,
+        hasCustomerId: !!profile.polar_customer_id,
+        hasSubscriptionId: !!profile.polar_subscription_id
+      })
       
-      // Try to find the customer by email as fallback
-      const { data: { user: authUser } } = await supabase.auth.admin.getUserById(profile.id)
-      
-      if (!authUser?.email) {
+      // Try to sync subscription data automatically
+      try {
+        const { data: { user: authUser } } = await supabase.auth.admin.getUserById(profile.id)
+        
+        if (authUser?.email) {
+          logger.info('Attempting to sync Polar subscription by email:', authUser.email)
+          
+          // Import and use syncPolarSubscription
+          const { syncPolarSubscription, POLAR_PRODUCT_IDS } = await import('@/lib/polar-client')
+          const polarSubscription = await syncPolarSubscription(authUser.email)
+          
+          if (polarSubscription && polarSubscription.customerId) {
+            // Map product ID to plan ID
+            let planId = 'free'
+            if (polarSubscription.productId === POLAR_PRODUCT_IDS.PRO_MONTHLY) {
+              planId = 'pro_monthly'
+            } else if (polarSubscription.productId === POLAR_PRODUCT_IDS.PRO_YEARLY) {
+              planId = 'pro_yearly'
+            }
+            
+            // Update profile with found subscription data
+            await supabase
+              .from('profiles')
+              .update({
+                polar_customer_id: polarSubscription.customerId,
+                subscription_plan_id: planId,
+                subscription_status: polarSubscription.status,
+                polar_subscription_id: polarSubscription.subscriptionId,
+                subscription_current_period_end: polarSubscription.currentPeriodEnd,
+                cancel_at_period_end: polarSubscription.cancelAtPeriodEnd,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', profile.id)
+            
+            logger.info('Auto-synced Polar subscription data', { 
+              userId: profile.id,
+              customerId: polarSubscription.customerId,
+              subscriptionId: polarSubscription.subscriptionId
+            })
+            
+            // Update profile object for this request
+            profile.polar_customer_id = polarSubscription.customerId
+            profile.polar_subscription_id = polarSubscription.subscriptionId
+          } else {
+            // No subscription found
+            return NextResponse.json({ 
+              error: 'No active subscription found',
+              details: 'You need an active subscription to access the billing portal.',
+              suggestion: 'Please subscribe to a plan first.'
+            }, { status: 404 })
+          }
+        } else {
+          return NextResponse.json({ 
+            error: 'No customer account found',
+            details: 'Unable to retrieve account information.'
+          }, { status: 404 })
+        }
+      } catch (syncError) {
+        logger.error('Failed to auto-sync subscription:', syncError)
         return NextResponse.json({ 
-          error: 'No customer account found. Please contact support.',
-          details: 'No customer ID or email found for portal access.'
+          error: 'No customer account found',
+          details: 'Failed to sync subscription data. Please try syncing manually from Settings.',
+          suggestion: 'Go to Settings → Subscription → Click "Sync Data"'
         }, { status: 404 })
       }
-      
-      // For now, if no customer ID exists, return a helpful error
-      return NextResponse.json({ 
-        error: 'No customer account found',
-        details: 'You need to have an active subscription to access the billing portal. Please contact support if you believe this is an error.',
-        suggestion: 'Try syncing your subscription data first from the Settings page.'
-      }, { status: 404 })
     }
 
     // Use the NextJS adapter portal endpoint with proper customer ID

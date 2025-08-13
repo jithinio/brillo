@@ -85,6 +85,16 @@ export const GET = async (req: NextRequest) => {
     }
     checkoutUrl.searchParams.set('metadata', JSON.stringify(metadata))
     
+    // Log the checkout parameters for debugging
+    console.log('🛒 Creating Polar checkout with params:', {
+      productId,
+      customerEmail: user.email,
+      customerExternalId: uid,
+      metadata,
+      planId,
+      userId: uid
+    })
+    
     // Create the request for the adapter
     const adapterRequest = new NextRequest(checkoutUrl, {
       headers: req.headers,
