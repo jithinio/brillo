@@ -2,6 +2,9 @@
 import { Polar } from '@polar-sh/sdk'
 import { POLAR_CONFIG } from './config/environment'
 
+// Re-export POLAR_CONFIG for use in other files
+export { POLAR_CONFIG }
+
 // Server-side Polar client
 export function createPolarClient() {
   if (!POLAR_CONFIG.accessToken) {
