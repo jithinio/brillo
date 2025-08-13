@@ -35,7 +35,7 @@ export function ProBadge({
 
   // 🚀 INSTANT PRO USER DETECTION - Never show for pro users, no flashing
   const cachedPlanId = getCachedPlanId()
-  const isKnownProUser = hasMounted && isProPlan(cachedPlanId)
+  const isKnownProUser = hasMounted && (isProPlan(cachedPlanId) || isProPlan(subscription?.planId))
 
   const checkFeatureAccess = () => {
     if (!feature) return true // No specific feature, assume access

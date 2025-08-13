@@ -595,6 +595,16 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
       } catch (error) {
         console.warn('Failed to save subscription cache to localStorage:', error)
       }
+      
+      // CRITICAL: Update CSS attribute for instant UI updates
+      if (newSubscription.planId) {
+        if (isProPlan(newSubscription.planId)) {
+          document.documentElement.setAttribute('data-user-plan', 'pro')
+          console.log('🚀 CSS attribute updated to pro for instant hiding')
+        } else {
+          document.documentElement.setAttribute('data-user-plan', 'free')
+        }
+      }
     }
     
     // Update usage limits if plan changed

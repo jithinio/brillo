@@ -263,7 +263,7 @@ export function SidebarUsageOverview() {
   // 🚀 INSTANT PRO USER DETECTION - Never show for pro users, no flashing
   // Check cached plan first to instantly hide for known pro users
   const cachedPlanId = getCachedPlanId()
-  const isKnownProUser = hasMounted && isProPlan(cachedPlanId)
+  const isKnownProUser = hasMounted && (isProPlan(cachedPlanId) || isProPlan(subscription?.planId))
   
   // During SSR or before mount, hide to prevent hydration mismatch
   if (!hasMounted) {

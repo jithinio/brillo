@@ -38,7 +38,8 @@ const ProFeatureGateComponent = ({
   // 🚀 PERFORMANCE: Instant pro user detection (SSR-safe)
   const cachedPlanId = getCachedPlanId()
   const isKnownProUser = hasMounted && 
-    (cachedPlanId === 'pro_monthly' || cachedPlanId === 'pro_yearly')
+    (cachedPlanId === 'pro_monthly' || cachedPlanId === 'pro_yearly' || 
+     subscription?.planId === 'pro_monthly' || subscription?.planId === 'pro_yearly')
 
   const checkFeatureAccess = () => {
     // During SSR or before mount, always deny access to prevent hydration mismatch
