@@ -1,12 +1,15 @@
-// Stripe/Polar subscription provider
+// Polar subscription provider with unified cache and events
 'use client'
 
-import React, { createContext, useContext, useEffect, useState, useCallback, ReactNode, useMemo } from 'react'
+import React, { createContext, useContext, useEffect, useState, useCallback, ReactNode, useMemo, useRef } from 'react'
 import { useAuth } from '@/components/auth-provider'
 import { SubscriptionPlan, UserSubscription, UsageLimits, FeatureAccess } from '@/lib/types/subscription'
 import { getPlan, checkLimits, canAccessFeature, isProPlan } from '@/lib/subscription-plans'
-import { areSubscriptionsEnabled, isStripeConfigured, isPolarConfigured, FEATURE_FLAGS } from '@/lib/config/environment'
+import { areSubscriptionsEnabled, isPolarConfigured, FEATURE_FLAGS } from '@/lib/config/environment'
 import { useSubscriptionPerformance } from '@/hooks/use-subscription-performance'
+import { trackSubscriptionOperation } from '@/lib/subscription-performance-tracker'
+import SubscriptionCache from '@/lib/subscription-cache'
+import { subscriptionEvents, emitUpgraded, emitSynced } from '@/lib/subscription-events'
 
 interface SubscriptionContextType {
   subscription: UserSubscription
@@ -18,8 +21,8 @@ interface SubscriptionContextType {
   canCreate: (resource: 'projects' | 'clients' | 'invoices') => boolean
   getOverLimitStatus: () => { isOverLimit: boolean; restrictions: string[] }
   upgrade: (planId: string) => Promise<void>
-  refetchSubscription: (forceUsageCheck?: boolean) => void
-  provider: 'stripe' | 'polar' | null
+  refetchSubscription: (forceUsageCheck?: boolean, immediate?: boolean) => void
+  provider: 'polar'
   // Optimistic updates
   updateSubscriptionOptimistically: (newSubscription: Partial<UserSubscription>) => void
   optimisticUpgrade: (planId: string) => void
@@ -65,43 +68,21 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
   const [loadingTimeout, setLoadingTimeout] = useState<NodeJS.Timeout | null>(null)
   const [error, setError] = useState<string | null>(null)
   
-  // Initialize subscription cache (will be hydrated on client)
-  const [subscriptionCache, setSubscriptionCache] = useState<{
-    data: UserSubscription | null
-    timestamp: number
-    userId: string
-  }>({ data: null, timestamp: 0, userId: '' })
+  // Track if component has mounted (for SSR safety)
+  const [hasMounted, setHasMounted] = useState(false)
   
-  // Track if we've hydrated from localStorage yet
-  const [hasHydratedCache, setHasHydratedCache] = useState(false)
-  
-  // Add separate usage caching to prevent redundant API calls
-  const [usageCache, setUsageCache] = useState<{
-    data: UsageLimits | null
-    timestamp: number
-    userId: string
-    planId: string
-  }>({ data: null, timestamp: 0, userId: '', planId: '' })
-  
-  const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes cache for free users
-  const PRO_CACHE_DURATION = 24 * 60 * 60 * 1000 // 24 hours cache for pro users (more stable)
-  const USAGE_CACHE_DURATION = 2 * 60 * 1000 // 2 minutes cache for usage (shorter since it changes more)
+  useEffect(() => {
+    setHasMounted(true)
+  }, [])
 
   // Listen for logout events to clear subscription cache
   useEffect(() => {
     const handleLogout = () => {
       console.log('🔄 Subscription Provider: Clearing cache due to logout')
       
-      // Clear subscription cache
-      setSubscriptionCache({ data: null, timestamp: 0, userId: '' })
-      setUsageCache({ data: null, timestamp: 0, userId: '', planId: '' })
-      
-      // Clear localStorage caches
-      try {
-        localStorage.removeItem('subscription-cache')
-        localStorage.removeItem('usage-cache')
-      } catch (error) {
-        console.warn('Failed to clear subscription localStorage cache:', error)
+      // Clear unified cache
+      if (user?.id) {
+        SubscriptionCache.clear(user.id)
       }
       
       // Reset to default state
@@ -129,37 +110,32 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     return () => {
       window.removeEventListener('auth-logout', handleLogout)
     }
-  }, [])
+  }, [user?.id])
 
   // Add immediate cache lookup to reduce loading time
   const [hasCheckedInitialCache, setHasCheckedInitialCache] = useState(false)
 
   // Quick cached plan ID access for UI components (SSR-safe)
   const getCachedPlanId = useCallback((): string => {
-    // During SSR or before hydration, always return 'free' to prevent mismatch
-    if (typeof window === 'undefined' || !hasHydratedCache) {
+    // During SSR or before mount, always return 'free' to prevent mismatch
+    if (typeof window === 'undefined' || !hasMounted) {
       return 'free'
     }
     
     // Return current subscription if not loading
     if (!isLoading) return subscription.planId
     
-    // Return cached subscription if available
-    if (subscriptionCache.data && subscriptionCache.userId === user?.id) {
-      const cacheAge = Date.now() - subscriptionCache.timestamp
-      const cachedPlanId = subscriptionCache.data.planId
-      
-      // Use different cache durations: pro users get longer cache
-      const effectiveCacheDuration = isProPlan(cachedPlanId) ? PRO_CACHE_DURATION : CACHE_DURATION
-      
-      if (cacheAge < effectiveCacheDuration) {
-        return cachedPlanId
+    // Check unified cache
+    if (user?.id) {
+      const cached = SubscriptionCache.get(user.id)
+      if (cached) {
+        return cached.planId
       }
     }
     
     // Default to free
     return 'free'
-  }, [isLoading, subscription.planId, subscriptionCache, user?.id, hasHydratedCache])
+  }, [isLoading, subscription.planId, user?.id, hasMounted])
 
   // Smart feature access that prioritizes cached pro detection
   const featureAccess = useMemo(() => ({
@@ -217,26 +193,18 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
   const checkInitialCache = useCallback(() => {
     if (!user || hasCheckedInitialCache) return false
     
-    const now = Date.now()
-    const cachedPlanId = subscriptionCache.data?.planId
+    const cached = SubscriptionCache.get(user.id)
     
-    // Use different cache durations: pro users get longer cache
-    const effectiveCacheDuration = isProPlan(cachedPlanId) ? PRO_CACHE_DURATION : CACHE_DURATION
-    
-    const isCacheValid = subscriptionCache.data && 
-      subscriptionCache.userId === user.id &&
-      (now - subscriptionCache.timestamp) < effectiveCacheDuration
-
-    if (isCacheValid && subscriptionCache.data) {
-      console.log(`🚀 Using initial cached subscription data (instant load) - ${isProPlan(cachedPlanId) ? 'Pro user' : 'Free user'} cache`)
+    if (cached) {
+      console.log(`🚀 Using initial cached subscription data (instant load) - ${isProPlan(cached.planId) ? 'Pro user' : 'Free user'} cache`)
       trackCacheHit()
-      setSubscription(subscriptionCache.data)
+      setSubscription(cached)
       setIsLoading(false) // Set loading false immediately for cached data
       setHasCheckedInitialCache(true)
       
       // Update usage in background - skip entirely for pro users
-      if (!isProPlan(subscriptionCache.data.planId)) {
-        setTimeout(() => updateUsageLimits(subscriptionCache.data.planId), 100)
+      if (!isProPlan(cached.planId)) {
+        setTimeout(() => updateUsageLimits(cached.planId), 100)
       } else {
         console.log('⚡ Skipping background usage update for cached pro user')
       }
@@ -245,9 +213,11 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     
     setHasCheckedInitialCache(true)
     return false
-  }, [user?.id, subscriptionCache.data, subscriptionCache.userId, subscriptionCache.timestamp, hasCheckedInitialCache, trackCacheHit])
+  }, [user?.id, hasCheckedInitialCache, trackCacheHit])
 
   const loadSubscriptionData = async (force: boolean = false) => {
+    const perfTracker = trackSubscriptionOperation(`load-${Date.now()}`, 'loadSubscriptionData')
+    
     if (!user) {
       setSubscription({
         planId: 'free',
@@ -258,28 +228,23 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
         cancelAtPeriodEnd: false
       })
       setIsLoading(false)
+      perfTracker.end(true, { userId: 'anonymous' })
       return
     }
 
     // Check cache first (unless force refresh)
-    const now = Date.now()
-    const cachedPlanId = subscriptionCache.data?.planId
-    
-    // Use different cache durations: pro users get longer cache
-    const effectiveCacheDuration = isProPlan(cachedPlanId) ? PRO_CACHE_DURATION : CACHE_DURATION
-    
-    const isCacheValid = !force && 
-      subscriptionCache.data && 
-      subscriptionCache.userId === user.id &&
-      (now - subscriptionCache.timestamp) < effectiveCacheDuration
-
-    if (isCacheValid && subscriptionCache.data) {
-      console.log(`🎯 Using cached subscription data - ${isProPlan(cachedPlanId) ? 'Pro user' : 'Free user'} cache`)
-      trackCacheHit()
-      setSubscription(subscriptionCache.data)
-      await updateUsageLimits(subscriptionCache.data.planId)
-      setIsLoading(false)
-      return
+    if (!force) {
+      const cached = SubscriptionCache.get(user.id)
+      
+      if (cached) {
+        console.log(`🎯 Using cached subscription data - ${isProPlan(cached.planId) ? 'Pro user' : 'Free user'} cache`)
+        trackCacheHit()
+        setSubscription(cached)
+        await updateUsageLimits(cached.planId)
+        setIsLoading(false)
+        perfTracker.end(true, { cacheHit: true, userId: user.id })
+        return
+      }
     }
 
     try {
@@ -318,6 +283,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
         endTiming('subscription_load', false)
         setError('Failed to load subscription data')
         setIsLoading(false)
+        perfTracker.end(false, { userId: user.id })
         return
       }
       
@@ -327,6 +293,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
         console.error('❌ No profile found for user:', user.id)
         setError('User profile not found')
         setIsLoading(false)
+        perfTracker.end(false, { userId: user.id })
         return
       }
 
@@ -348,25 +315,12 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
         setSubscription(subscriptionData)
         
         // Cache the successful result
-        const cacheData = {
-          data: subscriptionData,
-          timestamp: Date.now(),
-          userId: user.id
-        }
-        setSubscriptionCache(cacheData)
-        
-        // Also save to localStorage for persistence across sessions
-        if (typeof window !== 'undefined') {
-          try {
-            localStorage.setItem('brillo-subscription-cache', JSON.stringify(cacheData))
-          } catch (error) {
-            console.warn('Failed to save subscription cache to localStorage:', error)
-          }
-        }
+        SubscriptionCache.set(user.id, subscriptionData)
         
         // Update html attribute for CSS-based hiding
         if (typeof window !== 'undefined') {
           document.documentElement.setAttribute('data-user-plan', isProPlan(subscriptionData.planId) ? 'pro' : 'free')
+          console.log(`✅ Updated data-user-plan to ${isProPlan(subscriptionData.planId) ? 'pro' : 'free'} after loading`)
         }
 
         // Only update usage for non-pro plans to save API calls
@@ -378,6 +332,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
         setError(null)
         endTiming('subscription_load', true)
         setIsLoading(false)
+        perfTracker.end(true, { userId: user.id, cacheHit: false })
         return
       }
       
@@ -394,35 +349,24 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
       setSubscription(freeSubscription)
       
       // Cache the free plan result too
-      const freeCacheData = {
-        data: freeSubscription,
-        timestamp: Date.now(),
-        userId: user.id
-      }
-      setSubscriptionCache(freeCacheData)
-      
-      // Also save to localStorage for persistence across sessions
-      if (typeof window !== 'undefined') {
-        try {
-          localStorage.setItem('brillo-subscription-cache', JSON.stringify(freeCacheData))
-        } catch (error) {
-          console.warn('Failed to save subscription cache to localStorage:', error)
-        }
-      }
+      SubscriptionCache.set(user.id, freeSubscription)
       
       // Update html attribute for free users
       if (typeof window !== 'undefined') {
         document.documentElement.setAttribute('data-user-plan', 'free')
+        console.log('✅ Updated data-user-plan to free after loading')
       }
       
       await updateUsageLimits('free') // Free users always need usage tracking
       setError(null)
       endTiming('subscription_load', true)
       setIsLoading(false)
+      perfTracker.end(true, { userId: user.id, cacheHit: false })
 
     } catch (err) {
       console.error('Error loading subscription data:', err)
       setError('Failed to load subscription data')
+      perfTracker.end(false, { userId: user?.id })
     } finally {
       setIsLoading(false)
     }
@@ -456,31 +400,12 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
       }
       
       setUsage(unlimitedUsage)
-      
-      // Cache the unlimited usage (no API call needed)
-      setUsageCache({
-        data: unlimitedUsage,
-        timestamp: Date.now(),
-        userId: user.id,
-        planId: planId
-      })
       return
     }
 
     // For free users, we need actual usage tracking
+    // Note: We're not caching usage data separately anymore - it's fetched fresh for accuracy
     const now = Date.now()
-    const isUsageCacheValid = !force && 
-      usageCache.data && 
-      usageCache.userId === user.id &&
-      usageCache.planId === planId &&
-      (now - usageCache.timestamp) < USAGE_CACHE_DURATION
-
-    if (isUsageCacheValid && usageCache.data) {
-      console.log('🎯 Using cached usage data for free user')
-      trackCacheHit()
-      setUsage(usageCache.data)
-      return
-    }
 
     // Throttle API calls for free users only
     const throttleKey = `usage-${user.id}-${planId}`
@@ -537,14 +462,6 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
         
         // Update state
         setUsage(newUsage)
-        
-        // Cache the usage data
-        setUsageCache({
-          data: newUsage,
-          timestamp: now,
-          userId: user.id,
-          planId: planId
-        })
       }
     } catch (err) {
       console.error('Error checking usage for free user:', err)
@@ -561,8 +478,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
       }
       
       const baseUrl = window.location.origin
-      const checkoutEndpoint = FEATURE_FLAGS.USE_POLAR ? '/api/polar-checkout' : '/api/stripe-checkout'
-      const checkoutUrl = `${baseUrl}${checkoutEndpoint}?plan=${planId}&uid=${user.id}`
+      const checkoutUrl = `${baseUrl}/api/polar-checkout?plan=${planId}&uid=${user.id}`
       
       // Open checkout in new tab for better UX
       window.open(checkoutUrl, '_blank')
@@ -583,29 +499,17 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     setSubscription(updatedSubscription)
     
     // Update cache optimistically too
-    const optimisticCacheData = {
-      data: updatedSubscription,
-      timestamp: Date.now(),
-      userId: user?.id || ''
+    if (user?.id) {
+      SubscriptionCache.set(user.id, updatedSubscription)
     }
-    setSubscriptionCache(optimisticCacheData)
     
-    // Also save to localStorage for persistence across sessions
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem('brillo-subscription-cache', JSON.stringify(optimisticCacheData))
-      } catch (error) {
-        console.warn('Failed to save subscription cache to localStorage:', error)
-      }
-      
-      // CRITICAL: Update CSS attribute for instant UI updates
-      if (newSubscription.planId) {
-        if (isProPlan(newSubscription.planId)) {
-          document.documentElement.setAttribute('data-user-plan', 'pro')
-          console.log('🚀 CSS attribute updated to pro for instant hiding')
-        } else {
-          document.documentElement.setAttribute('data-user-plan', 'free')
-        }
+    // CRITICAL: Update CSS attribute for instant UI updates
+    if (typeof window !== 'undefined' && newSubscription.planId) {
+      if (isProPlan(newSubscription.planId)) {
+        document.documentElement.setAttribute('data-user-plan', 'pro')
+        console.log('🚀 CSS attribute updated to pro for instant hiding')
+      } else {
+        document.documentElement.setAttribute('data-user-plan', 'free')
       }
     }
     
@@ -623,51 +527,62 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     })
   }, [updateSubscriptionOptimistically])
 
-  const refetchSubscription = useCallback((forceUsageCheck: boolean = false) => {
-    if (user) {
+  // Debounce timer ref for refetchSubscription
+  const refetchDebounceRef = useRef<NodeJS.Timeout | null>(null)
+  
+  const refetchSubscription = useCallback((forceUsageCheck: boolean = false, immediate: boolean = false) => {
+    if (!user) return
+    
+    // For immediate refresh (e.g., after subscription changes), skip debouncing
+    if (immediate) {
+      console.log('🔄 Executing immediate subscription refresh')
       loadSubscriptionData(true)
       if (forceUsageCheck) {
         updateUsageLimits(subscription.planId)
       }
+      return
     }
+    
+    // Clear existing debounce timer
+    if (refetchDebounceRef.current) {
+      clearTimeout(refetchDebounceRef.current)
+    }
+    
+    // Debounce non-critical refresh calls (3 seconds)
+    refetchDebounceRef.current = setTimeout(() => {
+      console.log('🔄 Executing debounced subscription refresh')
+      loadSubscriptionData(true)
+      if (forceUsageCheck && !isProPlan(subscription.planId)) {
+        // Skip usage update for pro users (they have unlimited)
+        updateUsageLimits(subscription.planId)
+      }
+    }, 3000)
   }, [user, subscription.planId])
+  
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (refetchDebounceRef.current) {
+        clearTimeout(refetchDebounceRef.current)
+      }
+    }
+  }, [])
 
   // Immediately set body attribute for CSS-based hiding on client mount
   useEffect(() => {
-    if (typeof window !== 'undefined' && !hasHydratedCache) {
-      try {
-        const saved = localStorage.getItem('brillo-subscription-cache')
-        if (saved) {
-          const parsed = JSON.parse(saved)
-          const age = Date.now() - parsed.timestamp
-          const cachedPlanId = parsed.data?.planId
-          
-          // Use different cache durations: pro users get longer cache
-          const effectiveCacheDuration = isProPlan(cachedPlanId) ? PRO_CACHE_DURATION : CACHE_DURATION
-          
-          // Only use cache if still valid
-          if (age < effectiveCacheDuration) {
-            setSubscriptionCache(parsed)
-            
-            // INSTANT CSS-based hiding: Set html attribute immediately
-            if (isProPlan(cachedPlanId)) {
-              document.documentElement.setAttribute('data-user-plan', 'pro')
-              console.log('🚀 Instant pro user detection - CSS hiding activated (24h cache)')
-            } else {
-              document.documentElement.setAttribute('data-user-plan', 'free')
-            }
-          }
-        } else {
-          // No cache means likely free user
-          document.documentElement.setAttribute('data-user-plan', 'free')
-        }
-      } catch (error) {
-        console.warn('Failed to load subscription cache from localStorage:', error)
-        document.documentElement.setAttribute('data-user-plan', 'free')
+    if (typeof window !== 'undefined' && hasMounted) {
+      // Only update if we have a confirmed plan
+      if (!isLoading && subscription.planId) {
+        const isPro = isProPlan(subscription.planId)
+        document.documentElement.setAttribute('data-user-plan', isPro ? 'pro' : 'free')
+        console.log(`🚀 Setting data-user-plan to ${isPro ? 'pro' : 'free'} after loading`)
       }
-      setHasHydratedCache(true)
+      // If still loading and no inline script set the attribute, set to loading
+      else if (isLoading && !document.documentElement.getAttribute('data-user-plan')) {
+        document.documentElement.setAttribute('data-user-plan', 'loading')
+      }
     }
-  }, [hasHydratedCache])
+  }, [hasMounted, isLoading, subscription.planId])
 
   // Reset cache check flag when user changes
   useEffect(() => {
@@ -677,8 +592,8 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
   // Add immediate effect to check cache on mount/user change
   useEffect(() => {
     const initializeSubscription = async () => {
-      // Wait for cache hydration before proceeding
-      if (!hasHydratedCache) return
+      // Wait for component mount before proceeding
+      if (!hasMounted) return
       
       if (user && user.id) {
         // Clear any existing timeout
@@ -740,7 +655,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
         clearTimeout(loadingTimeout)
       }
     }
-  }, [user?.id, hasHydratedCache])
+  }, [user?.id, hasMounted])
 
   const value: SubscriptionContextType = {
     subscription,
@@ -753,7 +668,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     getOverLimitStatus,
     upgrade,
     refetchSubscription,
-    provider: FEATURE_FLAGS.USE_POLAR ? 'polar' : 'stripe',
+    provider: 'polar',
     // Optimistic updates
     updateSubscriptionOptimistically,
     optimisticUpgrade,

@@ -13,7 +13,7 @@ import { SubscriptionSkeleton } from "@/components/subscription/subscription-ske
 import { SubscriptionRecovery } from "@/components/subscription-recovery"
 
 export function SubscriptionManagement() {
-  const { subscription, plan, usage, isLoading, refetchSubscription, getCachedPlanId, provider } = useSubscription()
+  const { subscription, plan, usage, isLoading, refetchSubscription, getCachedPlanId } = useSubscription()
   const [isManaging, setIsManaging] = useState(false)
   const [isRefreshingUsage, setIsRefreshingUsage] = useState(false)
   
@@ -44,8 +44,7 @@ export function SubscriptionManagement() {
 
       // Handle portal action separately - return early
       if (action === 'portal') {
-        const portalEndpoint = provider === 'polar' ? '/api/polar/manage' : '/api/stripe/manage'
-        const response = await fetch(portalEndpoint, {
+        const response = await fetch('/api/polar/manage', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -79,8 +78,7 @@ export function SubscriptionManagement() {
         return
       }
 
-      const endpoint = provider === 'polar' ? '/api/polar/manage' : '/api/stripe/manage'
-      const response = await fetch(endpoint, {
+      const response = await fetch('/api/polar/manage', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -96,12 +94,21 @@ export function SubscriptionManagement() {
         url: response.url
       })
 
-      const data = await response.json()
+            const data = await response.json()
+
+      // Handle Polar portal redirect case
+      if (data.requiresPortal && data.portalUrl) {
+        toast.info('Redirecting to Polar customer portal...', {
+          duration: 4000,
+        })
+        window.open(data.portalUrl, '_blank')
+        return
+      }
 
       if (!response.ok) {
         // Handle specific error codes with more detailed messages
         if (response.status === 503) {
-          toast.error('Stripe services temporarily unavailable. Please try again later.')
+          toast.error('Billing services temporarily unavailable. Please try again later.')
           return
         }
         
@@ -120,15 +127,13 @@ export function SubscriptionManagement() {
         throw new Error(errorMessage)
       }
 
-
-
       toast.success(data.message || 'Subscription updated successfully')
       
-      // Force refresh subscription data after successful action
+      // Force immediate refresh subscription data after successful action
       setTimeout(() => {
         // Force refresh for subscription state changes (cancel/resume) to clear cache
         const needsForceRefresh = ['cancel', 'resume'].includes(action)
-        refetchSubscription(needsForceRefresh) // Force refresh for state changes
+        refetchSubscription(needsForceRefresh, true) // Immediate refresh for state changes
       }, 500)
 
     } catch (error) {
@@ -187,12 +192,9 @@ export function SubscriptionManagement() {
         return
       }
       
-      // Call sync endpoint (Polar or Stripe based on provider)
-      const syncUrl = provider === 'polar' ? '/api/polar/sync' : '/api/stripe/sync'
+      // Call unified sync endpoint
+      const syncUrl = '/api/subscription/sync'
       console.log('🔄 Making sync request to:', syncUrl)
-      console.log('🔄 Auth token (first 50 chars):', session.access_token.substring(0, 50))
-      console.log('🔄 Current URL:', window.location.href)
-      console.log('🔄 Provider:', provider)
       console.log('🔄 User ID:', userId)
       
       const response = await fetch(syncUrl, {
@@ -267,6 +269,30 @@ export function SubscriptionManagement() {
           toast.info(result.message || 'No subscription found')
         }
       } else {
+        // Handle specific error cases
+        let errorMessage = 'Failed to sync subscription data'
+        
+        if (response.status === 404) {
+          // 404 is expected for free users - treat as info, not error
+          const message = result.message || 'No subscription found. You haven\'t subscribed to any plan yet.'
+          console.log('ℹ️ No subscription found (expected for free users):', message)
+          toast.info(message)
+          return // Exit gracefully without error logging
+        } else if (response.status === 503) {
+          errorMessage = 'Billing services are temporarily unavailable. Please try again later.'
+        } else if (response.status === 401) {
+          errorMessage = 'Authentication required. Please log in again.'
+        } else if (response.status === 500) {
+          errorMessage = result.details ? `${result.error}: ${result.details}` : 'Sync failed due to server error. Please try again.'
+        } else if (result.error) {
+          errorMessage = result.message || result.error
+        } else if (Object.keys(result).length === 0) {
+          errorMessage = `Server returned empty response (${response.status}). Please try again.`
+        } else {
+          errorMessage = result.message || `Sync failed with status ${response.status}`
+        }
+        
+        // Only log as error for actual problems (not 404)
         console.error('❌ Sync failed with status:', response.status, response.statusText)
         console.error('❌ Response details:', { 
           status: response.status, 
@@ -275,28 +301,9 @@ export function SubscriptionManagement() {
           responseText: responseText.substring(0, 500), // First 500 chars for debugging
           parsedResult: result,
           resultKeys: Object.keys(result || {}),
-          url: '/api/stripe/sync',
+          url: syncUrl,
           method: 'POST'
         })
-        
-        // Handle specific error cases
-        let errorMessage = 'Failed to sync subscription data'
-        
-        if (response.status === 503) {
-          errorMessage = 'Stripe services are temporarily unavailable. Please try again later.'
-        } else if (response.status === 401) {
-          errorMessage = 'Authentication required. Please log in again.'
-        } else if (response.status === 404) {
-          errorMessage = result.message || 'No subscription found. You haven\'t subscribed yet.'
-        } else if (response.status === 500) {
-          errorMessage = result.details ? `${result.error}: ${result.details}` : 'Stripe sync failed. Please try again.'
-        } else if (result.error) {
-          errorMessage = result.message || result.error
-        } else if (Object.keys(result).length === 0) {
-          errorMessage = `Server returned empty response (${response.status}). Please try again.`
-        } else {
-          errorMessage = result.message || `Sync failed with status ${response.status}`
-        }
         
         toast.error(errorMessage)
       }

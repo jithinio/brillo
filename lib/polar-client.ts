@@ -302,10 +302,33 @@ export async function syncPolarSubscription(customerId: string) {
 
 // Helper to cancel subscription
 export async function cancelPolarSubscription(subscriptionId: string) {
-  const polar = createPolarClient()
-
   try {
-    await (polar as any).subscriptions.cancel(subscriptionId)
+    console.log(`Canceling Polar subscription ${subscriptionId}`)
+    
+    // Use raw API call for subscription cancellation
+    const response = await fetch(
+      `${POLAR_CONFIG.sandbox ? 'https://sandbox.polar.sh' : 'https://api.polar.sh'}/v1/subscriptions/${subscriptionId}/cancel`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${POLAR_CONFIG.accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    )
+    
+    if (!response.ok) {
+      const errorData = await response.text()
+      console.error('Failed to cancel subscription:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorData
+      })
+      throw new Error(`Failed to cancel subscription: ${response.status} ${response.statusText}`)
+    }
+    
+    const result = await response.json()
+    console.log('Subscription canceled successfully:', result)
     return true
   } catch (error) {
     console.error('Failed to cancel subscription:', error)
@@ -315,12 +338,36 @@ export async function cancelPolarSubscription(subscriptionId: string) {
 
 // Helper to update subscription (e.g., resume)
 export async function updatePolarSubscription(subscriptionId: string, cancelAtPeriodEnd: boolean) {
-  const polar = createPolarClient()
-
   try {
-    const subscription = await (polar as any).subscriptions.update(subscriptionId, {
-      cancelAtPeriodEnd: cancelAtPeriodEnd,
-    })
+    console.log(`Updating Polar subscription ${subscriptionId} - cancelAtPeriodEnd: ${cancelAtPeriodEnd}`)
+    
+    // Use raw API call for subscription update
+    const response = await fetch(
+      `${POLAR_CONFIG.sandbox ? 'https://sandbox.polar.sh' : 'https://api.polar.sh'}/v1/subscriptions/${subscriptionId}`,
+      {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${POLAR_CONFIG.accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          cancel_at_period_end: cancelAtPeriodEnd,
+        }),
+      }
+    )
+    
+    if (!response.ok) {
+      const errorData = await response.text()
+      console.error('Failed to update subscription:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorData
+      })
+      throw new Error(`Failed to update subscription: ${response.status} ${response.statusText}`)
+    }
+    
+    const subscription = await response.json()
+    console.log('Subscription updated successfully:', subscription)
     return subscription
   } catch (error) {
     console.error('Failed to update subscription:', error)

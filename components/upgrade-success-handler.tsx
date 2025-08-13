@@ -1,18 +1,20 @@
 "use client"
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { useAuth } from '@/components/auth-provider'
 import { useSubscription } from '@/components/providers/subscription-provider'
 import { supabase } from '@/lib/supabase'
+import { UpgradeLoader } from '@/components/subscription/upgrade-loader'
 
 export function UpgradeSuccessHandler() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { user } = useAuth()
-  const { refetchSubscription, optimisticUpgrade } = useSubscription()
+  const { refetchSubscription, optimisticUpgrade, subscription } = useSubscription()
   const hasProcessed = useRef(false)
+  const [showLoader, setShowLoader] = useState(false)
 
   useEffect(() => {
     // Prevent multiple executions
@@ -39,6 +41,9 @@ export function UpgradeSuccessHandler() {
       // First, clean up the URL immediately to prevent infinite loops
       console.log('🧹 Cleaning up URL parameters...')
       router.replace('/dashboard')
+
+      // Show the full-screen loader
+      setShowLoader(true)
 
       // ✨ OPTIMISTIC UPDATE: Immediately show pro features
       const planFromUrl = searchParams.get('plan') || 'pro_monthly'
@@ -70,20 +75,16 @@ export function UpgradeSuccessHandler() {
           console.warn('Failed to update localStorage cache:', error)
         }
       }
-
-      // Show immediate success message with pro features unlocked
-      toast.success('🎉 Welcome to Brillo Pro! All features unlocked!', {
-        duration: 4000,
-      })
       
-      // 🔄 POLAR SYNC - Give webhooks a chance to fire first
-      console.log('⏳ Preparing to sync subscription with Polar...')
+      // 🔄 SYNC IN BACKGROUND - Use a single, consolidated sync process
+      console.log('⏳ Syncing subscription data...')
       
-      // Wait 1.5 seconds for Polar webhook to potentially process
-      setTimeout(async () => {
+      // Perform sync operations while loader is showing
+      const performSync = async () => {
         try {
-          console.log('🔄 Syncing with Polar API...')
-          const syncResponse = await fetch('/api/polar/sync', {
+          // First attempt - immediate sync
+          console.log('🔄 Syncing subscription data...')
+          const syncResponse = await fetch('/api/subscription/sync', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -95,36 +96,15 @@ export function UpgradeSuccessHandler() {
             const syncData = await syncResponse.json()
             console.log('✅ Polar subscription synced successfully:', syncData)
             
-            // If sync returned subscription data, update the state with real data
-            if (syncData.subscription && syncData.subscription.planId) {
-              // Force a full refresh to ensure all components update
-              await refetchSubscription(true)
-            }
+            // Force refresh subscription data
+            await refetchSubscription(true, true)
           } else {
             console.warn('❌ Polar sync failed with status:', syncResponse.status)
             // Still try to refresh subscription data
             await refetchSubscription(true)
           }
-        } catch (syncError) {
-          console.error('❌ Error syncing Polar subscription:', syncError)
-          // Still try to refresh subscription data
-          await refetchSubscription(true)
-        }
-      }, 1500)
-      
-      // Additional background refresh after 3 seconds
-      setTimeout(async () => {
-        console.log('🔄 Additional subscription refresh...')
-        refetchSubscription(true)
-      }, 3000)
-      
-      // Second refresh after 3 seconds with status check
-      setTimeout(async () => {
-        console.log('🔄 Second subscription data refresh...')
-        refetchSubscription(true)
-        
-        // Check if subscription is properly synced
-        try {
+          
+          // Verify subscription is properly synced
           const { supabase } = await import('@/lib/supabase')
           const { data: profile } = await supabase
             .from('profiles')
@@ -132,34 +112,44 @@ export function UpgradeSuccessHandler() {
             .eq('id', user?.id)
             .single()
           
-          console.log('📊 Current subscription status:', profile)
+          console.log('📊 Final subscription status:', profile)
           
-          if (profile?.subscription_plan_id && profile.subscription_plan_id !== 'free') {
-            toast.success('✅ Pro features activated! Welcome to Brillo Pro!', {
-              duration: 5000,
-            })
-          } else {
-            // If still not synced, show info message
-            toast.info('🔄 Setting up your Pro account - this may take a moment...', {
-              duration: 3000,
-            })
-            
-            // One more refresh after another 3 seconds
-            setTimeout(() => {
-              console.log('🔄 Final subscription data refresh...')
-              refetchSubscription(true)
-            }, 3000)
-          }
+          // Return success status
+          return profile?.subscription_plan_id && profile.subscription_plan_id !== 'free'
+          
         } catch (error) {
-          console.error('Error checking subscription status:', error)
+          console.error('❌ Error during sync:', error)
+          return false
         }
-      }, 3000)
+      }
+      
+      // Wait a moment for webhooks, then sync
+      setTimeout(async () => {
+        const syncSuccess = await performSync()
+        
+        // If still not synced after first attempt, try once more
+        if (!syncSuccess) {
+          console.log('🔄 Retrying sync...')
+          setTimeout(async () => {
+            await performSync()
+          }, 2000)
+        }
+      }, 1500)
       
     } catch (error) {
       console.error('💥 Upgrade success handling error:', error)
       toast.error('Error processing upgrade: ' + (error instanceof Error ? error.message : 'Unknown error'))
+      setShowLoader(false) // Hide loader on error
     }
   }
 
-  return null // This component doesn't render anything
+  // Handle loader completion
+  const handleLoaderComplete = () => {
+    setShowLoader(false)
+    toast.success('🎉 Welcome to Brillo Pro! All features are now active.', {
+      duration: 5000,
+    })
+  }
+
+  return <UpgradeLoader isVisible={showLoader} onComplete={handleLoaderComplete} />
 }

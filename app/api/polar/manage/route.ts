@@ -5,7 +5,8 @@ import {
   createPolarClient, 
   cancelPolarSubscription, 
   updatePolarSubscription,
-  createCustomerPortalSession 
+  createCustomerPortalSession,
+  POLAR_CONFIG
 } from '@/lib/polar-client'
 import { logger } from '@/lib/logger'
 
@@ -65,32 +66,62 @@ async function handleCancelSubscription(profile: any, polar: any) {
   }
 
   try {
-    // Cancel subscription at period end
-    await updatePolarSubscription(profile.polar_subscription_id, true)
-
-    // Update local database
-    await supabase
-      .from('profiles')
-      .update({
-        cancel_at_period_end: true,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', profile.id)
-
-    logger.info('Subscription set to cancel', { 
+    // For Polar, we'll handle cancellation through their customer portal
+    // as direct API cancellation might not be fully supported
+    logger.info('Attempting to cancel Polar subscription', { 
       userId: profile.id,
       subscriptionId: profile.polar_subscription_id 
-    }, 'SUBSCRIPTION')
-
-    return NextResponse.json({ 
-      success: true,
-      message: 'Subscription will be canceled at the end of the billing period'
     })
+
+    // Try to cancel subscription via API first
+    try {
+      await updatePolarSubscription(profile.polar_subscription_id, true)
+      
+      // Update local database if API call succeeded
+      await supabase
+        .from('profiles')
+        .update({
+          cancel_at_period_end: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', profile.id)
+
+      logger.info('Subscription set to cancel via API', { 
+        userId: profile.id,
+        subscriptionId: profile.polar_subscription_id 
+      }, 'SUBSCRIPTION')
+
+      return NextResponse.json({ 
+        success: true,
+        message: 'Subscription will be canceled at the end of the billing period'
+      })
+    } catch (apiError: any) {
+      logger.warn('API cancellation failed, returning portal URL', apiError)
+      
+      // If API cancellation fails, redirect to Polar customer portal
+      // Get user's email for portal generation
+      const { data: { user: authUser } } = await supabase.auth.admin.getUserById(profile.id)
+      
+      if (!authUser?.email) {
+        throw new Error('User email not found')
+      }
+      
+      // Generate portal URL for manual cancellation
+      const portalUrl = `https://${POLAR_CONFIG.sandbox ? 'sandbox.' : ''}polar.sh/dashboard/${POLAR_CONFIG.organizationId}/subscriptions`
+      
+      return NextResponse.json({ 
+        success: false,
+        requiresPortal: true,
+        portalUrl,
+        message: 'Please use the customer portal to cancel your subscription',
+        error: 'Direct cancellation not available. Please use the customer portal.'
+      })
+    }
 
   } catch (error) {
     logger.error('Failed to cancel subscription:', error)
     return NextResponse.json(
-      { error: 'Failed to cancel subscription' },
+      { error: 'Failed to cancel subscription. Please try using the customer portal.' },
       { status: 500 }
     )
   }

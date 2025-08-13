@@ -3,10 +3,7 @@
 import { Crown, Sparkles } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { useSubscription } from "@/components/providers/subscription-provider"
-import { isProPlan } from "@/lib/subscription-plans"
 import { cn } from "@/lib/utils"
-import { useState, useEffect } from "react"
 
 interface ProBadgeProps {
   feature?: 'invoicing' | 'advanced_analytics' | 'invoice_customization' | 'api_access'
@@ -25,48 +22,8 @@ export function ProBadge({
   showTooltip = true,
   tooltipContent
 }: ProBadgeProps) {
-  const { hasAccess, isLoading, subscription, getCachedPlanId } = useSubscription()
-  const [hasMounted, setHasMounted] = useState(false)
-
-  // Track mounting to prevent hydration mismatch
-  useEffect(() => {
-    setHasMounted(true)
-  }, [])
-
-  // 🚀 INSTANT PRO USER DETECTION - Never show for pro users, no flashing
-  const cachedPlanId = getCachedPlanId()
-  const isKnownProUser = hasMounted && (isProPlan(cachedPlanId) || isProPlan(subscription?.planId))
-
-  const checkFeatureAccess = () => {
-    if (!feature) return true // No specific feature, assume access
-    
-    // For known pro users, instantly grant access
-    if (isKnownProUser) {
-      return true
-    }
-    
-    return hasAccess(feature)
-  }
-
-  // During SSR or before mount, hide to prevent hydration mismatch
-  if (!hasMounted) {
-    return null
-  }
-
-  // INSTANTLY hide for known pro users - no loading needed
-  if (isKnownProUser) {
-    return null
-  }
-
-  // Don't show anything during loading to prevent incorrect badges
-  if (isLoading) {
-    return null
-  }
-
-  // Only hide if user actually has access
-  if (checkFeatureAccess()) {
-    return null
-  }
+  // CSS handles all visibility logic now via data-user-plan attribute
+  // Component just renders and lets CSS decide visibility
 
   const getSizeClasses = () => {
     switch (size) {

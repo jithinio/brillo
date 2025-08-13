@@ -106,21 +106,45 @@ export default function RootLayout({
             __html: `
               (function() {
                 try {
-                  var saved = localStorage.getItem('brillo-subscription-cache');
-                  if (saved) {
-                    var parsed = JSON.parse(saved);
-                    var age = Date.now() - parsed.timestamp;
-                    if (age < 5 * 60 * 1000 && parsed.data && (parsed.data.planId === 'pro_monthly' || parsed.data.planId === 'pro_yearly')) {
-                      document.documentElement.setAttribute('data-user-plan', 'pro');
-                      console.log('🚀 INSTANT pro detection via script tag');
-                    } else {
-                      document.documentElement.setAttribute('data-user-plan', 'free');
+                  // Check for new unified cache key format first
+                  var cacheKeys = Object.keys(localStorage).filter(function(key) {
+                    return key.startsWith('brillo-sub-cache-');
+                  });
+                  
+                  var foundPlan = null;
+                  var mostRecentTimestamp = 0;
+                  
+                  // Find the most recent valid cache entry
+                  for (var i = 0; i < cacheKeys.length; i++) {
+                    var saved = localStorage.getItem(cacheKeys[i]);
+                    if (saved) {
+                      try {
+                        var parsed = JSON.parse(saved);
+                        var age = Date.now() - parsed.timestamp;
+                        // 10 minute cache validity (increased for better reliability)
+                        if (age < 10 * 60 * 1000 && parsed.data && parsed.data.planId && parsed.timestamp > mostRecentTimestamp) {
+                          mostRecentTimestamp = parsed.timestamp;
+                          foundPlan = parsed.data.planId;
+                        }
+                      } catch (parseError) {
+                        // Skip invalid entries
+                      }
                     }
-                  } else {
-                    document.documentElement.setAttribute('data-user-plan', 'free');
                   }
+                  
+                  // Only set attribute if we found a valid plan
+                  // Don't default to anything - let components handle unknown state
+                  if (foundPlan) {
+                    var isPro = foundPlan === 'pro_monthly' || foundPlan === 'pro_yearly';
+                    document.documentElement.setAttribute('data-user-plan', isPro ? 'pro' : 'free');
+                  } else {
+                    // Set loading state to prevent any flashing
+                    document.documentElement.setAttribute('data-user-plan', 'loading');
+                  }
+                  
                 } catch (e) {
-                  document.documentElement.setAttribute('data-user-plan', 'free');
+                  // On error, set loading state rather than defaulting to free
+                  document.documentElement.setAttribute('data-user-plan', 'loading');
                 }
               })();
             `

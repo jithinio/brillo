@@ -13,19 +13,13 @@ import { useSubscriptionListener } from "@/lib/subscription-manager"
 import { SidebarUsageSkeleton } from "@/components/subscription/subscription-skeleton"
 
 export function SidebarUsageOverview() {
-  const { subscription, usage, plan, isLoading, refetchSubscription, getCachedPlanId } = useSubscription()
+  const { subscription, usage, plan, isLoading, refetchSubscription } = useSubscription()
   const [previousCounts, setPreviousCounts] = useState({ projects: 0, clients: 0 })
   const [cachedUsage, setCachedUsage] = useState<typeof usage | null>(null)
   const [isInitialized, setIsInitialized] = useState(false)
-  const [hasMounted, setHasMounted] = useState(false)
   const subscriptionsRef = useRef<any[]>([])
   const { user } = useAuth()
   const pathname = usePathname()
-
-  // Track mounting to prevent hydration mismatch
-  useEffect(() => {
-    setHasMounted(true)
-  }, [])
 
   // Persistent cache key for localStorage
   const getCacheKey = () => user?.id ? `sidebar-usage-${user.id}` : null
@@ -175,18 +169,14 @@ export function SidebarUsageOverview() {
     }
   }, [isInitialized, subscription.planId, isLoading, cachedUsage, usage?.clients?.current, usage?.projects?.current, refetchSubscription])
 
-  // Ensure fresh data on component mount
+  // Remove automatic refresh on mount - rely on subscription provider's cache
+  // This prevents unnecessary API calls when switching tabs or focusing
   useEffect(() => {
-    // Only run once on mount - normal refresh without forcing cache clear
-    if (isInitialized) {
-      // Small delay to allow subscription provider to initialize
-      const timeoutId = setTimeout(() => {
-        refetchSubscription(false) // Don't force cache clear on mount
-      }, 500)
-      
-      return () => clearTimeout(timeoutId)
+    // Mark as initialized without triggering refresh
+    if (!isInitialized) {
+      setIsInitialized(true)
     }
-  }, [isInitialized, refetchSubscription])
+  }, [isInitialized])
 
   // Set up consolidated realtime updates using subscription manager
   useEffect(() => {
@@ -260,30 +250,8 @@ export function SidebarUsageOverview() {
     }
   }, [displayUsage?.projects?.current, displayUsage?.clients?.current, previousCounts, isOnRelevantPage, cachedUsage])
   
-  // 🚀 INSTANT PRO USER DETECTION - Never show for pro users, no flashing
-  // Check cached plan first to instantly hide for known pro users
-  const cachedPlanId = getCachedPlanId()
-  const isKnownProUser = hasMounted && (isProPlan(cachedPlanId) || isProPlan(subscription?.planId))
-  
-  // During SSR or before mount, hide to prevent hydration mismatch
-  if (!hasMounted) {
-    return null
-  }
-  
-  // INSTANTLY hide for known pro users - no loading needed
-  if (isKnownProUser) {
-    return null
-  }
-  
-  // For unknown users during loading, also hide to prevent flashing
-  if (isLoading) {
-    return null
-  }
-  
-  // Only show for explicitly confirmed free users after loading is complete
-  if (subscription.planId !== 'free') {
-    return null
-  }
+  // CSS handles all visibility logic now via data-user-plan attribute
+  // Component just renders and lets CSS decide visibility
 
   // Extract data with robust fallbacks
   const clientsUsed = displayUsage?.clients?.current ?? 0
