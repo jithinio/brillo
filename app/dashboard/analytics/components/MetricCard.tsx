@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
-import { TrendingUp, TrendingDown } from "lucide-react"
+import { TrendingUp, TrendingDown, BarChart3 } from "lucide-react"
 import { formatLargeNumber } from "@/lib/utils"
 import { formatCurrency, getCurrencySymbol } from "@/lib/currency"
 import { useSettings } from "@/components/settings-provider"
@@ -94,6 +94,12 @@ const MetricCard = ({
 
   const styles = sizeStyles[size]
 
+  // Check if this is an empty state for MRR/ARR (value is 0 and has sparkline data structure)
+  const isEmptyMRROrARR = (value === 0 && sparklineData !== undefined && 
+    (title.toLowerCase().includes('mrr') || title.toLowerCase().includes('arr'))) ||
+    (sparklineData && sparklineData.every(point => point.value === 0) && 
+    (title.toLowerCase().includes('mrr') || title.toLowerCase().includes('arr')))
+
   if (error) {
     return (
       <Card className={`relative overflow-hidden ${styles.card}`}>
@@ -179,49 +185,77 @@ const MetricCard = ({
             )}
           </div>
 
-          {/* Mini Sparkline Chart - Fills remaining space */}
-          {sparklineData && sparklineData.length > 0 && !isLoading && (
+          {/* Mini Sparkline Chart or Empty State - Fills remaining space */}
+          {sparklineData !== undefined && !isLoading && (
             <div className="relative flex-1 overflow-hidden mt-3 min-h-[40px] max-h-[80px] -mx-6 -mb-6">
-              <svg className="w-full h-full" viewBox="0 0 100 32" preserveAspectRatio="none">
-                <defs>
-                  <linearGradient id={`gradient-${title}`} x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" style={{ stopColor: 'hsl(var(--chart-1))', stopOpacity: 0.3 }} />
-                    <stop offset="100%" style={{ stopColor: 'hsl(var(--chart-1))', stopOpacity: 0 }} />
-                  </linearGradient>
-                </defs>
-                
-                {/* Create path for sparkline */}
-                <path
-                  d={sparklineData.reduce((path, point, index) => {
-                    const x = (index / (sparklineData.length - 1)) * 100
-                    const maxValue = Math.max(...sparklineData.map(p => p.value))
-                    const minValue = Math.min(...sparklineData.map(p => p.value))
-                    const range = maxValue - minValue || 1
-                    const y = 28 - ((point.value - minValue) / range) * 24
-                    
-                    return path + (index === 0 ? `M ${x} ${y}` : ` L ${x} ${y}`)
-                  }, '')}
-                  stroke="hsl(var(--chart-1))"
-                  strokeWidth="2"
-                  fill="none"
-                />
-                
-                {/* Fill area under the line */}
-                <path
-                  d={sparklineData.reduce((path, point, index) => {
-                    const x = (index / (sparklineData.length - 1)) * 100
-                    const maxValue = Math.max(...sparklineData.map(p => p.value))
-                    const minValue = Math.min(...sparklineData.map(p => p.value))
-                    const range = maxValue - minValue || 1
-                    const y = 28 - ((point.value - minValue) / range) * 24
-                    
-                    if (index === 0) return `M ${x} 32 L ${x} ${y}`
-                    if (index === sparklineData.length - 1) return path + ` L ${x} ${y} L ${x} 32 Z`
-                    return path + ` L ${x} ${y}`
-                  }, '')}
-                  fill={`url(#gradient-${title})`}
-                />
-              </svg>
+              {isEmptyMRROrARR ? (
+                /* Flat baseline curve for empty MRR/ARR */
+                <svg className="w-full h-full" viewBox="0 0 100 32" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id={`gradient-${title}-empty`} x1="0%" y1="0%" x2="0%" y2="100%">
+                      <stop offset="0%" style={{ stopColor: 'hsl(var(--muted))', stopOpacity: 0.1 }} />
+                      <stop offset="100%" style={{ stopColor: 'hsl(var(--muted))', stopOpacity: 0 }} />
+                    </linearGradient>
+                  </defs>
+                  
+                  {/* Flat baseline curve at the bottom */}
+                  <path
+                    d="M 0 28 L 100 28"
+                    stroke="hsl(var(--muted-foreground))"
+                    strokeWidth="1.5"
+                    strokeOpacity="0.3"
+                    fill="none"
+                  />
+                  
+                  {/* Subtle fill area under the flat line */}
+                  <path
+                    d="M 0 32 L 0 28 L 100 28 L 100 32 Z"
+                    fill={`url(#gradient-${title}-empty)`}
+                  />
+                </svg>
+              ) : sparklineData && sparklineData.length > 0 ? (
+                /* Sparkline Chart */
+                <svg className="w-full h-full" viewBox="0 0 100 32" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id={`gradient-${title}`} x1="0%" y1="0%" x2="0%" y2="100%">
+                      <stop offset="0%" style={{ stopColor: 'hsl(var(--chart-1))', stopOpacity: 0.3 }} />
+                      <stop offset="100%" style={{ stopColor: 'hsl(var(--chart-1))', stopOpacity: 0 }} />
+                    </linearGradient>
+                  </defs>
+                  
+                  {/* Create path for sparkline */}
+                  <path
+                    d={sparklineData.reduce((path, point, index) => {
+                      const x = (index / (sparklineData.length - 1)) * 100
+                      const maxValue = Math.max(...sparklineData.map(p => p.value))
+                      const minValue = Math.min(...sparklineData.map(p => p.value))
+                      const range = maxValue - minValue || 1
+                      const y = 28 - ((point.value - minValue) / range) * 24
+                      
+                      return path + (index === 0 ? `M ${x} ${y}` : ` L ${x} ${y}`)
+                    }, '')}
+                    stroke="hsl(var(--chart-1))"
+                    strokeWidth="2"
+                    fill="none"
+                  />
+                  
+                  {/* Fill area under the line */}
+                  <path
+                    d={sparklineData.reduce((path, point, index) => {
+                      const x = (index / (sparklineData.length - 1)) * 100
+                      const maxValue = Math.max(...sparklineData.map(p => p.value))
+                      const minValue = Math.min(...sparklineData.map(p => p.value))
+                      const range = maxValue - minValue || 1
+                      const y = 28 - ((point.value - minValue) / range) * 24
+                      
+                      if (index === 0) return `M ${x} 32 L ${x} ${y}`
+                      if (index === sparklineData.length - 1) return path + ` L ${x} ${y} L ${x} 32 Z`
+                      return path + ` L ${x} ${y}`
+                    }, '')}
+                    fill={`url(#gradient-${title})`}
+                  />
+                </svg>
+              ) : null}
             </div>
           )}
         </div>

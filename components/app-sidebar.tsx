@@ -2,6 +2,7 @@
 
 import type * as React from "react"
 import { Bot, Gauge, GalleryVerticalEnd, PieChart, ReceiptText, TrendingUp } from "lucide-react"
+import Link from "next/link"
 
 import { NavMain } from "@/components/nav-main"
 import { NavUser } from "@/components/nav-user"
@@ -102,7 +103,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <a href="/dashboard">
+              <Link href="/dashboard">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg">
                   <img 
                     src="/logo_mark.svg" 
@@ -110,7 +111,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     className="h-7 w-7 object-contain"
                   />
                 </div>
-              </a>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

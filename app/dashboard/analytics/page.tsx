@@ -352,7 +352,7 @@ export default function AnalyticsPage() {
                   </div>
 
                   {/* Cash Flow Chart - Large Card */}
-                  <div className="lg:col-span-8 flex w-full h-fit min-h-[400px] max-h-[450px]">
+                  <div className="lg:col-span-8 flex w-full min-h-[400px] max-h-[450px] h-[450px]">
                     <div className="w-full">
                       <CashFlowChart
                         data={globalMetrics.cashFlowData}
@@ -364,7 +364,7 @@ export default function AnalyticsPage() {
                   </div>
 
                   {/* Growth Metrics Column */}
-                  <div className="lg:col-span-4 flex flex-col h-fit min-h-[400px] max-h-[450px]">
+                  <div className="lg:col-span-4 flex flex-col min-h-[400px] max-h-[450px] h-[450px]">
                     <div className="grid grid-cols-1 gap-4 h-full">
                       {/* MRR Card */}
                       <div className="flex-1">

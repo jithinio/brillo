@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import type { ChartConfig } from "@/components/ui/chart"
 import { Bar, BarChart, XAxis, YAxis, ResponsiveContainer, ReferenceLine } from "recharts"
-import { TrendingUp, TrendingDown, DollarSign } from "lucide-react"
+import { TrendingUp, TrendingDown, DollarSign, BarChart3 } from "lucide-react"
 import { formatLargeNumber } from "@/lib/utils"
 import { getCurrencySymbol } from "@/lib/currency"
 import { useSettings } from "@/components/settings-provider"
@@ -43,6 +43,11 @@ export function CashFlowChart({
 }: CashFlowChartProps) {
   const { formatCurrency } = useSettings()
 
+  // Check if data is empty (all values are zero)
+  const isEmpty = data.length === 0 || data.every(item => 
+    item.incoming === 0 && item.outgoing === 0 && item.net === 0
+  )
+
   // Calculate trends
   const currentPeriodData = data[data.length - 1]
   const previousPeriodData = data[data.length - 2]
@@ -61,8 +66,8 @@ export function CashFlowChart({
   const totalNet = totalIncoming - totalOutgoing
 
   return (
-    <Card className="w-full">
-      <CardHeader className="p-6 pb-4">
+    <Card className="w-full h-full flex flex-col">
+      <CardHeader className="p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <DollarSign className="h-4 w-4 text-muted-foreground" />
@@ -82,10 +87,10 @@ export function CashFlowChart({
         </div>
       </CardHeader>
 
-      <CardContent className="px-6 pt-0 pb-6">
+      <CardContent className="px-4 pt-0 pb-4 flex-1">
         <div className="space-y-6">
           {/* Summary Cards */}
-          <div className="grid grid-cols-3 gap-4 py-4 border-t border-b -mx-6 px-6">
+          <div className="grid grid-cols-3 gap-4 py-4 border-t border-b -mx-4 px-4">
             <div className="space-y-1">
               <p className="text-xs text-muted-foreground">Total Incoming</p>
               <p className="text-lg font-semibold text-green-600">
@@ -126,71 +131,86 @@ export function CashFlowChart({
 
           {/* Chart */}
           <div className="w-full h-[240px]">
-            <ChartContainer config={chartConfig} className="h-full w-full">
-              <BarChart data={data} margin={{ top: 10, right: 10, left: 10, bottom: 5 }}>
-                <XAxis 
-                  dataKey="period" 
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }}
-                  className="[&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground"
-                />
-                
-                {/* Zero reference line */}
-                <ReferenceLine 
-                  y={0} 
-                  stroke="var(--border)" 
-                  strokeDasharray="3 3" 
-                  strokeWidth={1}
-                />
-                
-                <ChartTooltip 
-                  content={({ active, payload, label }) => {
-                    if (active && payload && payload.length) {
-                      return (
-                        <div className="rounded-lg border bg-background p-3 shadow-sm min-w-0">
-                          <div className="mb-2">
-                            <p className="text-sm font-medium">{label}</p>
+            {isEmpty ? (
+              /* Empty State */
+              <div className="flex flex-col items-center justify-center h-full text-center space-y-3">
+                <div className="flex items-center justify-center w-12 h-12 rounded-full bg-muted">
+                  <BarChart3 className="w-6 h-6 text-muted-foreground" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="font-medium text-sm">No cash flow data</h3>
+                  <p className="text-xs text-muted-foreground max-w-[280px]">
+                    Start creating projects with payments and expenses to see your cash flow analysis here.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <ChartContainer config={chartConfig} className="h-full w-full">
+                <BarChart data={data} margin={{ top: 10, right: 10, left: 10, bottom: 5 }}>
+                  <XAxis 
+                    dataKey="period" 
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }}
+                    className="[&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground"
+                  />
+                  
+                  {/* Zero reference line */}
+                  <ReferenceLine 
+                    y={0} 
+                    stroke="var(--border)" 
+                    strokeDasharray="3 3" 
+                    strokeWidth={1}
+                  />
+                  
+                  <ChartTooltip 
+                    content={({ active, payload, label }) => {
+                      if (active && payload && payload.length) {
+                        return (
+                          <div className="rounded-lg border bg-background p-3 shadow-sm min-w-0">
+                            <div className="mb-2">
+                              <p className="text-sm font-medium">{label}</p>
+                            </div>
+                            <div className="flex flex-col gap-2">
+                              {payload.map((item: any, index: number) => (
+                                <div key={index} className="flex items-center gap-2">
+                                  <div 
+                                    className="flex h-2 w-2 rounded-full" 
+                                    style={{ backgroundColor: item.color }} 
+                                  />
+                                  <span className="text-sm font-medium capitalize">
+                                    {item.dataKey}
+                                  </span>
+                                  <span className="text-sm text-muted-foreground ml-auto">
+                                    {formatLargeNumber(item.value, getCurrencySymbol())}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                          <div className="flex flex-col gap-2">
-                            {payload.map((item: any, index: number) => (
-                              <div key={index} className="flex items-center gap-2">
-                                <div 
-                                  className="flex h-2 w-2 rounded-full" 
-                                  style={{ backgroundColor: item.color }} 
-                                />
-                                <span className="text-sm font-medium capitalize">
-                                  {item.dataKey}
-                                </span>
-                                <span className="text-sm text-muted-foreground ml-auto">
-                                  {formatLargeNumber(item.value, getCurrencySymbol())}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )
-                    }
-                    return null
-                  }}
-                />
-                
-                <Bar 
-                  dataKey="incoming" 
-                  fill="var(--chart-1)" 
-                  radius={[2, 2, 0, 0]}
-                  name="Incoming"
-                  isAnimationActive={false}
-                />
-                <Bar 
-                  dataKey="outgoing" 
-                  fill="var(--chart-2)" 
-                  radius={[2, 2, 0, 0]}
-                  name="Outgoing"
-                  isAnimationActive={false}
-                />
-              </BarChart>
-            </ChartContainer>
+                        )
+                      }
+                      return null
+                    }}
+                  />
+                  
+                  <Bar 
+                    dataKey="incoming" 
+                    fill="var(--chart-1)" 
+                    radius={[2, 2, 0, 0]}
+                    name="Incoming"
+                    isAnimationActive={false}
+                  />
+                  <Bar 
+                    dataKey="outgoing" 
+                    fill="var(--chart-2)" 
+                    radius={[2, 2, 0, 0]}
+                    name="Outgoing"
+                    isAnimationActive={false}
+                  />
+                </BarChart>
+              </ChartContainer>
+            )}
           </div>
         </div>
       </CardContent>

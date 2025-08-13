@@ -19,6 +19,7 @@ import { isProPlan } from "@/lib/subscription-plans"
 import { useTheme } from "next-themes"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Loader } from "@/components/ui/loader"
+import Link from "next/link"
 
 export function NavUser() {
   const { user, signOut, loading: authLoading } = useAuth()
@@ -129,41 +130,41 @@ export function NavUser() {
               {/* Always show subscription button - use optimistic plan ID for immediate rendering */}
               {isProPlan(optimisticPlanId) ? (
                 <DropdownMenuItem asChild>
-                  <a href="/dashboard/settings?tab=subscription" className="cursor-pointer flex items-center">
+                  <Link href="/dashboard/settings?tab=subscription" className="cursor-pointer flex items-center">
                     <CreditCard className="mr-2 h-4 w-4" />
                     <span className="flex-1">Manage Subscription</span>
                     {isLoading && <Loader size="xs" variant="muted" className="opacity-30" />}
-                  </a>
+                  </Link>
                 </DropdownMenuItem>
               ) : (
                 <DropdownMenuItem asChild>
-                  <a href="/pricing" className="cursor-pointer flex items-center">
+                  <Link href="/pricing" className="cursor-pointer flex items-center">
                     <Sparkles className="mr-2 h-4 w-4" />
                     <span className="flex-1">Upgrade to Pro</span>
                     {isLoading && <Loader size="xs" variant="muted" className="opacity-30" />}
-                  </a>
+                  </Link>
                 </DropdownMenuItem>
               )}
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem asChild>
-                <a href="/dashboard/profile" className="cursor-pointer">
+                <Link href="/dashboard/profile" className="cursor-pointer">
                   <User className="mr-2 h-4 w-4" />
                   Profile
-                </a>
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <a href="/dashboard/settings" className="cursor-pointer">
+                <Link href="/dashboard/settings" className="cursor-pointer">
                   <Settings2 className="mr-2 h-4 w-4" />
                   Settings
-                </a>
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <a href="/dashboard/feedback" className="cursor-pointer">
+                <Link href="/dashboard/feedback" className="cursor-pointer">
                   <MessageSquare className="mr-2 h-4 w-4" />
                   Feedback
-                </a>
+                </Link>
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
