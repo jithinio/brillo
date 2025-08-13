@@ -76,14 +76,47 @@ export function UpgradeSuccessHandler() {
         duration: 4000,
       })
       
-      // Background sync to ensure consistency
-      console.log('⏳ Syncing with backend...')
+      // 🔄 POLAR SYNC - Give webhooks a chance to fire first
+      console.log('⏳ Preparing to sync subscription with Polar...')
       
-      // Initial refresh after 1 second (in background)
+      // Wait 1.5 seconds for Polar webhook to potentially process
       setTimeout(async () => {
-        console.log('🔄 Background subscription sync...')
+        try {
+          console.log('🔄 Syncing with Polar API...')
+          const syncResponse = await fetch('/api/polar/sync', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ userId: user?.id }),
+          })
+          
+          if (syncResponse.ok) {
+            const syncData = await syncResponse.json()
+            console.log('✅ Polar subscription synced successfully:', syncData)
+            
+            // If sync returned subscription data, update the state with real data
+            if (syncData.subscription && syncData.subscription.planId) {
+              // Force a full refresh to ensure all components update
+              await refetchSubscription(true)
+            }
+          } else {
+            console.warn('❌ Polar sync failed with status:', syncResponse.status)
+            // Still try to refresh subscription data
+            await refetchSubscription(true)
+          }
+        } catch (syncError) {
+          console.error('❌ Error syncing Polar subscription:', syncError)
+          // Still try to refresh subscription data
+          await refetchSubscription(true)
+        }
+      }, 1500)
+      
+      // Additional background refresh after 3 seconds
+      setTimeout(async () => {
+        console.log('🔄 Additional subscription refresh...')
         refetchSubscription(true)
-      }, 1000)
+      }, 3000)
       
       // Second refresh after 3 seconds with status check
       setTimeout(async () => {

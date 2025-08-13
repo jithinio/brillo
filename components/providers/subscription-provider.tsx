@@ -302,6 +302,8 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
           subscription_status,
           stripe_customer_id,
           stripe_subscription_id,
+          polar_customer_id,
+          polar_subscription_id,
           subscription_current_period_end,
           cancel_at_period_end
         `)
