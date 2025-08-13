@@ -756,8 +756,8 @@ export default function GenerateInvoicePage() {
         const validatedTotal = Number(total) || 0
         const validatedTaxRate = Number(taxRatePercent) || 0
         
-        // Ensure currency is valid (3-letter code)
-        const validatedCurrency = clientCurrency && clientCurrency.length === 3 ? clientCurrency : 'USD'
+        // Ensure currency is valid (check against supported currencies)
+        const validatedCurrency = clientCurrency && CURRENCIES[clientCurrency] ? clientCurrency : 'USD'
         
         // Prepare invoice data matching exact database schema
         const invoiceInsertData = {
@@ -1040,8 +1040,8 @@ export default function GenerateInvoicePage() {
         const validStatuses = ['draft', 'sent', 'paid', 'overdue', 'cancelled']
         const validatedStatus = 'sent' // Always use 'sent' for new invoices
         
-        // Ensure currency is valid (3-letter code)
-        const validatedCurrency = clientCurrency && clientCurrency.length === 3 ? clientCurrency : 'USD'
+        // Ensure currency is valid (check against supported currencies)
+        const validatedCurrency = clientCurrency && CURRENCIES[clientCurrency] ? clientCurrency : 'USD'
         
         // Prepare invoice data matching exact database schema
         const invoiceInsertData = {
@@ -1094,6 +1094,12 @@ export default function GenerateInvoicePage() {
           status: typeof invoiceInsertData.status,
           issue_date: typeof invoiceInsertData.issue_date,
           due_date: typeof invoiceInsertData.due_date
+        })
+        console.log('Currency validation check:', {
+          selectedCurrency: clientCurrency,
+          isSupported: CURRENCIES[clientCurrency] ? 'YES' : 'NO',
+          validatedCurrency: validatedCurrency,
+          allSupportedCurrencies: Object.keys(CURRENCIES)
         })
 
         // Insert or update the main invoice record
