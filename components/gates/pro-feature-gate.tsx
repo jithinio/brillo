@@ -92,40 +92,8 @@ const ProFeatureGateComponent = ({
 
   // 🚀 ZERO LOADING for known pro users - completely skip all loading states
   // Also handle pre-mount state to prevent hydration mismatch
-  // Enhanced check: Look in multiple cache locations for pro subscription
-  const hasProInLocalStorage = hasMounted && typeof window !== 'undefined' && (() => {
-    try {
-      // Check main subscription cache
-      const saved = localStorage.getItem('brillo-subscription-cache')
-      if (saved) {
-        const parsed = JSON.parse(saved)
-        if (parsed.data?.planId === 'pro_monthly' || parsed.data?.planId === 'pro_yearly') {
-          return true
-        }
-      }
-      
-      // Check user-specific cache keys
-      const allKeys = Object.keys(localStorage).filter(key => 
-        key.startsWith('brillo-subscription-') || key.includes('subscription')
-      )
-      
-      for (const key of allKeys) {
-        try {
-          const cached = localStorage.getItem(key)
-          if (cached) {
-            const parsed = JSON.parse(cached)
-            if (parsed.planId === 'pro_monthly' || parsed.planId === 'pro_yearly' ||
-                parsed.data?.planId === 'pro_monthly' || parsed.data?.planId === 'pro_yearly') {
-              return true
-            }
-          }
-        } catch (e) {
-          // Continue checking other keys
-        }
-      }
-    } catch (e) {}
-    return false
-  })()
+  // Only check user-specific cache to prevent pro feature access leakage
+  const hasProInLocalStorage = false // Disable generic localStorage checking
 
   if (!hasMounted || (isLoading && !isKnownProUser && !hasProInLocalStorage)) {
     // Only show loading for definitively non-pro users during initial load

@@ -282,7 +282,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         'fallback_setting_',
         'rates_',
         'currency_conversion_cache_',
-        'setting_'
+        'setting_',
+        'brillo-sub-cache-', // Add subscription cache prefix
+        'brillo-subscription-' // Add any legacy subscription cache prefix
       ]
       
       // Get all localStorage keys and clear those matching prefixes

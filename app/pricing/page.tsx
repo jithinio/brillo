@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Check, Crown, FileText, BarChart3, Palette, Zap, Users, CreditCard, ArrowLeft, ChevronDown, Mail } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -10,11 +10,26 @@ import { useSubscription } from "@/components/providers/subscription-provider"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { motion, AnimatePresence } from "framer-motion"
+import { useSearchParams, useRouter } from "next/navigation"
+import { toast } from "sonner"
 
 export default function PricingPage() {
   const { subscription, upgrade, isLoading } = useSubscription()
   const [isYearly, setIsYearly] = useState(true) // Default to yearly
   const [openFAQ, setOpenFAQ] = useState<string | null>(null)
+  const searchParams = useSearchParams()
+  const router = useRouter()
+
+  // Handle upgrade cancelled status
+  useEffect(() => {
+    const upgradeStatus = searchParams.get('upgrade')
+    
+    if (upgradeStatus === 'cancelled') {
+      toast.info('Subscription upgrade was cancelled')
+      // Clean up the URL
+      router.replace('/pricing')
+    }
+  }, [searchParams, router])
 
   const plans = [
     {

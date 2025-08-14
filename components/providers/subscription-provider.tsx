@@ -133,30 +133,8 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
       }
     }
     
-    // Fallback: Check localStorage for any pro subscription data
-    try {
-      const allKeys = Object.keys(localStorage).filter(key => 
-        key.startsWith('brillo-subscription-') || key.includes('subscription')
-      )
-      
-      for (const key of allKeys) {
-        try {
-          const cached = localStorage.getItem(key)
-          if (cached) {
-            const parsed = JSON.parse(cached)
-            const planId = parsed.planId || parsed.data?.planId
-            if (planId === 'pro_monthly' || planId === 'pro_yearly') {
-              console.log('🚀 getCachedPlanId: Found cached pro user:', planId)
-              return planId
-            }
-          }
-        } catch (e) {
-          // Continue checking other keys
-        }
-      }
-    } catch (e) {
-      // Ignore localStorage errors
-    }
+    // Only check user-specific cache to prevent data leakage between users
+    // No fallback to generic localStorage keys
     
     // Default to free
     return 'free'
@@ -237,47 +215,9 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
       return true
     }
     
-    // Fallback: Check localStorage for any subscription data
-    try {
-      const allKeys = Object.keys(localStorage).filter(key => 
-        key.startsWith('brillo-subscription-') || key.includes('subscription')
-      )
-      
-      for (const key of allKeys) {
-        try {
-          const cachedData = localStorage.getItem(key)
-          if (cachedData) {
-            const parsed = JSON.parse(cachedData)
-            const planId = parsed.planId || parsed.data?.planId
-            
-            if (planId === 'pro_monthly' || planId === 'pro_yearly') {
-              console.log(`🚀 Using localStorage cached pro subscription data: ${planId}`)
-              
-              const subscriptionData = {
-                planId: planId,
-                status: parsed.status || parsed.data?.status || 'active',
-                customerId: parsed.customerId || parsed.data?.customerId || null,
-                subscriptionId: parsed.subscriptionId || parsed.data?.subscriptionId || null,
-                currentPeriodEnd: parsed.currentPeriodEnd || parsed.data?.currentPeriodEnd || null,
-                cancelAtPeriodEnd: parsed.cancelAtPeriodEnd || parsed.data?.cancelAtPeriodEnd || false
-              }
-              
-              trackCacheHit()
-              setSubscription(subscriptionData)
-              setIsLoading(false)
-              setHasCheckedInitialCache(true)
-              
-              console.log('⚡ Skipping background usage update for localStorage cached pro user')
-              return true
-            }
-          }
-        } catch (e) {
-          // Continue checking other keys
-        }
-      }
-    } catch (e) {
-      // Ignore localStorage errors
-    }
+    // No fallback to generic localStorage keys - only use user-specific cache
+    // This prevents new users from inheriting stale pro subscription data
+    console.log('🔍 No cached subscription found for user:', user.id)
     
     setHasCheckedInitialCache(true)
     return false
@@ -540,8 +480,8 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
       const baseUrl = window.location.origin
       const checkoutUrl = `${baseUrl}/api/polar-checkout?plan=${planId}&uid=${user.id}`
       
-      // Open checkout in new tab for better UX
-      window.open(checkoutUrl, '_blank')
+      // Redirect in the same tab for better UX
+      window.location.href = checkoutUrl
       
     } catch (err) {
       console.error('Error starting upgrade:', err)
