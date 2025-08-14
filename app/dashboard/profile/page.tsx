@@ -400,8 +400,11 @@ export default function ProfilePage() {
   }
 
   const handleDeleteAccountConfirm = async () => {
-    // Validate inputs
-    if (!deleteVerification.password) {
+    // Check if user is a Google OAuth user (no password required)
+    const isGoogleUser = user?.app_metadata?.provider === 'google'
+    
+    // Validate inputs based on user type
+    if (!isGoogleUser && !deleteVerification.password) {
       toast.error("Please enter your current password")
       return
     }
@@ -415,7 +418,12 @@ export default function ProfilePage() {
       setIsDeleting(true)
 
       // In a real app, you would call your backend API to delete the account
-      // await api.deleteAccount(deleteVerification.password)
+      // For Google users, skip password verification
+      if (isGoogleUser) {
+        // await api.deleteAccount() // No password needed for OAuth users
+      } else {
+        // await api.deleteAccount(deleteVerification.password)
+      }
       
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 2000))
@@ -924,22 +932,34 @@ export default function ProfilePage() {
                   </p>
                   
                   <div className="space-y-3">
-                    <div className="space-y-2">
-                      <Label htmlFor="deletePassword" className="text-sm font-medium">
-                        Enter your current password to confirm:
-                      </Label>
-                      <Input
-                        id="deletePassword"
-                        type="password"
-                        value={deleteVerification.password}
-                        onChange={(e) => setDeleteVerification({
-                          ...deleteVerification,
-                          password: e.target.value
-                        })}
-                        placeholder="Current password"
-                        className="border-destructive/20 focus:border-destructive"
-                      />
-                    </div>
+                    {/* Only show password field for non-Google users */}
+                    {user?.app_metadata?.provider !== 'google' && (
+                      <div className="space-y-2">
+                        <Label htmlFor="deletePassword" className="text-sm font-medium">
+                          Enter your current password to confirm:
+                        </Label>
+                        <Input
+                          id="deletePassword"
+                          type="password"
+                          value={deleteVerification.password}
+                          onChange={(e) => setDeleteVerification({
+                            ...deleteVerification,
+                            password: e.target.value
+                          })}
+                          placeholder="Current password"
+                          className="border-destructive/20 focus:border-destructive"
+                        />
+                      </div>
+                    )}
+                    
+                    {/* Show different messaging for Google users */}
+                    {user?.app_metadata?.provider === 'google' && (
+                      <div className="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-md">
+                        <p className="text-sm text-blue-700 dark:text-blue-300">
+                          <span className="font-medium">Google Account:</span> No password verification required for OAuth accounts.
+                        </p>
+                      </div>
+                    )}
                     
                     <div className="space-y-2">
                       <Label htmlFor="deleteConfirmation" className="text-sm font-medium">
