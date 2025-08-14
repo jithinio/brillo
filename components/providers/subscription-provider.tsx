@@ -327,10 +327,58 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
       apiTracker.success()
 
       if (!profile) {
-        console.error('❌ No profile found for user:', user.id)
-        setError('User profile not found')
+        console.log('👤 No profile found for user, creating profile and default subscription for new user:', user.id)
+        
+        // Try to create a profile for the user (particularly useful for Google OAuth users)
+        try {
+          const newProfile = {
+            id: user.id,
+            first_name: user.user_metadata?.first_name || '',
+            last_name: user.user_metadata?.last_name || '',
+            full_name: user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || '',
+            avatar_url: user.user_metadata?.avatar_url || '',
+            email: user.email || '',
+            subscription_plan_id: 'free',
+            subscription_status: 'active',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }
+          
+          const { error: insertError } = await supabase
+            .from('profiles')
+            .insert(newProfile)
+          
+          if (insertError) {
+            console.warn('Failed to create profile for user (may already exist):', insertError.message)
+          } else {
+            console.log('✅ Created profile for new user:', user.id)
+          }
+        } catch (profileError) {
+          console.warn('Error creating profile for user:', profileError)
+        }
+        
+        // Default to free plan for users without profiles (like Google OAuth users)
+        const freeSubscription = {
+          planId: 'free' as const,
+          status: 'active' as const,
+          customerId: null,
+          subscriptionId: null,
+          currentPeriodEnd: null,
+          cancelAtPeriodEnd: false
+        }
+        
+        setSubscription(freeSubscription)
+        
+        // Cache the free plan result
+        SubscriptionCache.set(user.id, freeSubscription)
+        
+        console.log('✅ Subscription loaded: Free user (no profile, default setup)')
+        
+        await updateUsageLimits('free') // Free users always need usage tracking
+        setError(null)
+        endTiming('subscription_load', true)
         setIsLoading(false)
-        perfTracker.end(false, { userId: user.id })
+        perfTracker.end(true, { userId: user.id, cacheHit: false })
         return
       }
 
