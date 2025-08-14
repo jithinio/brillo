@@ -26,7 +26,7 @@ const ProFeatureGateComponent = ({
   className,
   showUpgrade = true 
 }: ProFeatureGateProps) => {
-  const { hasAccess, plan, isLoading, getCachedPlanId } = useSubscription()
+  const { hasAccess, plan, isLoading, getCachedPlanId, subscription } = useSubscription()
   
   // Track if component has mounted on client (prevents hydration mismatch)
   const [hasMounted, setHasMounted] = useState(false)
@@ -92,13 +92,36 @@ const ProFeatureGateComponent = ({
 
   // 🚀 ZERO LOADING for known pro users - completely skip all loading states
   // Also handle pre-mount state to prevent hydration mismatch
-  // Additional check: if user has any pro subscription in localStorage, never show loading
+  // Enhanced check: Look in multiple cache locations for pro subscription
   const hasProInLocalStorage = hasMounted && typeof window !== 'undefined' && (() => {
     try {
+      // Check main subscription cache
       const saved = localStorage.getItem('brillo-subscription-cache')
       if (saved) {
         const parsed = JSON.parse(saved)
-        return parsed.data?.planId === 'pro_monthly' || parsed.data?.planId === 'pro_yearly'
+        if (parsed.data?.planId === 'pro_monthly' || parsed.data?.planId === 'pro_yearly') {
+          return true
+        }
+      }
+      
+      // Check user-specific cache keys
+      const allKeys = Object.keys(localStorage).filter(key => 
+        key.startsWith('brillo-subscription-') || key.includes('subscription')
+      )
+      
+      for (const key of allKeys) {
+        try {
+          const cached = localStorage.getItem(key)
+          if (cached) {
+            const parsed = JSON.parse(cached)
+            if (parsed.planId === 'pro_monthly' || parsed.planId === 'pro_yearly' ||
+                parsed.data?.planId === 'pro_monthly' || parsed.data?.planId === 'pro_yearly') {
+              return true
+            }
+          }
+        } catch (e) {
+          // Continue checking other keys
+        }
       }
     } catch (e) {}
     return false

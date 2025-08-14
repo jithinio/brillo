@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
         found: !!data, 
         error: error?.message,
         errorCode: error?.code,
-        invoiceId 
+        invoiceId
       })
 
       if (error) {
@@ -211,17 +211,8 @@ export async function POST(request: NextRequest) {
 
     invoiceData = data
 
-    // Fetch invoice items
-    const { data: itemsData, error: itemsError } = await supabase
-      .from('invoice_items')
-      .select('*')
-      .eq('invoice_id', invoiceId)
-
-    if (itemsError) {
-      console.error('Error fetching invoice items:', itemsError)
-    } else {
-      invoiceData.items = itemsData || []
-    }
+    // Items are now stored as JSON in the invoice record itself
+    // No need to fetch from separate invoice_items table
 
     // Get user's company settings for currency fallback
     let defaultCurrency = 'USD'

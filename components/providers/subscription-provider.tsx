@@ -115,7 +115,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
   // Add immediate cache lookup to reduce loading time
   const [hasCheckedInitialCache, setHasCheckedInitialCache] = useState(false)
 
-  // Quick cached plan ID access for UI components (SSR-safe)
+  // Enhanced cached plan ID access for UI components (SSR-safe)
   const getCachedPlanId = useCallback((): string => {
     // During SSR or before mount, always return 'free' to prevent mismatch
     if (typeof window === 'undefined' || !hasMounted) {
@@ -125,12 +125,37 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     // Return current subscription if not loading
     if (!isLoading) return subscription.planId
     
-    // Check unified cache
+    // Check unified cache first
     if (user?.id) {
       const cached = SubscriptionCache.get(user.id)
       if (cached) {
         return cached.planId
       }
+    }
+    
+    // Fallback: Check localStorage for any pro subscription data
+    try {
+      const allKeys = Object.keys(localStorage).filter(key => 
+        key.startsWith('brillo-subscription-') || key.includes('subscription')
+      )
+      
+      for (const key of allKeys) {
+        try {
+          const cached = localStorage.getItem(key)
+          if (cached) {
+            const parsed = JSON.parse(cached)
+            const planId = parsed.planId || parsed.data?.planId
+            if (planId === 'pro_monthly' || planId === 'pro_yearly') {
+              console.log('🚀 getCachedPlanId: Found cached pro user:', planId)
+              return planId
+            }
+          }
+        } catch (e) {
+          // Continue checking other keys
+        }
+      }
+    } catch (e) {
+      // Ignore localStorage errors
     }
     
     // Default to free
@@ -189,10 +214,11 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     return { isOverLimit, restrictions }
   }
 
-  // New function to check initial cache without loading state
+  // Enhanced function to check initial cache without loading state
   const checkInitialCache = useCallback(() => {
     if (!user || hasCheckedInitialCache) return false
     
+    // Check unified cache first
     const cached = SubscriptionCache.get(user.id)
     
     if (cached) {
@@ -209,6 +235,48 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
         console.log('⚡ Skipping background usage update for cached pro user')
       }
       return true
+    }
+    
+    // Fallback: Check localStorage for any subscription data
+    try {
+      const allKeys = Object.keys(localStorage).filter(key => 
+        key.startsWith('brillo-subscription-') || key.includes('subscription')
+      )
+      
+      for (const key of allKeys) {
+        try {
+          const cachedData = localStorage.getItem(key)
+          if (cachedData) {
+            const parsed = JSON.parse(cachedData)
+            const planId = parsed.planId || parsed.data?.planId
+            
+            if (planId === 'pro_monthly' || planId === 'pro_yearly') {
+              console.log(`🚀 Using localStorage cached pro subscription data: ${planId}`)
+              
+              const subscriptionData = {
+                planId: planId,
+                status: parsed.status || parsed.data?.status || 'active',
+                customerId: parsed.customerId || parsed.data?.customerId || null,
+                subscriptionId: parsed.subscriptionId || parsed.data?.subscriptionId || null,
+                currentPeriodEnd: parsed.currentPeriodEnd || parsed.data?.currentPeriodEnd || null,
+                cancelAtPeriodEnd: parsed.cancelAtPeriodEnd || parsed.data?.cancelAtPeriodEnd || false
+              }
+              
+              trackCacheHit()
+              setSubscription(subscriptionData)
+              setIsLoading(false)
+              setHasCheckedInitialCache(true)
+              
+              console.log('⚡ Skipping background usage update for localStorage cached pro user')
+              return true
+            }
+          }
+        } catch (e) {
+          // Continue checking other keys
+        }
+      }
+    } catch (e) {
+      // Ignore localStorage errors
     }
     
     setHasCheckedInitialCache(true)

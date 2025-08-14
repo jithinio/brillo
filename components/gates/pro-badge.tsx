@@ -25,11 +25,12 @@ export function ProBadge({
   showTooltip = true,
   tooltipContent
 }: ProBadgeProps) {
-  const { subscription, isLoading, hasAccess } = useSubscription()
+  // ALWAYS call all hooks first - never conditionally call hooks
+  const { subscription, isLoading, hasAccess, getCachedPlanId } = useSubscription()
   const [shouldRender, setShouldRender] = useState(false)
   const [isVisible, setIsVisible] = useState(false)
 
-  // Progressive loading effect - only render for free users after page load
+  // Progressive loading effect - only render for confirmed free users
   useEffect(() => {
     if (!isLoading && subscription?.planId) {
       // Only render for confirmed free users
@@ -41,6 +42,43 @@ export function ProBadge({
       // For pro users or any other plan, never render
     }
   }, [isLoading, subscription?.planId])
+
+  // Now do all the conditional logic AFTER all hooks are called
+  
+  // Enhanced check - use cached data to determine if user is pro
+  const cachedPlanId = getCachedPlanId()
+  const effectivePlanId = subscription?.planId || cachedPlanId
+  
+  // Early return for pro users (including cached detection)
+  if (effectivePlanId && effectivePlanId !== 'free') {
+    return null
+  }
+  
+  // Additional cache check in localStorage for pro users
+  if (typeof window !== 'undefined') {
+    try {
+      const allKeys = Object.keys(localStorage).filter(key => 
+        key.startsWith('brillo-subscription-') || key.includes('subscription')
+      )
+      
+      for (const key of allKeys) {
+        try {
+          const cached = localStorage.getItem(key)
+          if (cached) {
+            const parsed = JSON.parse(cached)
+            const planId = parsed.planId || parsed.data?.planId
+            if (planId === 'pro_monthly' || planId === 'pro_yearly') {
+              return null // Don't show pro badge for cached pro users
+            }
+          }
+        } catch (e) {
+          // Continue checking other keys
+        }
+      }
+    } catch (e) {
+      // Ignore localStorage errors
+    }
+  }
 
   // Don't render anything during loading or for non-free users
   if (!shouldRender) {

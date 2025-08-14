@@ -22,6 +22,7 @@ import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { useSettings } from "@/components/settings-provider"
 import type { Client } from "@/components/clients/columns"
 import { useQueryClient } from "@tanstack/react-query"
+import { invoiceNumberManager } from "@/lib/invoice-number-manager"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useRouter } from "next/navigation"
@@ -46,6 +47,7 @@ export default function GenerateInvoicePage() {
   
   // Check if we're in edit mode
   const [isEditMode, setIsEditMode] = useState(false)
+  const [isLoadingEditData, setIsLoadingEditData] = useState(false)
   
   // Invoice form state
   const [selectedClientId, setSelectedClientId] = useState("")
@@ -89,9 +91,11 @@ export default function GenerateInvoicePage() {
   const [selectedProject, setSelectedProject] = useState<any>(null)
   const [projectsLoading, setProjectsLoading] = useState(false)
   
-  // Invoice number state
+  // Invoice number state with new reservation system
   const [invoiceNumber, setInvoiceNumber] = useState<string>("")
   const [isPreviewNumber, setIsPreviewNumber] = useState(true)
+  const [reservedNumber, setReservedNumber] = useState<string>("")
+  const [numberReservationExpiry, setNumberReservationExpiry] = useState<Date | null>(null)
   const [editInvoiceId, setEditInvoiceId] = useState<string | null>(null)
   
 
@@ -105,7 +109,7 @@ export default function GenerateInvoicePage() {
     defaultDueDate.setDate(defaultDueDate.getDate() + 30)
     setDueDate(defaultDueDate)
     
-    // Preview the next invoice number without actually generating it
+    // Preview the next invoice number without actually reserving it
     const previewInvoiceNumber = async () => {
       // Don't generate new numbers if we're in edit mode or if edit data is available
       if (isEditMode) return
@@ -114,72 +118,46 @@ export default function GenerateInvoicePage() {
       const storedEditData = sessionStorage.getItem('edit-invoice-data')
       if (storedEditData) return
       
-      const now = new Date()
-      const year = now.getFullYear()
       const prefix = settings.invoicePrefix || 'INV'
+      const year = new Date().getFullYear()
 
-      if (isSupabaseConfigured()) {
-        try {
-          const { data: userData } = await supabase.auth.getUser()
-          
-          // First, check what actual invoices exist for this user and year
-          const { data: existingInvoices, error: invoicesError } = await supabase
-            .from('invoices')
-            .select('invoice_number')
-            .eq('user_id', userData.user?.id)
-            .like('invoice_number', `${prefix}-${year}-%`)
-            .order('invoice_number', { ascending: false })
-
-          if (invoicesError) {
-            console.error('Error checking existing invoices:', invoicesError)
-            setInvoiceNumber(`${prefix}-${year}-001`)
-            setIsPreviewNumber(true)
-            return
-          }
-
-          // Find the highest number from actual invoices
-          let maxInvoiceNumber = 0
-          if (existingInvoices && existingInvoices.length > 0) {
-            existingInvoices.forEach(invoice => {
-              if (invoice.invoice_number) {
-                // Extract number from format like "INV-2024-003"
-                const match = invoice.invoice_number.match(/-(\d+)$/)
-                if (match) {
-                  const num = parseInt(match[1], 10)
-                  if (num > maxInvoiceNumber) {
-                    maxInvoiceNumber = num
-                  }
-                }
-              }
-            })
-          }
-
-          // The next number should be maxInvoiceNumber + 1
-          const nextNumber = maxInvoiceNumber + 1
-          const previewNumber = `${prefix}-${year}-${String(nextNumber).padStart(3, '0')}`
-          setInvoiceNumber(previewNumber)
-          setIsPreviewNumber(true)
-          
-        } catch (error) {
-          console.error('Error previewing invoice number:', error)
-          setInvoiceNumber(`${prefix}-${year}-001`)
-          setIsPreviewNumber(true)
-        }
-      } else {
-        // Demo mode: preview based on existing invoices
-        const existingInvoices = JSON.parse(sessionStorage.getItem('demo-invoices') || '[]')
-        const currentYearInvoices = existingInvoices.filter((inv: any) => 
-          inv.invoice_number?.startsWith(`${prefix}-${year}-`)
-        )
-        const nextNumber = currentYearInvoices.length + 1
-        const previewNumber = `${prefix}-${year}-${String(nextNumber).padStart(3, '0')}`
+      try {
+        // Use the new preview system that doesn't reserve numbers
+        const previewNumber = await invoiceNumberManager.previewNextInvoiceNumber(prefix, year)
         setInvoiceNumber(previewNumber)
+        setIsPreviewNumber(true)
+        
+        console.log(`Previewing invoice number: ${previewNumber} (not reserved)`)
+      } catch (error) {
+        console.error('Error previewing invoice number:', error)
+        setInvoiceNumber(`${prefix}-${year}-001`)
         setIsPreviewNumber(true)
       }
     }
     
     previewInvoiceNumber()
   }, [isEditMode, settings.invoicePrefix])
+
+  // Setup page unload handlers and cleanup
+  useEffect(() => {
+    // Clean up any previous session reservations on startup
+    invoiceNumberManager.cleanupOnStartup()
+    
+    // Setup page unload handler to cancel reservations
+    const cleanupHandler = invoiceNumberManager.setupPageUnloadHandler()
+    
+    return cleanupHandler
+  }, [])
+
+  // Cancel any reserved number when component unmounts or page changes
+  useEffect(() => {
+    return () => {
+      if (reservedNumber && isPreviewNumber) {
+        // Cancel reservation if we had one but never used it
+        invoiceNumberManager.cancelReservation(reservedNumber)
+      }
+    }
+  }, [reservedNumber, isPreviewNumber])
 
   // Update tax and currency settings when settings change (but not in edit mode)
   useEffect(() => {
@@ -264,56 +242,7 @@ export default function GenerateInvoicePage() {
     }
   }, [clients, toast])
 
-  // Fallback invoice number generation that maintains sequence
-  const generateFallbackInvoiceNumber = async (prefix: string, year: number, userId?: string) => {
-    try {
-      if (!userId) {
-        console.error('No user ID for fallback number generation')
-        return `${prefix}-${year}-001`
-      }
 
-      // Query existing invoices to find the highest number
-      const { data: existingInvoices, error } = await supabase
-        .from('invoices')
-        .select('invoice_number')
-        .eq('user_id', userId)
-        .like('invoice_number', `${prefix}-${year}-%`)
-        .order('invoice_number', { ascending: false })
-
-      if (error) {
-        console.error('Error querying existing invoices for fallback:', error)
-        return `${prefix}-${year}-001`
-      }
-
-      // Find the highest number from actual invoices
-      let maxInvoiceNumber = 0
-      if (existingInvoices && existingInvoices.length > 0) {
-        existingInvoices.forEach(invoice => {
-          if (invoice.invoice_number) {
-            // Extract number from format like "INV-2024-003"
-            const match = invoice.invoice_number.match(/-(\d+)$/)
-            if (match) {
-              const num = parseInt(match[1], 10)
-              if (num > maxInvoiceNumber) {
-                maxInvoiceNumber = num
-              }
-            }
-          }
-        })
-      }
-
-      // The next number should be maxInvoiceNumber + 1
-      const nextNumber = maxInvoiceNumber + 1
-      const fallbackNumber = `${prefix}-${year}-${String(nextNumber).padStart(3, '0')}`
-      
-      console.log(`Generated fallback invoice number: ${fallbackNumber} (max was ${maxInvoiceNumber})`)
-      return fallbackNumber
-      
-    } catch (error) {
-      console.error('Error in fallback number generation:', error)
-      return `${prefix}-${year}-001`
-    }
-  }
 
   // Handle edit mode data loading when clients are available
   useEffect(() => {
@@ -321,6 +250,8 @@ export default function GenerateInvoicePage() {
     
     // Only process edit data if we have clients loaded and edit data exists
     if (storedEditData && clients.length > 0) {
+      setIsLoadingEditData(true)
+      
       try {
         const editInfo = JSON.parse(storedEditData)
         
@@ -434,6 +365,8 @@ export default function GenerateInvoicePage() {
       } catch (error) {
         console.error('Error parsing edit invoice data:', error)
         toast.error("Could not load invoice data for editing. Please try again.")
+      } finally {
+        setIsLoadingEditData(false)
       }
     }
   }, [clients, toast])
@@ -446,6 +379,10 @@ export default function GenerateInvoicePage() {
     
     if (editParam === 'true' || storedEditData) {
       setIsEditMode(true)
+      // Show loading overlay if we have edit data to process
+      if (storedEditData) {
+        setIsLoadingEditData(true)
+      }
     }
   }, [])
 
@@ -717,53 +654,44 @@ export default function GenerateInvoicePage() {
         throw new Error('Error calculating invoice totals. Please check your items and tax settings.')
       }
       
-      // Generate invoice number if not already generated
+      // Reserve invoice number if not already reserved or in edit mode
       let finalInvoiceNumber = invoiceNumber
       
       console.log('DRAFT SAVE - Starting invoice number generation:', {
         currentInvoiceNumber: invoiceNumber,
+        reservedNumber: reservedNumber,
         isEditMode: isEditMode,
-        selectedCurrency: clientCurrency,
-        clientSelected: !!selectedClient
+        isPreviewNumber: isPreviewNumber
       })
       
       if (!isEditMode) {
-        const now = new Date()
-        const year = now.getFullYear()
         const prefix = settings.invoicePrefix || 'INV'
+        const year = new Date().getFullYear()
 
-        if (isSupabaseConfigured()) {
+        // If we only have a preview number, reserve it now for the draft
+        if (isPreviewNumber) {
           try {
-            const { data: userData } = await supabase.auth.getUser()
-            const { data, error } = await supabase
-              .rpc('get_next_invoice_number', {
-                p_user_id: userData.user?.id,
-                p_prefix: prefix,
-                p_year: year
-              })
-
-            if (error) {
-              console.error('Error generating invoice number:', error)
-              finalInvoiceNumber = await generateFallbackInvoiceNumber(prefix, year, userData.user?.id)
-            } else {
-              finalInvoiceNumber = data
-              setIsPreviewNumber(false)
-            }
+            finalInvoiceNumber = await invoiceNumberManager.reserveNextInvoiceNumber(prefix, year)
+            setReservedNumber(finalInvoiceNumber)
+            setInvoiceNumber(finalInvoiceNumber)
+            setIsPreviewNumber(false)
+            
+            console.log(`Reserved invoice number for draft: ${finalInvoiceNumber}`)
           } catch (error) {
-            console.error('Error generating invoice number:', error)
-            finalInvoiceNumber = await generateFallbackInvoiceNumber(prefix, year, userData.user?.id)
+            console.error('Error reserving invoice number:', error)
+            // Keep the preview number as fallback
+            finalInvoiceNumber = invoiceNumber
           }
-        } else {
-          const existingInvoices = JSON.parse(sessionStorage.getItem('demo-invoices') || '[]')
-          const currentYearInvoices = existingInvoices.filter((inv: any) => 
-            inv.invoice_number?.startsWith(`${prefix}-${year}-`)
-          )
-          const invoiceCount = currentYearInvoices.length + 1
-          finalInvoiceNumber = `${prefix}-${year}-${String(invoiceCount).padStart(3, '0')}`
         }
+      } else {
+        // In edit mode, use the current invoice number (don't generate new one)
+        finalInvoiceNumber = invoiceNumber
+        console.log('Edit mode: Using existing invoice number:', finalInvoiceNumber)
       }
       
       // Save invoice to database or add to session storage for demo
+
+      
       if (isSupabaseConfigured()) {
         console.log('Saving draft to Supabase...')
         
@@ -790,7 +718,7 @@ export default function GenerateInvoicePage() {
           console.warn(`Invalid currency "${clientCurrency}" detected, falling back to USD`)
         }
         
-        // Prepare invoice data matching exact database schema
+        // Prepare invoice data with items as JSON (optimal for PDF/email generation)
         const invoiceInsertData = {
           invoice_number: String(finalInvoiceNumber).substring(0, 100), // Limit length
           client_id: String(selectedClient.id),
@@ -805,7 +733,14 @@ export default function GenerateInvoicePage() {
           issue_date: formatDateForDatabase(invoiceDate),
           due_date: formatDateForDatabase(dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
           notes: String(notes || '').substring(0, 1000), // Limit notes length
-          terms: String(paymentTerms || '').substring(0, 500) // Limit terms length
+          terms: String(paymentTerms || '').substring(0, 500), // Limit terms length
+          items: items.map(item => ({
+            id: item.id,
+            description: item.description,
+            quantity: item.quantity,
+            rate: item.rate,
+            amount: item.quantity * item.rate
+          })) // Store items as JSON for optimal PDF/email performance
         }
 
         // Additional validation before database insert
@@ -825,43 +760,41 @@ export default function GenerateInvoicePage() {
           throw new Error('Due date is required but missing')
         }
         
-        console.log('Draft invoice insert data:', invoiceInsertData)
-        console.log('Draft data types check:', {
-          invoice_number: typeof invoiceInsertData.invoice_number,
-          client_id: typeof invoiceInsertData.client_id,
-          user_id: typeof invoiceInsertData.user_id,
-          amount: typeof invoiceInsertData.amount,
-          tax_rate: typeof invoiceInsertData.tax_rate,
-          tax_amount: typeof invoiceInsertData.tax_amount,
-          total_amount: typeof invoiceInsertData.total_amount,
-          currency: typeof invoiceInsertData.currency,
-          status: typeof invoiceInsertData.status,
-          issue_date: typeof invoiceInsertData.issue_date,
-          due_date: typeof invoiceInsertData.due_date
-        })
-        console.log('Draft currency validation check:', {
-          selectedCurrency: clientCurrency,
-          validatedCurrency: validatedCurrency,
-          isInCurrenciesObject: CURRENCIES[clientCurrency] ? 'YES' : 'NO',
-          willUseSelectedCurrency: clientCurrency ? 'YES' : 'NO (fallback to USD)'
-        })
+        console.log('Saving draft invoice:', invoiceInsertData.invoice_number)
 
-        // Insert the main invoice record
-        const { data: invoiceData, error: invoiceError } = await supabase
-          .from('invoices')
-          .insert([invoiceInsertData])
-          .select()
-          .single()
+        let invoiceData, invoiceError
+
+        if (isEditMode && editInvoiceId) {
+          // Update existing invoice
+          console.log('Updating existing invoice as draft:', editInvoiceId)
+          const updateResult = await supabase
+            .from('invoices')
+            .update(invoiceInsertData)
+            .eq('id', editInvoiceId)
+            .select()
+            .single()
+          
+          invoiceData = updateResult.data
+          invoiceError = updateResult.error
+        } else {
+          // Insert new draft invoice
+          console.log('Inserting new draft invoice')
+          const insertResult = await supabase
+            .from('invoices')
+            .insert([invoiceInsertData])
+            .select()
+            .single()
+          
+          invoiceData = insertResult.data
+          invoiceError = insertResult.error
+        }
 
         if (invoiceError) {
-          console.error('Failed to insert draft invoice:', invoiceError)
-          console.error('Error details:', {
+          console.error('Failed to insert draft invoice:', {
             message: invoiceError.message,
-            details: invoiceError.details,
-            hint: invoiceError.hint,
-            code: invoiceError.code
+            code: invoiceError.code,
+            hint: invoiceError.hint
           })
-          console.error('Draft invoice data being inserted:', invoiceInsertData)
           
           // Handle specific database constraint errors
           let errorMessage = 'Failed to save draft'
@@ -917,25 +850,12 @@ export default function GenerateInvoicePage() {
         }
 
         console.log('Draft invoice saved successfully:', invoiceData)
-
-        // Now save the invoice items
-        const invoiceItemsData = items.map(item => ({
-          invoice_id: invoiceData.id,
-          description: item.description,
-          quantity: item.quantity,
-          rate: item.rate,
-          amount: item.quantity * item.rate
-        }))
-
-        const { error: itemsError } = await supabase
-          .from('invoice_items')
-          .insert(invoiceItemsData)
-
-        if (itemsError) {
-          console.error('Failed to insert invoice items:', itemsError)
-          throw new Error(`Failed to save draft items: ${itemsError.message}`)
-        }
-
+        
+        // After saving draft, switch to edit mode so generate will update instead of insert
+        setEditInvoiceId(invoiceData.id)
+        setIsEditMode(true)
+        setIsPreviewNumber(false) // Number is now confirmed
+        
         toast.success("Draft saved successfully")
         
         // Invalidate invoice cache to ensure fresh data
@@ -975,6 +895,11 @@ export default function GenerateInvoicePage() {
         
         existingInvoices.push(draftInvoice)
         sessionStorage.setItem('demo-invoices', JSON.stringify(existingInvoices))
+
+        // After saving draft, switch to edit mode so generate will update instead of insert
+        setEditInvoiceId(mockId)
+        setIsEditMode(true)
+        setIsPreviewNumber(false) // Number is now confirmed
 
         toast.success("Draft saved successfully (demo mode)")
         
@@ -1029,47 +954,31 @@ export default function GenerateInvoicePage() {
     }
 
     try {
-      // Generate invoice number only when actually creating the invoice
+      // Reserve or confirm invoice number for actual invoice creation
       let finalInvoiceNumber = invoiceNumber
       
       if (!isEditMode) {
-        const now = new Date()
-        const year = now.getFullYear()
         const prefix = settings.invoicePrefix || 'INV'
+        const year = new Date().getFullYear()
 
-        if (isSupabaseConfigured()) {
+        // If we only have a preview number, reserve it now for the final invoice
+        if (isPreviewNumber) {
           try {
-            // Use the database function to get the next invoice number for this user
-            const { data: userData } = await supabase.auth.getUser()
-            const { data, error } = await supabase
-              .rpc('get_next_invoice_number', {
-                p_user_id: userData.user?.id,
-                p_prefix: prefix,
-                p_year: year
-              })
-
-            if (error) {
-              console.error('Error generating invoice number:', error)
-              // Fallback to manual sequence generation
-              finalInvoiceNumber = await generateFallbackInvoiceNumber(prefix, year, userData.user?.id)
-            } else {
-              console.log(`Generated invoice number: ${data}`)
-              finalInvoiceNumber = data
-              setIsPreviewNumber(false)
-            }
+            finalInvoiceNumber = await invoiceNumberManager.reserveNextInvoiceNumber(prefix, year)
+            setReservedNumber(finalInvoiceNumber)
+            setInvoiceNumber(finalInvoiceNumber)
+            setIsPreviewNumber(false)
+            
+            console.log(`Reserved invoice number for generation: ${finalInvoiceNumber}`)
           } catch (error) {
-            console.error('Error generating invoice number:', error)
-            // Ultimate fallback - use manual sequence generation
-            finalInvoiceNumber = await generateFallbackInvoiceNumber(prefix, year, userData.user?.id)
+            console.error('Error reserving invoice number:', error)
+            // Keep the preview number as fallback
+            finalInvoiceNumber = invoiceNumber
           }
-        } else {
-          // Demo mode: count from session storage per user
-          const existingInvoices = JSON.parse(sessionStorage.getItem('demo-invoices') || '[]')
-          const currentYearInvoices = existingInvoices.filter((inv: any) => 
-            inv.invoice_number?.startsWith(`${prefix}-${year}-`)
-          )
-          const invoiceCount = currentYearInvoices.length + 1
-          finalInvoiceNumber = `${prefix}-${year}-${String(invoiceCount).padStart(3, '0')}`
+        } else if (reservedNumber) {
+          // We already have a reserved number from draft save, use it
+          finalInvoiceNumber = reservedNumber
+          console.log(`Using already reserved invoice number: ${finalInvoiceNumber}`)
         }
       }
 
@@ -1143,7 +1052,7 @@ export default function GenerateInvoicePage() {
           console.warn(`Invalid currency "${clientCurrency}" detected, falling back to USD`)
         }
         
-        // Prepare invoice data matching exact database schema
+        // Prepare invoice data with items as JSON (optimal for PDF/email generation)
         const invoiceInsertData = {
           invoice_number: String(finalInvoiceNumber).substring(0, 100), // Limit length
           client_id: String(selectedClient.id),
@@ -1158,7 +1067,14 @@ export default function GenerateInvoicePage() {
           issue_date: formatDateForDatabase(invoiceDate),
           due_date: formatDateForDatabase(dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
           notes: String(notes || '').substring(0, 1000), // Limit notes length
-          terms: String(paymentTerms || '').substring(0, 500) // Limit terms length
+          terms: String(paymentTerms || '').substring(0, 500), // Limit terms length
+          items: items.map(item => ({
+            id: item.id,
+            description: item.description,
+            quantity: item.quantity,
+            rate: item.rate,
+            amount: item.quantity * item.rate
+          })) // Store items as JSON for optimal PDF/email performance
         }
 
         // Additional validation before database insert
@@ -1294,41 +1210,12 @@ export default function GenerateInvoicePage() {
 
         console.log(isEditMode ? 'Invoice updated successfully:' : 'Invoice saved successfully:', invoiceData)
 
-        // Now save the invoice items
-        if (isEditMode && editInvoiceId) {
-          // Delete existing items first
-          const { error: deleteError } = await supabase
-            .from('invoice_items')
-            .delete()
-            .eq('invoice_id', editInvoiceId)
-          
-          if (deleteError) {
-            console.error('Failed to delete existing invoice items:', deleteError)
-          }
+        // Confirm the number reservation since invoice was created successfully
+        if (reservedNumber && !isEditMode) {
+          await invoiceNumberManager.confirmReservation(finalInvoiceNumber)
+          console.log(`Confirmed invoice number reservation: ${finalInvoiceNumber}`)
         }
         
-        const invoiceItemsData = items.map(item => ({
-          invoice_id: invoiceData.id,
-          description: item.description,
-          quantity: item.quantity,
-          rate: item.rate,
-          amount: item.quantity * item.rate
-        }))
-
-        console.log('Invoice items data:', invoiceItemsData)
-
-        const { data: itemsData, error: itemsError } = await supabase
-          .from('invoice_items')
-          .insert(invoiceItemsData)
-
-        if (itemsError) {
-          console.error('Failed to insert invoice items:', itemsError)
-          // Don't throw error here, invoice is already saved
-          console.warn(`Invoice ${isEditMode ? 'updated' : 'saved'} but items failed to save:`, itemsError.message)
-        } else {
-          console.log('Invoice items saved successfully:', itemsData)
-        }
-
         // Don't show toast here - preview page will show it
         // toast.success(isEditMode ? "Invoice updated successfully" : "Invoice generated successfully")
         
@@ -1675,6 +1562,16 @@ export default function GenerateInvoicePage() {
 
   return (
     <InvoicingGate>
+      {/* Loading overlay for edit mode */}
+      {isLoadingEditData && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="flex items-center space-x-3">
+            <Loader className="h-5 w-5 animate-spin text-primary" />
+            <p className="font-medium">Loading invoice for editing</p>
+          </div>
+        </div>
+      )}
+      
       <PageHeader
         title={isEditMode ? "Edit Invoice" : "Generate Invoice"}
         action={
@@ -1719,7 +1616,7 @@ export default function GenerateInvoicePage() {
             <CardContent className="space-y-4">
               {/* Client Selection */}
               <div className="space-y-2">
-                <Label htmlFor="client">Client</Label>
+                <Label htmlFor="client" className="font-normal text-secondary-foreground mb-2 block">Client</Label>
                 <div className="flex space-x-2">
                   <Popover open={clientDropdownOpen} onOpenChange={setClientDropdownOpen}>
                     <PopoverTrigger asChild>
@@ -1806,7 +1703,7 @@ export default function GenerateInvoicePage() {
               {/* Project Selection */}
               {selectedClient && (
                 <div className="space-y-2">
-                  <Label htmlFor="project">Project (Optional)</Label>
+                  <Label htmlFor="project" className="font-normal text-secondary-foreground mb-2 block">Project (Optional)</Label>
                   <Select 
                     value={selectedProject?.id || "none"} 
                     onValueChange={(value) => {
@@ -1835,7 +1732,7 @@ export default function GenerateInvoicePage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="invoiceDate">Invoice Date</Label>
+                  <Label htmlFor="invoiceDate" className="font-normal text-secondary-foreground mb-2 block">Invoice Date</Label>
                   <DatePicker
                     date={invoiceDate}
                     onSelect={(date) => date && setInvoiceDate(date)}
@@ -1843,7 +1740,7 @@ export default function GenerateInvoicePage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="dueDate">Due Date</Label>
+                  <Label htmlFor="dueDate" className="font-normal text-secondary-foreground mb-2 block">Due Date</Label>
                   <DatePicker
                     date={dueDate}
                     onSelect={setDueDate}
@@ -1853,7 +1750,7 @@ export default function GenerateInvoicePage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="clientCurrency">Client Currency</Label>
+                <Label htmlFor="clientCurrency" className="font-normal text-secondary-foreground mb-2 block">Client Currency</Label>
                 <CurrencySelector
                   value={clientCurrency}
                   onValueChange={setClientCurrency}
@@ -1870,14 +1767,14 @@ export default function GenerateInvoicePage() {
                       checked={taxEnabled}
                       onCheckedChange={setTaxEnabled}
                     />
-                    <Label htmlFor="tax-enabled" className="text-sm">
+                    <Label htmlFor="tax-enabled" className="font-normal text-secondary-foreground text-sm">
                       Apply {settings.taxName}
                     </Label>
                   </div>
                   
                   {taxEnabled && (
                     <div className="flex items-center space-x-2">
-                      <Label htmlFor="custom-tax-rate" className="text-sm">
+                      <Label htmlFor="custom-tax-rate" className="font-normal text-secondary-foreground text-sm">
                         Tax Rate (%):
                       </Label>
                       <Input
@@ -1912,12 +1809,12 @@ export default function GenerateInvoicePage() {
                 </Button>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
               <div className="space-y-4 w-full">
                 {items.map((item, index) => (
-                  <div key={item.id} className="grid grid-cols-12 gap-4 items-end w-full">
+                  <div key={item.id} className="grid grid-cols-12 gap-4 items-start w-full">
                     <div className="col-span-5">
-                      <Label htmlFor={`description-${item.id}`}>Description</Label>
+                      <Label htmlFor={`description-${item.id}`} className="font-normal text-secondary-foreground mb-2 block">Description</Label>
                       <Input
                         id={`description-${item.id}`}
                         placeholder="Service or product description"
@@ -1927,7 +1824,7 @@ export default function GenerateInvoicePage() {
                       />
                     </div>
                     <div className="col-span-2">
-                      <Label htmlFor={`quantity-${item.id}`}>Qty</Label>
+                      <Label htmlFor={`quantity-${item.id}`} className="font-normal text-secondary-foreground mb-2 block">Qty</Label>
                       <Input
                         id={`quantity-${item.id}`}
                         type="number"
@@ -1938,30 +1835,65 @@ export default function GenerateInvoicePage() {
                       />
                     </div>
                     <div className="col-span-2">
-                      <Label htmlFor={`rate-${item.id}`}>Rate</Label>
+                      <Label htmlFor={`rate-${item.id}`} className="font-normal text-secondary-foreground mb-2 block">Rate</Label>
                       <Input
                         id={`rate-${item.id}`}
                         type="number"
                         min="0"
                         step="0.01"
                         value={item.rate}
-                        onChange={(e) => updateItem(item.id, "rate", Number.parseFloat(e.target.value) || 0)}
+                        onFocus={(e) => {
+                          if (item.rate === 0) {
+                            e.target.select()
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          // If the current value is 0 and user types a number, clear the 0 first
+                          if (item.rate === 0 && e.key >= '0' && e.key <= '9') {
+                            updateItem(item.id, "rate", 0) // This will trigger a re-render with 0
+                            setTimeout(() => {
+                              if (e.currentTarget) {
+                                e.currentTarget.select() // Select all so typing replaces
+                              }
+                            }, 0)
+                          }
+                        }}
+                        onChange={(e) => {
+                          const value = e.target.value
+                          const target = e.target
+                          if (value === '' || value === '0') {
+                            updateItem(item.id, "rate", 0)
+                            // Auto-select when value becomes 0
+                            setTimeout(() => {
+                              if (target && target.value === '0') {
+                                try {
+                                  target.select()
+                                } catch (error) {
+                                  // Ignore errors if element is no longer available
+                                  console.debug('Could not select input:', error)
+                                }
+                              }
+                            }, 0)
+                          } else {
+                            updateItem(item.id, "rate", Number.parseFloat(value) || 0)
+                          }
+                        }}
                         className="w-full"
                       />
                     </div>
                     <div className="col-span-2">
-                      <Label>Amount</Label>
-                      <div className="h-10 flex items-center font-medium w-full">
+                      <Label className="font-normal text-secondary-foreground mb-2 block">Amount</Label>
+                      <div className="h-9 flex items-center font-medium w-full">
                         {formatCurrency(item.quantity * item.rate, clientCurrency)}
                       </div>
                     </div>
-                    <div className="col-span-1">
+                    <div className="col-span-1 flex flex-col justify-end">
                       <Button 
                         variant="outline" 
                         size="sm" 
                         onClick={() => removeItem(item.id)}
                         disabled={items.length <= 1}
-                        className="w-full"
+                        className="w-full h-9 flex items-center justify-center"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -1980,7 +1912,7 @@ export default function GenerateInvoicePage() {
             <CardContent>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="paymentTerms">Payment Terms</Label>
+                  <Label htmlFor="paymentTerms" className="font-normal text-secondary-foreground mb-2 block">Payment Terms</Label>
                   <Select value={paymentTerms} onValueChange={setPaymentTerms}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select payment terms" />
@@ -2001,7 +1933,7 @@ export default function GenerateInvoicePage() {
                 </div>
                 
               <div className="space-y-2">
-                <Label htmlFor="notes">Notes</Label>
+                <Label htmlFor="notes" className="font-normal text-secondary-foreground mb-2 block">Notes</Label>
                 <Textarea
                   id="notes"
                     placeholder="Additional notes for this invoice..."
@@ -2036,7 +1968,7 @@ export default function GenerateInvoicePage() {
           )}
 
           {/* Modern Summary Card */}
-          <Card className="border border-border shadow-sm bg-background">            
+          <Card className="border border-border bg-background">            
             <CardContent className="p-6">
               {/* Header with Icon */}
               <div className="flex justify-between items-start mb-6">
@@ -2052,8 +1984,20 @@ export default function GenerateInvoicePage() {
                 <div className="text-right">
                   <p className="text-sm text-muted-foreground">Invoice number</p>
                   <p className="text-sm font-medium text-foreground font-mono">{invoiceNumber || "Will be generated"}</p>
-                  {!isEditMode && isPreviewNumber && invoiceNumber && (
-                    <p className="text-xs text-muted-foreground mt-0.5">(Preview)</p>
+                  {!isEditMode && invoiceNumber && (
+                    <div className="flex items-center justify-end mt-1">
+                      {isPreviewNumber ? (
+                        <div className="flex items-center space-x-1">
+                          <Clock className="h-3 w-3 text-muted-foreground" />
+                          <p className="text-xs text-muted-foreground">Preview</p>
+                        </div>
+                      ) : reservedNumber ? (
+                        <div className="flex items-center space-x-1">
+                          <Check className="h-3 w-3 text-green-600" />
+                          <p className="text-xs text-green-600">Reserved</p>
+                        </div>
+                      ) : null}
+                    </div>
                   )}
                 </div>
               </div>
@@ -2188,7 +2132,7 @@ export default function GenerateInvoicePage() {
           <div className="grid gap-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="new-name">Name *</Label>
+                <Label htmlFor="new-name" className="font-normal text-secondary-foreground mb-2 block">Name *</Label>
                 <Input
                   id="new-name"
                   value={newClient.name || ""}
@@ -2197,7 +2141,7 @@ export default function GenerateInvoicePage() {
                 />
               </div>
               <div>
-                <Label htmlFor="new-company">Company</Label>
+                <Label htmlFor="new-company" className="font-normal text-secondary-foreground mb-2 block">Company</Label>
                 <Input
                   id="new-company"
                   value={newClient.company || ""}
@@ -2208,7 +2152,7 @@ export default function GenerateInvoicePage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="new-email">Email</Label>
+                <Label htmlFor="new-email" className="font-normal text-secondary-foreground mb-2 block">Email</Label>
                 <Input
                   id="new-email"
                   type="email"
@@ -2218,7 +2162,7 @@ export default function GenerateInvoicePage() {
                 />
               </div>
               <div>
-                <Label htmlFor="new-phone">Phone</Label>
+                <Label htmlFor="new-phone" className="font-normal text-secondary-foreground mb-2 block">Phone</Label>
                 <Input
                   id="new-phone"
                   value={newClient.phone || ""}
@@ -2228,7 +2172,7 @@ export default function GenerateInvoicePage() {
               </div>
             </div>
             <div>
-              <Label htmlFor="new-address">Address</Label>
+              <Label htmlFor="new-address" className="font-normal text-secondary-foreground mb-2 block">Address</Label>
               <Input
                 id="new-address"
                 value={newClient.address || ""}
@@ -2238,7 +2182,7 @@ export default function GenerateInvoicePage() {
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <Label htmlFor="new-city">City</Label>
+                <Label htmlFor="new-city" className="font-normal text-secondary-foreground mb-2 block">City</Label>
                 <Input
                   id="new-city"
                   value={newClient.city || ""}
@@ -2247,7 +2191,7 @@ export default function GenerateInvoicePage() {
                 />
               </div>
               <div>
-                <Label htmlFor="new-state">State</Label>
+                <Label htmlFor="new-state" className="font-normal text-secondary-foreground mb-2 block">State</Label>
                 <Input
                   id="new-state"
                   value={newClient.state || ""}
@@ -2256,7 +2200,7 @@ export default function GenerateInvoicePage() {
                 />
               </div>
               <div>
-                <Label htmlFor="new-zip_code">Zip Code</Label>
+                <Label htmlFor="new-zip_code" className="font-normal text-secondary-foreground mb-2 block">Zip Code</Label>
                 <Input
                   id="new-zip_code"
                   value={newClient.zip_code || ""}
@@ -2266,7 +2210,7 @@ export default function GenerateInvoicePage() {
               </div>
             </div>
             <div>
-              <Label htmlFor="new-country">Country</Label>
+              <Label htmlFor="new-country" className="font-normal text-secondary-foreground mb-2 block">Country</Label>
               <Input
                 id="new-country"
                 value={newClient.country || ""}
@@ -2275,7 +2219,7 @@ export default function GenerateInvoicePage() {
               />
             </div>
             <div>
-              <Label htmlFor="new-notes">Notes</Label>
+              <Label htmlFor="new-notes" className="font-normal text-secondary-foreground mb-2 block">Notes</Label>
               <Textarea
                 id="new-notes"
                 value={newClient.notes || ""}

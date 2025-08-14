@@ -254,16 +254,10 @@ export default function InvoicePreviewPage() {
 
         if (error) throw error
         
-        // Load invoice items if any
-        const { data: items } = await supabase
-          .from('invoice_items')
-          .select('*')
-          .eq('invoice_id', params.id)
-          .order('created_at', { ascending: true })
-        
+        // Items are now stored as JSON in the invoice record itself
         const invoiceWithItems = {
           ...invoiceData,
-          items: items || []
+          items: invoiceData.items || []
         }
         console.log('Loaded invoice from Supabase:', invoiceWithItems)
         setInvoice(invoiceWithItems)
@@ -467,6 +461,12 @@ export default function InvoicePreviewPage() {
   function handleEdit() {
     if (!invoice) return
     
+    // Show loading toast
+    toast.loading(`Loading invoice ${invoice.invoice_number} for editing...`, {
+      id: `edit-${invoice.id}`,
+      duration: 10000 // 10 second timeout
+    })
+    
     // Store invoice data for editing
     const editData = {
       invoiceId: invoice.id,
@@ -503,16 +503,20 @@ export default function InvoicePreviewPage() {
     }
   }
 
-  // Show success toast based on action
+  // Show success toast based on action (only once, then remove from URL)
   useEffect(() => {
     if (action === 'created') {
       toast.success('Invoice created successfully!', {
         description: 'Your invoice has been created and is ready to download or send.'
       })
+      // Remove action from URL to prevent showing toast on refresh
+      window.history.replaceState({}, '', window.location.pathname)
     } else if (action === 'updated') {
       toast.success('Invoice updated successfully!', {
         description: 'Your invoice has been updated and saved.'
       })
+      // Remove action from URL to prevent showing toast on refresh
+      window.history.replaceState({}, '', window.location.pathname)
     }
   }, [action])
 

@@ -13,15 +13,8 @@ import { useSubscriptionListener } from "@/lib/subscription-manager"
 import { SidebarUsageSkeleton } from "@/components/subscription/subscription-skeleton"
 
 export function SidebarUsageOverview() {
-  const { subscription, usage, plan, isLoading, refetchSubscription } = useSubscription()
-  
-  // 🚀 EARLY RETURN: Don't render anything for non-free users
-  // This is the FIRST check - before any state initialization
-  if (!isLoading && subscription?.planId && subscription.planId !== 'free') {
-    console.log('❌ SidebarUsageOverview: Early return for non-free user:', subscription.planId)
-    return null
-  }
-  
+  // ALWAYS call all hooks first - never conditionally call hooks
+  const { subscription, usage, plan, isLoading, refetchSubscription, getCachedPlanId } = useSubscription()
   const [previousCounts, setPreviousCounts] = useState({ projects: 0, clients: 0 })
   const [cachedUsage, setCachedUsage] = useState<typeof usage | null>(null)
   const [isInitialized, setIsInitialized] = useState(false)
@@ -278,6 +271,45 @@ export function SidebarUsageOverview() {
       setPreviousCounts(currentCounts)
     }
   }, [displayUsage?.projects?.current, displayUsage?.clients?.current, previousCounts, isOnRelevantPage, cachedUsage])
+  
+  // Now do all the conditional logic AFTER all hooks are called
+  
+  // 🚀 ENHANCED EARLY RETURN: Check both live subscription and cached data
+  // This prevents showing usage card for pro users during loading states
+  const cachedPlanId = getCachedPlanId()
+  const effectivePlanId = subscription?.planId || cachedPlanId
+  
+  if (effectivePlanId && effectivePlanId !== 'free') {
+    console.log('❌ SidebarUsageOverview: Early return for non-free user:', effectivePlanId)
+    return null
+  }
+  
+  // Additional cache check in localStorage for pro users
+  if (typeof window !== 'undefined') {
+    try {
+      const allKeys = Object.keys(localStorage).filter(key => 
+        key.startsWith('brillo-subscription-') || key.includes('subscription')
+      )
+      
+      for (const key of allKeys) {
+        try {
+          const cached = localStorage.getItem(key)
+          if (cached) {
+            const parsed = JSON.parse(cached)
+            const planId = parsed.planId || parsed.data?.planId
+            if (planId === 'pro_monthly' || planId === 'pro_yearly') {
+              console.log('❌ SidebarUsageOverview: Early return for cached pro user:', planId)
+              return null
+            }
+          }
+        } catch (e) {
+          // Continue checking other keys
+        }
+      }
+    } catch (e) {
+      // Ignore localStorage errors
+    }
+  }
   
   // Don't render anything during loading or for non-free users
   if (!shouldRender) {
