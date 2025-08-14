@@ -95,6 +95,16 @@ const ProFeatureGateComponent = ({
   // Only check user-specific cache to prevent pro feature access leakage
   const hasProInLocalStorage = false // Disable generic localStorage checking
 
+  // CRITICAL: For known pro users, ALWAYS render children immediately
+  // This prevents flashing when refetching subscription data
+  if (isKnownProUser) {
+    return <>{children}</>
+  }
+
+  // Only show loading state for:
+  // 1. Initial mount (!hasMounted)
+  // 2. Loading state for non-pro users
+  // But NOT for pro users during refresh operations
   if (!hasMounted || (isLoading && !isKnownProUser && !hasProInLocalStorage)) {
     // Only show loading for definitively non-pro users during initial load
     return (
@@ -121,8 +131,7 @@ const ProFeatureGateComponent = ({
     )
   }
   
-  // Pro users never see loading - instant access
-
+  // Check feature access after loading
   if (checkFeatureAccess()) {
     return <>{children}</>
   }

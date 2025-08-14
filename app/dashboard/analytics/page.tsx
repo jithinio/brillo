@@ -7,7 +7,7 @@ import { Separator } from "@/components/ui/separator"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import type { ChartConfig } from "@/components/ui/chart"
 import { Bar, BarChart, XAxis, YAxis, Line, LineChart } from "recharts"
-import { DollarSign, TrendingUp, TrendingDown, FileText, Users, Calendar, Activity, BarChart3, Wallet } from "lucide-react"
+import { DollarSign, TrendingUp, TrendingDown, FileText, Users, Calendar, Activity, BarChart3, Wallet, Clock } from "lucide-react"
 
 import { PageHeader } from "@/components/page-header"
 import { Loader } from "@/components/ui/loader"
@@ -22,7 +22,7 @@ import {
   calculateYoYGrowth,
   calculateTopPayingClients,
   calculateCLTV,
-  calculateNetProfit,
+  calculateTotalPending,
   generateRevenueBarChartData,
   calculateCashFlow,
   generateMRRSparklineData,
@@ -103,7 +103,7 @@ export default function AnalyticsPage() {
         revenue: { current: 0, previous: 0, trend: 'up' as const, percentage: 0 },
         expenses: { current: 0, previous: 0, trend: 'up' as const, percentage: 0 },
         totalProjects: { current: 0, previous: 0, trend: 'up' as const, percentage: 0 },
-        netProfit: { current: 0, previous: 0, trend: 'up' as const, percentage: 0 },
+        totalPending: { current: 0, previous: 0, trend: 'up' as const, percentage: 0 },
         topClients: [],
         revenueChartData: []
       }
@@ -113,7 +113,7 @@ export default function AnalyticsPage() {
       revenue: calculateOverallRevenue(filteredProjects, filters.dateRange),
       expenses: calculateOverallExpenses(filteredProjects, filters.dateRange),
       totalProjects: calculateTotalProjects(filteredProjects, filters.dateRange),
-      netProfit: calculateNetProfit(filteredProjects, filters.dateRange),
+      totalPending: calculateTotalPending(filteredProjects, filters.dateRange),
       topClients: calculateTopPayingClients(filteredProjects, 5),
       revenueChartData: generateRevenueBarChartData(filteredProjects, periods.revenueChart)
     }
@@ -126,7 +126,7 @@ export default function AnalyticsPage() {
         revenue: { current: 0, previous: 0, trend: 'up' as const, percentage: 0 },
         expenses: { current: 0, previous: 0, trend: 'up' as const, percentage: 0 },
         totalProjects: { current: 0, previous: 0, trend: 'up' as const, percentage: 0 },
-        netProfit: { current: 0, previous: 0, trend: 'up' as const, percentage: 0 },
+        totalPending: { current: 0, previous: 0, trend: 'up' as const, percentage: 0 },
         mrr: { current: 0, previous: 0, trend: 'up' as const, percentage: 0 },
         arr: { current: 0, previous: 0, trend: 'up' as const, percentage: 0 },
         yoyGrowth: { current: 0, previous: 0, trend: 'up' as const, percentage: 0 },
@@ -141,7 +141,7 @@ export default function AnalyticsPage() {
       revenue: calculateOverallRevenue(projects),
       expenses: calculateOverallExpenses(projects),
       totalProjects: calculateTotalProjects(projects),
-      netProfit: calculateNetProfit(projects),
+      totalPending: calculateTotalPending(projects),
       mrr: calculateMRR(projects, periods.mrr),
       arr: calculateARR(projects, periods.arr),
       yoyGrowth: calculateYoYGrowth(projects),
@@ -246,14 +246,14 @@ export default function AnalyticsPage() {
                     />
 
                     <MetricCard
-                      title="Net Profit"
-                      value={filteredMetrics.netProfit.current}
+                      title="Total Pending"
+                      value={filteredMetrics.totalPending.current}
                       trend={{
-                        direction: filteredMetrics.netProfit.trend,
-                        percentage: filteredMetrics.netProfit.percentage,
+                        direction: filteredMetrics.totalPending.trend,
+                        percentage: filteredMetrics.totalPending.percentage,
                         label: "vs previous period"
                       }}
-                      icon={TrendingUp}
+                      icon={Clock}
                       variant="currency"
                       isLoading={false}
                       error={error}
@@ -336,14 +336,14 @@ export default function AnalyticsPage() {
                       />
 
                       <MetricCard
-                        title="Net Profit"
-                        value={globalMetrics.netProfit.current}
+                        title="Total Pending"
+                        value={globalMetrics.totalPending.current}
                         trend={{
-                          direction: globalMetrics.netProfit.trend,
-                          percentage: globalMetrics.netProfit.percentage,
+                          direction: globalMetrics.totalPending.trend,
+                          percentage: globalMetrics.totalPending.percentage,
                           label: "vs previous period"
                         }}
-                        icon={TrendingUp}
+                        icon={Clock}
                         variant="currency"
                         isLoading={false}
                         error={error}

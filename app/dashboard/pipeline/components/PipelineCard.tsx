@@ -38,6 +38,8 @@ import type { PipelineProject } from "@/lib/types/pipeline"
 import { toast } from "sonner"
 import { EditProjectDialog } from "./EditProjectDialog"
 import { supabase } from "@/lib/supabase"
+import { useQueryClient } from "@tanstack/react-query"
+import { cacheUtils } from "@/components/query-provider"
 
 interface PipelineCardProps {
   project: PipelineProject
@@ -47,6 +49,9 @@ interface PipelineCardProps {
 
 export function PipelineCard({ project, onProjectUpdate, isDragging }: PipelineCardProps) {
   const [showEditDialog, setShowEditDialog] = useState(false)
+  
+  // Query client for cache invalidation
+  const queryClient = useQueryClient()
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   
@@ -83,6 +88,11 @@ export function PipelineCard({ project, onProjectUpdate, isDragging }: PipelineC
     try {
       const success = await deletePipelineProject(project.id)
       if (success) {
+        // Invalidate analytics and dashboard caches after successful deletion
+        cacheUtils.invalidateAnalytics(queryClient)
+        cacheUtils.invalidateAnalyticsData(queryClient)
+        queryClient.invalidateQueries({ queryKey: ['analytics', 'dashboard'] })
+        
         toast.success(`${project.name} deleted successfully`)
         onProjectUpdate()
         setShowDeleteDialog(false)

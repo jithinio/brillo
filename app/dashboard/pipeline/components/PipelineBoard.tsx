@@ -40,6 +40,8 @@ import { supabase } from "@/lib/supabase"
 import { formatLargeNumber } from "@/lib/utils"
 import { getCurrencySymbol } from "@/lib/currency"
 import { EditProjectDialog } from "./EditProjectDialog"
+import { useQueryClient } from "@tanstack/react-query"
+import { cacheUtils } from "@/components/query-provider"
 
 interface PipelineBoardProps {
   projects: PipelineProject[]
@@ -330,6 +332,9 @@ export function PipelineBoard({
   const [searchQuery, setSearchQuery] = useState("")
   const [loadingLostClients, setLoadingLostClients] = useState(false)
   const [optimisticProjects, setOptimisticProjects] = useState<PipelineProject[]>(projects)
+  
+  // Query client for cache invalidation
+  const queryClient = useQueryClient()
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -440,6 +445,11 @@ export function PipelineBoard({
       if (success) {
         // Remove from lost clients list immediately
         setLostClients(prev => prev.filter(p => p.id !== projectId))
+        
+        // Invalidate analytics and dashboard caches after successful deletion
+        cacheUtils.invalidateAnalytics(queryClient)
+        cacheUtils.invalidateAnalyticsData(queryClient)
+        queryClient.invalidateQueries({ queryKey: ['analytics', 'dashboard'] })
         
         // Refresh pipeline data (in case this affects other views)
         onProjectUpdate()

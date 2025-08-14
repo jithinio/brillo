@@ -30,6 +30,8 @@ import {
 import { toast } from "sonner"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { formatCurrencyAbbreviated } from "../../lib/currency-utils"
+import { useQueryClient } from "@tanstack/react-query"
+import { cacheUtils } from "@/components/query-provider"
 
 // Position constants for floating indicators
 const BADGE_POSITION = {
@@ -195,6 +197,9 @@ function FinalDataTableComponent({
   preferencesLoaded,
 }: FinalDataTableProps) {
   const tableRef = React.useRef<HTMLDivElement>(null)
+  
+  // Query client for cache invalidation
+  const queryClient = useQueryClient()
   
   // Row selection state
   const [rowSelection, setRowSelection] = React.useState<Record<string, boolean>>({})
@@ -546,6 +551,11 @@ function FinalDataTableComponent({
                                   .eq('id', project.id)
 
                                 if (error) throw error
+
+                                // Invalidate analytics and dashboard caches after successful deletion
+                                cacheUtils.invalidateAnalytics(queryClient)
+                                cacheUtils.invalidateAnalyticsData(queryClient)
+                                queryClient.invalidateQueries({ queryKey: ['analytics', 'dashboard'] })
 
                                 toast.success(`Project "${project.name}" deleted successfully`)
                                 refetch()

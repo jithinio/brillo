@@ -48,6 +48,8 @@ import { EnhancedAddProjectDialog } from "./EnhancedAddProjectDialog"
 
 import { useInfiniteProjects } from "@/hooks/use-infinite-projects"
 import { useProjectFiltersV2 } from "@/hooks/use-project-filters-v2"
+import { useQueryClient } from "@tanstack/react-query"
+import { cacheUtils } from "@/components/query-provider"
 import { useTablePreferencesEnterprise } from "@/hooks/use-table-preferences-enterprise"
 import { PageHeader } from "@/components/page-header"
 import { PageActionsMenu } from "@/components/page-actions-menu"
@@ -162,6 +164,9 @@ export function ProjectsTableWrapper({
   
   // Subscription management for refreshing usage after creation/deletion
   const { refetchSubscription } = useSubscription()
+  
+  // Query client for cache invalidation
+  const queryClient = useQueryClient()
   
   // Initialize filters on mount
   React.useEffect(() => {
@@ -1008,6 +1013,11 @@ export function ProjectsTableWrapper({
         if (error) throw error
 
         // Show success toast with undo functionality
+        // Invalidate analytics and dashboard caches after successful deletion
+        cacheUtils.invalidateAnalytics(queryClient)
+        cacheUtils.invalidateAnalyticsData(queryClient)
+        queryClient.invalidateQueries({ queryKey: ['analytics', 'dashboard'] })
+
         toast.success(`${projects.length} project(s) deleted successfully`, {
           description: `${projectNames.length > 50 ? projects.length + ' projects' : projectNames} removed`,
           action: {
@@ -1075,6 +1085,12 @@ export function ProjectsTableWrapper({
                 toast.success(`${projects.length} project(s) restored successfully`, {
                   description: 'All deleted projects have been recovered'
                 })
+                
+                // Invalidate analytics and dashboard caches after restoration
+                cacheUtils.invalidateAnalytics(queryClient)
+                cacheUtils.invalidateAnalyticsData(queryClient)
+                queryClient.invalidateQueries({ queryKey: ['analytics', 'dashboard'] })
+                
                 refetch()
                 forceRefresh()
                 // Refresh usage limits since projects were restored
@@ -1088,6 +1104,7 @@ export function ProjectsTableWrapper({
             },
           },
         })
+        
         refetch()
         forceRefresh()
         // Refresh usage limits immediately after successful batch deletion

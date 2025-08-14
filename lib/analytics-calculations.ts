@@ -320,80 +320,41 @@ export const calculateCLTV = (projects: Project[], clients: Client[]): Analytics
     project.status !== 'pipeline' && project.pipeline_stage !== 'lost'
   )
   
-  // Calculate Customer Lifetime Value
-  const clientCLTVs = clients.map(client => {
-    const clientProjects = validProjects.filter(p => p.client_id === client.id)
-    
-    if (clientProjects.length === 0) return 0
-    
-    // Average order value
-    const totalValue = clientProjects.reduce((sum, p) => sum + getProjectValue(p), 0)
-    const avgOrderValue = totalValue / clientProjects.length
-    
-    // Purchase frequency (projects per month)
-    const firstProject = new Date(Math.min(...clientProjects.map(p => new Date(p.created_at).getTime())))
-    const lastProject = new Date(Math.max(...clientProjects.map(p => new Date(p.created_at).getTime())))
-    const monthsActive = Math.max(1, differenceInMonths(lastProject, firstProject))
-    const purchaseFrequency = clientProjects.length / monthsActive
-    
-    // Calculate real gross margin from project expenses
-    const totalExpenses = clientProjects.reduce((sum, p) => sum + getProjectExpenses(p), 0)
-    const grossMargin = totalValue > 0 ? Math.max(0.1, (totalValue - totalExpenses) / totalValue) : 0.3
-    
-    // Calculate churn rate based on actual client activity
-    const recentActivity = validProjects.filter(p => {
-      const projectDate = new Date(p.created_at)
-      const threeMonthsAgo = subMonths(new Date(), 3)
-      return p.client_id === client.id && projectDate >= threeMonthsAgo
-    }).length
-    
-    const churnRate = recentActivity > 0 ? 0.05 : 0.2 // Lower churn for active clients
-    
-    // CLTV = (AOV × Purchase Frequency × Gross Margin) / Churn Rate
-    return (avgOrderValue * purchaseFrequency * grossMargin) / churnRate
-  })
+  // Calculate current CLTV
+  const clientsWithProjects = clients.filter(client => 
+    validProjects.some(p => p.client_id === client.id)
+  )
   
-  const currentCLTV = clientCLTVs.reduce((sum, cltv) => sum + cltv, 0) / clientCLTVs.length || 0
+  if (clientsWithProjects.length === 0) {
+    return calculateTrendData(0, 0)
+  }
   
-  // Calculate previous period CLTV based on real data from 6 months ago
-  const sixMonthsAgo = subMonths(new Date(), 6)
-  const twelveMonthsAgo = subMonths(new Date(), 12)
+  // Calculate total revenue and total number of clients
+  const totalRevenue = validProjects.reduce((sum, project) => sum + getProjectValue(project), 0)
+  const totalClients = clientsWithProjects.length
   
-  const previousPeriodProjects = validProjects.filter(project => {
+  // Simple CLTV = Average Revenue per Client
+  const currentCLTV = totalRevenue / totalClients
+  
+  // Calculate previous period CLTV (last year)
+  const now = new Date()
+  const lastYearStart = startOfYear(subYears(now, 1))
+  const lastYearEnd = endOfYear(subYears(now, 1))
+  
+  const previousProjects = validProjects.filter(project => {
     const projectDate = new Date(project.start_date || project.created_at)
-    return projectDate >= twelveMonthsAgo && projectDate < sixMonthsAgo
+    return projectDate >= lastYearStart && projectDate <= lastYearEnd
   })
   
-  const previousClientCLTVs = clients.map(client => {
-    const clientProjects = previousPeriodProjects.filter(p => p.client_id === client.id)
-    
-    if (clientProjects.length === 0) return 0
-    
-    const totalValue = clientProjects.reduce((sum, p) => sum + getProjectValue(p), 0)
-    const avgOrderValue = totalValue / clientProjects.length
-    
-    const firstProject = new Date(Math.min(...clientProjects.map(p => new Date(p.created_at).getTime())))
-    const lastProject = new Date(Math.max(...clientProjects.map(p => new Date(p.created_at).getTime())))
-    const monthsActive = Math.max(1, differenceInMonths(lastProject, firstProject))
-    const purchaseFrequency = clientProjects.length / monthsActive
-    
-    // Use real gross margin calculation
-    const totalExpenses = clientProjects.reduce((sum, p) => sum + getProjectExpenses(p), 0)
-    const grossMargin = totalValue > 0 ? Math.max(0.1, (totalValue - totalExpenses) / totalValue) : 0.3
-    
-    // Calculate churn rate based on actual client activity
-    const recentActivity = validProjects.filter(p => {
-      const projectDate = new Date(p.created_at)
-      const threeMonthsAgo = subMonths(new Date(), 3)
-      return p.client_id === client.id && projectDate >= threeMonthsAgo
-    }).length
-    
-    const churnRate = recentActivity > 0 ? 0.05 : 0.2 // Lower churn for active clients
-    
-    return (avgOrderValue * purchaseFrequency * grossMargin) / churnRate
-  })
+  const previousClientsWithProjects = clients.filter(client => 
+    previousProjects.some(p => p.client_id === client.id)
+  )
   
-  const previousCLTV = previousClientCLTVs.reduce((sum, cltv) => sum + cltv, 0) / previousClientCLTVs.length || 0
+  let previousCLTV = 0
+  if (previousClientsWithProjects.length > 0) {
+    const previousTotalRevenue = previousProjects.reduce((sum, project) => sum + getProjectValue(project), 0)
+    previousCLTV = previousTotalRevenue / previousClientsWithProjects.length
+  }
   
   return calculateTrendData(currentCLTV, previousCLTV)
 }
@@ -511,6 +472,42 @@ export const calculateNetProfit = (projects: Project[], dateRange?: { start: Dat
   const current = revenue.current - expenses.current
   const previous = revenue.previous - expenses.previous
   
+  return calculateTrendData(current, previous)
+}
+
+export const calculateTotalPending = (projects: Project[], dateRange?: { start: Date; end: Date }): AnalyticsResult => {
+  const now = new Date()
+  const currentStart = dateRange?.start || startOfYear(now)
+  const currentEnd = dateRange?.end || now
+  const previousStart = startOfYear(subYears(currentStart, 1))
+  const previousEnd = subYears(currentEnd, 1)
+
+  const currentProjects = filterProjectsByDateRange(projects, currentStart, currentEnd)
+  const previousProjects = filterProjectsByDateRange(projects, previousStart, previousEnd)
+
+  // Filter for only active and due projects
+  const currentActiveDueProjects = currentProjects.filter(project => 
+    project.status === 'active' || project.status === 'due'
+  )
+  const previousActiveDueProjects = previousProjects.filter(project => 
+    project.status === 'active' || project.status === 'due'
+  )
+
+  // Calculate pending amounts: total budget - payment received (only for active + due projects)
+  const current = currentActiveDueProjects.reduce((sum, project) => {
+    const budget = project.total_budget || project.budget || 0
+    const received = project.payment_received || 0
+    const pending = Math.max(0, budget - received) // Ensure it's not negative
+    return sum + pending
+  }, 0)
+
+  const previous = previousActiveDueProjects.reduce((sum, project) => {
+    const budget = project.total_budget || project.budget || 0
+    const received = project.payment_received || 0
+    const pending = Math.max(0, budget - received) // Ensure it's not negative
+    return sum + pending
+  }, 0)
+
   return calculateTrendData(current, previous)
 }
 
