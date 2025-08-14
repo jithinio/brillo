@@ -112,6 +112,30 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     }
   }, [user?.id])
 
+  // Track if we need to reload subscription data for Google OAuth users
+  const [shouldReloadForOAuth, setShouldReloadForOAuth] = useState(false)
+  
+  // Listen for user sign-in events (especially for Google OAuth)
+  useEffect(() => {
+    const handleUserSignedIn = (event: CustomEvent) => {
+      console.log('🔄 Subscription Provider: User signed in, marking for reload', event.detail)
+      
+      // Mark that we need to reload subscription data for new sign-ins
+      // This ensures Google OAuth users get proper subscription data
+      if (event.detail?.userId && user?.id === event.detail.userId) {
+        // Clear any stale cache first
+        SubscriptionCache.clear(user.id)
+        setShouldReloadForOAuth(true)
+      }
+    }
+
+    window.addEventListener('user-signed-in', handleUserSignedIn as EventListener)
+    
+    return () => {
+      window.removeEventListener('user-signed-in', handleUserSignedIn as EventListener)
+    }
+  }, [user?.id])
+
   // Add immediate cache lookup to reduce loading time
   const [hasCheckedInitialCache, setHasCheckedInitialCache] = useState(false)
 
@@ -283,7 +307,12 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
         .eq('id', user.id)
         .single()
 
-      console.log('🔍 Database query result:', { profile, error })
+      console.log('🔍 Database query result:', { 
+        profile, 
+        error,
+        subscription_plan_id: profile?.subscription_plan_id || 'NOT SET',
+        isGoogleUser: user.app_metadata?.provider === 'google'
+      })
 
       if (error) {
         console.error('Error fetching subscription data:', error)
@@ -305,10 +334,14 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
         return
       }
 
-      // Check if user has a subscription in the database
-      // Note: Client-side Stripe/Polar config check may fail due to server-only env vars, 
-      // but server-side payment functionality works correctly
-      if (profile && (profile.subscription_plan_id === 'pro_monthly' || profile.subscription_plan_id === 'pro_yearly')) {
+      // Check if user has a PRO subscription in the database
+      // IMPORTANT: Default to FREE plan unless explicitly pro_monthly or pro_yearly
+      // This prevents Google OAuth users from accidentally getting pro features
+      const hasProSubscription = profile && 
+        profile.subscription_plan_id && 
+        (profile.subscription_plan_id === 'pro_monthly' || profile.subscription_plan_id === 'pro_yearly')
+      
+      if (hasProSubscription) {
         const subscriptionData = {
           planId: profile.subscription_plan_id,
           status: profile.subscription_status || 'active',
@@ -341,6 +374,12 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
       }
       
       // Default to free plan if no pro subscription found
+      console.log('🆓 No pro subscription found, defaulting to FREE plan', {
+        subscription_plan_id: profile?.subscription_plan_id || 'NOT SET',
+        hasProSubscription,
+        userId: user.id
+      })
+      
       const freeSubscription = {
         planId: 'free' as const,
         status: 'active' as const,
@@ -639,6 +678,19 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
       }
     }
   }, [user?.id, hasMounted])
+
+  // Handle OAuth reload flag
+  useEffect(() => {
+    if (shouldReloadForOAuth && hasMounted && user?.id) {
+      console.log('🔄 Executing OAuth reload for user:', user.id)
+      setShouldReloadForOAuth(false)
+      
+      // Add a small delay to ensure profile is created in database
+      setTimeout(() => {
+        loadSubscriptionData(true)
+      }, 1500)
+    }
+  }, [shouldReloadForOAuth, hasMounted, user?.id])
 
   const value: SubscriptionContextType = {
     subscription,
