@@ -562,6 +562,14 @@ export const useAnalyticsData = (filters?: AnalyticsFilters) => {
     clients: project.clients
   })), [unifiedData.filteredProjects])
   
+  // Debug: Log data updates only when data actually changes
+  console.log('🔍 useAnalyticsData:', {
+    projects: analyticsProjects.length,
+    filtered: analyticsFilteredProjects.length,
+    isLoading: unifiedData.isLoading,
+    lastUpdated: unifiedData.lastUpdated?.toLocaleTimeString()
+  })
+
   return {
     // Original data
     projects: analyticsProjects,

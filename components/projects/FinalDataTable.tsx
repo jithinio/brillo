@@ -552,10 +552,8 @@ function FinalDataTableComponent({
 
                                 if (error) throw error
 
-                                // Invalidate analytics and dashboard caches after successful deletion
-                                cacheUtils.invalidateAnalytics(queryClient)
-                                cacheUtils.invalidateAnalyticsData(queryClient)
-                                queryClient.invalidateQueries({ queryKey: ['analytics', 'dashboard'] })
+                                // Complete cache invalidation after successful deletion
+                                cacheUtils.invalidateAllProjectRelatedData(queryClient)
 
                                 toast.success(`Project "${project.name}" deleted successfully`)
                                 refetch()

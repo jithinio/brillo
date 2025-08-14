@@ -27,6 +27,7 @@ import {
   calculateCashFlow,
   generateMRRSparklineData,
   generateARRSparklineData,
+  diagnoseProjectFiltering,
   type Project,
   type Client
 } from "@/lib/analytics-calculations"
@@ -121,7 +122,26 @@ export default function AnalyticsPage() {
 
   // Calculate unfiltered metrics (global metrics)
   const globalMetrics = useMemo(() => {
-    if (isLoading || !projects.length) {
+    // Debug: Log global metrics calculation
+    console.log('📊 Analytics: Calculating global metrics', {
+      projectsLength: projects.length,
+      isLoading,
+      lastUpdated,
+      firstFewProjects: projects.slice(0, 3).map(p => ({
+        name: p.name,
+        status: p.status,
+        budget: p.budget,
+        total_budget: p.total_budget,
+        pipeline_stage: p.pipeline_stage,
+        created_at: p.created_at,
+        start_date: p.start_date
+      }))
+    })
+    
+    // Only return zero metrics if we truly have no projects AND we're not loading
+    // During loading, we should continue showing calculated metrics if we have project data
+    if (!projects.length && !isLoading) {
+      console.log('📊 Analytics: Returning zero metrics - no projects available')
       return {
         revenue: { current: 0, previous: 0, trend: 'up' as const, percentage: 0 },
         expenses: { current: 0, previous: 0, trend: 'up' as const, percentage: 0 },
@@ -136,12 +156,38 @@ export default function AnalyticsPage() {
         arrSparklineData: []
       }
     }
+    
+    // If we have projects, calculate metrics regardless of loading state
+    // This prevents showing zero during cache refresh when we have valid data
+
+    console.log('📊 Analytics: Starting calculations for global metrics...')
+    
+    // Run diagnostic to understand project filtering
+    diagnoseProjectFiltering(projects)
+    
+    const calculatedRevenue = calculateOverallRevenue(projects)
+    const calculatedExpenses = calculateOverallExpenses(projects)
+    const calculatedTotalProjects = calculateTotalProjects(projects)
+    const calculatedTotalPending = calculateTotalPending(projects)
+    
+    // Debug: Log calculated metrics summary
+    console.log('📊 Analytics: Calculated overview metrics', {
+      revenueValue: calculatedRevenue.current,
+      expensesValue: calculatedExpenses.current,
+      totalProjectsValue: calculatedTotalProjects.current,
+      totalPendingValue: calculatedTotalPending.current,
+      projectsUsed: projects.length,
+      projectStatuses: projects.reduce((acc, p) => {
+        acc[p.status] = (acc[p.status] || 0) + 1
+        return acc
+      }, {} as Record<string, number>)
+    })
 
     return {
-      revenue: calculateOverallRevenue(projects),
-      expenses: calculateOverallExpenses(projects),
-      totalProjects: calculateTotalProjects(projects),
-      totalPending: calculateTotalPending(projects),
+      revenue: calculatedRevenue,
+      expenses: calculatedExpenses,
+      totalProjects: calculatedTotalProjects,
+      totalPending: calculatedTotalPending,
       mrr: calculateMRR(projects, periods.mrr),
       arr: calculateARR(projects, periods.arr),
       yoyGrowth: calculateYoYGrowth(projects),

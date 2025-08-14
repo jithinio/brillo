@@ -204,7 +204,7 @@ export default function InvoicePreviewPage() {
       showNotes: templateSettings.showNotes !== undefined ? templateSettings.showNotes : true,
       showTaxId: templateSettings.showTaxId !== undefined ? templateSettings.showTaxId : false,
       showItemDetails: templateSettings.showItemDetails !== undefined ? templateSettings.showItemDetails : true,
-      notes: templateSettings.notes || '',
+      notes: settings.defaultInvoiceNotes || '',
       ...companyInfo
     }
     
@@ -527,10 +527,10 @@ export default function InvoicePreviewPage() {
           title="Invoice Preview"
         />
         <PageContent>
-          <div className="flex items-center justify-center min-h-[400px]">
-            <div className="text-center">
-              <Loader size="xl" variant="primary" className="mx-auto" />
-              <p className="mt-4 text-muted-foreground">Loading invoice...</p>
+          <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center" style={{left: 'var(--sidebar-width, 16rem)'}}>
+            <div className="flex items-center space-x-3">
+              <Loader className="h-5 w-5 animate-spin text-muted-foreground" />
+              <p className="font-medium">Loading invoice...</p>
             </div>
           </div>
         </PageContent>
@@ -640,9 +640,11 @@ export default function InvoicePreviewPage() {
                 />
               ) : (
                 <div className="shadow-lg rounded-lg overflow-hidden border bg-background">
-                  <div className="p-8 text-center text-muted-foreground">
-                    <Loader size="xl" variant="primary" className="mx-auto mb-4" />
-                    Rendering invoice preview...
+                  <div className="p-8 text-center">
+                    <div className="flex items-center justify-center space-x-3">
+                      <Loader className="h-5 w-5 animate-spin text-muted-foreground" />
+                      <p className="font-medium text-muted-foreground">Rendering invoice preview...</p>
+                    </div>
                   </div>
                 </div>
               )}

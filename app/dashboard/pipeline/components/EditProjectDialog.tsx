@@ -41,6 +41,8 @@ import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import type { PipelineProject } from "@/lib/types/pipeline"
+import { useQueryClient } from "@tanstack/react-query"
+import { cacheUtils } from "@/components/query-provider"
 
 interface EditProjectDialogProps {
   open: boolean
@@ -76,6 +78,9 @@ export function EditProjectDialog({ open, onOpenChange, onProjectUpdate, project
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
   const [clientSearchQuery, setClientSearchQuery] = useState("")
   const [displayedClientsCount, setDisplayedClientsCount] = useState(10)
+  
+  // Query client for cache invalidation
+  const queryClient = useQueryClient()
   
   const [editProject, setEditProject] = useState<EditProjectData>({
     name: "",
@@ -196,6 +201,10 @@ export function EditProjectDialog({ open, onOpenChange, onProjectUpdate, project
       
       if (result) {
         toast.success(`${editProject.name} updated successfully`)
+        
+        // Complete cache invalidation after successful update
+        cacheUtils.invalidateAllProjectRelatedData(queryClient)
+        
         onProjectUpdate()
         onOpenChange(false)
       } else {

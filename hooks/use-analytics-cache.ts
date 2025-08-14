@@ -59,19 +59,47 @@ export function useAnalyticsCache(options: AnalyticsCacheOptions = {}) {
 
     // Listen to React Query cache events for project mutations
     const unsubscribe = queryClient.getQueryCache().subscribe((event) => {
-      if (event.type === 'updated') {
+      if (event.type === 'updated' || event.type === 'removed') {
         const query = event.query
         const queryKey = query.queryKey
         
         // Check if this is a project-related query update
-        if (queryKey.some(key => key === 'projects')) {
-          // Only invalidate if the query was successful and data changed
-          if (query.state.status === 'success' && query.state.dataUpdatedAt > 0) {
-            handleDataChange('project query update')
+        if (queryKey.some(key => 
+          key === 'projects' || 
+          key === 'analytics' || 
+          key === 'dashboard' ||
+          key === 'database-metrics' ||
+          (typeof key === 'string' && (
+            key.includes('project') || 
+            key.includes('analytics') || 
+            key.includes('dashboard')
+          ))
+        )) {
+          console.log('🔄 Analytics Cache: Detected React Query cache change', {
+            type: event.type,
+            queryKey,
+            status: query.state.status
+          })
+          
+          // Trigger invalidation for any project-related cache changes
+          if (event.type === 'removed' || 
+              (query.state.status === 'success' && query.state.dataUpdatedAt > 0) ||
+              query.state.status === 'error') {
+            handleDataChange(`react query ${event.type}`)
           }
         }
       }
     })
+
+    // Listen for manual cache invalidation events
+    const handleCustomInvalidation = (event: CustomEvent) => {
+      console.log('🔄 Analytics Cache: Received custom invalidation event', event.detail)
+      handleDataChange('custom invalidation event')
+    }
+    
+    if (typeof window !== 'undefined') {
+      window.addEventListener('project-cache-invalidated', handleCustomInvalidation as EventListener)
+    }
 
     // Also listen for Supabase real-time changes as backup
     const projectsSubscription = supabase
@@ -97,6 +125,11 @@ export function useAnalyticsCache(options: AnalyticsCacheOptions = {}) {
       unsubscribe()
       projectsSubscription.unsubscribe()
       clientsSubscription.unsubscribe()
+      
+      // Clean up custom event listener
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('project-cache-invalidated', handleCustomInvalidation as EventListener)
+      }
     }
   }, [enableRealTimeUpdates, debounceMs, invalidateAnalyticsCache, queryClient])
 

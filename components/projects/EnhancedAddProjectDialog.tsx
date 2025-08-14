@@ -45,6 +45,8 @@ import { calculateRecurringTotal, calculateHourlyTotal } from "@/lib/project-cal
 import { AddClientDialog } from "@/app/dashboard/pipeline/components/AddClientDialog"
 import { useSettings } from "@/components/settings-provider"
 import { parseFormattedDate } from "@/lib/date-format"
+import { useQueryClient } from "@tanstack/react-query"
+import { cacheUtils } from "@/components/query-provider"
 // Define the types locally since the external types were removed
 interface CreateProjectData {
   name: string
@@ -490,6 +492,9 @@ export function EnhancedAddProjectDialog({
   // Over-limit validation
   const { canCreateResource, getActionBlockedReason } = useCanPerformAction()
 
+  // Query client for cache invalidation
+  const queryClient = useQueryClient()
+
   // Fetch clients
   const { data: clients = [], refetch: refetchClients } = useClients()
 
@@ -839,6 +844,9 @@ export function EnhancedAddProjectDialog({
       }
 
       toast.success(`${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} project ${isEditMode ? 'updated' : 'created'} successfully!`)
+      
+      // Complete cache invalidation after successful creation/update
+      cacheUtils.invalidateAllProjectRelatedData(queryClient)
       
       // Callbacks
       onProjectUpdate?.()

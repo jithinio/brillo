@@ -240,6 +240,14 @@ const InvoiceEmail = ({
               </Section>
             </Section>
 
+            {/* Invoice Notes */}
+            {displayData.notes && (
+              <Section style={notesSection}>
+                <Text style={notesTitle}>Notes</Text>
+                <Text style={notesText}>{displayData.notes}</Text>
+              </Section>
+            )}
+
             <Text style={paragraph}>
               If you have any questions about this invoice, please don't hesitate to contact us.
             </Text>
@@ -673,6 +681,26 @@ const footerSmall = {
   fontSize: '12px',
   lineHeight: '1.4',
   margin: '0',
+}
+
+// Notes section styles
+const notesSection = {
+  marginBottom: '24px',
+}
+
+const notesTitle = {
+  color: '#111827',
+  fontSize: '16px',
+  fontWeight: '600',
+  margin: '0 0 12px',
+}
+
+const notesText = {
+  color: '#374151',
+  fontSize: '14px',
+  lineHeight: '1.6',
+  margin: '0',
+  whiteSpace: 'pre-wrap' as const, // Preserve line breaks
 }
 
 export default InvoiceEmail 

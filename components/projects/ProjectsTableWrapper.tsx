@@ -514,6 +514,10 @@ export function ProjectsTableWrapper({
 
           setIsAddDialogOpen(false)
           toast.success(`Project "${newProject.name}" has been added successfully`)
+          
+          // Complete cache invalidation after successful creation
+          cacheUtils.invalidateAllProjectRelatedData(queryClient)
+          
           refetch()
           forceRefresh()
           // Refresh usage limits immediately after creating a project
@@ -1013,10 +1017,8 @@ export function ProjectsTableWrapper({
         if (error) throw error
 
         // Show success toast with undo functionality
-        // Invalidate analytics and dashboard caches after successful deletion
-        cacheUtils.invalidateAnalytics(queryClient)
-        cacheUtils.invalidateAnalyticsData(queryClient)
-        queryClient.invalidateQueries({ queryKey: ['analytics', 'dashboard'] })
+        // Complete cache invalidation after successful deletion
+        cacheUtils.invalidateAllProjectRelatedData(queryClient)
 
         toast.success(`${projects.length} project(s) deleted successfully`, {
           description: `${projectNames.length > 50 ? projects.length + ' projects' : projectNames} removed`,
@@ -1086,10 +1088,8 @@ export function ProjectsTableWrapper({
                   description: 'All deleted projects have been recovered'
                 })
                 
-                // Invalidate analytics and dashboard caches after restoration
-                cacheUtils.invalidateAnalytics(queryClient)
-                cacheUtils.invalidateAnalyticsData(queryClient)
-                queryClient.invalidateQueries({ queryKey: ['analytics', 'dashboard'] })
+                // Complete cache invalidation after restoration
+                cacheUtils.invalidateAllProjectRelatedData(queryClient)
                 
                 refetch()
                 forceRefresh()

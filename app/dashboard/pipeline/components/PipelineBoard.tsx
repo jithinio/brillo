@@ -446,10 +446,8 @@ export function PipelineBoard({
         // Remove from lost clients list immediately
         setLostClients(prev => prev.filter(p => p.id !== projectId))
         
-        // Invalidate analytics and dashboard caches after successful deletion
-        cacheUtils.invalidateAnalytics(queryClient)
-        cacheUtils.invalidateAnalyticsData(queryClient)
-        queryClient.invalidateQueries({ queryKey: ['analytics', 'dashboard'] })
+        // Complete cache invalidation after successful deletion
+        cacheUtils.invalidateAllProjectRelatedData(queryClient)
         
         // Refresh pipeline data (in case this affects other views)
         onProjectUpdate()

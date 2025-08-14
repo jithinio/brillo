@@ -30,6 +30,7 @@ interface AppSettings {
   invoicePrefix: string
   dateFormat: DateFormat
   invoiceTemplate?: any
+  defaultInvoiceNotes: string
 }
 
 interface SettingsContextType {
@@ -58,6 +59,7 @@ const defaultSettings: AppSettings = {
   autoCalculateTax: true,
   invoicePrefix: "INV",
   dateFormat: "MM/DD/YYYY",
+  defaultInvoiceNotes: "",
 }
 
 const SettingsContext = createContext<SettingsContextType>({
@@ -173,6 +175,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             autoCalculateTax: dbSettings.auto_calculate_tax || loadedSettings.autoCalculateTax,
             invoicePrefix: dbSettings.invoice_prefix || loadedSettings.invoicePrefix,
             invoiceTemplate: dbSettings.invoice_template || loadedSettings.invoiceTemplate,
+            defaultInvoiceNotes: dbSettings.default_invoice_notes || loadedSettings.defaultInvoiceNotes,
             dateFormat: (dbSettings.date_format as DateFormat) || loadedSettings.dateFormat, // Load date format from database
           }
           
@@ -231,6 +234,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                   autoCalculateTax: dbSettings.auto_calculate_tax || loadedSettings.autoCalculateTax,
                   invoicePrefix: dbSettings.invoice_prefix || loadedSettings.invoicePrefix,
                   invoiceTemplate: parsedLocalTemplate, // Use localStorage template
+                  defaultInvoiceNotes: dbSettings.default_invoice_notes || loadedSettings.defaultInvoiceNotes,
                   dateFormat: (dbSettings.date_format as DateFormat) || loadedSettings.dateFormat, // Sync date format
                 }
                 
@@ -383,6 +387,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           break
         case 'dateFormat':
           dbSettingsUpdate.date_format = value
+          break
+        case 'defaultInvoiceNotes':
+          dbSettingsUpdate.default_invoice_notes = value
           break
       }
       

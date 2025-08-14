@@ -21,6 +21,7 @@ export interface CompanySettings {
   invoice_prefix: string
   date_format?: string
   invoice_template?: any // JSON object for invoice template settings
+  default_invoice_notes?: string
   created_at?: string
   updated_at?: string
 }

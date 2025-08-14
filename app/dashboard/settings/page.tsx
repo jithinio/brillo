@@ -59,6 +59,7 @@ export default function SettingsPage() {
     defaultCurrency: "USD",
     invoicePrefix: "INV",
     dateFormat: "MM/DD/YYYY" as DateFormat,
+    defaultInvoiceNotes: "",
   })
 
   // Company information state
@@ -140,6 +141,7 @@ export default function SettingsPage() {
           defaultCurrency: settings.defaultCurrency || "USD",
           invoicePrefix: settings.invoicePrefix || "INV",
           dateFormat: settings.dateFormat || "MM/DD/YYYY" as DateFormat,
+          defaultInvoiceNotes: settings.defaultInvoiceNotes || "",
         }
 
         // Only update if the general settings have actually changed
@@ -241,7 +243,8 @@ export default function SettingsPage() {
       await Promise.all([
         updateSetting('defaultCurrency', generalSettings.defaultCurrency),
         updateSetting('invoicePrefix', generalSettings.invoicePrefix),
-        updateSetting('dateFormat', generalSettings.dateFormat)
+        updateSetting('dateFormat', generalSettings.dateFormat),
+        updateSetting('defaultInvoiceNotes', generalSettings.defaultInvoiceNotes)
       ])
       
       // Clear currency conversion cache if currency changed
@@ -363,6 +366,7 @@ export default function SettingsPage() {
       updateSetting('defaultCurrency', generalSettings.defaultCurrency)
       updateSetting('invoicePrefix', generalSettings.invoicePrefix)
       updateSetting('dateFormat', generalSettings.dateFormat)
+      updateSetting('defaultInvoiceNotes', generalSettings.defaultInvoiceNotes)
       
       // Update company information
       updateSetting('companyName', companyInfo.companyName)
@@ -579,6 +583,20 @@ export default function SettingsPage() {
                   </Select>
                   <p className="text-xs text-muted-foreground">
                     Select how dates should be displayed in the application.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="defaultInvoiceNotes">Default Invoice Notes</Label>
+                  <Textarea 
+                    id="defaultInvoiceNotes" 
+                    value={generalSettings.defaultInvoiceNotes} 
+                    onChange={(e) => setGeneralSettings({...generalSettings, defaultInvoiceNotes: e.target.value})}
+                    placeholder="Enter default notes to appear on all new invoices..."
+                    rows={4}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    These notes will automatically appear in all new invoices. You can override them for individual invoices.
                   </p>
                 </div>
               </CardContent>

@@ -120,6 +120,85 @@ export const cacheUtils = {
     console.log('♻️ Cache: Invalidating analytics data', filters ? 'with filters' : 'all')
     queryClient.invalidateQueries({ queryKey: queryKeys.analyticsData(filters) })
   },
+
+  // Clear localStorage caches related to projects/analytics
+  clearLocalStorageCaches: () => {
+    console.log('♻️ Cache: Clearing localStorage caches')
+    try {
+      // Clear analytics data cache
+      localStorage.removeItem('analytics-data')
+      // Clear unified projects cache
+      localStorage.removeItem('unified-projects-data')
+      // Clear dashboard data cache
+      localStorage.removeItem('dashboard-data')
+      // Clear any other project-related caches
+      const keys = Object.keys(localStorage)
+      const clearedKeys: string[] = []
+      keys.forEach(key => {
+        if (key.includes('project') || key.includes('analytics') || key.includes('dashboard')) {
+          localStorage.removeItem(key)
+          clearedKeys.push(key)
+        }
+      })
+      
+      console.log('♻️ Cache: Cleared localStorage keys:', clearedKeys)
+      
+      // Also clear session storage
+      const sessionKeys = Object.keys(sessionStorage)
+      sessionKeys.forEach(key => {
+        if (key.includes('project') || key.includes('analytics') || key.includes('dashboard')) {
+          sessionStorage.removeItem(key)
+        }
+      })
+    } catch (error) {
+      console.error('Error clearing localStorage caches:', error)
+    }
+  },
+
+  // Complete cache invalidation for project changes
+  invalidateAllProjectRelatedData: (queryClient: QueryClient) => {
+    console.log('♻️ Cache: Complete invalidation of all project-related data')
+    
+    // Clear localStorage caches first
+    cacheUtils.clearLocalStorageCaches()
+    
+    // Invalidate React Query caches with comprehensive coverage
+    cacheUtils.invalidateProjects(queryClient)
+    cacheUtils.invalidateAnalytics(queryClient)
+    cacheUtils.invalidateAnalyticsData(queryClient)
+    queryClient.invalidateQueries({ queryKey: ['analytics'] })
+    queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+    queryClient.invalidateQueries({ queryKey: ['projects'] })
+    queryClient.invalidateQueries({ queryKey: ['clients'] })
+    queryClient.invalidateQueries({ queryKey: ['database-metrics'] })
+    queryClient.invalidateQueries({ queryKey: ['filtered-metrics'] })
+    
+    // Force removal and refetch to ensure fresh data
+    queryClient.removeQueries({ queryKey: ['analytics'] })
+    queryClient.removeQueries({ queryKey: ['dashboard'] })
+    queryClient.removeQueries({ queryKey: ['projects'] })
+    
+    // Trigger the analytics cache invalidation manually
+    // This ensures useAnalyticsCache detects the change
+    setTimeout(() => {
+      console.log('♻️ Cache: Broadcasting cache invalidation event')
+      // Trigger a custom event that useAnalyticsCache can listen to
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('project-cache-invalidated', {
+          detail: { reason: 'manual invalidation' }
+        }))
+      }
+    }, 50)
+    
+    // Force immediate refetch of all queries
+    setTimeout(() => {
+      console.log('♻️ Cache: Force refetching all queries after cache clear')
+      queryClient.refetchQueries({ queryKey: ['analytics'] })
+      queryClient.refetchQueries({ queryKey: ['dashboard'] })
+      queryClient.refetchQueries({ queryKey: ['projects'] })
+      queryClient.refetchQueries({ queryKey: ['database-metrics'] })
+    }, 100)
+  },
   
   // Update project in cache optimistically
   updateProjectInCache: (queryClient: QueryClient, projectId: string, updater: (old: any) => any) => {

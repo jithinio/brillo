@@ -36,6 +36,8 @@ import { toast } from "sonner"
 import { getCompanySettings } from "@/lib/company-settings"
 import type { PipelineProject } from "@/lib/types/pipeline"
 import { useCanPerformAction } from "@/components/over-limit-alert"
+import { useQueryClient } from "@tanstack/react-query"
+import { cacheUtils } from "@/components/query-provider"
 
 interface AddProjectDialogProps {
   open: boolean
@@ -89,6 +91,9 @@ export function AddProjectDialog({
 
   // Over-limit validation
   const { canCreateResource, getActionBlockedReason } = useCanPerformAction()
+  
+  // Query client for cache invalidation
+  const queryClient = useQueryClient()
 
   // Filter and limit clients based on search query
   const filteredClients = clients.filter(client =>
@@ -206,6 +211,10 @@ export function AddProjectDialog({
         }
         
         toast.success(`${newProject.name} added to pipeline`)
+        
+        // Complete cache invalidation after successful creation
+        cacheUtils.invalidateAllProjectRelatedData(queryClient)
+        
         // Don't call onProjectUpdate() - optimistic update already handled UI
         onOpenChange(false)
         // Reset form

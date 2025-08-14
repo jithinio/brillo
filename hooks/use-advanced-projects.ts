@@ -308,9 +308,8 @@ export function useAdvancedProjects(filters: ProjectFilters = {}) {
       })
     },
     onSuccess: (data, { id, status }) => {
-      // Invalidate and refetch related queries
-      cacheUtils.invalidateProjects(queryClient)
-      cacheUtils.invalidateAnalytics(queryClient)
+      // Complete cache invalidation after status update
+      cacheUtils.invalidateAllProjectRelatedData(queryClient)
       
       toast.success(`Project status updated to ${status}`, {
         description: `${data.name} has been updated successfully`

@@ -88,10 +88,8 @@ export function PipelineCard({ project, onProjectUpdate, isDragging }: PipelineC
     try {
       const success = await deletePipelineProject(project.id)
       if (success) {
-        // Invalidate analytics and dashboard caches after successful deletion
-        cacheUtils.invalidateAnalytics(queryClient)
-        cacheUtils.invalidateAnalyticsData(queryClient)
-        queryClient.invalidateQueries({ queryKey: ['analytics', 'dashboard'] })
+        // Complete cache invalidation after successful deletion
+        cacheUtils.invalidateAllProjectRelatedData(queryClient)
         
         toast.success(`${project.name} deleted successfully`)
         onProjectUpdate()

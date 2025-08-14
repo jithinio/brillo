@@ -76,12 +76,79 @@ const getProjectExpenses = (project: Project): number => {
   return project.expenses || 0
 }
 
+// Utility function to check if a project should be included in analytics
+const isValidForAnalytics = (project: Project): boolean => {
+  const isPipeline = project.status === 'pipeline'
+  const isLost = (project as any).pipeline_stage === 'lost'
+  return !isPipeline && !isLost
+}
+
 const filterProjectsByDateRange = (projects: Project[], startDate: Date, endDate: Date): Project[] => {
-  return projects.filter(project => {
+  const filtered = projects.filter(project => {
     const projectDate = new Date(project.start_date || project.created_at)
     const isInDateRange = projectDate >= startDate && projectDate <= endDate
-    const isValidForMetrics = project.status !== 'pipeline' && (project as any).pipeline_stage !== 'lost'
+    const isValidForMetrics = isValidForAnalytics(project)
+    
+    // Debug logging for filtering
+    if (!isValidForMetrics) {
+      console.log('🚫 Analytics: Filtering out project (PIPELINE EXCLUSION)', {
+        name: project.name,
+        status: project.status,
+        pipeline_stage: (project as any).pipeline_stage,
+        reason: project.status === 'pipeline' ? 'EXCLUDED: pipeline status' : 'EXCLUDED: lost pipeline stage'
+      })
+    }
+    
+    if (!isInDateRange) {
+      console.log('📅 Analytics: Project outside date range', {
+        name: project.name,
+        projectDate: projectDate.toISOString(),
+        rangeStart: startDate.toISOString(),
+        rangeEnd: endDate.toISOString()
+      })
+    }
+    
     return isInDateRange && isValidForMetrics
+  })
+  
+  console.log('🔍 Analytics: Date range filtering results', {
+    totalProjects: projects.length,
+    filteredProjects: filtered.length,
+    dateRange: `${startDate.toISOString()} to ${endDate.toISOString()}`,
+    filteredProjectNames: filtered.map(p => p.name)
+  })
+  
+  return filtered
+}
+
+// Helper function to diagnose filtering issues
+export const diagnoseProjectFiltering = (projects: Project[]): void => {
+  const pipelineProjects = projects.filter(p => p.status === 'pipeline')
+  const lostProjects = projects.filter(p => (p as any).pipeline_stage === 'lost')
+  const validProjects = projects.filter(isValidForAnalytics)
+  
+  console.log('🔍 Analytics: Project filtering diagnosis', {
+    totalProjects: projects.length,
+    pipelineProjects: pipelineProjects.length,
+    lostProjects: lostProjects.length,
+    validProjectsForAnalytics: validProjects.length,
+    statusBreakdown: projects.reduce((acc, p) => {
+      acc[p.status] = (acc[p.status] || 0) + 1
+      return acc
+    }, {} as Record<string, number>),
+    pipelineStageBreakdown: projects.reduce((acc, p) => {
+      const stage = (p as any).pipeline_stage || 'none'
+      acc[stage] = (acc[stage] || 0) + 1
+      return acc
+    }, {} as Record<string, number>),
+    projectsWithBudgets: validProjects.filter(p => (p.budget || 0) > 0 || (p.total_budget || 0) > 0).length,
+    averageBudget: validProjects.length > 0 
+      ? validProjects.reduce((sum, p) => sum + (p.total_budget || p.budget || 0), 0) / validProjects.length 
+      : 0,
+    exclusionSummary: {
+      excludedPipeline: pipelineProjects.map(p => ({ name: p.name, status: p.status })),
+      excludedLost: lostProjects.map(p => ({ name: p.name, pipeline_stage: (p as any).pipeline_stage }))
+    }
   })
 }
 
@@ -105,11 +172,59 @@ export const calculateOverallRevenue = (projects: Project[], dateRange?: { start
   const previousStart = startOfYear(subYears(currentStart, 1))
   const previousEnd = subYears(currentEnd, 1)
 
+  console.log('💰 Analytics: Calculating Overall Revenue', {
+    totalProjects: projects.length,
+    dateRange: dateRange ? `${currentStart.toISOString()} to ${currentEnd.toISOString()}` : 'Year to date',
+    hasProjects: projects.length > 0
+  })
+
   const currentProjects = filterProjectsByDateRange(projects, currentStart, currentEnd)
   const previousProjects = filterProjectsByDateRange(projects, previousStart, previousEnd)
 
+  console.log('💰 Analytics: Revenue calculation details', {
+    currentProjectsCount: currentProjects.length,
+    previousProjectsCount: previousProjects.length,
+    currentProjectsWithValues: currentProjects.filter(p => getProjectValue(p) > 0).length,
+    currentProjectValues: currentProjects.map(p => ({
+      name: p.name,
+      value: getProjectValue(p),
+      budget: p.budget,
+      total_budget: p.total_budget,
+      status: p.status
+    }))
+  })
+
   const current = currentProjects.reduce((sum, project) => sum + getProjectValue(project), 0)
   const previous = previousProjects.reduce((sum, project) => sum + getProjectValue(project), 0)
+
+  // If no filtered projects but we have projects, try a fallback approach
+  if (current === 0 && projects.length > 0) {
+    console.log('💰 Analytics: No filtered projects found, trying fallback approach')
+    
+    // Fallback: Include all valid NON-PIPELINE projects regardless of date if no projects in date range
+    const allValidProjects = projects.filter(isValidForAnalytics)
+    
+    console.log('💰 Analytics: Fallback filtering details', {
+      totalProjects: projects.length,
+      pipelineProjects: projects.filter(p => p.status === 'pipeline').length,
+      lostProjects: projects.filter(p => (p as any).pipeline_stage === 'lost').length,
+      validNonPipelineProjects: allValidProjects.length
+    })
+    
+    if (allValidProjects.length > 0) {
+      const fallbackCurrent = allValidProjects.reduce((sum, project) => sum + getProjectValue(project), 0)
+      console.log('💰 Analytics: Fallback revenue calculation (EXCLUDING PIPELINE)', {
+        fallbackProjectsCount: allValidProjects.length,
+        fallbackRevenue: fallbackCurrent,
+        pipelineProjectsExcluded: projects.filter(p => p.status === 'pipeline').length
+      })
+      
+      // Use fallback value but keep previous as 0 to show no trend data
+      return calculateTrendData(fallbackCurrent, 0)
+    }
+  }
+
+  console.log('💰 Analytics: Revenue result', { current, previous })
 
   return calculateTrendData(current, previous)
 }
@@ -137,11 +252,33 @@ export const calculateTotalProjects = (projects: Project[], dateRange?: { start:
   const previousStart = startOfYear(subYears(currentStart, 1))
   const previousEnd = subYears(currentEnd, 1)
 
+  console.log('📊 Analytics: Calculating Total Projects', {
+    totalProjects: projects.length,
+    dateRange: dateRange ? `${currentStart.toISOString()} to ${currentEnd.toISOString()}` : 'Year to date'
+  })
+
   const currentProjects = filterProjectsByDateRange(projects, currentStart, currentEnd)
   const previousProjects = filterProjectsByDateRange(projects, previousStart, previousEnd)
 
-  const current = currentProjects.length
+  let current = currentProjects.length
   const previous = previousProjects.length
+
+  // If no filtered projects but we have projects, try fallback approach
+  if (current === 0 && projects.length > 0) {
+    console.log('📊 Analytics: No filtered projects found, using fallback count')
+    
+    // Fallback: Count all valid NON-PIPELINE projects regardless of date
+    const allValidProjects = projects.filter(isValidForAnalytics)
+    
+    current = allValidProjects.length
+    console.log('📊 Analytics: Fallback total projects (EXCLUDING PIPELINE)', { 
+      fallbackCount: current,
+      pipelineProjectsExcluded: projects.filter(p => p.status === 'pipeline').length,
+      totalProjectsBeforeFilter: projects.length
+    })
+  }
+
+  console.log('📊 Analytics: Total Projects result', { current, previous })
 
   return calculateTrendData(current, previous)
 }
@@ -233,9 +370,7 @@ export const calculateTopPayingClients = (projects: Project[], limit: number = 5
   const clientMap = new Map<string, TopClient>()
   
   // Filter out pipeline and lost projects for client metrics
-  const validProjects = projects.filter(project => 
-    project.status !== 'pipeline' && project.pipeline_stage !== 'lost'
-  )
+  const validProjects = projects.filter(isValidForAnalytics)
   
   // Group projects by client
   validProjects.forEach(project => {
@@ -316,9 +451,7 @@ export const calculateTopPayingClients = (projects: Project[], limit: number = 5
 
 export const calculateCLTV = (projects: Project[], clients: Client[]): AnalyticsResult => {
   // Filter out pipeline and lost projects for CLTV calculation
-  const validProjects = projects.filter(project => 
-    project.status !== 'pipeline' && project.pipeline_stage !== 'lost'
-  )
+  const validProjects = projects.filter(isValidForAnalytics)
   
   // Calculate current CLTV
   const clientsWithProjects = clients.filter(client => 
@@ -482,6 +615,11 @@ export const calculateTotalPending = (projects: Project[], dateRange?: { start: 
   const previousStart = startOfYear(subYears(currentStart, 1))
   const previousEnd = subYears(currentEnd, 1)
 
+  console.log('⏳ Analytics: Calculating Total Pending', {
+    totalProjects: projects.length,
+    dateRange: dateRange ? `${currentStart.toISOString()} to ${currentEnd.toISOString()}` : 'Year to date'
+  })
+
   const currentProjects = filterProjectsByDateRange(projects, currentStart, currentEnd)
   const previousProjects = filterProjectsByDateRange(projects, previousStart, previousEnd)
 
@@ -493,8 +631,20 @@ export const calculateTotalPending = (projects: Project[], dateRange?: { start: 
     project.status === 'active' || project.status === 'due'
   )
 
+  console.log('⏳ Analytics: Pending calculation details', {
+    currentActiveDueCount: currentActiveDueProjects.length,
+    previousActiveDueCount: previousActiveDueProjects.length,
+    currentActiveDueProjects: currentActiveDueProjects.map(p => ({
+      name: p.name,
+      status: p.status,
+      budget: p.total_budget || p.budget || 0,
+      received: p.payment_received || 0,
+      pending: Math.max(0, (p.total_budget || p.budget || 0) - (p.payment_received || 0))
+    }))
+  })
+
   // Calculate pending amounts: total budget - payment received (only for active + due projects)
-  const current = currentActiveDueProjects.reduce((sum, project) => {
+  let current = currentActiveDueProjects.reduce((sum, project) => {
     const budget = project.total_budget || project.budget || 0
     const received = project.payment_received || 0
     const pending = Math.max(0, budget - received) // Ensure it's not negative
@@ -507,6 +657,33 @@ export const calculateTotalPending = (projects: Project[], dateRange?: { start: 
     const pending = Math.max(0, budget - received) // Ensure it's not negative
     return sum + pending
   }, 0)
+
+  // If no pending amount but we have projects, try fallback approach
+  if (current === 0 && projects.length > 0) {
+    console.log('⏳ Analytics: No filtered pending projects found, using fallback')
+    
+    // Fallback: Include all active/due projects regardless of date (pipeline already excluded by status check)
+    const allActiveDueProjects = projects.filter(project => 
+      (project.status === 'active' || project.status === 'due') &&
+      (project as any).pipeline_stage !== 'lost'
+    )
+    
+    current = allActiveDueProjects.reduce((sum, project) => {
+      const budget = project.total_budget || project.budget || 0
+      const received = project.payment_received || 0
+      const pending = Math.max(0, budget - received)
+      return sum + pending
+    }, 0)
+    
+    console.log('⏳ Analytics: Fallback pending calculation (EXCLUDING PIPELINE)', { 
+      fallbackProjectsCount: allActiveDueProjects.length,
+      fallbackPending: current,
+      pipelineProjectsExcluded: projects.filter(p => p.status === 'pipeline').length,
+      activeDueBeforeFilter: projects.filter(p => p.status === 'active' || p.status === 'due').length
+    })
+  }
+
+  console.log('⏳ Analytics: Total Pending result', { current, previous })
 
   return calculateTrendData(current, previous)
 }

@@ -417,30 +417,44 @@ export default function ProfilePage() {
     try {
       setIsDeleting(true)
 
-      // In a real app, you would call your backend API to delete the account
-      // For Google users, skip password verification
-      if (isGoogleUser) {
-        // await api.deleteAccount() // No password needed for OAuth users
-      } else {
-        // await api.deleteAccount(deleteVerification.password)
+      // Call the delete account API
+      const response = await fetch('/api/delete-account', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user?.id,
+          password: isGoogleUser ? null : deleteVerification.password,
+          isGoogleUser: isGoogleUser
+        }),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to delete account')
       }
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000))
 
       toast.success("Account deleted successfully")
       
       // Clear all local storage
       localStorage.clear()
       
+      // Sign out the user
+      if (typeof window !== 'undefined') {
+        const { supabase } = await import('@/lib/supabase')
+        await supabase.auth.signOut()
+      }
+      
       // Redirect to login or goodbye page
       setTimeout(() => {
         window.location.href = "/login"
       }, 1000)
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error deleting account:", error)
-      toast.error("Failed to delete account. Please try again.")
+      toast.error(error.message || "Failed to delete account. Please try again.")
     } finally {
       setIsDeleting(false)
     }

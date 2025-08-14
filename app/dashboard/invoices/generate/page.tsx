@@ -74,6 +74,7 @@ export default function GenerateInvoicePage() {
   const [newClient, setNewClient] = useState<Partial<Client>>({
     country: "United States"
   })
+  const [isAddingClient, setIsAddingClient] = useState(false)
   
   // Success dialog state
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
@@ -81,6 +82,7 @@ export default function GenerateInvoicePage() {
   const [isDownloading, setIsDownloading] = useState(false)
   const [isSending, setIsSending] = useState(false)
   const [isSavingDraft, setIsSavingDraft] = useState(false)
+  const [isGenerating, setIsGenerating] = useState(false)
   
   // Auto-populate data from session storage
   const [projectData, setProjectData] = useState<any>(null)
@@ -169,6 +171,16 @@ export default function GenerateInvoicePage() {
       setClientCurrency(settings.defaultCurrency || 'USD')
     }
   }, [settings.autoCalculateTax, settings.taxRate, settings.defaultCurrency, isEditMode, editInvoiceId])
+
+  // Separate effect for auto-populating default invoice notes (only for truly new invoices)
+  useEffect(() => {
+    // Only auto-populate default notes for completely new invoices
+    // Don't run if we're in edit mode, have edit data, or notes are already set
+    const hasEditData = sessionStorage.getItem('edit-invoice-data')
+    if (!isEditMode && !editInvoiceId && !hasEditData && !notes && settings.defaultInvoiceNotes) {
+      setNotes(settings.defaultInvoiceNotes)
+    }
+  }, [settings.defaultInvoiceNotes, isEditMode, editInvoiceId, notes])
 
   // Load project or client data from sessionStorage when component mounts
   useEffect(() => {
@@ -478,6 +490,7 @@ export default function GenerateInvoicePage() {
       return
     }
 
+    setIsAddingClient(true)
     try {
       if (isSupabaseConfigured()) {
         const { data, error } = await supabase
@@ -545,6 +558,8 @@ export default function GenerateInvoicePage() {
     } catch (error) {
       console.error('Error adding client:', error)
       toast.error("Failed to add client. Please try again.")
+    } finally {
+      setIsAddingClient(false)
     }
   }
 
@@ -953,6 +968,7 @@ export default function GenerateInvoicePage() {
       return
     }
 
+    setIsGenerating(true)
     try {
       // Reserve or confirm invoice number for actual invoice creation
       let finalInvoiceNumber = invoiceNumber
@@ -1328,6 +1344,8 @@ export default function GenerateInvoicePage() {
       }
 
       toast.error(errorMessage)
+    } finally {
+      setIsGenerating(false)
     }
   }
 
@@ -1564,13 +1582,27 @@ export default function GenerateInvoicePage() {
     <InvoicingGate>
       {/* Loading overlay for edit mode */}
       {isLoadingEditData && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center" style={{left: 'var(--sidebar-width, 16rem)'}}>
           <div className="flex items-center space-x-3">
-            <Loader className="h-5 w-5 animate-spin text-primary" />
+            <Loader className="h-5 w-5 animate-spin text-muted-foreground" />
             <p className="font-medium">Loading invoice for editing</p>
           </div>
         </div>
       )}
+      
+      {/* Loading overlay for generating/updating invoice */}
+      {isGenerating && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center" style={{left: 'var(--sidebar-width, 16rem)'}}>
+          <div className="flex items-center space-x-3">
+            <Loader className="h-5 w-5 animate-spin text-muted-foreground" />
+            <p className="font-medium">
+              {isEditMode ? "Updating invoice..." : "Generating invoice..."}
+            </p>
+          </div>
+        </div>
+      )}
+      
+      <div className="relative">
       
       <PageHeader
         title={isEditMode ? "Edit Invoice" : "Generate Invoice"}
@@ -1580,19 +1612,31 @@ export default function GenerateInvoicePage() {
               variant="outline" 
               size="sm" 
               onClick={handleSaveDraft}
-              disabled={isSavingDraft || !selectedClient || !invoiceDate}
+              disabled={isSavingDraft || !selectedClient || !invoiceDate || isGenerating}
             >
-              <Save className="mr-1.5 h-4 w-4" />
+              {isSavingDraft ? (
+                <Loader className="mr-1.5 h-4 w-4 animate-spin text-muted-foreground" />
+              ) : (
+                <Save className="mr-1.5 h-4 w-4" />
+              )}
               {isSavingDraft ? "Saving..." : "Save Draft"}
             </Button>
 
             <Button 
               size="sm"
               onClick={handleGenerateInvoice}
-              disabled={!isReadyToGenerate()}
+              disabled={!isReadyToGenerate() || isGenerating}
             >
-              <Download className="mr-1.5 h-4 w-4" />
-              {isEditMode ? "Update Invoice" : "Generate Invoice"}
+              {isGenerating ? (
+                <Loader className="mr-1.5 h-4 w-4 animate-spin text-muted-foreground" />
+              ) : (
+                <Download className="mr-1.5 h-4 w-4" />
+              )}
+              {isGenerating ? (
+                isEditMode ? "Updating..." : "Generating..."
+              ) : (
+                isEditMode ? "Update Invoice" : "Generate Invoice"
+              )}
             </Button>
           </div>
         }
@@ -2230,11 +2274,18 @@ export default function GenerateInvoicePage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowNewClientDialog(false)}>
+            <Button variant="outline" onClick={() => setShowNewClientDialog(false)} disabled={isAddingClient}>
               Cancel
             </Button>
-            <Button onClick={handleAddNewClient} disabled={!newClient.name}>
-              Add Client
+            <Button onClick={handleAddNewClient} disabled={!newClient.name || isAddingClient}>
+              {isAddingClient ? (
+                <>
+                  <Loader className="mr-1.5 h-4 w-4 animate-spin text-muted-foreground" />
+                  Adding...
+                </>
+              ) : (
+                "Add Client"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -2391,7 +2442,7 @@ export default function GenerateInvoicePage() {
         </DialogContent>
       </Dialog>
 
-
+      </div>
     </InvoicingGate>
   )
 }
