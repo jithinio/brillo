@@ -986,7 +986,11 @@ export default function ProfilePage() {
               </AlertDialogCancel>
               <AlertDialogAction 
                 onClick={handleDeleteAccountConfirm}
-                disabled={isDeleting || !deleteVerification.password || deleteVerification.confirmationText !== "DELETE"}
+                disabled={
+                  isDeleting || 
+                  deleteVerification.confirmationText !== "DELETE" ||
+                  (user?.app_metadata?.provider !== 'google' && !deleteVerification.password)
+                }
                 className="bg-destructive hover:bg-destructive/90 text-white hover:text-white disabled:text-white/70"
               >
                 {isDeleting ? (
