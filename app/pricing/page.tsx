@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { Check, Crown, FileText, BarChart3, Palette, Zap, Users, CreditCard, ArrowLeft, ChevronDown, Mail } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -13,7 +13,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { useSearchParams, useRouter } from "next/navigation"
 import { toast } from "sonner"
 
-export default function PricingPage() {
+function PricingContent() {
   const { subscription, upgrade, isLoading } = useSubscription()
   const [isYearly, setIsYearly] = useState(true) // Default to yearly
   const [openFAQ, setOpenFAQ] = useState<string | null>(null)
@@ -400,5 +400,20 @@ export default function PricingPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function PricingPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg animate-pulse mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading pricing...</p>
+        </div>
+      </div>
+    }>
+      <PricingContent />
+    </Suspense>
   )
 }
