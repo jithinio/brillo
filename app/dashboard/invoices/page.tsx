@@ -17,6 +17,7 @@ import { getDateRangeFromTimePeriod } from "@/lib/project-filters-v2"
 import { useSettings } from "@/components/settings-provider"
 import { useCurrencyCache } from "@/hooks/use-currency-cache"
 import { InvoicingGate } from "@/components/gates/pro-feature-gate"
+import { formatCurrency } from "@/lib/currency"
 
 export default function InvoicesPage() {
   const router = useRouter()
@@ -274,7 +275,8 @@ export default function InvoicesPage() {
               const previousStatus = invoice.status
               const statusLabels = {
                 draft: 'Draft',
-                sent: 'Sent', 
+                sent: 'Sent',
+                partially_paid: 'Partially Paid',
                 paid: 'Paid',
                 overdue: 'Overdue',
                 cancelled: 'Cancelled'
@@ -292,6 +294,26 @@ export default function InvoicesPage() {
                     invoicesData.updateStatus?.(invoice.id, previousStatus)
                     toast.success(`Reverted to ${statusLabels[previousStatus as keyof typeof statusLabels]}`, {
                       description: `${invoice.invoice_number} status restored`
+                    })
+                  },
+                },
+              })
+            },
+            onPaymentUpdate: (invoice, paymentReceived) => {
+              const previousPayment = invoice.payment_received || 0
+              
+              // Execute payment update immediately
+              invoicesData.updatePayment?.(invoice.id, paymentReceived)
+              
+              // Show toast with undo functionality
+              toast.success(`Payment updated`, {
+                description: `${invoice.invoice_number} payment set to ${formatCurrency(paymentReceived, invoice.currency || 'USD')}`,
+                action: {
+                  label: "Undo",
+                  onClick: () => {
+                    invoicesData.updatePayment?.(invoice.id, previousPayment)
+                    toast.success(`Payment reverted`, {
+                      description: `${invoice.invoice_number} payment restored to ${formatCurrency(previousPayment, invoice.currency || 'USD')}`
                     })
                   },
                 },
@@ -315,10 +337,12 @@ export default function InvoicesPage() {
             invoice_number: 150,
             client: 200,
             project: 200,
-            status: 120,
+            status: 144,
             total_amount: 150,
+            payment_received: 148,
+            balance_due: 140,
             issue_date: 120,
-            due_date: 120,
+            due_date: 172,
           }}
           metricsComponent={<InvoiceMetrics metrics={metrics} />}
           addButton={

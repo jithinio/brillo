@@ -1,7 +1,7 @@
 "use client"
 
 import { forwardRef, useEffect } from "react"
-import { formatCurrency } from "@/lib/currency"
+import { formatCurrency, formatPhoneNumber } from "@/lib/currency"
 import type { Invoice } from "@/components/invoices/columns"
 
 interface InvoiceTemplateProps {
@@ -105,7 +105,9 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
             {invoice.clients?.company && (
               <div className="mb-1">{invoice.clients.company}</div>
             )}
-            <div>client@email.com</div>
+            {invoice.clients?.email && (
+              <div>{invoice.clients.email}</div>
+            )}
           </div>
         </div>
 

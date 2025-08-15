@@ -13,7 +13,7 @@ import type { GenericEntity, DataHookReturn, TableFeatures, EntityActions } from
 import { useTablePreferences } from "@/hooks/use-table-preferences"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
-import { Search, X, Calendar, Plus, RotateCcw } from "lucide-react"
+import { Search, X, Calendar, Plus, RotateCcw, Activity } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import {
@@ -74,6 +74,15 @@ const RELATIONSHIP_OPTIONS = [
   { value: "regular", label: "Regular" },
 ]
 
+const INVOICE_STATUS_OPTIONS = [
+  { value: "draft", label: "Draft" },
+  { value: "sent", label: "Sent" },
+  { value: "partially_paid", label: "Partially Paid" },
+  { value: "paid", label: "Paid" },
+  { value: "overdue", label: "Overdue" },
+  { value: "cancelled", label: "Cancelled" },
+]
+
 export function GenericTableWrapper<T extends GenericEntity>({
   entityType,
   pageTitle,
@@ -122,8 +131,12 @@ export function GenericTableWrapper<T extends GenericEntity>({
   // Filter state
   const [searchQuery, setSearchQuery] = React.useState("")
   const [isSearching, setIsSearching] = React.useState(false)
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = React.useState("")
+  const searchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
   const [timePeriod, setTimePeriod] = React.useState<string | null>(null)
   const [timePeriodOpen, setTimePeriodOpen] = React.useState(false)
+  const [invoiceStatus, setInvoiceStatus] = React.useState<string[]>([])
+  const [invoiceStatusOpen, setInvoiceStatusOpen] = React.useState(false)
   const [relationship, setRelationship] = React.useState<string[]>([])
   const [relationshipOpen, setRelationshipOpen] = React.useState(false)
 
@@ -166,8 +179,9 @@ export function GenericTableWrapper<T extends GenericEntity>({
   const filteredAndSortedData = React.useMemo(() => {
     let result = data
 
-    // Apply search filtering
-    if (searchQuery.trim()) {
+    // For invoices, search is handled by the useInvoices hook, not here
+    // Only apply client-side search for other entity types
+    if (entityType !== "invoices" && searchQuery.trim()) {
       const query = searchQuery.toLowerCase()
       result = result.filter((item: any) => {
         // Search in common fields
@@ -180,6 +194,45 @@ export function GenericTableWrapper<T extends GenericEntity>({
         if (item.clients?.name?.toLowerCase().includes(query)) return true
         if (item.clients?.company?.toLowerCase().includes(query)) return true
         if (item.projects?.name?.toLowerCase().includes(query)) return true
+        
+        // Search in amount fields (convert numbers to strings for search)
+        if (item.total_amount?.toString().includes(query)) return true
+        if (item.amount?.toString().includes(query)) return true
+        if (item.payment_received?.toString().includes(query)) return true
+        if (item.balance_due?.toString().includes(query)) return true
+        
+        // Also search in formatted currency strings (e.g., "$1,234.56", "€50.00")
+        // This requires importing formatCurrency, but let's do basic formatting here
+        try {
+          const currency = item.currency || 'USD'
+          if (item.total_amount && item.total_amount.toLocaleString('en-US', { 
+            style: 'currency', 
+            currency: currency, 
+            minimumFractionDigits: 2, 
+            maximumFractionDigits: 2 
+          }).toLowerCase().includes(query)) return true
+          
+          if (item.payment_received && item.payment_received.toLocaleString('en-US', { 
+            style: 'currency', 
+            currency: currency, 
+            minimumFractionDigits: 2, 
+            maximumFractionDigits: 2 
+          }).toLowerCase().includes(query)) return true
+        } catch (e) {
+          // Fallback if currency formatting fails
+        }
+        
+        // Search in status field
+        if (item.status?.toLowerCase().includes(query)) return true
+        
+        // Search in date fields (formatted as strings)
+        if (item.issue_date && new Date(item.issue_date).toLocaleDateString().includes(query)) return true
+        if (item.due_date && new Date(item.due_date).toLocaleDateString().includes(query)) return true
+        if (item.created_at && new Date(item.created_at).toLocaleDateString().includes(query)) return true
+        
+        // Search in additional text fields
+        if (item.notes?.toLowerCase().includes(query)) return true
+        if (item.terms?.toLowerCase().includes(query)) return true
         
         return false
       })
@@ -361,6 +414,46 @@ export function GenericTableWrapper<T extends GenericEntity>({
     return [...orderedColumns, ...newColumns]
   }, [createColumns, actions, columnOrder, columnVisibility, columnWidths, allColumns, createSortingFunctions])
 
+  // Helper function to get proper column display names
+  const getColumnDisplayName = (col: any) => {
+    const key = col.id || col.accessorKey
+    const displayNames: Record<string, string> = {
+      // Common columns
+      'select': 'Select',
+      'actions': 'Actions',
+      
+      // Invoice columns
+      'invoice_number': 'Invoice Number',
+      'client': 'Client',
+      'project': 'Project',
+      'status': 'Status',
+      'total_amount': 'Total Amount',
+      'amount': 'Amount',
+      'payment_received': 'Received',
+      'balance_due': 'Balance Due',
+      'issue_date': 'Issue Date',
+      'due_date': 'Due Date',
+      'created_at': 'Created At',
+      
+      // Project columns
+      'name': 'Project Name',
+      'project_type': 'Project Type',
+      'start_date': 'Start Date',
+      'total_budget': 'Total Budget',
+      'budget': 'Budget',
+      'expenses': 'Expenses',
+      'received': 'Received',
+      'pending': 'Pending',
+      
+      // Client columns
+      'company': 'Company',
+      'email': 'Email',
+      'phone': 'Phone',
+      'address': 'Address',
+    }
+    return displayNames[key] || key.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())
+  }
+
   // Column metadata for view filter
   const columnMetadata = React.useMemo(() => {
     if (columnOrder.length === 0) {
@@ -368,7 +461,7 @@ export function GenericTableWrapper<T extends GenericEntity>({
       return allColumns.map((col: any) => ({
         id: col.id || col.accessorKey,
         accessorKey: col.accessorKey,
-        header: col.header,
+        header: getColumnDisplayName(col),
         visible: columnVisibility[col.id || col.accessorKey] !== false,
         canHide: col.id !== 'select'
       }))
@@ -385,7 +478,7 @@ export function GenericTableWrapper<T extends GenericEntity>({
           return {
             id: col.id || col.accessorKey,
             accessorKey: col.accessorKey,
-            header: col.header,
+            header: getColumnDisplayName(col),
             visible: columnVisibility[col.id || col.accessorKey] !== false,
             canHide: col.id !== 'select'
           }
@@ -401,7 +494,7 @@ export function GenericTableWrapper<T extends GenericEntity>({
       .map((col: any) => ({
         id: col.id || col.accessorKey,
         accessorKey: col.accessorKey,
-        header: col.header,
+        header: getColumnDisplayName(col),
         visible: columnVisibility[col.id || col.accessorKey] !== false,
         canHide: col.id !== 'select'
       }))
@@ -522,6 +615,14 @@ export function GenericTableWrapper<T extends GenericEntity>({
     setTimePeriodOpen(false)
   }
 
+  const handleInvoiceStatusSelect = (value: string) => {
+    setInvoiceStatus(prev => 
+      prev.includes(value) 
+        ? prev.filter(s => s !== value)
+        : [...prev, value]
+    )
+  }
+
   const handleRelationshipSelect = (value: string) => {
     setRelationship(prev => 
       prev.includes(value) 
@@ -530,16 +631,39 @@ export function GenericTableWrapper<T extends GenericEntity>({
     )
   }
 
-  // Notify parent component when filters change
+  // Debounce search input for better performance
+  React.useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current)
+    }
+    
+    searchTimeoutRef.current = setTimeout(() => {
+      // Only search if query is empty or has at least 2 characters for performance
+      if (searchQuery.length === 0 || searchQuery.length >= 2) {
+        setDebouncedSearchQuery(searchQuery)
+      }
+      setIsSearching(false)
+    }, 300) // 300ms debounce for invoice search
+    
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current)
+      }
+    }
+  }, [searchQuery])
+
+  // Notify parent component when filters change (use debounced search)
   React.useEffect(() => {
     if (onFiltersChange) {
-      onFiltersChange({
-        search: searchQuery,
+      const filters = {
+        search: debouncedSearchQuery.trim() || '', // Use debounced search query
         timePeriod: timePeriod,
-        relationship: relationship,
-      })
+        status: invoiceStatus.length > 0 ? invoiceStatus : undefined,
+        relationship: relationship.length > 0 ? relationship : undefined,
+      }
+      onFiltersChange(filters)
     }
-  }, [searchQuery, timePeriod, relationship, onFiltersChange])
+  }, [debouncedSearchQuery, timePeriod, invoiceStatus, relationship, onFiltersChange])
 
   return (
     <div className={cn("w-full h-screen flex flex-col", className)}>
@@ -595,7 +719,7 @@ export function GenericTableWrapper<T extends GenericEntity>({
                 <Search className="absolute left-3 top-2 h-4 w-4 text-muted-foreground" />
               )}
               <Input
-                placeholder={`Search ${entityType}...`}
+                placeholder={`Search ${entityType} by name, amount, status... (min 2 chars)`}
                 className={`h-8 pl-9 pr-8 text-sm font-normal transition-colors ${
                   isSearching 
                     ? "border-primary/50 bg-primary/5 text-foreground placeholder:text-muted-foreground/60" 
@@ -605,7 +729,7 @@ export function GenericTableWrapper<T extends GenericEntity>({
                 onChange={(e) => {
                   setSearchQuery(e.target.value)
                   setIsSearching(true)
-                  setTimeout(() => setIsSearching(false), 300)
+                  // Searching state will be cleared by the debounce effect
                 }}
               />
               {searchQuery && (
@@ -650,6 +774,47 @@ export function GenericTableWrapper<T extends GenericEntity>({
                               className="mr-2"
                             />
                             {period.label}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            )}
+
+            {/* Invoice Status Filter - Only show for invoices */}
+            {entityType === "invoices" && (
+              <Popover open={invoiceStatusOpen} onOpenChange={setInvoiceStatusOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      "h-8 border-dashed transition-colors text-sm font-normal text-muted-foreground",
+                      invoiceStatus.length > 0 && "border-muted-foreground bg-muted text-muted-foreground"
+                    )}
+                  >
+                    <Activity className={cn("mr-1 h-3 w-3", invoiceStatus.length > 0 ? "text-muted-foreground" : "text-muted-foreground")} />
+                    {invoiceStatus.length > 0 ? `Status (${invoiceStatus.length})` : "Status"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[220px] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search status..." />
+                    <CommandList>
+                      <CommandEmpty>No results found.</CommandEmpty>
+                      <CommandGroup>
+                        {INVOICE_STATUS_OPTIONS.map((status) => (
+                          <CommandItem
+                            key={status.value}
+                            onSelect={() => handleInvoiceStatusSelect(status.value)}
+                          >
+                            <Checkbox
+                              checked={invoiceStatus.includes(status.value)}
+                              className="mr-2"
+                            />
+                            {status.label}
                           </CommandItem>
                         ))}
                       </CommandGroup>
@@ -706,13 +871,14 @@ export function GenericTableWrapper<T extends GenericEntity>({
             />
 
             {/* Clear Filters Button */}
-            {(searchQuery || timePeriod || relationship.length > 0) && (
+            {(searchQuery || timePeriod || invoiceStatus.length > 0 || relationship.length > 0) && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => {
                   setSearchQuery("")
                   setTimePeriod(null)
+                  setInvoiceStatus([])
                   setRelationship([])
                 }}
                 className="h-8 text-sm font-normal text-muted-foreground hover:text-foreground"

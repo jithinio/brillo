@@ -291,7 +291,7 @@ export function EditProjectDialog({ open, onOpenChange, onProjectUpdate, project
                           {displayedClients.map((client) => (
                             <CommandItem
                               key={client.id}
-                              value={`${client.name} ${client.company || ''}`}
+                              value={`${client.name} ${client.company || ''} ${client.id}`}
                               onSelect={() => handleClientSelect(client.id)}
                               className="flex items-center space-x-3 p-3"
                             >

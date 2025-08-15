@@ -1,4 +1,5 @@
 import { formatPhoneNumber, CURRENCIES, formatCurrency as formatCurrencyUtil } from './currency'
+import { countries } from './countries'
 
 export async function renderInvoiceHTML(invoice: any, template: any, userDateFormat?: string): Promise<string> {
   // Get currency symbol using the centralized CURRENCIES object
@@ -120,7 +121,7 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
     client: {
       name: invoice.clients?.name || 'Client Name',
       address: formatClientAddress(invoice.clients),
-      email: invoice.clients?.email || 'client@email.com'
+      email: invoice.clients?.email || ''
     },
     items: invoice.items?.length > 0 ? invoice.items : [{
       description: invoice.projects?.name || 'Professional Services',
@@ -146,7 +147,12 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
       const cityStateZip = [client.city, client.state, client.zip_code].filter(Boolean).join(' ')
       if (cityStateZip) parts.push(cityStateZip)
     }
-    if (client.country) parts.push(client.country)
+    if (client.country) {
+      // Convert country code to full country name
+      const country = countries.find(c => c.code === client.country)
+      const countryName = country ? country.name : client.country // Fallback to original if not found
+      parts.push(countryName)
+    }
     return parts.join('\n')
   }
 
@@ -560,9 +566,11 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
             <div style="color: ${template.secondaryColor}; white-space: pre-line; line-height: 1.5;">
               ${invoiceData.client.address}
             </div>
+            ${invoiceData.client.email ? `
             <div style="color: ${template.secondaryColor}; margin-top: 8px;">
               ${invoiceData.client.email}
             </div>
+            ` : ''}
           </div>
         </div>
 
@@ -694,9 +702,11 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
               <div style="white-space: pre-line; color: ${template.secondaryColor};">
                 ${invoiceData.client.address}
               </div>
+              ${invoiceData.client.email ? `
               <div style="color: ${template.secondaryColor}; margin-top: 4px;">
                 ${invoiceData.client.email}
               </div>
+              ` : ''}
             </div>
           </div>
 
@@ -1033,9 +1043,11 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
                   <div style="font-weight: 500; color: ${template.primaryColor}; margin-bottom: 4px;">
                     ${invoiceData.client.name}
                   </div>
+                  ${invoiceData.client.email ? `
                   <div style="color: ${template.secondaryColor}; margin-bottom: 4px;">
                     ${invoiceData.client.email}
                   </div>
+                  ` : ''}
                   <div style="color: ${template.secondaryColor}; margin-top: 16px; white-space: pre-line;">
                     ${invoiceData.client.address}
                   </div>

@@ -24,12 +24,12 @@ export function SortableHeader({
   const sortDirection = column.getIsSorted()
   
   return (
-    <div className={cn("py-1", className)}>
+    <div className={cn("py-1 w-full overflow-hidden", className)}>
       <Popover>
         <PopoverTrigger asChild>
           <Button
             variant="ghost"
-            className="h-auto p-0 font-normal text-sm hover:bg-transparent focus:outline-none flex items-center"
+            className="h-auto p-0 font-normal text-sm hover:bg-transparent focus:outline-none flex items-center justify-start w-full max-w-full overflow-hidden"
             style={{ gap: '6px' }}
           >
             {Icon && (
@@ -43,9 +43,9 @@ export function SortableHeader({
                 }} 
               />
             )}
-            <span className="text-sm font-normal">{children}</span>
+            <span className="text-sm font-normal truncate min-w-0 flex-1 text-left">{children}</span>
             {sortDirection && (
-              <span className="ml-1">
+              <span className="ml-1 flex-shrink-0">
                 {sortDirection === 'asc' ? '↑' : '↓'}
               </span>
             )}

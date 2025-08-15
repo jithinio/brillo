@@ -1438,7 +1438,7 @@ export default function GenerateInvoicePage() {
         created_at: new Date().toISOString(),
         clients: {
           ...generatedInvoiceData.client,
-          email: generatedInvoiceData.client.email || 'client@email.com'
+          email: generatedInvoiceData.client.email || ''
         },
         projects: undefined,
         items: generatedInvoiceData.items
@@ -1707,7 +1707,7 @@ export default function GenerateInvoicePage() {
                             {filteredClients.map((client) => (
                               <CommandItem
                                 key={client.id}
-                                value={`${client.name} ${client.company || ''}`}
+                                value={`${client.name} ${client.company || ''} ${client.id}`}
                                 onSelect={() => handleClientSelect(client.id)}
                                 className="flex items-center space-x-3 p-3"
                               >

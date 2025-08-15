@@ -209,7 +209,7 @@ const ClientField = ({
                     {filteredClients.map((client) => (
                       <CommandItem
                         key={client.id}
-                        value={`${client.name} ${client.company || ''}`}
+                        value={`${client.name} ${client.company || ''} ${client.id}`}
                         onSelect={() => {
                           handleClientSelect(client.id);
                           setClientDropdownOpen(false);

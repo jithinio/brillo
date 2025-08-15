@@ -235,16 +235,26 @@ export function DataTable<TData, TValue>({
                         return "Invoice Number"
                       case "client":
                         return "Client"
-                      case "amount":
-                        return "Amount"
+                      case "project":
+                        return "Project"
                       case "status":
                         return "Status"
+                      case "total_amount":
+                        return "Total Amount"
+                      case "payment_received":
+                        return "Received"
+                      case "balance_due":
+                        return "Balance Due"
+                      case "issue_date":
+                        return "Issue Date"
                       case "due_date":
                         return "Due Date"
                       case "created_at":
-                        return "Created"
+                        return "Created At"
+                      case "amount":
+                        return "Amount"
                       default:
-                        return columnId
+                        return columnId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
                     }
                   }
 
