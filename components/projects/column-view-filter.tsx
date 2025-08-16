@@ -1,5 +1,6 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import * as React from "react"
 import {
   DndContext,
@@ -20,7 +21,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { Eye, EyeOff, GripVertical, Settings } from "lucide-react"
+import { ViewIcon, ViewOffIcon, DragDropVerticalIcon, SettingsIcon } from '@hugeicons/core-free-icons'
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -106,7 +107,7 @@ function SortableColumnItem({ column, onVisibilityToggle }: SortableColumnItemPr
           {...attributes}
           {...listeners}
         >
-          <GripVertical className="h-4 w-4" />
+                      <HugeiconsIcon icon={DragDropVerticalIcon} className="h-4 w-4"  />
         </div>
         <span className="text-sm font-medium truncate flex-1">
           {headerText}
@@ -121,9 +122,9 @@ function SortableColumnItem({ column, onVisibilityToggle }: SortableColumnItemPr
           onClick={() => onVisibilityToggle(column.id, !column.visible)}
         >
           {column.visible ? (
-                          <Eye className="h-4 w-4 text-muted-foreground" />
+                          <HugeiconsIcon icon={ViewIcon} className="h-4 w-4 text-muted-foreground"  />
           ) : (
-              <EyeOff className="h-4 w-4 text-muted-foreground" />
+                              <HugeiconsIcon icon={ViewOffIcon} className="h-4 w-4 text-muted-foreground"  />
           )}
         </Button>
       )}
@@ -174,7 +175,7 @@ export function ColumnViewFilter({ columns, onColumnReorder, onColumnVisibilityC
             className
           )}
         >
-          <Settings className={cn("mr-1 h-3 w-3", hasHiddenColumns ? "text-muted-foreground" : "text-muted-foreground")} />
+          <HugeiconsIcon icon={SettingsIcon} className={cn("mr-1 h-3 w-3", hasHiddenColumns ? "text-muted-foreground" : "text-muted-foreground")}  />
           View
           {hasHiddenColumns && (
             <Badge variant="secondary" className="ml-1 h-4 px-1 text-xs font-normal bg-muted text-muted-foreground">

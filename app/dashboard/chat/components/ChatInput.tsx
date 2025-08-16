@@ -1,11 +1,12 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import { useState, useRef, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card } from "@/components/ui/card"
-import { ArrowUp, Plus } from "lucide-react"
+import { ArrowUp01Icon, PlusSignIcon } from '@hugeicons/core-free-icons'
 import { cn } from "@/lib/utils"
 
 interface ChatInputProps {
@@ -15,10 +16,10 @@ interface ChatInputProps {
 }
 
 const QUICK_ACTIONS = [
-  { label: "Add new client", icon: Plus },
-  { label: "Create project", icon: Plus },
-  { label: "Show revenue", icon: Plus },
-  { label: "Pipeline status", icon: Plus },
+  { label: "Add new client", icon: PlusSignIcon },
+  { label: "Create project", icon: PlusSignIcon },
+  { label: "Show revenue", icon: PlusSignIcon },
+  { label: "Pipeline status", icon: PlusSignIcon },
 ]
 
 export function ChatInput({ onSendMessage, isActive, disabled }: ChatInputProps) {
@@ -109,7 +110,7 @@ export function ChatInput({ onSendMessage, isActive, disabled }: ChatInputProps)
               className="h-8 text-xs"
               disabled={disabled}
             >
-              <action.icon className="mr-1 h-3 w-3" />
+              <HugeiconsIcon icon={action.icon} className="mr-1 h-3 w-3" />
               {action.label}
             </Button>
           ))}
@@ -161,7 +162,7 @@ export function ChatInput({ onSendMessage, isActive, disabled }: ChatInputProps)
                   size="icon"
                   ref={sendButtonRef}
                 >
-                  <ArrowUp className="h-4 w-4" />
+                  <HugeiconsIcon icon={ArrowUp01Icon} className="h-4 w-4"  />
                 </Button>
               </div>
             </div>

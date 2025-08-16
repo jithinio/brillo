@@ -79,6 +79,20 @@
   }
 }
 
+/* Global Hugeicons stroke width override - outside @layer for higher specificity */
+[data-hugeicons-icon] svg {
+  stroke-width: 2 !important;
+}
+
+[data-hugeicons-icon] svg path,
+[data-hugeicons-icon] svg line,
+[data-hugeicons-icon] svg polyline,
+[data-hugeicons-icon] svg polygon,
+[data-hugeicons-icon] svg circle,
+[data-hugeicons-icon] svg rect {
+  stroke-width: 2 !important;
+}
+
 :root {
   --background: oklch(1.0000 0 0);
   --foreground: oklch(0.1617 0.0044 128.7697);
@@ -90,7 +104,7 @@
   --primary-foreground: oklch(0.1617 0.0044 128.7697);
   --secondary: oklch(0.9868 0.0028 128.4921);
   --secondary-foreground: oklch(0.4268 0.0090 132.5173);
-  --muted: oklch(0.9868 0.0028 128.4921);
+  --muted: oklch(0.9495 0.0057 128.5275);
   --muted-foreground: oklch(0.5875 0.0115 131.4371);
   --accent: oklch(0.9549 0.0013 106.4243);
   --accent-foreground: oklch(0.1617 0.0044 128.7697);
@@ -108,7 +122,7 @@
   --sidebar-foreground: oklch(0.1617 0.0044 128.7697);
   --sidebar-primary: oklch(0.1617 0.0044 128.7697);
   --sidebar-primary-foreground: oklch(0.9424 0.0074 132.4168);
-  --sidebar-accent: oklch(0.8983 0.0116 128.6048);
+  --sidebar-accent: oklch(0.9424 0.0074 132.4168);
   --sidebar-accent-foreground: oklch(0.1617 0.0044 128.7697);
   --sidebar-border: oklch(0.9344 0.0057 128.5289);
   --sidebar-ring: oklch(0.7559 0.0104 125.7276);

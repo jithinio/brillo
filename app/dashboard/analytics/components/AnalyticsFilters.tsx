@@ -1,5 +1,6 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import { useState } from "react"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Button } from "@/components/ui/button"
@@ -7,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
-import { Check, ChevronsUpDown, X, Calendar, RefreshCw } from "lucide-react"
+import { Tick01Icon, ArrowDown01Icon, CancelIcon, Calendar01Icon, RefreshIcon } from '@hugeicons/core-free-icons'
 import { cn } from "@/lib/utils"
 import type { DateRange, AnalyticsFilters } from "@/hooks/use-unified-projects"
 import type { Client } from "@/lib/analytics-calculations"
@@ -165,7 +166,7 @@ export function AnalyticsFilters({
                   variant="outline"
                   className="h-8 min-w-[80px] max-w-[160px] w-auto justify-start text-left font-normal border-dashed text-sm px-3"
                 >
-                  <Calendar className="mr-1 h-3 w-3 flex-shrink-0" />
+                  <HugeiconsIcon icon={Calendar01Icon} className="mr-1 h-3 w-3 flex-shrink-0" />
                   <span className="truncate">
                     {filters.dateRange?.start ? (
                       formatDate(filters.dateRange.start)
@@ -207,7 +208,7 @@ export function AnalyticsFilters({
                   variant="outline"
                   className="h-8 min-w-[80px] max-w-[160px] w-auto justify-start text-left font-normal border-dashed text-sm px-3"
                 >
-                  <Calendar className="mr-1 h-3 w-3 flex-shrink-0" />
+                  <HugeiconsIcon icon={Calendar01Icon} className="mr-1 h-3 w-3 flex-shrink-0" />
                   <span className="truncate">
                     {filters.dateRange?.end ? (
                       formatDate(filters.dateRange.end)
@@ -276,7 +277,7 @@ export function AnalyticsFilters({
                   : selectedClients.length === 1
                   ? selectedClients[0].name
                   : `${selectedClients.length} clients`}
-                <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
+                <HugeiconsIcon icon={ArrowDown01Icon} className="ml-1 h-3 w-3 shrink-0 opacity-50"  />
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-[200px] p-0 shadow-lg border">
@@ -290,12 +291,12 @@ export function AnalyticsFilters({
                         key={client.id}
                         onSelect={() => handleClientToggle(client.id)}
                       >
-                        <Check
+                        <HugeiconsIcon icon={Tick01Icon}
                           className={cn(
                             "mr-2 h-4 w-4",
                             filters.clientIds?.includes(client.id) ? "opacity-100" : "opacity-0"
                           )}
-                        />
+                         />
                         <div className="flex flex-col">
                           <span className="text-sm">{client.name}</span>
                           {client.company && (
@@ -324,7 +325,7 @@ export function AnalyticsFilters({
                   : selectedStatuses.length === 1
                   ? selectedStatuses[0].label
                   : `${selectedStatuses.length} status`}
-                <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
+                <HugeiconsIcon icon={ArrowDown01Icon} className="ml-1 h-3 w-3 shrink-0 opacity-50"  />
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-[150px] p-0 shadow-lg border">
@@ -336,12 +337,12 @@ export function AnalyticsFilters({
                         key={status.value}
                         onSelect={() => handleStatusToggle(status.value)}
                       >
-                        <Check
+                        <HugeiconsIcon icon={Tick01Icon}
                           className={cn(
                             "mr-2 h-4 w-4",
                             filters.projectStatuses?.includes(status.value) ? "opacity-100" : "opacity-0"
                           )}
-                        />
+                         />
                         {status.label}
                       </CommandItem>
                     ))}
@@ -363,7 +364,7 @@ export function AnalyticsFilters({
               className="h-8 border-dashed text-sm font-normal text-muted-foreground"
               title={isLoading ? "Analytics refreshing..." : "Refresh analytics data"}
             >
-              <RefreshCw className={cn("mr-1 h-3 w-3", isLoading && "animate-spin")} />
+              <HugeiconsIcon icon={RefreshIcon} className={cn("mr-1 h-3 w-3", isLoading && "animate-spin")}  />
               {isLoading ? "Refreshing..." : "Refresh"}
             </Button>
           )}
@@ -374,7 +375,7 @@ export function AnalyticsFilters({
               onClick={clearAllFilters}
               className="h-8 border-dashed text-sm font-normal text-muted-foreground"
             >
-              <X className="mr-1 h-3 w-3" />
+              <HugeiconsIcon icon={CancelIcon} className="mr-1 h-3 w-3"  />
               Clear
             </Button>
           )}
@@ -394,7 +395,7 @@ export function AnalyticsFilters({
                 className="ml-1 h-3 w-3 p-0 hover:bg-transparent"
                 onClick={() => handleClientToggle(client.id)}
               >
-                <X className="h-2 w-2" />
+                <HugeiconsIcon icon={CancelIcon} className="h-2 w-2"  />
               </Button>
             </Badge>
           ))}
@@ -409,7 +410,7 @@ export function AnalyticsFilters({
                 className="ml-1 h-3 w-3 p-0 hover:bg-transparent"
                 onClick={() => handleStatusToggle(status.value)}
               >
-                <X className="h-2 w-2" />
+                <HugeiconsIcon icon={CancelIcon} className="h-2 w-2"  />
               </Button>
             </Badge>
           ))}
@@ -427,7 +428,7 @@ export function AnalyticsFilters({
                   setQuickPeriodValue("")
                 }}
               >
-                <X className="h-2 w-2" />
+                <HugeiconsIcon icon={CancelIcon} className="h-2 w-2"  />
               </Button>
             </Badge>
           )}

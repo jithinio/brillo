@@ -11,7 +11,8 @@ SET items = (
   SELECT COALESCE(jsonb_agg(
     jsonb_build_object(
       'id', item.id::text,
-      'description', item.description,
+      'item_name', COALESCE(item.item_name, item.description),
+      'item_description', COALESCE(item.item_description, ''),
       'quantity', item.quantity,
       'rate', item.rate,
       'amount', item.amount
@@ -35,7 +36,8 @@ SELECT
   i.id as invoice_id,
   i.invoice_number,
   (item->>'id')::uuid as id,
-  item->>'description' as description,
+  item->>'item_name' as item_name,
+  item->>'item_description' as item_description,
   (item->>'quantity')::numeric as quantity,
   (item->>'rate')::numeric as rate,
   (item->>'amount')::numeric as amount

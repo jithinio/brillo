@@ -1,8 +1,9 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import * as React from "react"
 import { format } from "date-fns"
-import { Calendar as CalendarIcon } from "lucide-react"
+import { Calendar01Icon } from '@hugeicons/core-free-icons'
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -59,7 +60,7 @@ export function DatePicker({
           )}
           disabled={disabled}
         >
-          <CalendarIcon className="mr-2 h-4 w-4" />
+                        <HugeiconsIcon icon={Calendar01Icon} className="mr-2 h-4 w-4" />
           {displayDate ? <span>{displayDate}</span> : <span>{placeholder}</span>}
         </Button>
       </PopoverTrigger>

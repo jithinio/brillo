@@ -14,6 +14,8 @@ interface AuthContextType {
   signOut: () => Promise<void>
   signIn: (email: string, password: string) => Promise<{ error?: any }>
   signUp: (email: string, password: string, userData?: any) => Promise<{ error?: any }>
+  resetPassword: (email: string) => Promise<{ error?: any }>
+  updatePassword: (newPassword: string) => Promise<{ error?: any }>
   getCachedUser: () => User | null
 }
 
@@ -308,8 +310,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const resetPassword = async (email: string) => {
+    if (!isSupabaseConfigured()) {
+      logger.error("Supabase not configured - password reset not available")
+      return { error: { message: "Password reset service not available" } }
+    }
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      })
+      if (!error) {
+        logger.authLog("Password reset email sent successfully")
+      }
+      return { error }
+    } catch (error) {
+      logger.error("Password reset error", error)
+      return { error }
+    }
+  }
+
+  const updatePassword = async (newPassword: string) => {
+    if (!isSupabaseConfigured()) {
+      logger.error("Supabase not configured - password update not available")
+      return { error: { message: "Password update service not available" } }
+    }
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      })
+      if (!error) {
+        logger.authLog("Password updated successfully")
+      }
+      return { error }
+    } catch (error) {
+      logger.error("Password update error", error)
+      return { error }
+    }
+  }
+
   return (
-    <AuthContext.Provider value={{ user, loading, signingOut, signOut, signIn, signUp, getCachedUser }}>
+    <AuthContext.Provider value={{ user, loading, signingOut, signOut, signIn, signUp, resetPassword, updatePassword, getCachedUser }}>
       {children}
       <LogoutOverlay isVisible={signingOut} />
     </AuthContext.Provider>

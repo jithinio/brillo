@@ -1,11 +1,12 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import * as React from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Loader } from "@/components/ui/loader"
 import { Button } from "@/components/ui/button"
-import { Trash2, Edit, FileText, Check, Eye, Send, FolderPlus, RotateCcw, Zap, Clock } from "lucide-react"
+import { Delete01Icon, Edit03Icon, DocumentAttachmentIcon, Tick02Icon, ViewIcon, DollarSend01Icon, FolderAddIcon, UserTime01Icon, ZapIcon, ClockIcon, MailSend02Icon } from '@hugeicons/core-free-icons'
 import {
   ContextMenu,
   ContextMenuContent,
@@ -267,7 +268,7 @@ function GenericDataTableComponent<T extends GenericEntity>({
                       onClick={handleBatchDelete}
                       className="h-7 px-3 text-xs text-white"
                     >
-                      <Trash2 className="mr-1 h-3 w-3" />
+                                                    <HugeiconsIcon icon={Delete01Icon} className="mr-1 h-3 w-3"  />
                       Delete
                     </Button>
                   )}
@@ -430,7 +431,7 @@ function GenericDataTableComponent<T extends GenericEntity>({
                         <ContextMenuContent className="w-48">
                           {actions.onEdit && (
                             <ContextMenuItem onClick={() => actions.onEdit!(item)}>
-                              <Edit className="mr-1.5 h-4 w-4" />
+                              <HugeiconsIcon icon={Edit03Icon} className="mr-1.5 h-4 w-4" />
                               Edit {entityType.slice(0, -1)}
                             </ContextMenuItem>
                           )}
@@ -454,19 +455,19 @@ function GenericDataTableComponent<T extends GenericEntity>({
                                   // Map action labels to appropriate icons
                                   const getActionIcon = (actionLabel: string) => {
                                     const lowerLabel = actionLabel.toLowerCase()
-                                    if (lowerLabel.includes('view details')) return Eye
-                                    if (lowerLabel.includes('send invoice')) return Send
-                                    if (lowerLabel.includes('view pdf')) return FileText
-                                    if (lowerLabel.includes('create invoice')) return FileText
-                                    if (lowerLabel.includes('new project')) return FolderPlus
-                                    return FileText // default
+                                    if (lowerLabel.includes('view details')) return ViewIcon
+                                    if (lowerLabel.includes('send invoice')) return MailSend02Icon
+                                    if (lowerLabel.includes('view pdf')) return DocumentAttachmentIcon
+                                    if (lowerLabel.includes('create invoice')) return DocumentAttachmentIcon
+                                    if (lowerLabel.includes('new project')) return FolderAddIcon
+                                    return DocumentAttachmentIcon // default
                                   }
                                   
                                   const ActionIcon = getActionIcon(label)
                                   
                                   return (
                                     <ContextMenuItem key={label} onClick={() => action(item)}>
-                                      <ActionIcon className="mr-1.5 h-4 w-4" />
+                                      <HugeiconsIcon icon={ActionIcon} className="mr-1.5 h-4 w-4" />
                                       {label}
                                     </ContextMenuItem>
                                   )
@@ -476,7 +477,7 @@ function GenericDataTableComponent<T extends GenericEntity>({
                                 {relationshipActions.length > 0 && (
                                   <ContextMenuSub>
                                     <ContextMenuSubTrigger className="flex items-center">
-                                      <RotateCcw className="mr-1.5 h-4 w-4" />
+                                      <HugeiconsIcon icon={UserTime01Icon} className="mr-1.5 h-4 w-4"  />
                                       Relationship
                                     </ContextMenuSubTrigger>
                                     <ContextMenuSubContent className="w-44">
@@ -488,13 +489,13 @@ function GenericDataTableComponent<T extends GenericEntity>({
                                         const getRelationshipConfig = (type: string) => {
                                           switch (type) {
                                             case 'recurring': 
-                                              return { icon: RotateCcw, label: 'Recurring', className: 'text-blue-500' }
+                                              return { icon: UserTime01Icon, label: 'Recurring', className: 'text-blue-500' }
                                             case 'one time': 
-                                              return { icon: Zap, label: 'One Time', className: 'text-orange-500' }
+                                              return { icon: ZapIcon, label: 'One Time', className: 'text-orange-500' }
                                             case 'regular': 
-                                              return { icon: Clock, label: 'Regular', className: 'text-green-500' }
+                                              return { icon: ClockIcon, label: 'Regular', className: 'text-green-500' }
                                             default: 
-                                              return { icon: Clock, label: 'Regular', className: 'text-green-500' }
+                                              return { icon: ClockIcon, label: 'Regular', className: 'text-green-500' }
                                           }
                                         }
                                         
@@ -503,7 +504,7 @@ function GenericDataTableComponent<T extends GenericEntity>({
                                         
                                         return (
                                           <ContextMenuItem key={label} onClick={() => action(item)}>
-                                            <RelationshipIcon className={`mr-1.5 h-3 w-3 ${config.className}`} />
+                                            <HugeiconsIcon icon={RelationshipIcon} className={`mr-1.5 h-3 w-3 ${config.className}`} />
                                             {config.label}
                                           </ContextMenuItem>
                                         )
@@ -522,7 +523,7 @@ function GenericDataTableComponent<T extends GenericEntity>({
                               onClick={() => actions.onDelete!(item)}
                               className="text-destructive focus:text-destructive"
                             >
-                              <Trash2 className="mr-1.5 h-4 w-4" />
+                              <HugeiconsIcon icon={Delete01Icon} className="mr-1.5 h-4 w-4"  />
                               Delete {entityType.slice(0, -1)}
                             </ContextMenuItem>
                           )}
@@ -543,7 +544,7 @@ function GenericDataTableComponent<T extends GenericEntity>({
                               variant="outline" 
                               className="flex items-center gap-1 text-xs bg-background/80 backdrop-blur-sm border-border/50"
                             >
-                              <Check className="w-2 h-2" />
+                              <HugeiconsIcon icon={Tick02Icon} className="w-2 h-2"  />
                               <span className="text-xs">All loaded</span>
                             </Badge>
                           </div>

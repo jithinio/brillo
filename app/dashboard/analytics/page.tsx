@@ -1,5 +1,6 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import { useState, useEffect, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -7,7 +8,7 @@ import { Separator } from "@/components/ui/separator"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import type { ChartConfig } from "@/components/ui/chart"
 import { Bar, BarChart, XAxis, YAxis, Line, LineChart } from "recharts"
-import { DollarSign, TrendingUp, TrendingDown, FileText, Users, Calendar, Activity, BarChart3, Wallet, Clock } from "lucide-react"
+import { DollarCircleIcon, TradeUpIcon, TradeDownIcon, DocumentAttachmentIcon, Group01Icon, Calendar01Icon, ActivityIcon, BarChartIcon, WalletIcon, ClockIcon, DocumentIcon } from '@hugeicons/core-free-icons'
 
 import { PageHeader } from "@/components/page-header"
 import { Loader } from "@/components/ui/loader"
@@ -266,7 +267,7 @@ export default function AnalyticsPage() {
                         percentage: filteredMetrics.revenue.percentage,
                         label: "vs previous period"
                       }}
-                      icon={DollarSign}
+                      icon={DollarCircleIcon}
                       variant="currency"
                       isLoading={false}
                       error={error}
@@ -280,7 +281,7 @@ export default function AnalyticsPage() {
                         percentage: filteredMetrics.totalProjects.percentage,
                         label: "vs previous period"
                       }}
-                      icon={FileText}
+                      icon={DocumentIcon}
                       variant="number"
                       isLoading={false}
                       error={error}
@@ -299,7 +300,7 @@ export default function AnalyticsPage() {
                         percentage: filteredMetrics.totalPending.percentage,
                         label: "vs previous period"
                       }}
-                      icon={Clock}
+                      icon={ClockIcon}
                       variant="currency"
                       isLoading={false}
                       error={error}
@@ -347,7 +348,7 @@ export default function AnalyticsPage() {
                           percentage: globalMetrics.revenue.percentage,
                           label: "vs previous period"
                         }}
-                        icon={DollarSign}
+                        icon={DollarCircleIcon}
                         variant="currency"
                         isLoading={false}
                         error={error}
@@ -361,7 +362,7 @@ export default function AnalyticsPage() {
                           percentage: globalMetrics.expenses.percentage,
                           label: "vs previous period"
                         }}
-                        icon={Wallet}
+                        icon={WalletIcon}
                         variant="currency"
                         isLoading={false}
                         error={error}
@@ -375,7 +376,7 @@ export default function AnalyticsPage() {
                           percentage: globalMetrics.totalProjects.percentage,
                           label: "vs previous period"
                         }}
-                        icon={FileText}
+                        icon={DocumentAttachmentIcon}
                         variant="number"
                         isLoading={false}
                         error={error}
@@ -389,7 +390,7 @@ export default function AnalyticsPage() {
                           percentage: globalMetrics.totalPending.percentage,
                           label: "vs previous period"
                         }}
-                        icon={Clock}
+                        icon={ClockIcon}
                         variant="currency"
                         isLoading={false}
                         error={error}
@@ -422,7 +423,7 @@ export default function AnalyticsPage() {
                             percentage: globalMetrics.mrr.percentage,
                             label: "vs previous period"
                           }}
-                          icon={Calendar}
+                          icon={Calendar01Icon}
                           variant="currency"
                           period={periods.mrr}
                           onPeriodChange={(value: string) => handlePeriodChange('mrr', value)}
@@ -443,7 +444,7 @@ export default function AnalyticsPage() {
                             percentage: globalMetrics.arr.percentage,
                             label: "vs previous period"
                           }}
-                          icon={Activity}
+                          icon={ActivityIcon}
                           variant="currency"
                           period={periods.arr}
                           onPeriodChange={(value: string) => handlePeriodChange('arr', value)}
@@ -466,7 +467,7 @@ export default function AnalyticsPage() {
                         percentage: globalMetrics.yoyGrowth.percentage,
                         label: "revenue growth"
                       }}
-                      icon={TrendingUp}
+                                              icon={TradeUpIcon}
                       variant="percentage"
                       size="lg"
                       isLoading={false}
@@ -483,7 +484,7 @@ export default function AnalyticsPage() {
                         percentage: globalMetrics.cltv.percentage,
                         label: "vs previous period"
                       }}
-                      icon={Users}
+                                              icon={Group01Icon}
                       variant="currency"
                       subtitle="Average CLTV per client"
                       size="lg"

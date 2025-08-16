@@ -1,5 +1,6 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PageHeader } from '@/components/page-header'
@@ -10,20 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { 
-  Bell, 
-  CheckCircle, 
-  XCircle, 
-  AlertCircle, 
-  RefreshCw, 
-  Send,
-  Calendar,
-  Clock,
-  Mail,
-  ChevronRight,
-  Loader2,
-  Eye
-} from 'lucide-react'
+import { NotificationIcon, CheckmarkCircleIcon, CancelCircleIcon, AlertCircleIcon, RefreshIcon, DollarSend01Icon, Calendar01Icon, ClockIcon, MailIcon, ArrowRight01Icon, Loading03Icon, ViewIcon } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 import RecurringProjectReminder from '@/emails/recurring-project-reminder'
@@ -320,11 +308,11 @@ export default function TestRemindersPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'sent':
-        return <Badge variant="default" className="bg-green-500"><CheckCircle className="w-3 h-3 mr-1" />Sent</Badge>
+        return <Badge variant="default" className="bg-green-500"><HugeiconsIcon icon={CheckmarkCircleIcon} className="w-3 h-3 mr-1"  />Sent</Badge>
       case 'failed':
-        return <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" />Failed</Badge>
+        return <Badge variant="destructive"><HugeiconsIcon icon={CancelCircleIcon} className="w-3 h-3 mr-1"  />Failed</Badge>
       case 'pending':
-        return <Badge variant="secondary"><Clock className="w-3 h-3 mr-1" />Pending</Badge>
+        return <Badge variant="secondary"><HugeiconsIcon icon={ClockIcon} className="w-3 h-3 mr-1"  />Pending</Badge>
       case 'active':
         return <Badge variant="default" className="bg-blue-500">Active</Badge>
       case 'due':
@@ -356,7 +344,7 @@ export default function TestRemindersPage() {
             {checking ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
             ) : (
-              <RefreshCw className="w-4 h-4 mr-2" />
+              <HugeiconsIcon icon={RefreshIcon} className="w-4 h-4 mr-2"  />
             )}
             Check Projects
           </Button>
@@ -369,7 +357,7 @@ export default function TestRemindersPage() {
             {sending ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
             ) : (
-              <Send className="w-4 h-4 mr-2" />
+              <HugeiconsIcon icon={DollarSend01Icon} className="w-4 h-4 mr-2"  />
             )}
             Send Pending Reminders
           </Button>
@@ -381,7 +369,7 @@ export default function TestRemindersPage() {
             {triggering ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
             ) : (
-              <Bell className="w-4 h-4 mr-2" />
+              <HugeiconsIcon icon={NotificationIcon} className="w-4 h-4 mr-2"  />
             )}
             Trigger Full Process
           </Button>
@@ -391,7 +379,7 @@ export default function TestRemindersPage() {
             variant="ghost"
             disabled={loading}
           >
-            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            <HugeiconsIcon icon={RefreshIcon} className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`}  />
             Refresh Data
           </Button>
         </CardContent>
@@ -420,7 +408,7 @@ export default function TestRemindersPage() {
                 </div>
               ) : projects.length === 0 ? (
                 <Alert>
-                  <AlertCircle className="h-4 w-4" />
+                  <HugeiconsIcon icon={AlertCircleIcon} className="h-4 w-4"  />
                   <AlertTitle>No recurring projects</AlertTitle>
                   <AlertDescription>
                     Create some recurring projects to test the reminder system
@@ -473,7 +461,7 @@ export default function TestRemindersPage() {
                 </div>
               ) : reminders.length === 0 ? (
                 <Alert>
-                  <AlertCircle className="h-4 w-4" />
+                  <HugeiconsIcon icon={AlertCircleIcon} className="h-4 w-4"  />
                   <AlertTitle>No reminders found</AlertTitle>
                   <AlertDescription>
                     Run "Check Projects" to generate reminders for eligible projects
@@ -498,7 +486,7 @@ export default function TestRemindersPage() {
                               variant="ghost"
                               onClick={() => previewEmail(reminder)}
                             >
-                              <Eye className="w-4 h-4" />
+                              <HugeiconsIcon icon={ViewIcon} className="w-4 h-4"  />
                             </Button>
                             {getStatusBadge(reminder.status)}
                           </div>
@@ -510,14 +498,14 @@ export default function TestRemindersPage() {
                             Reminder: {format(new Date(reminder.reminder_date), 'MMM d, yyyy')}
                           </div>
                           <div className="flex items-center gap-1">
-                            <ChevronRight className="w-3 h-3" />
+                            <HugeiconsIcon icon={ArrowRight01Icon} className="w-3 h-3" />
                             Period: {format(new Date(reminder.period_start), 'MMM d')} - {format(new Date(reminder.period_end), 'MMM d, yyyy')}
                           </div>
                         </div>
 
                         {reminder.sent_at && (
                           <div className="text-sm text-muted-foreground mt-2 flex items-center gap-1">
-                            <Mail className="w-3 h-3" />
+                            <HugeiconsIcon icon={MailIcon} className="w-3 h-3"  />
                             Sent: {format(new Date(reminder.sent_at), 'MMM d, yyyy h:mm a')}
                           </div>
                         )}
@@ -547,7 +535,7 @@ export default function TestRemindersPage() {
             <CardContent>
               {systemLogs.length === 0 ? (
                 <Alert>
-                  <AlertCircle className="h-4 w-4" />
+                  <HugeiconsIcon icon={AlertCircleIcon} className="h-4 w-4"  />
                   <AlertTitle>No logs found</AlertTitle>
                   <AlertDescription>
                     System logs will appear here after running the reminder process

@@ -1,8 +1,9 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Package, Calendar } from "lucide-react"
+import { PackageIcon, Calendar01Icon } from '@hugeicons/core-free-icons'
 
 interface SubscriptionSkeletonProps {
   showUsageOverview?: boolean
@@ -17,7 +18,7 @@ export function SubscriptionSkeleton({ showUsageOverview = true }: SubscriptionS
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
-                <Package className="w-5 h-5" />
+                <HugeiconsIcon icon={PackageIcon} className="w-5 h-5"  />
                 Current Plan
               </CardTitle>
               <CardDescription>Loading subscription information...</CardDescription>
@@ -56,7 +57,7 @@ export function SubscriptionSkeleton({ showUsageOverview = true }: SubscriptionS
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="flex items-center gap-2">
-                  <Calendar className="w-5 h-5" />
+                  <HugeiconsIcon icon={Calendar01Icon} className="w-5 h-5" />
                   Usage Overview
                 </CardTitle>
                 <CardDescription>Current usage against your plan limits</CardDescription>

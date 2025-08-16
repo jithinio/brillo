@@ -1,5 +1,6 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import * as React from "react"
 import { AnimatePresence, motion } from "framer-motion"
 import type { ColumnDef } from "@tanstack/react-table"
@@ -13,7 +14,7 @@ import type { GenericEntity, DataHookReturn, TableFeatures, EntityActions } from
 import { useTablePreferences } from "@/hooks/use-table-preferences"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
-import { Search, X, Calendar, Plus, RotateCcw, Activity } from "lucide-react"
+import { SearchIcon, CancelIcon, Calendar01Icon, PlusSignIcon, UserTime01Icon, ActivityIcon, Activity03Icon } from '@hugeicons/core-free-icons'
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import {
@@ -716,10 +717,10 @@ export function GenericTableWrapper<T extends GenericEntity>({
               {isSearching ? (
                 <Loader size="sm" variant="primary" className="absolute left-3 top-2" />
               ) : (
-                <Search className="absolute left-3 top-2 h-4 w-4 text-muted-foreground" />
+                <HugeiconsIcon icon={SearchIcon} className="absolute left-3 top-2 h-4 w-4 text-muted-foreground"  />
               )}
               <Input
-                placeholder={`Search ${entityType} by name, amount, status... (min 2 chars)`}
+                placeholder="Search"
                 className={`h-8 pl-9 pr-8 text-sm font-normal transition-colors ${
                   isSearching 
                     ? "border-primary/50 bg-primary/5 text-foreground placeholder:text-muted-foreground/60" 
@@ -739,7 +740,7 @@ export function GenericTableWrapper<T extends GenericEntity>({
                   className="absolute right-1 top-0.5 h-6 w-6 p-0 hover:bg-muted"
                   onClick={() => setSearchQuery("")}
                 >
-                  <X className="h-3 w-3" />
+                  <HugeiconsIcon icon={CancelIcon} className="h-3 w-3"  />
                 </Button>
               )}
             </div>
@@ -756,7 +757,7 @@ export function GenericTableWrapper<T extends GenericEntity>({
                       timePeriod && "border-muted-foreground bg-muted text-muted-foreground"
                     )}
                   >
-                    <Calendar className={cn("mr-1 h-3 w-3", timePeriod ? "text-muted-foreground" : "text-muted-foreground")} />
+                    <HugeiconsIcon icon={Calendar01Icon} className={cn("mr-1 h-3 w-3", timePeriod ? "text-muted-foreground" : "text-muted-foreground")} />
                     {timePeriod ? getTimePeriodLabel(timePeriod) : "Period"}
                   </Button>
                 </PopoverTrigger>
@@ -795,7 +796,7 @@ export function GenericTableWrapper<T extends GenericEntity>({
                       invoiceStatus.length > 0 && "border-muted-foreground bg-muted text-muted-foreground"
                     )}
                   >
-                    <Activity className={cn("mr-1 h-3 w-3", invoiceStatus.length > 0 ? "text-muted-foreground" : "text-muted-foreground")} />
+                    <HugeiconsIcon icon={Activity03Icon} className={cn("mr-1 h-3 w-3", invoiceStatus.length > 0 ? "text-muted-foreground" : "text-muted-foreground")} />
                     {invoiceStatus.length > 0 ? `Status (${invoiceStatus.length})` : "Status"}
                   </Button>
                 </PopoverTrigger>
@@ -836,7 +837,7 @@ export function GenericTableWrapper<T extends GenericEntity>({
                       relationship.length > 0 && "border-muted-foreground bg-muted text-muted-foreground"
                     )}
                   >
-                    <RotateCcw className={cn("mr-1 h-3 w-3", relationship.length > 0 ? "text-muted-foreground" : "text-muted-foreground")} />
+                    <HugeiconsIcon icon={UserTime01Icon} className={cn("mr-1 h-3 w-3", relationship.length > 0 ? "text-muted-foreground" : "text-muted-foreground")} />
                     {relationship.length > 0 ? `Relationship (${relationship.length})` : "Relationship"}
                   </Button>
                 </PopoverTrigger>

@@ -1,7 +1,8 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import { calculatePasswordStrength } from "@/lib/password-strength"
-import { Check, X } from "lucide-react"
+import { Tick02Icon, CancelIcon } from '@hugeicons/core-free-icons'
 import { cn } from "@/lib/utils"
 
 interface PasswordStrengthIndicatorProps {
@@ -95,9 +96,9 @@ function RequirementItem({ met, text }: RequirementItemProps) {
           : "bg-muted text-muted-foreground"
       )}>
         {met ? (
-          <Check className="h-2.5 w-2.5" />
+                          <HugeiconsIcon icon={Tick02Icon} className="h-2.5 w-2.5"  />
         ) : (
-          <X className="h-2.5 w-2.5" />
+          <HugeiconsIcon icon={CancelIcon} className="h-2.5 w-2.5"  />
         )}
       </div>
       <span className={cn(

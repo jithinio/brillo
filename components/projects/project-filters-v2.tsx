@@ -1,7 +1,8 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import * as React from "react"
-import { Filter, ChevronDown, Search, Plus, Calendar, Settings, CheckCircle, Users, X, Crown, Tag } from "lucide-react"
+import { FilterIcon, ArrowDown01Icon, SearchIcon, PlusSignIcon, Calendar01Icon, SettingsIcon, CheckmarkCircleIcon, UserIcon, CancelIcon, Crown02Icon, TagIcon, Activity03Icon } from '@hugeicons/core-free-icons'
 import { ColumnViewFilter } from "./column-view-filter"
 import { Button } from "@/components/ui/button"
 import { Loader } from "@/components/ui/loader"
@@ -132,7 +133,7 @@ export function ProjectFiltersV2({
           {isSearching ? (
             <Loader size="sm" variant="primary" className="absolute left-3 top-2" />
           ) : (
-            <Search className="absolute left-3 top-2 h-4 w-4 text-muted-foreground" />
+                          <HugeiconsIcon icon={SearchIcon} className="absolute left-3 top-2 h-4 w-4 text-muted-foreground"  />
           )}
           <Input
             placeholder="Search projects..."
@@ -151,7 +152,7 @@ export function ProjectFiltersV2({
               className="absolute right-1 top-0.5 h-6 w-6 p-0 hover:bg-muted"
               onClick={() => updateSearch("")}
             >
-              <X className="h-3 w-3" />
+              <HugeiconsIcon icon={CancelIcon} className="h-3 w-3"  />
             </Button>
           )}
         </div>
@@ -173,7 +174,7 @@ export function ProjectFiltersV2({
                   size="sm"
                   className="h-8 border-dashed transition-colors text-sm font-normal text-muted-foreground hover:text-foreground hover:border-muted-foreground"
                 >
-                  <Settings className="mr-1 h-3 w-3 text-muted-foreground" />
+                  <HugeiconsIcon icon={SettingsIcon} className="mr-1 h-3 w-3 text-muted-foreground"  />
                   View
                 </Button>
               </PopoverTrigger>
@@ -225,7 +226,7 @@ export function ProjectFiltersV2({
                     filters.status.length > 0 && "border-muted-foreground bg-muted text-muted-foreground"
                   )}
                 >
-                                      <CheckCircle className={cn("mr-1 h-3 w-3", filters.status.length > 0 ? "text-muted-foreground" : "text-muted-foreground")} />
+                                      <HugeiconsIcon icon={Activity03Icon} className={cn("mr-1 h-3 w-3", filters.status.length > 0 ? "text-muted-foreground" : "text-muted-foreground")} />
                   Status
                   {filters.status.length > 0 && (
                       <Badge variant="secondary" className="ml-1 h-4 px-1 text-xs font-normal bg-muted text-muted-foreground">
@@ -270,7 +271,7 @@ export function ProjectFiltersV2({
                   filters.projectType.length > 0 && "border-muted-foreground bg-muted text-muted-foreground"
                 )}
               >
-                <Tag className={cn("mr-1 h-3 w-3", filters.projectType.length > 0 ? "text-muted-foreground" : "text-muted-foreground")} />
+                <HugeiconsIcon icon={TagIcon} className={cn("mr-1 h-3 w-3", filters.projectType.length > 0 ? "text-muted-foreground" : "text-muted-foreground")} />
                 Type
                 {filters.projectType.length > 0 && (
                   <Badge variant="secondary" className="ml-1 h-4 px-1 text-xs font-normal bg-muted text-muted-foreground">
@@ -314,7 +315,7 @@ export function ProjectFiltersV2({
                   filters.client.length > 0 && "border-muted-foreground bg-muted text-muted-foreground"
                 )}
               >
-                <Users className={cn("mr-1 h-3 w-3", filters.client.length > 0 ? "text-muted-foreground" : "text-muted-foreground")} />
+                <HugeiconsIcon icon={UserIcon} className={cn("mr-1 h-3 w-3", filters.client.length > 0 ? "text-muted-foreground" : "text-muted-foreground")} />
                 Client
                 {filters.client.length > 0 && (
                   <Badge variant="secondary" className="ml-1 h-4 px-1 text-xs font-normal bg-muted text-muted-foreground">
@@ -365,7 +366,7 @@ export function ProjectFiltersV2({
                   filters.timePeriod && "border-muted-foreground bg-muted text-muted-foreground"
                 )}
               >
-                                  <Calendar className={cn("mr-1 h-3 w-3", filters.timePeriod ? "text-muted-foreground" : "text-muted-foreground")} />
+                                  <HugeiconsIcon icon={Calendar01Icon} className={cn("mr-1 h-3 w-3", filters.timePeriod ? "text-muted-foreground" : "text-muted-foreground")} />
                 {filters.timePeriod ? getTimePeriodLabel(filters.timePeriod) : "Period"}
               </Button>
             </PopoverTrigger>
@@ -412,7 +413,7 @@ export function ProjectFiltersV2({
               {!canCreateResource('projects') && (
                 <Button asChild variant="outline" size="sm" className="h-8 text-sm font-normal">
                   <Link href="/pricing">
-                    <Crown className="mr-1 h-3 w-3" />
+                    <HugeiconsIcon icon={Crown02Icon} className="mr-1 h-3 w-3"  />
                     Upgrade to Pro
                   </Link>
                 </Button>
@@ -422,7 +423,7 @@ export function ProjectFiltersV2({
                 className="h-8 text-sm font-normal"
                 disabled={!canCreateResource('projects')}
               >
-                <Plus className="mr-1 h-3 w-3" />
+                <HugeiconsIcon icon={PlusSignIcon} className="mr-1 h-3 w-3"  />
                 Add
               </Button>
             </div>

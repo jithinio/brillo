@@ -1,23 +1,8 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import { ColumnDef } from "@tanstack/react-table"
-import {
-  MoreHorizontal,
-  CheckCircle,
-  Clock,
-  Send,
-  XCircle,
-  FileText,
-  User,
-  Building2,
-  Briefcase,
-  Activity,
-  Calendar,
-  DollarSign,
-  Edit,
-  Check,
-  X,
-} from "lucide-react"
+import { MoreHorizontalIcon, Tick01Icon, ClockIcon, DollarSend01Icon, CancelCircleIcon, DocumentAttachmentIcon, UserIcon, Building02Icon, BriefcaseIcon, ActivityIcon, Calendar01Icon, DollarCircleIcon, Edit03Icon, CancelIcon, Activity03Icon, WorkIcon, MoneyReceiveCircleIcon, CashbackIcon, SentIcon, CheckmarkCircle04Icon } from '@hugeicons/core-free-icons'
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
@@ -75,47 +60,29 @@ function EditablePaymentCell({
   }
 
   return (
-    <div className="min-w-[148px] max-w-[148px] overflow-hidden">
+    <div className="w-[148px] max-w-[148px] overflow-hidden">
       {isEditing ? (
-        <div className="flex items-center gap-1 w-full overflow-hidden">
-          <Input
-            type="number"
-            value={editValue}
-            onChange={(e) => setEditValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-            onBlur={handleSave}
-            className="h-8 text-sm border border-input bg-background px-2 py-1 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex-1 min-w-0"
-            step="0.01"
-            min="0"
-            max={invoice.total_amount || 0}
-            autoFocus
-          />
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={handleSave}
-            className="h-8 w-6 p-0 flex-shrink-0"
-          >
-            <Check className="h-3 w-3" />
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={handleCancel}
-            className="h-8 w-6 p-0 flex-shrink-0"
-          >
-            <X className="h-3 w-3" />
-          </Button>
-        </div>
+        <Input
+          type="number"
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={handleSave}
+          className="h-8 text-sm border border-input bg-background px-2 py-1 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 w-full max-w-full"
+          step="0.01"
+          min="0"
+          max={invoice.total_amount || 0}
+          autoFocus
+        />
       ) : (
         <div 
-          className="cursor-pointer hover:bg-muted rounded px-2 py-1"
+          className="cursor-pointer overflow-hidden flex items-center group/payment"
           onClick={handleEdit}
         >
-          <span className="font-normal text-sm">
+          <span className="font-normal text-sm truncate flex-1 min-w-0">
             {formatCurrency(paymentReceived, invoiceCurrency)}
           </span>
-          <Edit className="ml-1 h-3 w-3 opacity-0 group-hover:opacity-100 inline" />
+          <HugeiconsIcon icon={Edit03Icon} className="ml-1 h-3 w-3 opacity-0 group-hover/payment:opacity-100 flex-shrink-0" />
         </div>
       )}
     </div>
@@ -125,37 +92,37 @@ function EditablePaymentCell({
 const invoiceStatusConfig = {
   draft: {
     label: "Draft",
-    icon: Clock,
+    icon: ClockIcon,
     variant: "outline" as const,
     iconClassName: "text-muted-foreground",
   },
   sent: {
     label: "Sent",
-    icon: Send,
+    icon: SentIcon,
     variant: "outline" as const,
     iconClassName: "text-blue-500",
   },
   partially_paid: {
     label: "Partially Paid",
-    icon: CheckCircle,
+    icon: CheckmarkCircle04Icon,
     variant: "outline" as const,
     iconClassName: "text-yellow-500",
   },
   paid: {
     label: "Paid",
-    icon: CheckCircle,
+    icon: CheckmarkCircle04Icon,
     variant: "outline" as const,
     iconClassName: "text-green-500",
   },
   overdue: {
     label: "Overdue",
-    icon: XCircle,
+    icon: CancelCircleIcon,
     variant: "outline" as const,
     iconClassName: "text-red-500",
   },
   cancelled: {
     label: "Cancelled",
-    icon: XCircle,
+    icon: CancelCircleIcon,
     variant: "outline" as const,
     iconClassName: "text-muted-foreground",
   },
@@ -179,7 +146,7 @@ const FooterCell = ({ value, label }: { value: number | string; label?: string }
 )
 
 const CurrencyFooterCell = ({ value }: { value: number }) => (
-  <div className="text-right font-mono text-sm font-normal text-muted-foreground">
+  <div className="text-right text-sm font-normal text-muted-foreground">
     {formatCurrencyAbbreviated(value)}
   </div>
 )
@@ -251,7 +218,7 @@ export function createInvoiceColumns(columnConfig: InvoiceColumnConfig): ColumnD
     {
       accessorKey: "invoice_number",
       header: ({ column }) => (
-        <SortableHeader column={column} icon={FileText} className="px-0">
+        <SortableHeader column={column} icon={DocumentAttachmentIcon} className="px-0">
           Invoice Number
         </SortableHeader>
       ),
@@ -274,7 +241,7 @@ export function createInvoiceColumns(columnConfig: InvoiceColumnConfig): ColumnD
     {
       accessorKey: "client",
       header: ({ column }) => (
-        <SortableHeader column={column} icon={User} className="px-0">
+        <SortableHeader column={column} icon={UserIcon} className="px-0">
           Client
         </SortableHeader>
       ),
@@ -300,7 +267,7 @@ export function createInvoiceColumns(columnConfig: InvoiceColumnConfig): ColumnD
     {
       accessorKey: "project",
       header: ({ column }) => (
-        <SortableHeader column={column} icon={Briefcase} className="px-0">
+        <SortableHeader column={column} icon={WorkIcon} className="px-0">
           Project
         </SortableHeader>
       ),
@@ -319,7 +286,7 @@ export function createInvoiceColumns(columnConfig: InvoiceColumnConfig): ColumnD
     {
       accessorKey: "status",
       header: ({ column }) => (
-        <SortableHeader column={column} icon={Activity} className="px-0">
+        <SortableHeader column={column} icon={Activity03Icon} className="px-0">
           Status
         </SortableHeader>
       ),
@@ -332,7 +299,7 @@ export function createInvoiceColumns(columnConfig: InvoiceColumnConfig): ColumnD
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Badge variant={config.variant} className="flex items-center space-x-1 cursor-pointer font-normal text-sm whitespace-nowrap">
-                <Icon className={`h-3 w-3 ${config.iconClassName}`} />
+                <HugeiconsIcon icon={Icon} className={`h-3 w-3 ${config.iconClassName}`} />
                 <span>{config.label}</span>
               </Badge>
             </DropdownMenuTrigger>
@@ -345,7 +312,7 @@ export function createInvoiceColumns(columnConfig: InvoiceColumnConfig): ColumnD
                     onClick={() => columnConfig.onStatusChange?.(row.original, key)}
                     disabled={status === key}
                   >
-                    <StatusIcon className={`mr-2 h-3 w-3 ${statusConfig.iconClassName}`} />
+                    <HugeiconsIcon icon={StatusIcon} className={`mr-2 h-3 w-3 ${statusConfig.iconClassName}`} />
                     {statusConfig.label}
                   </DropdownMenuItem>
                 )
@@ -360,7 +327,7 @@ export function createInvoiceColumns(columnConfig: InvoiceColumnConfig): ColumnD
     {
       accessorKey: "total_amount",
       header: ({ column }) => (
-        <SortableHeader column={column} icon={DollarSign} className="px-0">
+        <SortableHeader column={column} icon={DollarCircleIcon} className="px-0">
           Total Amount
         </SortableHeader>
       ),
@@ -390,7 +357,7 @@ export function createInvoiceColumns(columnConfig: InvoiceColumnConfig): ColumnD
     {
       accessorKey: "payment_received",
       header: ({ column }) => (
-        <SortableHeader column={column} icon={DollarSign} className="px-0">
+        <SortableHeader column={column} icon={MoneyReceiveCircleIcon} className="px-0">
           Received
         </SortableHeader>
       ),
@@ -410,7 +377,7 @@ export function createInvoiceColumns(columnConfig: InvoiceColumnConfig): ColumnD
     {
       accessorKey: "balance_due",
       header: ({ column }) => (
-        <SortableHeader column={column} icon={DollarSign} className="px-0">
+        <SortableHeader column={column} icon={CashbackIcon} className="px-0">
           Balance Due
         </SortableHeader>
       ),
@@ -423,8 +390,8 @@ export function createInvoiceColumns(columnConfig: InvoiceColumnConfig): ColumnD
         const isOverdue = invoice.status === 'overdue'
         
         return (
-          <div className="min-w-[120px] max-w-[180px]">
-            <span className={`font-normal text-sm ${isOverdue && balanceDue > 0 ? 'text-red-600' : ''}`}>
+          <div className="min-w-[120px] max-w-[140px] overflow-hidden">
+            <span className={`font-normal text-sm truncate block ${isOverdue && balanceDue > 0 ? 'text-red-600' : ''}`}>
               {formatCurrency(balanceDue, invoiceCurrency)}
             </span>
           </div>
@@ -436,7 +403,7 @@ export function createInvoiceColumns(columnConfig: InvoiceColumnConfig): ColumnD
     {
       accessorKey: "issue_date",
       header: ({ column }) => (
-        <SortableHeader column={column} icon={Calendar} className="px-0">
+        <SortableHeader column={column} icon={Calendar01Icon} className="px-0">
           Issue Date
         </SortableHeader>
       ),
@@ -453,7 +420,7 @@ export function createInvoiceColumns(columnConfig: InvoiceColumnConfig): ColumnD
     {
       accessorKey: "due_date",
       header: ({ column }) => (
-        <SortableHeader column={column} icon={Calendar} className="px-0">
+        <SortableHeader column={column} icon={Calendar01Icon} className="px-0">
           Due Date
         </SortableHeader>
       ),

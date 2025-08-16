@@ -1,5 +1,6 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -12,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { BadgeCheck, MoreVertical, LogOut, Sparkles, Moon, Sun, Monitor, Palette, Settings2, User, CreditCard, Crown, MessageSquare } from "lucide-react"
+import { BadgeIcon, More01Icon, LogoutIcon, SparklesIcon, Moon01Icon, Sun01Icon, ComputerIcon, ColorPickerIcon, Settings01Icon, UserIcon, CreditCardIcon, Crown02Icon, Message01Icon, MoreVerticalCircle01Icon, PaintBoardIcon, LogoutSquare02Icon, Sun03Icon, Moon02Icon } from '@hugeicons/core-free-icons'
 import { useAuth } from "@/components/auth-provider"
 import { useSubscription } from "@/components/providers/subscription-provider"
 import { isProPlan } from "@/lib/subscription-plans"
@@ -80,13 +81,13 @@ export function NavUser() {
   const getThemeIcon = (theme: string | undefined) => {
     switch (theme) {
       case "light":
-        return <Sun className="h-3 w-3" />
+        return <HugeiconsIcon icon={Sun03Icon} className="h-3 w-3"  />
       case "dark":
-        return <Moon className="h-3 w-3" />
+        return <HugeiconsIcon icon={Moon02Icon} className="h-3 w-3"  />
       case "system":
-        return <Monitor className="h-3 w-3" />
+        return <HugeiconsIcon icon={ComputerIcon} className="h-3 w-3"  />
       default:
-        return <Monitor className="h-3 w-3" />
+        return <HugeiconsIcon icon={ComputerIcon} className="h-3 w-3"  />
     }
   }
 
@@ -118,9 +119,9 @@ export function NavUser() {
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold text-foreground">{currentUser.name}</span>
-                <span className="truncate text-xs text-foreground">{currentUser.email}</span>
+                <span className="truncate text-xs text-muted-foreground">{currentUser.email}</span>
               </div>
-              <MoreVertical className="ml-auto h-4 w-4" />
+              <HugeiconsIcon icon={MoreVerticalCircle01Icon} className="ml-auto h-4 w-4"  />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
@@ -135,7 +136,7 @@ export function NavUser() {
               {isProPlan(optimisticPlanId) ? (
                 <DropdownMenuItem asChild>
                   <Link href="/dashboard/settings?tab=subscription" className="cursor-pointer flex items-center">
-                    <CreditCard className="mr-2 h-4 w-4" />
+                    <HugeiconsIcon icon={CreditCardIcon} className="mr-2 h-4 w-4"  />
                     <span className="flex-1">Manage Subscription</span>
                     {isLoading && <Loader size="xs" variant="muted" className="opacity-30" />}
                   </Link>
@@ -143,7 +144,7 @@ export function NavUser() {
               ) : (
                 <DropdownMenuItem asChild>
                   <Link href="/pricing" className="cursor-pointer flex items-center">
-                    <Sparkles className="mr-2 h-4 w-4" />
+                    <HugeiconsIcon icon={SparklesIcon} className="mr-2 h-4 w-4"  />
                     <span className="flex-1">Upgrade to Pro</span>
                     {isLoading && <Loader size="xs" variant="muted" className="opacity-30" />}
                   </Link>
@@ -154,19 +155,19 @@ export function NavUser() {
             <DropdownMenuGroup>
               <DropdownMenuItem asChild>
                 <Link href="/dashboard/profile" className="cursor-pointer">
-                  <User className="mr-2 h-4 w-4" />
+                  <HugeiconsIcon icon={UserIcon} className="mr-2 h-4 w-4"  />
                   Profile
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/dashboard/settings" className="cursor-pointer">
-                  <Settings2 className="mr-2 h-4 w-4" />
+                  <HugeiconsIcon icon={Settings01Icon} className="mr-2 h-4 w-4"  />
                   Settings
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/dashboard/feedback" className="cursor-pointer">
-                  <MessageSquare className="mr-2 h-4 w-4" />
+                  <HugeiconsIcon icon={Message01Icon} className="mr-2 h-4 w-4"  />
                   Feedback
                 </Link>
               </DropdownMenuItem>
@@ -174,7 +175,7 @@ export function NavUser() {
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <div className="flex items-center gap-2 px-2 py-1.5 text-sm">
-                <Palette className="h-4 w-4" />
+                <HugeiconsIcon icon={PaintBoardIcon} className="h-4 w-4"  />
                 <span className="flex-1">Theme</span>
                 <Select value={theme} onValueChange={setTheme}>
                   <SelectTrigger className="h-8 w-28 text-xs">
@@ -186,19 +187,19 @@ export function NavUser() {
                   <SelectContent>
                     <SelectItem value="light">
                       <div className="flex items-center gap-2">
-                        <Sun className="h-3 w-3" />
+                        <HugeiconsIcon icon={Sun03Icon} className="h-3 w-3"  />
                         Light
                       </div>
                     </SelectItem>
                     <SelectItem value="dark">
                       <div className="flex items-center gap-2">
-                        <Moon className="h-3 w-3" />
+                        <HugeiconsIcon icon={Moon02Icon} className="h-3 w-3"  />
                         Dark
                       </div>
                     </SelectItem>
                     <SelectItem value="system">
                       <div className="flex items-center gap-2">
-                        <Monitor className="h-3 w-3" />
+                        <HugeiconsIcon icon={ComputerIcon} className="h-3 w-3"  />
                         System
                       </div>
                     </SelectItem>
@@ -208,7 +209,7 @@ export function NavUser() {
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
-              <LogOut className="mr-2 h-4 w-4" />
+              <HugeiconsIcon icon={LogoutSquare02Icon} className="mr-2 h-4 w-4"  />
               Log out
             </DropdownMenuItem>
           </DropdownMenuContent>

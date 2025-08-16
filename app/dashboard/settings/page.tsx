@@ -1,5 +1,6 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import type React from "react"
 
 import { useState, useEffect, useRef } from "react"
@@ -15,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { PhoneInput } from "@/components/ui/phone-input"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
-import { Save, Upload, AlertTriangle } from "lucide-react"
+import { FloppyDiskIcon, Upload01Icon, Alert01Icon, ImageUploadIcon } from '@hugeicons/core-free-icons'
 import { Badge } from "@/components/ui/badge"
 import { Loader } from "@/components/ui/loader"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -30,7 +31,7 @@ import { DATE_FORMAT_OPTIONS, type DateFormat } from "@/lib/date-format"
 import { clearCurrencyConversionCache } from "@/lib/currency-conversion-cache"
 import { SubscriptionManagement } from "@/components/pricing/subscription-management"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { InfoIcon } from "lucide-react"
+import { InformationCircleIcon } from '@hugeicons/core-free-icons'
 
 export default function SettingsPage() {
   const searchParams = useSearchParams()
@@ -483,7 +484,7 @@ export default function SettingsPage() {
       <PageContent>
         {!isSupabaseConfigured() && (
           <Alert className="mb-6 border-amber-200 bg-amber-50">
-            <InfoIcon className="h-4 w-4 text-amber-600" />
+            <HugeiconsIcon icon={InformationCircleIcon} className="h-4 w-4 text-amber-600"  />
             <AlertTitle className="text-amber-800">Database Not Configured</AlertTitle>
             <AlertDescription className="text-amber-700">
               Settings are saving to localStorage only. For full functionality including cross-device sync, 
@@ -510,7 +511,7 @@ export default function SettingsPage() {
                     {savingGeneral ? (
                       <Loader size="sm" variant="default" className="mr-1.5" />
                     ) : (
-                      <Save className="mr-1.5 h-4 w-4" />
+                      <HugeiconsIcon icon={FloppyDiskIcon} className="mr-1.5 h-4 w-4"  />
                     )}
                     {savingGeneral ? "Saving..." : "Save"}
                   </Button>
@@ -530,7 +531,7 @@ export default function SettingsPage() {
                     <TooltipProvider delayDuration={300}>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <AlertTriangle className="h-5 w-5 text-amber-500 hover:text-amber-600 cursor-help shrink-0" />
+                          <HugeiconsIcon icon={Alert01Icon} className="h-5 w-5 text-amber-500 hover:text-amber-600 cursor-help shrink-0"  />
                         </TooltipTrigger>
                         <TooltipContent side="right" className="max-w-sm" sideOffset={8}>
                           <div className="space-y-2">
@@ -615,7 +616,7 @@ export default function SettingsPage() {
                     {savingCompany ? (
                       <Loader size="sm" variant="default" className="mr-1.5" />
                     ) : (
-                      <Save className="mr-1.5 h-4 w-4" />
+                      <HugeiconsIcon icon={FloppyDiskIcon} className="mr-1.5 h-4 w-4"  />
                     )}
                     {savingCompany ? "Saving..." : "Save"}
                   </Button>
@@ -648,7 +649,7 @@ export default function SettingsPage() {
                         </div>
                       ) : (
                         <div className="w-16 h-16 border-2 border-dashed border-muted-foreground/25 rounded-lg flex items-center justify-center">
-                          <Upload className="h-6 w-6 text-muted-foreground" />
+                          <HugeiconsIcon icon={Upload01Icon} className="h-6 w-6 text-muted-foreground"  />
                         </div>
                       )}
                       <div className="flex-1">
@@ -658,7 +659,7 @@ export default function SettingsPage() {
                                                     {uploading ? (
                         <Loader size="sm" variant="default" className="mr-1.5" />
                       ) : (
-                        <Upload className="mr-1.5 h-4 w-4" />
+                        <HugeiconsIcon icon={ImageUploadIcon} className="mr-1.5 h-4 w-4"  />
                       )}
                               {companyLogo ? "Change Logo" : "Upload Logo"}
                             </span>
@@ -775,7 +776,7 @@ export default function SettingsPage() {
                     {savingTax ? (
                       <Loader size="sm" variant="default" className="mr-1.5" />
                     ) : (
-                      <Save className="mr-1.5 h-4 w-4" />
+                      <HugeiconsIcon icon={FloppyDiskIcon} className="mr-1.5 h-4 w-4"  />
                     )}
                     {savingTax ? "Saving..." : "Save"}
                   </Button>
@@ -943,7 +944,7 @@ export default function SettingsPage() {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-amber-500" />
+                <HugeiconsIcon icon={Alert01Icon} className="h-5 w-5 text-amber-500"  />
                 Confirm Currency Change
               </AlertDialogTitle>
               <AlertDialogDescription asChild>

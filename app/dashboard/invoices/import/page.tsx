@@ -1,8 +1,9 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Upload, Download, CheckCircle, AlertCircle, FileText, Users, Receipt } from "lucide-react"
+import { ArrowLeft01Icon, Upload03Icon, FileDownloadIcon, Tick01Icon, AlertCircleIcon, DocumentAttachmentIcon, Group01Icon } from '@hugeicons/core-free-icons'
 import { Button } from "@/components/ui/button"
 import { Loader } from "@/components/ui/loader"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -430,7 +431,7 @@ export default function InvoiceImportPage() {
         title="Import Invoices"
         action={
           <Button variant="outline" onClick={handleBack} className="gap-2">
-            <ArrowLeft className="h-4 w-4" />
+            <HugeiconsIcon icon={ArrowLeft01Icon} className="h-4 w-4"  />
             Back to Invoices
           </Button>
         }
@@ -443,7 +444,7 @@ export default function InvoiceImportPage() {
             <div className="flex items-center space-x-4">
               <div className={`flex items-center gap-2 ${step === 'upload' ? 'text-blue-600' : step === 'mapping' || step === 'client-confirm' || step === 'importing' || step === 'complete' ? 'text-green-600' : 'text-muted-foreground'}`}>
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step === 'mapping' || step === 'client-confirm' || step === 'importing' || step === 'complete' ? 'bg-green-100 border-2 border-green-600' : 'bg-muted border-2 border-border'}`}>
-                  {step === 'mapping' || step === 'client-confirm' || step === 'importing' || step === 'complete' ? <CheckCircle className="h-4 w-4" /> : '1'}
+                  {step === 'mapping' || step === 'client-confirm' || step === 'importing' || step === 'complete' ? <HugeiconsIcon icon={Tick01Icon} className="h-4 w-4"  /> : '1'}
                 </div>
                 <span className="font-medium">Upload</span>
               </div>
@@ -452,7 +453,7 @@ export default function InvoiceImportPage() {
               
               <div className={`flex items-center gap-2 ${step === 'mapping' ? 'text-blue-600' : step === 'client-confirm' || step === 'importing' || step === 'complete' ? 'text-green-600' : 'text-muted-foreground'}`}>
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step === 'mapping' ? 'bg-blue-100 border-2 border-blue-600' : step === 'client-confirm' || step === 'importing' || step === 'complete' ? 'bg-green-100 border-2 border-green-600' : 'bg-muted border-2 border-border'}`}>
-                  {step === 'client-confirm' || step === 'importing' || step === 'complete' ? <CheckCircle className="h-4 w-4" /> : '2'}
+                  {step === 'client-confirm' || step === 'importing' || step === 'complete' ? <HugeiconsIcon icon={Tick01Icon} className="h-4 w-4"  /> : '2'}
                 </div>
                 <span className="font-medium">Map Fields</span>
               </div>
@@ -461,7 +462,7 @@ export default function InvoiceImportPage() {
               
               <div className={`flex items-center gap-2 ${step === 'importing' ? 'text-blue-600' : step === 'complete' ? 'text-green-600' : 'text-muted-foreground'}`}>
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step === 'importing' ? 'bg-blue-100 border-2 border-blue-600' : step === 'complete' ? 'bg-green-100 border-2 border-green-600' : 'bg-muted border-2 border-border'}`}>
-                  {step === 'complete' ? <CheckCircle className="h-4 w-4" /> : step === 'importing' ? <Loader size="sm" variant="primary" /> : '3'}
+                  {step === 'complete' ? <HugeiconsIcon icon={Tick01Icon} className="h-4 w-4"  /> : step === 'importing' ? <Loader size="sm" variant="primary" /> : '3'}
                 </div>
                 <span className="font-medium">Import</span>
               </div>
@@ -479,7 +480,7 @@ export default function InvoiceImportPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
-                  <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                  <HugeiconsIcon icon={Upload03Icon} className="mx-auto h-12 w-12 text-muted-foreground mb-4"  />
                   <div className="space-y-2">
                     <p className="text-sm text-muted-foreground">
                       Click to select a CSV file or drag and drop
@@ -496,11 +497,11 @@ export default function InvoiceImportPage() {
                 
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <HugeiconsIcon icon={DocumentAttachmentIcon} className="h-4 w-4 text-muted-foreground"  />
                     <span className="text-sm text-muted-foreground">Need a sample file?</span>
                   </div>
                   <Button variant="outline" size="sm" onClick={downloadSample}>
-                    <Download className="mr-2 h-4 w-4" />
+                    <HugeiconsIcon icon={FileDownloadIcon} className="mr-2 h-4 w-4"  />
                     Download Sample
                   </Button>
                 </div>
@@ -514,7 +515,7 @@ export default function InvoiceImportPage() {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Receipt className="h-5 w-5" />
+                    <HugeiconsIcon icon={Document01Icon} className="h-5 w-5"  />
                     Map Invoice Fields
                   </CardTitle>
                   <CardDescription>
@@ -570,7 +571,7 @@ export default function InvoiceImportPage() {
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <Users className="h-5 w-5" />
+                      <HugeiconsIcon icon={Group01Icon} className="h-5 w-5"  />
                       Client Fields (Optional)
                     </CardTitle>
                     <CardDescription>
@@ -639,7 +640,7 @@ export default function InvoiceImportPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
+                  <HugeiconsIcon icon={Group01Icon} className="h-5 w-5"  />
                   Import Clients?
                 </CardTitle>
                 <CardDescription>
@@ -715,7 +716,7 @@ export default function InvoiceImportPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <HugeiconsIcon icon={Tick01Icon} className="h-5 w-5 text-green-600"  />
                   Import Complete
                 </CardTitle>
                 <CardDescription>
@@ -765,7 +766,7 @@ export default function InvoiceImportPage() {
 
                 {errors.length > 0 && (
                   <Alert>
-                    <AlertCircle className="h-4 w-4" />
+                    <HugeiconsIcon icon={AlertCircleIcon} className="h-4 w-4"  />
                     <AlertDescription>
                       <div className="space-y-1">
                         <p className="font-medium">Import Errors:</p>

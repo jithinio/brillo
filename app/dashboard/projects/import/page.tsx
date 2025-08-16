@@ -1,8 +1,9 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Upload, Download, CheckCircle, AlertCircle, FileText, Users, AlertTriangle } from "lucide-react"
+import { ArrowLeft01Icon, Upload03Icon, FileDownloadIcon, CheckmarkCircleIcon, AlertCircleIcon, DocumentAttachmentIcon, Group01Icon, Alert01Icon } from '@hugeicons/core-free-icons'
 import { Button } from "@/components/ui/button"
 import { Loader } from "@/components/ui/loader"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -1661,7 +1662,7 @@ Data Analytics Platform,on_hold,2024-02-15,2024-05-15,18000,3000,15000,USD,parti
         title="Import Projects"
         action={
           <Button variant="outline" onClick={handleBack} className="gap-2">
-            <ArrowLeft className="h-4 w-4" />
+            <HugeiconsIcon icon={ArrowLeft01Icon} className="h-4 w-4"  />
             Back to Projects
           </Button>
         }
@@ -1674,7 +1675,7 @@ Data Analytics Platform,on_hold,2024-02-15,2024-05-15,18000,3000,15000,USD,parti
             <div className="flex items-center space-x-4">
               <div className={`flex items-center gap-2 ${step === 'upload' ? 'text-blue-600' : step === 'mapping' || step === 'client-confirm' || step === 'importing' || step === 'complete' ? 'text-green-600' : 'text-muted-foreground'}`}>
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step === 'mapping' || step === 'client-confirm' || step === 'importing' || step === 'complete' ? 'bg-green-100 border-2 border-green-600' : 'bg-muted border-2 border-border'}`}>
-                  {step === 'mapping' || step === 'client-confirm' || step === 'importing' || step === 'complete' ? <CheckCircle className="h-4 w-4" /> : '1'}
+                  {step === 'mapping' || step === 'client-confirm' || step === 'importing' || step === 'complete' ? <HugeiconsIcon icon={CheckmarkCircleIcon} className="h-4 w-4"  /> : '1'}
                 </div>
                 <span className="font-medium">Upload</span>
               </div>
@@ -1683,7 +1684,7 @@ Data Analytics Platform,on_hold,2024-02-15,2024-05-15,18000,3000,15000,USD,parti
               
               <div className={`flex items-center gap-2 ${step === 'mapping' ? 'text-blue-600' : step === 'client-confirm' || step === 'importing' || step === 'complete' ? 'text-green-600' : 'text-muted-foreground'}`}>
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step === 'mapping' ? 'bg-blue-100 border-2 border-blue-600' : step === 'client-confirm' || step === 'importing' || step === 'complete' ? 'bg-green-100 border-2 border-green-600' : 'bg-muted border-2 border-border'}`}>
-                  {step === 'client-confirm' || step === 'importing' || step === 'complete' ? <CheckCircle className="h-4 w-4" /> : '2'}
+                  {step === 'client-confirm' || step === 'importing' || step === 'complete' ? <HugeiconsIcon icon={CheckmarkCircleIcon} className="h-4 w-4"  /> : '2'}
                 </div>
                 <span className="font-medium">Map Fields</span>
               </div>
@@ -1692,7 +1693,7 @@ Data Analytics Platform,on_hold,2024-02-15,2024-05-15,18000,3000,15000,USD,parti
               
               <div className={`flex items-center gap-2 ${step === 'importing' ? 'text-blue-600' : step === 'complete' ? 'text-green-600' : 'text-muted-foreground'}`}>
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step === 'importing' ? 'bg-blue-100 border-2 border-blue-600' : step === 'complete' ? 'bg-green-100 border-2 border-green-600' : 'bg-muted border-2 border-border'}`}>
-                  {step === 'complete' ? <CheckCircle className="h-4 w-4" /> : step === 'importing' ? <Loader size="sm" variant="primary" /> : '3'}
+                  {step === 'complete' ? <HugeiconsIcon icon={CheckmarkCircleIcon} className="h-4 w-4"  /> : step === 'importing' ? <Loader size="sm" variant="primary" /> : '3'}
                 </div>
                 <span className="font-medium">Import</span>
               </div>
@@ -1710,7 +1711,7 @@ Data Analytics Platform,on_hold,2024-02-15,2024-05-15,18000,3000,15000,USD,parti
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
-                  <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                  <HugeiconsIcon icon={Upload03Icon} className="mx-auto h-12 w-12 text-muted-foreground mb-4"  />
                   <div className="space-y-2">
                     <p className="text-sm text-muted-foreground">
                       Click to select a CSV file or drag and drop
@@ -1727,11 +1728,11 @@ Data Analytics Platform,on_hold,2024-02-15,2024-05-15,18000,3000,15000,USD,parti
                 
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <HugeiconsIcon icon={DocumentAttachmentIcon} className="h-4 w-4 text-muted-foreground"  />
                     <span className="text-sm text-muted-foreground">Need a sample file?</span>
                   </div>
                   <Button variant="outline" size="sm" onClick={downloadSample}>
-                    <Download className="mr-2 h-4 w-4" />
+                    <HugeiconsIcon icon={FileDownloadIcon} className="mr-2 h-4 w-4"  />
                     Download Sample
                   </Button>
                 </div>
@@ -1818,7 +1819,7 @@ Data Analytics Platform,on_hold,2024-02-15,2024-05-15,18000,3000,15000,USD,parti
                             </p>
                             {hasWarning && (
                               <p className="text-xs text-orange-600 mt-1 flex items-center gap-1">
-                                <AlertTriangle className="h-3 w-3" />
+                                <HugeiconsIcon icon={Alert01Icon} className="h-3 w-3"  />
                                 {warningMessage}
                               </p>
                             )}
@@ -1863,7 +1864,7 @@ Data Analytics Platform,on_hold,2024-02-15,2024-05-15,18000,3000,15000,USD,parti
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5" />
+                    <HugeiconsIcon icon={Group01Icon} className="h-5 w-5"  />
                     Client Fields (Optional)
                   </CardTitle>
                   <CardDescription>
@@ -1986,7 +1987,7 @@ Data Analytics Platform,on_hold,2024-02-15,2024-05-15,18000,3000,15000,USD,parti
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
+                  <HugeiconsIcon icon={Group01Icon} className="h-5 w-5"  />
                   Import Clients?
                 </CardTitle>
                 <CardDescription>
@@ -2060,7 +2061,7 @@ Data Analytics Platform,on_hold,2024-02-15,2024-05-15,18000,3000,15000,USD,parti
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                  <HugeiconsIcon icon={Alert01Icon} className="h-5 w-5 text-yellow-500"  />
                   Duplicate Records Detected
                 </CardTitle>
                 <CardDescription>
@@ -2071,7 +2072,7 @@ Data Analytics Platform,on_hold,2024-02-15,2024-05-15,18000,3000,15000,USD,parti
                 {duplicateInfo.projects.duplicates.length > 0 && (
                   <div className="space-y-3">
                     <h3 className="font-medium flex items-center gap-2">
-                      <AlertCircle className="h-4 w-4 text-orange-500" />
+                      <HugeiconsIcon icon={AlertCircleIcon} className="h-4 w-4 text-orange-500"  />
                       Duplicate Projects ({duplicateInfo.projects.duplicates.length})
                     </h3>
                     <div className="bg-orange-50 p-3 rounded-md">
@@ -2098,7 +2099,7 @@ Data Analytics Platform,on_hold,2024-02-15,2024-05-15,18000,3000,15000,USD,parti
                 {duplicateInfo.clients.duplicates.length > 0 && (
                   <div className="space-y-3">
                     <h3 className="font-medium flex items-center gap-2">
-                      <AlertCircle className="h-4 w-4 text-blue-500" />
+                      <HugeiconsIcon icon={AlertCircleIcon} className="h-4 w-4 text-blue-500"  />
                       Duplicate Clients ({duplicateInfo.clients.duplicates.length})
                     </h3>
                     <div className="bg-blue-50 p-3 rounded-md">
@@ -2209,7 +2210,7 @@ Data Analytics Platform,on_hold,2024-02-15,2024-05-15,18000,3000,15000,USD,parti
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <HugeiconsIcon icon={CheckmarkCircleIcon} className="h-5 w-5 text-green-600"  />
                   Import Complete
                 </CardTitle>
                 <CardDescription>
@@ -2259,7 +2260,7 @@ Data Analytics Platform,on_hold,2024-02-15,2024-05-15,18000,3000,15000,USD,parti
 
                 {errors.length > 0 && (
                   <Alert>
-                    <AlertCircle className="h-4 w-4" />
+                    <HugeiconsIcon icon={AlertCircleIcon} className="h-4 w-4"  />
                     <AlertDescription>
                       <div className="space-y-1">
                         <p className="font-medium">Import Errors:</p>

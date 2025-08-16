@@ -1,15 +1,11 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import * as React from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { 
-  AlertCircle,
-  Trash2,
-  Check,
-  ChevronsUpDown,
-} from "lucide-react"
+import { AlertCircleIcon, Delete01Icon, Tick01Icon, ChevronUpDownIcon, Icon } from '@hugeicons/core-free-icons'
 import {
   Dialog,
   DialogContent,
@@ -68,15 +64,7 @@ import {
   ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu"
-import { 
-  Edit, 
-  FileText, 
-  CheckCircle, 
-  Clock, 
-  Pause, 
-  XCircle, 
-  GitBranch 
-} from "lucide-react"
+import { Edit03Icon, Document01Icon, CheckmarkCircleIcon, ClockIcon, PauseIcon, CancelCircleIcon, GitBranchIcon } from '@hugeicons/core-free-icons'
 
 // Import the existing FinalDataTable component
 import { FinalDataTable } from "./FinalDataTable"
@@ -241,6 +229,10 @@ export function ProjectsTableWrapper({
     hasNextPage,
     loadMore,
     updateStatus,
+    updateBudget,
+    updateExpenses,
+    updateReceived,
+    updateActualHours,
     refetch,
     forceRefresh,
   } = useInfiniteProjects(finalFilters)
@@ -620,6 +612,18 @@ export function ProjectsTableWrapper({
       },
       onStatusChange: (project: any, status: string) => {
         updateStatus({ id: project.id, status })
+      },
+      onBudgetUpdate: (project: any, budget: number) => {
+        updateBudget({ id: project.id, budget })
+      },
+      onExpensesUpdate: (project: any, expenses: number) => {
+        updateExpenses({ id: project.id, expenses })
+      },
+      onReceivedUpdate: (project: any, received: number) => {
+        updateReceived({ id: project.id, received })
+      },
+      onActualHoursUpdate: (project: any, actualHours: number) => {
+        updateActualHours({ id: project.id, actualHours })
       },
       onDateChange: async (project: any, field: 'start_date' | 'due_date', date: Date | undefined) => {
         try {
@@ -1434,7 +1438,7 @@ export function ProjectsTableWrapper({
     return (
       <div className="container mx-auto px-4 py-6">
         <div className="text-center py-12">
-          <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
+          <HugeiconsIcon icon={AlertCircleIcon} className="w-12 h-12 text-destructive mx-auto mb-4"  />
           <h3 className="text-lg font-semibold mb-2">Failed to load projects</h3>
           <p className="text-muted-foreground mb-4">{error ? error.message : 'An error occurred'}</p>
           <Button onClick={() => refetch()}>Try Again</Button>

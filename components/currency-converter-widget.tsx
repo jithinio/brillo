@@ -1,7 +1,8 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import { useState, useEffect, useCallback, useRef } from "react"
-import { X, ArrowUpDown, Copy, Move } from "lucide-react"
+import { CancelIcon, ArrowUpDownIcon, CopyIcon, MoveIcon } from '@hugeicons/core-free-icons'
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -225,7 +226,7 @@ export function CurrencyConverterWidget({
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Move className="h-4 w-4 text-muted-foreground/60" />
+              <HugeiconsIcon icon={MoveIcon} className="h-4 w-4 text-muted-foreground/60"  />
               <h3 className="font-medium text-sm text-foreground/90">Currency Converter</h3>
             </div>
             <Button
@@ -234,7 +235,7 @@ export function CurrencyConverterWidget({
               className="h-7 w-7 p-0 rounded-md hover:bg-destructive/10 hover:text-destructive transition-colors"
               onClick={onClose}
             >
-              <X className="h-3.5 w-3.5" />
+              <HugeiconsIcon icon={CancelIcon} className="h-3.5 w-3.5"  />
             </Button>
           </div>
         </CardHeader>
@@ -269,7 +270,7 @@ export function CurrencyConverterWidget({
                 onClick={handleSwapCurrencies}
                 className="h-6 w-6 p-0 rounded-full border-muted-foreground/20 hover:border-primary hover:bg-primary/5 transition-colors"
               >
-                <ArrowUpDown className="h-3 w-3" />
+                <HugeiconsIcon icon={ArrowUpDownIcon} className="h-3 w-3"  />
               </Button>
             </div>
 
@@ -295,7 +296,7 @@ export function CurrencyConverterWidget({
                       className="absolute right-1 top-0.5 h-7 w-7 p-0 hover:bg-green-100 rounded-md"
                       onClick={handleCopyAmount}
                     >
-                      <Copy className="h-3 w-3" />
+                      <HugeiconsIcon icon={CopyIcon} className="h-3 w-3"  />
                     </Button>
                   )}
                 </div>

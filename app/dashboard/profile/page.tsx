@@ -1,5 +1,6 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import type React from "react"
 
 import { useState, useEffect } from "react"
@@ -12,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Save, Edit, Camera, AlertCircle, Shield, Trash2 } from "lucide-react"
+import { FloppyDiskIcon, Edit03Icon, CameraIcon, AlertCircleIcon, ShieldIcon, Delete01Icon } from '@hugeicons/core-free-icons'
 import { useAuth } from "@/components/auth-provider"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { useClients } from "@/hooks/use-clients"
@@ -45,7 +46,7 @@ export default function ProfilePage() {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isSupabaseReady, setIsSupabaseReady] = useState(false)
-  const { user } = useAuth()
+  const { user, updatePassword } = useAuth()
 
 
   const [profile, setProfile] = useState<Profile>({
@@ -373,8 +374,26 @@ export default function ProfilePage() {
     }
 
     try {
-      // In a real app, you would send this to your backend API
-      // await api.updatePassword(securitySettings.currentPassword, securitySettings.newPassword)
+      // First verify the current password by attempting to sign in
+      if (user?.email) {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: user.email,
+          password: securitySettings.currentPassword
+        })
+
+        if (signInError) {
+          toast.error("Current password is incorrect")
+          return
+        }
+      }
+
+      // Update the password using the auth provider
+      const { error } = await updatePassword(securitySettings.newPassword)
+
+      if (error) {
+        toast.error(error.message || "Failed to update password")
+        return
+      }
       
       // Clear password fields
       setSecuritySettings({
@@ -571,13 +590,13 @@ export default function ProfilePage() {
                   Cancel
                 </Button>
                 <Button size="sm" onClick={updateProfile} disabled={saving}>
-                  {saving ? <Loader size="sm" variant="default" className="mr-1.5" /> : <Save className="mr-1.5 h-4 w-4" />}
+                  {saving ? <Loader size="sm" variant="default" className="mr-1.5" /> : <HugeiconsIcon icon={FloppyDiskIcon} className="mr-1.5 h-4 w-4"  />}
                   Save Changes
                 </Button>
               </>
             ) : (
               <Button size="sm" onClick={() => setIsEditing(true)}>
-                <Edit className="mr-1.5 h-4 w-4" />
+                                  <HugeiconsIcon icon={Edit03Icon} className="mr-1.5 h-4 w-4" />
                 Edit Profile
               </Button>
             )}
@@ -587,7 +606,7 @@ export default function ProfilePage() {
       <PageContent>
         {error && (
           <Alert>
-            <AlertCircle className="h-4 w-4" />
+            <HugeiconsIcon icon={AlertCircleIcon} className="h-4 w-4"  />
             <AlertDescription>
               {error}. Your changes will be saved locally and synced when the database is available.
             </AlertDescription>
@@ -613,7 +632,7 @@ export default function ProfilePage() {
                     <div className="absolute bottom-0 right-0">
                       <Label htmlFor="avatar-upload" className="cursor-pointer">
                         <div className="flex items-center justify-center w-8 h-8 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors">
-                          {uploading ? <Loader size="sm" variant="default" /> : <Camera className="h-4 w-4" />}
+                          {uploading ? <Loader size="sm" variant="default" /> : <HugeiconsIcon icon={CameraIcon} className="h-4 w-4"  />}
                         </div>
                       </Label>
                       <Input
@@ -797,7 +816,7 @@ export default function ProfilePage() {
             <Card className="mt-6">
               <CardHeader>
                 <CardTitle className="flex items-center">
-                  <Shield className="mr-2 h-5 w-5" />
+                  <HugeiconsIcon icon={ShieldIcon} className="mr-2 h-5 w-5"  />
                   Security Settings
                 </CardTitle>
                 <CardDescription>Change your account password and security settings.</CardDescription>
@@ -842,7 +861,7 @@ export default function ProfilePage() {
             <Card className="mt-6 border-destructive/20">
               <CardHeader>
                 <CardTitle className="flex items-center text-destructive">
-                  <Trash2 className="mr-2 h-5 w-5" />
+                  <HugeiconsIcon icon={Delete01Icon} className="mr-2 h-5 w-5"  />
                   Danger Zone
                 </CardTitle>
                 <CardDescription>
@@ -872,7 +891,7 @@ export default function ProfilePage() {
                   onClick={handleDeleteAccount}
                   className="text-white hover:text-white"
                 >
-                  <Trash2 className="mr-1.5 h-4 w-4 text-white" />
+                  <HugeiconsIcon icon={Delete01Icon} className="mr-1.5 h-4 w-4 text-white"  />
                   Delete Account
                 </Button>
               </CardContent>
@@ -885,7 +904,7 @@ export default function ProfilePage() {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle className="flex items-center gap-2 text-destructive">
-                <Trash2 className="h-5 w-5" />
+                <HugeiconsIcon icon={Delete01Icon} className="h-5 w-5"  />
                 Delete Account
               </AlertDialogTitle>
               <AlertDialogDescription asChild>
@@ -936,7 +955,7 @@ export default function ProfilePage() {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle className="flex items-center gap-2 text-destructive">
-                <Trash2 className="h-5 w-5" />
+                <HugeiconsIcon icon={Delete01Icon} className="h-5 w-5"  />
                 Confirm Account Deletion
               </AlertDialogTitle>
               <AlertDialogDescription asChild>
@@ -1014,7 +1033,7 @@ export default function ProfilePage() {
                   </>
                 ) : (
                   <>
-                    <Trash2 className="mr-1.5 h-4 w-4 text-white" />
+                    <HugeiconsIcon icon={Delete01Icon} className="mr-1.5 h-4 w-4 text-white"  />
                     Delete Account Permanently
                   </>
                 )}

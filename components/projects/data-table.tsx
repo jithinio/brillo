@@ -1,5 +1,6 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import * as React from "react"
 import {
   type ColumnDef,
@@ -13,7 +14,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { ChevronDown, Search, Settings2, Edit, FileText, Trash2, CheckCircle, Clock, Pause, XCircle, Plus } from "lucide-react"
+import { ArrowDown01Icon, SearchIcon, Settings01Icon, Edit03Icon, Document01Icon, Delete01Icon, CheckmarkCircleIcon, ClockIcon, PauseIcon, CancelCircleIcon, PlusSignIcon, Activity03Icon } from '@hugeicons/core-free-icons'
 
 import { Button } from "@/components/ui/button"
 import { Loader } from "@/components/ui/loader"
@@ -40,7 +41,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { AlertTriangle } from "lucide-react"
+import { Alert01Icon } from '@hugeicons/core-free-icons'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -224,7 +225,7 @@ export function DataTable<TData, TValue>({ columns, data, onAddProject, onBatchD
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <div className="relative">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                          <HugeiconsIcon icon={SearchIcon} className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground"  />
             <Input
               placeholder="Search projects..."
               value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
@@ -235,7 +236,7 @@ export function DataTable<TData, TValue>({ columns, data, onAddProject, onBatchD
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
-                <Settings2 className="mr-1.5 h-4 w-4" />
+                <HugeiconsIcon icon={Settings01Icon} className="mr-1.5 h-4 w-4"  />
                 <span className="hidden lg:inline">View</span>
                 <span className="lg:hidden">View</span>
               </Button>
@@ -292,7 +293,7 @@ export function DataTable<TData, TValue>({ columns, data, onAddProject, onBatchD
               className="bg-red-100 text-red-600 hover:bg-red-200 rounded-full"
               onClick={handleBatchDelete}
             >
-              <Trash2 className="h-3.5 w-3.5" />
+              <HugeiconsIcon icon={Delete01Icon} className="h-3.5 w-3.5"  />
             </Button>
           )}
           <Button 
@@ -306,7 +307,7 @@ export function DataTable<TData, TValue>({ columns, data, onAddProject, onBatchD
             }}
             title="Add Project"
           >
-            <Plus className="h-3.5 w-3.5" />
+            <HugeiconsIcon icon={PlusSignIcon} className="h-3.5 w-3.5"  />
           </Button>
         </div>
       </div>
@@ -388,38 +389,38 @@ export function DataTable<TData, TValue>({ columns, data, onAddProject, onBatchD
                         {/* Status Change Submenu */}
                         <ContextMenuSub>
                           <ContextMenuSubTrigger>
-                            <CheckCircle className="mr-1.5 h-4 w-4" />
+                            <HugeiconsIcon icon={Activity03Icon} className="mr-1.5 h-4 w-4"  />
                             Change Status
                           </ContextMenuSubTrigger>
                           <ContextMenuSubContent>
                             <ContextMenuItem 
                               onClick={() => contextActions.onStatusChange(row.original, 'active')}
                             >
-                              <Clock className="mr-1.5 h-4 w-4 text-blue-500" />
+                              <HugeiconsIcon icon={ClockIcon} className="mr-1.5 h-4 w-4 text-blue-500"  />
                               Active
                             </ContextMenuItem>
                             <ContextMenuItem 
                               onClick={() => contextActions.onStatusChange(row.original, 'completed')}
                             >
-                              <CheckCircle className="mr-1.5 h-4 w-4 text-green-500" />
+                              <HugeiconsIcon icon={CheckmarkCircleIcon} className="mr-1.5 h-4 w-4 text-green-500"  />
                               Completed
                             </ContextMenuItem>
                             <ContextMenuItem 
                               onClick={() => contextActions.onStatusChange(row.original, 'on_hold')}
                             >
-                              <Pause className="mr-1.5 h-4 w-4 text-amber-500" />
+                              <HugeiconsIcon icon={PauseIcon} className="mr-1.5 h-4 w-4 text-amber-500"  />
                               On Hold
                             </ContextMenuItem>
                             <ContextMenuItem 
                               onClick={() => contextActions.onStatusChange(row.original, 'cancelled')}
                             >
-                              <XCircle className="mr-1.5 h-4 w-4 text-rose-500" />
+                              <HugeiconsIcon icon={CancelCircleIcon} className="mr-1.5 h-4 w-4 text-rose-500"  />
                               Cancelled
                             </ContextMenuItem>
                             <ContextMenuItem 
                               onClick={() => contextActions.onStatusChange(row.original, 'due')}
                             >
-                              <Clock className="mr-1.5 h-4 w-4 text-orange-500" />
+                              <HugeiconsIcon icon={ClockIcon} className="mr-1.5 h-4 w-4 text-orange-500"  />
                               Due
                             </ContextMenuItem>
                           </ContextMenuSubContent>
@@ -430,7 +431,7 @@ export function DataTable<TData, TValue>({ columns, data, onAddProject, onBatchD
                           onClick={() => contextActions.onDeleteProject(row.original)}
                           className="text-red-600"
                         >
-                          <Trash2 className="mr-1.5 h-4 w-4" />
+                          <HugeiconsIcon icon={Delete01Icon} className="mr-1.5 h-4 w-4"  />
                           Delete Project
                         </ContextMenuItem>
                       </ContextMenuContent>

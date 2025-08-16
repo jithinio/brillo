@@ -10,17 +10,6 @@ import {
   type Client 
 } from '@/hooks/use-unified-projects'
 
-export interface DateRange {
-  start: Date
-  end: Date
-}
-
-export interface AnalyticsFilters {
-  dateRange?: DateRange
-  clientIds?: string[]
-  projectStatuses?: string[]
-}
-
 interface AnalyticsData {
   projects: Project[]
   clients: Client[]
@@ -53,6 +42,7 @@ const getFromCache = (): CachedData | null => {
     
     return parsed
   } catch {
+    // Cache failed, continue without caching
     return null
   }
 }
@@ -74,267 +64,6 @@ export const useAnalyticsData = (filters?: AnalyticsFilters) => {
   return useUnifiedAnalyticsData(filters)
 }
 
-  // Ref to track if we should trigger refresh
-  const refreshTriggerRef = useRef<(() => void) | null>(null)
-  
-  // Performance monitoring
-  const { trackRefresh, metrics: performanceMetrics } = useAnalyticsPerformance()
-
-  // Fetch projects with client data
-  const fetchProjects = useCallback(async (): Promise<Project[]> => {
-    const { data, error } = await supabase
-      .from('projects')
-      .select(`
-        id,
-        name,
-        budget,
-        total_budget,
-        revenue,
-        expenses,
-        payment_received,
-        payment_pending,
-        start_date,
-        due_date,
-        created_at,
-        status,
-        pipeline_stage,
-        client_id,
-        clients (
-          id,
-          name,
-          company,
-          created_at
-        )
-      `)
-      .not('status', 'is', null) // Exclude lost projects (which have status=null)
-      .order('created_at', { ascending: false })
-
-    if (error) {
-      throw new Error(`Failed to fetch projects: ${error.message}`)
-    }
-
-    // Transform the data to match our interface and exclude lost projects
-    const transformedData = (data || [])
-      .filter(project => 
-        project.status !== null && // Additional check for lost projects
-        (project as any).pipeline_stage !== 'lost' // Exclude lost pipeline stage
-      )
-      .map(project => ({
-        ...project,
-        clients: project.clients && project.clients.length > 0 ? project.clients[0] : undefined
-      }))
-
-    // Check for budget data
-    const projectsWithBudgets = transformedData.filter(p => (p.budget || 0) > 0 || (p.total_budget || 0) > 0)
-    if (transformedData.length > 0 && projectsWithBudgets.length === 0) {
-      console.warn('⚠️ Analytics: No projects have budget values')
-    }
-
-    return transformedData
-  }, [])
-
-  // Fetch clients with project count
-  const fetchClients = useCallback(async (): Promise<Client[]> => {
-    const { data, error } = await supabase
-      .from('clients')
-      .select(`
-        id,
-        name,
-        company,
-        created_at
-      `)
-      .order('created_at', { ascending: false })
-
-    if (error) {
-      throw new Error(`Failed to fetch clients: ${error.message}`)
-    }
-
-    return data || []
-  }, [])
-
-  // Main data fetching function
-  const fetchAnalyticsData = useCallback(async (useCache: boolean = true) => {
-    const startTime = performance.now()
-    
-    try {
-      // Try cache first
-      if (useCache) {
-        const cached = getFromCache()
-        if (cached) {
-          const endTime = performance.now()
-          trackRefresh(startTime, endTime, true) // Cache hit
-          
-          setAnalyticsData(prev => ({
-            ...prev,
-            ...cached.data,
-            isLoading: false,
-            error: null,
-            lastUpdated: new Date(cached.timestamp)
-          }))
-          return
-        }
-      }
-
-      setAnalyticsData(prev => ({ ...prev, isLoading: true, error: null }))
-
-      // Fetch fresh data
-      const [projects, clients] = await Promise.all([
-        fetchProjects(),
-        fetchClients()
-      ])
-
-      const newData = { projects, clients }
-      
-      // Cache the fresh data
-      setToCache(newData)
-
-      const endTime = performance.now()
-      trackRefresh(startTime, endTime, false) // Cache miss
-
-      setAnalyticsData({
-        ...newData,
-        isLoading: false,
-        error: null,
-        lastUpdated: new Date()
-      })
-    } catch (error) {
-      const endTime = performance.now()
-      trackRefresh(startTime, endTime, false) // Error case
-      
-      console.error('Analytics data fetch error:', error)
-      setAnalyticsData(prev => ({
-        ...prev,
-        isLoading: false,
-        error: error instanceof Error ? error.message : 'Failed to fetch analytics data'
-      }))
-    }
-  }, [fetchProjects, fetchClients, trackRefresh])
-
-  // Filtered data based on filters
-  const filteredData = useMemo(() => {
-    let filteredProjects = analyticsData.projects
-    let filteredClients = analyticsData.clients
-
-    if (filters?.dateRange) {
-      filteredProjects = filteredProjects.filter(project => {
-        const projectDate = new Date(project.start_date || project.created_at)
-        return projectDate >= filters.dateRange!.start && projectDate <= filters.dateRange!.end
-      })
-    }
-
-    if (filters?.clientIds && filters.clientIds.length > 0) {
-      filteredProjects = filteredProjects.filter(project => 
-        project.client_id && filters.clientIds!.includes(project.client_id)
-      )
-      filteredClients = filteredClients.filter(client =>
-        filters.clientIds!.includes(client.id)
-      )
-    }
-
-    if (filters?.projectStatuses && filters.projectStatuses.length > 0) {
-      filteredProjects = filteredProjects.filter(project =>
-        filters.projectStatuses!.includes(project.status)
-      )
-    }
-
-    return {
-      projects: filteredProjects,
-      clients: filteredClients
-    }
-  }, [analyticsData.projects, analyticsData.clients, filters])
-
-  // Force refresh function
-  const refreshData = useCallback(() => {
-    fetchAnalyticsData(false)
-  }, [fetchAnalyticsData])
-
-  // Set up the refresh trigger ref
-  useEffect(() => {
-    refreshTriggerRef.current = refreshData
-  }, [refreshData])
-
-  // Use the advanced analytics cache system
-  const { refreshAnalytics } = useAnalyticsCache({
-    enableRealTimeUpdates: true,
-    debounceMs: 800, // Faster response
-    onCacheInvalidated: () => {
-      // Trigger a fresh fetch when cache is invalidated
-      refreshTriggerRef.current?.()
-    }
-  })
-
-  // Use optimistic updates for immediate feedback
-  const { optimisticCreateProject, optimisticUpdateProject, optimisticDeleteProject } = useAnalyticsOptimistic({
-    onOptimisticUpdate: (change) => {
-      // Apply optimistic changes to local state for immediate UI feedback
-      if (change.operation === 'create' && change.changes) {
-        setAnalyticsData(prev => ({
-          ...prev,
-          projects: [...prev.projects, change.changes as Project]
-        }))
-      } else if (change.operation === 'update') {
-        setAnalyticsData(prev => ({
-          ...prev,
-          projects: prev.projects.map(p => 
-            p.id === change.id ? { ...p, ...change.changes } : p
-          )
-        }))
-      } else if (change.operation === 'delete') {
-        setAnalyticsData(prev => ({
-          ...prev,
-          projects: prev.projects.filter(p => p.id !== change.id)
-        }))
-      }
-    }
-  })
-
-  // Initial data fetch
-  useEffect(() => {
-    fetchAnalyticsData()
-  }, [fetchAnalyticsData])
-
-  // Note: Real-time updates are now handled by useAnalyticsCache hook above
-
-  // Periodic refresh (every 10 minutes as fallback) - reduced frequency
-  useEffect(() => {
-    const interval = setInterval(() => {
-      // Only refresh if the page is visible to avoid unnecessary requests
-      if (document.visibilityState === 'visible') {
-        fetchAnalyticsData(false)
-      }
-    }, 10 * 60 * 1000) // Increased from 5 to 10 minutes
-
-    return () => clearInterval(interval)
-  }, [fetchAnalyticsData])
-
-  return {
-    // Original data
-    projects: analyticsData.projects,
-    clients: analyticsData.clients,
-    
-    // Filtered data
-    filteredProjects: filteredData.projects,
-    filteredClients: filteredData.clients,
-    
-    // State
-    isLoading: analyticsData.isLoading,
-    error: analyticsData.error,
-    lastUpdated: analyticsData.lastUpdated,
-    
-    // Actions
-    refreshData,
-    refreshAnalytics,
-    
-    // Optimistic updates
-    optimisticCreateProject,
-    optimisticUpdateProject,
-    optimisticDeleteProject,
-    
-    // Performance metrics
-    performanceMetrics
-  }
-}
-
 // Hook for quick metrics without filters
 export const useQuickAnalytics = () => {
   const { projects, clients, isLoading, error } = useAnalyticsData()
@@ -354,35 +83,31 @@ export const useQuickAnalytics = () => {
       p.status !== 'cancelled' && 
       (p as any).pipeline_stage !== 'lost'
     )
-    
-    const totalRevenue = activeProjects.reduce((sum, project) => {
-      if (project.status === 'on hold' || project.status === 'cancelled') {
-        return sum + (project.payment_received || 0)
-      }
-      return sum + (project.budget || project.total_budget || project.revenue || 0)
-    }, 0)
 
-    const totalExpenses = activeProjects.reduce((sum, project) => {
-      return sum + (project.expenses || 0)
-    }, 0)
+    const totalRevenue = activeProjects.reduce((sum, p) => 
+      sum + ((p.payment_received || 0) + (p.payment_pending || 0)), 0
+    )
 
-    const activeClients = new Set(
-      activeProjects
-        .map(p => p.client_id)
-        .filter(Boolean)
-    ).size
+    const totalExpenses = activeProjects.reduce((sum, p) => 
+      sum + (p.expenses || 0), 0
+    )
+
+    const activeClientIds = new Set(activeProjects.map(p => p.client_id).filter(Boolean))
 
     return {
       totalProjects: activeProjects.length,
       totalRevenue,
       totalExpenses,
-      activeClients
+      activeClients: activeClientIds.size
     }
-  }, [projects, isLoading])
+  }, [projects, clients, isLoading])
 
   return {
-    metrics,
+    ...metrics,
     isLoading,
     error
   }
-} 
+}
+
+// Import required hooks from React
+import { useMemo } from 'react'

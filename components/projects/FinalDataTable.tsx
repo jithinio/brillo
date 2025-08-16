@@ -1,11 +1,12 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import * as React from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Loader } from "@/components/ui/loader"
 import { Button } from "@/components/ui/button"
-import { Trash2 } from "lucide-react"
+import { Delete01Icon } from '@hugeicons/core-free-icons'
 import {
   ContextMenu,
   ContextMenuContent,
@@ -16,17 +17,7 @@ import {
   ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu"
-import { 
-  Edit, 
-  FileText, 
-  CheckCircle, 
-  Clock, 
-  Pause, 
-  XCircle, 
-  GitBranch,
-  Check,
-  Copy
-} from "lucide-react"
+import { Edit03Icon, DocumentAttachmentIcon, CheckmarkCircleIcon, ClockIcon, PauseIcon, CancelCircleIcon, GitBranchIcon, Tick02Icon, CopyIcon, Activity03Icon, AddInvoiceIcon, FilterIcon } from '@hugeicons/core-free-icons'
 import { toast } from "sonner"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { formatCurrencyAbbreviated } from "../../lib/currency-utils"
@@ -321,7 +312,7 @@ function FinalDataTableComponent({
                   onClick={() => onBatchDelete(selectedProjects)}
                   className="h-7 px-3 text-xs text-white"
                 >
-                  <Trash2 className="mr-1 h-3 w-3" />
+                  <HugeiconsIcon icon={Delete01Icon} className="mr-1 h-3 w-3"  />
                   Delete
                 </Button>
               </div>
@@ -477,11 +468,11 @@ function FinalDataTableComponent({
                       </ContextMenuTrigger>
                       <ContextMenuContent className="w-48">
                         <ContextMenuItem onClick={() => onEditProject(project)}>
-                          <Edit className="mr-2 h-4 w-4" />
+                          <HugeiconsIcon icon={Edit03Icon} className="mr-2 h-4 w-4"  />
                           Edit Project
                         </ContextMenuItem>
                         <ContextMenuItem onClick={() => onDuplicateProject(project)}>
-                          <Copy className="mr-2 h-4 w-4" />
+                          <HugeiconsIcon icon={CopyIcon} className="mr-2 h-4 w-4"  />
                           Duplicate Project
                         </ContextMenuItem>
                         <ContextMenuItem onClick={() => {
@@ -489,50 +480,50 @@ function FinalDataTableComponent({
                             description: "This feature will be available soon"
                           })
                         }}>
-                          <FileText className="mr-2 h-4 w-4" />
+                          <HugeiconsIcon icon={AddInvoiceIcon} className="mr-2 h-4 w-4"  />
                           Create Invoice
                         </ContextMenuItem>
                         <ContextMenuSeparator />
                         <ContextMenuSub>
                           <ContextMenuSubTrigger>
-                            <GitBranch className="mr-2 h-4 w-4" />
+                            <HugeiconsIcon icon={Activity03Icon} className="mr-2 h-4 w-4"  />
                             Change Status
                           </ContextMenuSubTrigger>
                           <ContextMenuSubContent>
                             <ContextMenuItem onClick={() => {
                               updateStatus({ id: project.id, status: 'active' })
                             }}>
-                              <Clock className="mr-2 h-4 w-4 text-blue-500" />
+                              <HugeiconsIcon icon={ClockIcon} className="mr-2 h-4 w-4 text-blue-500"  />
                               Active
                             </ContextMenuItem>
                             <ContextMenuItem onClick={() => {
                               updateStatus({ id: project.id, status: 'completed' })
                             }}>
-                              <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
+                              <HugeiconsIcon icon={CheckmarkCircleIcon} className="mr-2 h-4 w-4 text-green-500"  />
                               Completed
                             </ContextMenuItem>
                             <ContextMenuItem onClick={() => {
                               updateStatus({ id: project.id, status: 'on_hold' })
                             }}>
-                              <Pause className="mr-2 h-4 w-4 text-amber-500" />
+                              <HugeiconsIcon icon={PauseIcon} className="mr-2 h-4 w-4 text-amber-500"  />
                               On Hold
                             </ContextMenuItem>
                             <ContextMenuItem onClick={() => {
                               updateStatus({ id: project.id, status: 'cancelled' })
                             }}>
-                              <XCircle className="mr-2 h-4 w-4 text-rose-500" />
+                              <HugeiconsIcon icon={CancelCircleIcon} className="mr-2 h-4 w-4 text-rose-500"  />
                               Cancelled
                             </ContextMenuItem>
                             <ContextMenuItem onClick={() => {
                               updateStatus({ id: project.id, status: 'pipeline' })
                             }}>
-                              <GitBranch className="mr-2 h-4 w-4 text-sky-500" />
+                              <HugeiconsIcon icon={FilterIcon} className="mr-2 h-4 w-4 text-sky-500"  />
                               Pipeline
                             </ContextMenuItem>
                             <ContextMenuItem onClick={() => {
                               updateStatus({ id: project.id, status: 'due' })
                             }}>
-                              <Clock className="mr-2 h-4 w-4 text-orange-500" />
+                              <HugeiconsIcon icon={ClockIcon} className="mr-2 h-4 w-4 text-orange-500"  />
                               Due
                             </ContextMenuItem>
                           </ContextMenuSubContent>
@@ -566,7 +557,7 @@ function FinalDataTableComponent({
                           }}
                           className="text-destructive"
                         >
-                          <Trash2 className="mr-2 h-4 w-4" />
+                          <HugeiconsIcon icon={Delete01Icon} className="mr-2 h-4 w-4"  />
                           Delete Project
                         </ContextMenuItem>
                       </ContextMenuContent>
@@ -581,7 +572,7 @@ function FinalDataTableComponent({
                           variant="outline" 
                           className="flex items-center gap-1 text-xs bg-background/80 backdrop-blur-sm border-border/50"
                         >
-                          <Check className="w-2 h-2" />
+                                                        <HugeiconsIcon icon={Tick02Icon} className="w-2 h-2"  />
                           <span className="text-xs">All loaded</span>
                         </Badge>
                       </div>

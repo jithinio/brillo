@@ -1,3 +1,4 @@
+import { HugeiconsIcon } from '@hugeicons/react';
 import * as React from "react"
 import { Button } from "@/components/ui/button"
 import {
@@ -5,13 +6,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { ArrowUp, ArrowDown, ChevronsUpDown } from "lucide-react"
+import { ArrowUp01Icon, ArrowDown01Icon, ReloadIcon } from '@hugeicons/core-free-icons'
 import { cn } from "@/lib/utils"
 
 interface SortableHeaderProps {
   column: any
   children: React.ReactNode
-  icon?: React.ComponentType<{ className?: string; style?: React.CSSProperties }>
+  icon?: any
   className?: string
 }
 
@@ -33,13 +34,14 @@ export function SortableHeader({
             style={{ gap: '6px' }}
           >
             {Icon && (
-              <Icon 
-                className="flex-shrink-0" 
+              <HugeiconsIcon 
+                icon={Icon}
+                className="flex-shrink-0 text-muted-foreground" 
                 style={{ 
-                  width: '12px', 
-                  height: '12px',
-                  minWidth: '12px',
-                  minHeight: '12px'
+                  width: '14px', 
+                  height: '14px',
+                  minWidth: '14px',
+                  minHeight: '14px'
                 }} 
               />
             )}
@@ -63,7 +65,7 @@ export function SortableHeader({
               className="w-full justify-start text-xs h-7"
               onClick={() => column.toggleSorting(false)}
             >
-              <ArrowUp className="mr-2 h-3 w-3" />
+              <HugeiconsIcon icon={ArrowUp01Icon} className="mr-2 h-3 w-3"  />
               Asc
             </Button>
             <Button
@@ -72,7 +74,7 @@ export function SortableHeader({
               className="w-full justify-start text-xs h-7"
               onClick={() => column.toggleSorting(true)}
             >
-              <ArrowDown className="mr-2 h-3 w-3" />
+              <HugeiconsIcon icon={ArrowDown01Icon} className="mr-2 h-3 w-3"  />
               Desc
             </Button>
             {sortDirection && (
@@ -82,7 +84,7 @@ export function SortableHeader({
                 className="w-full justify-start text-xs h-7"
                 onClick={() => column.clearSorting()}
               >
-                <ChevronsUpDown className="mr-2 h-3 w-3" />
+                <HugeiconsIcon icon={ReloadIcon} className="mr-2 h-3 w-3"  />
                 Clear
               </Button>
             )}

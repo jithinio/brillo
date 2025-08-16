@@ -1,7 +1,8 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import React from 'react'
-import { AlertCircle } from 'lucide-react'
+import { AlertCircleIcon } from '@hugeicons/core-free-icons'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
@@ -44,7 +45,7 @@ export class TableErrorBoundary extends React.Component<ErrorBoundaryProps, Erro
       return (
         <div className="flex items-center justify-center h-full min-h-[400px] p-8">
           <Alert className="max-w-lg">
-            <AlertCircle className="h-4 w-4" />
+            <HugeiconsIcon icon={AlertCircleIcon} className="h-4 w-4"  />
             <AlertTitle>Something went wrong</AlertTitle>
             <AlertDescription className="mt-2">
               <p className="text-sm text-muted-foreground mb-4">

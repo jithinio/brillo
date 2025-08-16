@@ -1095,11 +1095,11 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
                   <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 2rem; align-items: center; padding: 12px 0; border-bottom: 1px solid ${template.borderColor}40;">
                     <div>
                       <div style="color: ${template.primaryColor}; font-weight: 500;">
-                        ${item.description}
+                        ${item.item_name || item.description}
                       </div>
-                      ${template.showItemDetails && item.details ? `
+                      ${template.showItemDetails && (item.item_description || item.details) ? `
                         <div style="color: ${template.secondaryColor}; font-size: 14px; margin-top: 4px;">
-                          ${item.details}
+                          ${item.item_description || item.details}
                         </div>
                       ` : ''}
                     </div>

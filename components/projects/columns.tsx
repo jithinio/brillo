@@ -1,35 +1,10 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import type { ColumnDef } from "@tanstack/react-table"
 import * as React from "react"
-import {
-  ArrowUpDown,
-  MoreHorizontal,
-  CheckCircle,
-  Clock,
-  Pause,
-  XCircle,
-  Eye,
-  Edit,
-  FileText,
-  Trash2,
-  Calendar,
-  GitBranch,
-  User,
-  Activity,
-  DollarSign,
-  Minus,
-  Plus,
-  CalendarDays,
-  Building2,
-  ArrowUp,
-  ArrowDown,
-  ChevronsUpDown,
-  Check,
-  X,
-  Repeat,
-  Timer,
-} from "lucide-react"
+import { useState } from "react"
+import { ArrowUpDownIcon, MoreHorizontalIcon, CheckmarkCircleIcon, ClockIcon, PauseIcon, CancelCircleIcon, ViewIcon, Edit03Icon, DocumentAttachmentIcon, Delete01Icon, Calendar01Icon, GitBranchIcon, UserIcon, ActivityIcon, DollarCircleIcon, MinusSignIcon, PlusSignIcon, Building02Icon, ArrowUp01Icon, ArrowDown01Icon, Tick01Icon, CancelIcon, RepeatIcon, TimerIcon, Activity03Icon, WorkIcon, File01Icon, MoneyReceiveCircleIcon, MoneySendCircleIcon, FilterIcon } from '@hugeicons/core-free-icons'
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -56,6 +31,7 @@ import {
   CommandList,
 } from "@/components/ui/command"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
 
 // Project Type Cell Component
 function ProjectTypeCell({ project }: { project: Project }) {
@@ -63,25 +39,25 @@ function ProjectTypeCell({ project }: { project: Project }) {
     switch (type) {
       case 'fixed':
         return {
-          icon: DollarSign,
+          icon: DollarCircleIcon,
           label: 'Fixed',
           color: 'bg-emerald-50 text-emerald-800 ring-emerald-700/20 dark:bg-emerald-950/30 dark:text-emerald-300 dark:ring-emerald-800/30'
         }
       case 'recurring':
         return {
-          icon: Repeat,
+          icon: RepeatIcon,
           label: 'Recurring',
           color: 'bg-sky-50 text-sky-800 ring-sky-700/20 dark:bg-sky-950/30 dark:text-sky-300 dark:ring-sky-800/30'
         }
       case 'hourly':
         return {
-          icon: Timer,
+          icon: TimerIcon,
           label: 'Hourly',
           color: 'bg-violet-50 text-violet-800 ring-violet-700/20 dark:bg-violet-950/30 dark:text-violet-300 dark:ring-violet-800/30'
         }
       default:
         return {
-          icon: DollarSign,
+          icon: DollarCircleIcon,
           label: 'Fixed',
           color: 'bg-slate-50 text-slate-800 ring-slate-700/20 dark:bg-slate-800/30 dark:text-slate-300 dark:ring-slate-700/30'
         }
@@ -93,7 +69,7 @@ function ProjectTypeCell({ project }: { project: Project }) {
 
   return (
     <Badge variant="outline" className={`${config.color} border-0 ring-1 ring-inset text-sm font-normal`}>
-      <Icon className="w-3 h-3 mr-1" />
+      <HugeiconsIcon icon={Icon} className="mr-1 h-3 w-3"  />
       {config.label}
     </Badge>
   )
@@ -103,6 +79,279 @@ import { ClientAvatar } from "@/components/ui/client-avatar"
 import { DatePickerTable } from "@/components/ui/date-picker-table"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+
+// Separate component for editable budget cell to avoid hook ordering issues
+function EditableBudgetCell({ 
+  project, 
+  onBudgetUpdate 
+}: { 
+  project: Project, 
+  onBudgetUpdate?: (project: Project, budget: number) => void 
+}) {
+  const budget = project.total_budget || 0
+  const [isEditing, setIsEditing] = useState(false)
+  const [editValue, setEditValue] = useState(budget.toString())
+
+  const handleEdit = () => {
+    setIsEditing(true)
+    setEditValue(budget.toString())
+  }
+
+  const handleSave = () => {
+    const newValue = parseFloat(editValue) || 0
+    if (newValue !== budget && newValue >= 0) {
+      onBudgetUpdate?.(project, newValue)
+    }
+    setIsEditing(false)
+  }
+
+  const handleCancel = () => {
+    setIsEditing(false)
+    setEditValue(budget.toString())
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSave()
+    } else if (e.key === 'Escape') {
+      handleCancel()
+    }
+  }
+
+  return (
+    <div className="w-[148px] max-w-[148px] overflow-hidden">
+      {isEditing ? (
+        <Input
+          type="number"
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={handleSave}
+          className="h-8 text-sm border border-input bg-background px-2 py-1 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 w-full max-w-full"
+          step="0.01"
+          min="0"
+          autoFocus
+        />
+      ) : (
+        <div 
+          className="cursor-pointer overflow-hidden flex items-center group/budget"
+          onClick={handleEdit}
+        >
+          <span className="font-normal text-sm truncate flex-1 min-w-0">
+            {budget ? formatCurrency(budget) : formatCurrency(0)}
+          </span>
+          <HugeiconsIcon icon={Edit03Icon} className="ml-1 h-3 w-3 opacity-0 group-hover/budget:opacity-100 flex-shrink-0" />
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Separate component for editable expenses cell
+function EditableExpensesCell({ 
+  project, 
+  onExpensesUpdate 
+}: { 
+  project: Project, 
+  onExpensesUpdate?: (project: Project, expenses: number) => void 
+}) {
+  const expenses = project.expenses || 0
+  const [isEditing, setIsEditing] = useState(false)
+  const [editValue, setEditValue] = useState(expenses.toString())
+
+  const handleEdit = () => {
+    setIsEditing(true)
+    setEditValue(expenses.toString())
+  }
+
+  const handleSave = () => {
+    const newValue = parseFloat(editValue) || 0
+    if (newValue !== expenses && newValue >= 0) {
+      onExpensesUpdate?.(project, newValue)
+    }
+    setIsEditing(false)
+  }
+
+  const handleCancel = () => {
+    setIsEditing(false)
+    setEditValue(expenses.toString())
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSave()
+    } else if (e.key === 'Escape') {
+      handleCancel()
+    }
+  }
+
+  return (
+    <div className="w-[148px] max-w-[148px] overflow-hidden">
+      {isEditing ? (
+        <Input
+          type="number"
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={handleSave}
+          className="h-8 text-sm border border-input bg-background px-2 py-1 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 w-full max-w-full"
+          step="0.01"
+          min="0"
+          autoFocus
+        />
+      ) : (
+        <div 
+          className="cursor-pointer overflow-hidden flex items-center group/expenses"
+          onClick={handleEdit}
+        >
+          <span className="font-normal text-sm truncate flex-1 min-w-0">
+            {formatCurrency(expenses)}
+          </span>
+          <HugeiconsIcon icon={Edit03Icon} className="ml-1 h-3 w-3 opacity-0 group-hover/expenses:opacity-100 flex-shrink-0" />
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Separate component for editable received cell
+function EditableReceivedCell({ 
+  project, 
+  onReceivedUpdate 
+}: { 
+  project: Project, 
+  onReceivedUpdate?: (project: Project, received: number) => void 
+}) {
+  const received = project.received || 0
+  const [isEditing, setIsEditing] = useState(false)
+  const [editValue, setEditValue] = useState(received.toString())
+
+  const handleEdit = () => {
+    setIsEditing(true)
+    setEditValue(received.toString())
+  }
+
+  const handleSave = () => {
+    const newValue = parseFloat(editValue) || 0
+    if (newValue !== received && newValue >= 0) {
+      onReceivedUpdate?.(project, newValue)
+    }
+    setIsEditing(false)
+  }
+
+  const handleCancel = () => {
+    setIsEditing(false)
+    setEditValue(received.toString())
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSave()
+    } else if (e.key === 'Escape') {
+      handleCancel()
+    }
+  }
+
+  return (
+    <div className="w-[148px] max-w-[148px] overflow-hidden">
+      {isEditing ? (
+        <Input
+          type="number"
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={handleSave}
+          className="h-8 text-sm border border-input bg-background px-2 py-1 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 w-full max-w-full"
+          step="0.01"
+          min="0"
+          autoFocus
+        />
+      ) : (
+        <div 
+          className="cursor-pointer overflow-hidden flex items-center group/received"
+          onClick={handleEdit}
+        >
+          <span className="font-normal text-sm truncate flex-1 min-w-0">
+            {formatCurrency(received)}
+          </span>
+          <HugeiconsIcon icon={Edit03Icon} className="ml-1 h-3 w-3 opacity-0 group-hover/received:opacity-100 flex-shrink-0" />
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Separate component for editable actual hours cell
+function EditableActualHoursCell({ 
+  project, 
+  onActualHoursUpdate 
+}: { 
+  project: Project, 
+  onActualHoursUpdate?: (project: Project, actualHours: number) => void 
+}) {
+  const actualHours = project.actual_hours || project.total_hours_logged || 0
+  const [isEditing, setIsEditing] = useState(false)
+  const [editValue, setEditValue] = useState(actualHours.toString())
+
+  const handleEdit = () => {
+    setIsEditing(true)
+    setEditValue(actualHours.toString())
+  }
+
+  const handleSave = () => {
+    const newValue = parseFloat(editValue) || 0
+    if (newValue !== actualHours && newValue >= 0) {
+      onActualHoursUpdate?.(project, newValue)
+    }
+    setIsEditing(false)
+  }
+
+  const handleCancel = () => {
+    setIsEditing(false)
+    setEditValue(actualHours.toString())
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSave()
+    } else if (e.key === 'Escape') {
+      handleCancel()
+    }
+  }
+
+  const estimatedHours = project.estimated_hours || 0
+
+  return (
+    <div className="w-[148px] max-w-[148px] overflow-hidden">
+      {isEditing ? (
+        <Input
+          type="number"
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={handleSave}
+          className="h-8 text-sm border border-input bg-background px-2 py-1 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 w-full max-w-full"
+          step="0.25"
+          min="0"
+          autoFocus
+        />
+      ) : (
+        <div 
+          className="cursor-pointer overflow-hidden flex items-center group/hours"
+          onClick={handleEdit}
+        >
+          <span className="font-normal text-sm truncate flex-1 min-w-0">
+            {actualHours > 0 || estimatedHours > 0
+              ? `${actualHours}${estimatedHours > 0 ? `/${estimatedHours}` : ''}h`
+              : '—'
+            }
+          </span>
+          <HugeiconsIcon icon={Edit03Icon} className="ml-1 h-3 w-3 opacity-0 group-hover/hours:opacity-100 flex-shrink-0" />
+        </div>
+      )}
+    </div>
+  )
+}
 
 export type Project = {
   id: string
@@ -134,37 +383,37 @@ export type Project = {
 const statusConfig = {
   active: {
     label: "Active",
-    icon: Clock,
+    icon: ClockIcon,
     variant: "outline" as const,
     iconClassName: "text-blue-500",
   },
   completed: {
     label: "Completed",
-    icon: CheckCircle,
+    icon: CheckmarkCircleIcon,
     variant: "outline" as const,
     iconClassName: "text-green-500",
   },
   on_hold: {
     label: "On Hold",
-    icon: Pause,
+    icon: PauseIcon,
     variant: "outline" as const,
     iconClassName: "text-amber-500",
   },
   cancelled: {
     label: "Cancelled",
-    icon: XCircle,
+    icon: CancelCircleIcon,
     variant: "outline" as const,
     iconClassName: "text-rose-500",
   },
   pipeline: {
     label: "Pipeline",
-    icon: GitBranch,
+    icon: FilterIcon,
     variant: "outline" as const,
     iconClassName: "text-sky-500",
   },
   due: {
     label: "Due",
-    icon: Clock,
+    icon: ClockIcon,
     variant: "outline" as const,
     iconClassName: "text-orange-500",
   },
@@ -176,6 +425,10 @@ interface ColumnActions {
   onDeleteProject: (project: Project) => void
   onDuplicateProject: (project: Project) => void
   onStatusChange: (project: Project, newStatus: string) => void
+  onBudgetUpdate?: (project: Project, budget: number) => void
+  onExpensesUpdate?: (project: Project, expenses: number) => void
+  onReceivedUpdate?: (project: Project, received: number) => void
+  onActualHoursUpdate?: (project: Project, actualHours: number) => void
   onDateChange: (project: Project, field: 'start_date' | 'due_date', date: Date | undefined) => void
   onClientChange?: (project: Project, clientId: string | null, onUpdate?: () => void) => void
   availableClients?: Array<{
@@ -208,15 +461,7 @@ function SortableHeader({
             className="h-auto p-0 font-normal text-sm hover:bg-transparent focus:outline-none flex items-center"
             style={{ gap: '6px' }}
           >
-            <Icon 
-              className="flex-shrink-0" 
-              style={{ 
-                width: '12px', 
-                height: '12px',
-                minWidth: '12px',
-                minHeight: '12px'
-              }} 
-            />
+            <HugeiconsIcon icon={Icon} className="flex-shrink-0 h-3 w-3 text-muted-foreground"  />
             <span className="text-sm font-normal">{children}</span>
           </Button>
         </PopoverTrigger>
@@ -235,7 +480,7 @@ function SortableHeader({
                 column.toggleSorting(false)
               }}
             >
-              <ArrowUp className="mr-2 h-3 w-3" />
+              <HugeiconsIcon icon={ArrowUp01Icon} className="mr-2 h-3 w-3"  />
               Asc
             </Button>
             <Button
@@ -247,7 +492,7 @@ function SortableHeader({
                 column.toggleSorting(true)
               }}
             >
-              <ArrowDown className="mr-2 h-3 w-3" />
+              <HugeiconsIcon icon={ArrowDown01Icon} className="mr-2 h-3 w-3"  />
               Desc
             </Button>
             {sortDirection && (
@@ -260,7 +505,7 @@ function SortableHeader({
                   column.clearSorting()
                 }}
               >
-                <ChevronsUpDown className="mr-2 h-3 w-3" />
+                <HugeiconsIcon icon={ArrowUpDownIcon} className="mr-2 h-3 w-3"  />
                 Clear
               </Button>
             )}
@@ -342,7 +587,7 @@ function ClientSelector({
                     onSelect={handleRemoveClient}
                     className="text-muted-foreground"
                   >
-                    <X className="mr-2 h-4 w-4" />
+                    <HugeiconsIcon icon={CancelIcon} className="mr-2 h-4 w-4"  />
                     Remove client
                   </CommandItem>
                 )}
@@ -366,12 +611,12 @@ function ClientSelector({
                           <div className="text-xs text-muted-foreground">{availableClient.company}</div>
                         )}
                       </div>
-                      <Check
+                      <HugeiconsIcon icon={Tick01Icon}
                         className={cn(
                           "ml-auto h-4 w-4",
                           isSelected ? "opacity-100" : "opacity-0"
                         )}
-                      />
+                       />
                     </CommandItem>
                   )
                 })}
@@ -425,7 +670,7 @@ function StatusCell({ project, actions }: { project: Project; actions: ColumnAct
       <Popover open={isOpen} onOpenChange={setIsOpen}>
         <PopoverTrigger asChild>
           <Badge variant={config.variant} className="cursor-pointer hover:bg-slate-100 transition-colors font-normal text-sm focus:outline-none focus-visible:outline-none whitespace-nowrap min-w-fit">
-            <Icon className={`mr-1 h-3 w-3 ${config.iconClassName} flex-shrink-0`} />
+            <HugeiconsIcon icon={Icon} className={`mr-1 h-3 w-3 ${config.iconClassName}`}  />
             <span className="whitespace-nowrap">{config.label}</span>
           </Badge>
         </PopoverTrigger>
@@ -438,7 +683,7 @@ function StatusCell({ project, actions }: { project: Project; actions: ColumnAct
               onClick={() => handleStatusChange('active')}
               disabled={project.status === 'active'}
             >
-              <Clock className="mr-2 h-3 w-3 text-blue-500 flex-shrink-0" />
+              <HugeiconsIcon icon={ClockIcon} className="mr-2 h-3 w-3 text-blue-500 flex-shrink-0"  />
               <span className="whitespace-nowrap">Active</span>
             </Button>
             <Button
@@ -448,7 +693,7 @@ function StatusCell({ project, actions }: { project: Project; actions: ColumnAct
               onClick={() => handleStatusChange('completed')}
               disabled={project.status === 'completed'}
             >
-              <CheckCircle className="mr-2 h-3 w-3 text-green-500 flex-shrink-0" />
+              <HugeiconsIcon icon={CheckmarkCircleIcon} className="mr-2 h-3 w-3 text-green-500 flex-shrink-0"  />
               <span className="whitespace-nowrap">Completed</span>
             </Button>
             <Button
@@ -458,7 +703,7 @@ function StatusCell({ project, actions }: { project: Project; actions: ColumnAct
               onClick={() => handleStatusChange('on_hold')}
               disabled={project.status === 'on_hold'}
             >
-              <Pause className="mr-2 h-3 w-3 text-amber-500 flex-shrink-0" />
+              <HugeiconsIcon icon={PauseIcon} className="mr-2 h-3 w-3 text-amber-500 flex-shrink-0"  />
               <span className="whitespace-nowrap">On Hold</span>
             </Button>
             <Button
@@ -468,7 +713,7 @@ function StatusCell({ project, actions }: { project: Project; actions: ColumnAct
               onClick={() => handleStatusChange('cancelled')}
               disabled={project.status === 'cancelled'}
             >
-              <XCircle className="mr-2 h-3 w-3 text-rose-500 flex-shrink-0" />
+              <HugeiconsIcon icon={CancelCircleIcon} className="mr-2 h-3 w-3 text-rose-500 flex-shrink-0"  />
               <span className="whitespace-nowrap">Cancelled</span>
             </Button>
             <Button
@@ -478,7 +723,7 @@ function StatusCell({ project, actions }: { project: Project; actions: ColumnAct
               onClick={() => handleStatusChange('pipeline')}
               disabled={project.status === 'pipeline'}
             >
-              <GitBranch className="mr-2 h-3 w-3 text-purple-500 flex-shrink-0" />
+              <HugeiconsIcon icon={FilterIcon} className="mr-2 h-3 w-3 text-purple-500 flex-shrink-0"  />
               <span className="whitespace-nowrap">Pipeline</span>
             </Button>
             <Button
@@ -488,7 +733,7 @@ function StatusCell({ project, actions }: { project: Project; actions: ColumnAct
               onClick={() => handleStatusChange('due')}
               disabled={project.status === 'due'}
             >
-              <Clock className="mr-2 h-3 w-3 text-orange-500 flex-shrink-0" />
+              <HugeiconsIcon icon={ClockIcon} className="mr-2 h-3 w-3 text-orange-500 flex-shrink-0"  />
               <span className="whitespace-nowrap">Due</span>
             </Button>
           </div>
@@ -529,7 +774,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
     {
       accessorKey: "name",
       header: ({ column }) => (
-        <SortableHeader column={column} icon={Building2}>
+        <SortableHeader column={column} icon={File01Icon}>
           Project Name
         </SortableHeader>
       ),
@@ -553,7 +798,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
       id: "client",
       accessorFn: (row) => row.clients?.name || "",
       header: ({ column }) => (
-        <SortableHeader column={column} icon={User}>
+        <SortableHeader column={column} icon={UserIcon}>
           Client
         </SortableHeader>
       ),
@@ -575,7 +820,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
     {
       accessorKey: "status",
       header: ({ column }) => (
-        <SortableHeader column={column} icon={Activity}>
+        <SortableHeader column={column} icon={Activity03Icon}>
           Status
         </SortableHeader>
       ),
@@ -590,7 +835,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
     {
       accessorKey: "project_type",
       header: ({ column }) => (
-        <SortableHeader column={column} icon={GitBranch}>
+        <SortableHeader column={column} icon={WorkIcon}>
           Type
         </SortableHeader>
       ),
@@ -603,20 +848,17 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
     {
       accessorKey: "total_budget",
       header: ({ column }) => (
-        <SortableHeader column={column} icon={DollarSign}>
+        <SortableHeader column={column} icon={DollarCircleIcon}>
           Total Budget
         </SortableHeader>
       ),
       cell: ({ row }) => {
-        const budget = row.getValue("total_budget") as number
+        const project = row.original
         return (
-          <div className="w-full">
-            {budget ? (
-              <span className="truncate font-normal text-sm">{formatCurrency(budget)}</span>
-            ) : (
-              <span className="text-muted-foreground text-sm">—</span>
-            )}
-          </div>
+          <EditableBudgetCell 
+            project={project} 
+            onBudgetUpdate={actions.onBudgetUpdate} 
+          />
         )
       },
       enableHiding: true,
@@ -624,20 +866,17 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
     {
       accessorKey: "expenses",
       header: ({ column }) => (
-        <SortableHeader column={column} icon={Minus}>
+        <SortableHeader column={column} icon={MoneySendCircleIcon}>
           Expenses
         </SortableHeader>
       ),
       cell: ({ row }) => {
-        const expenses = row.getValue("expenses") as number
+        const project = row.original
         return (
-          <div className="w-full">
-            {expenses ? (
-              <span className="truncate font-normal text-sm">{formatCurrency(expenses)}</span>
-            ) : (
-              <span className="text-muted-foreground text-sm">{formatCurrency(0)}</span>
-            )}
-          </div>
+          <EditableExpensesCell 
+            project={project} 
+            onExpensesUpdate={actions.onExpensesUpdate} 
+          />
         )
       },
       enableHiding: true,
@@ -645,20 +884,17 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
     {
       accessorKey: "received",
       header: ({ column }) => (
-        <SortableHeader column={column} icon={Plus}>
+        <SortableHeader column={column} icon={MoneyReceiveCircleIcon}>
           Received
         </SortableHeader>
       ),
       cell: ({ row }) => {
-        const received = row.getValue("received") as number
+        const project = row.original
         return (
-          <div className="w-full">
-            {received ? (
-              <span className="truncate font-normal text-sm">{formatCurrency(received)}</span>
-            ) : (
-              <span className="text-muted-foreground text-sm">{formatCurrency(0)}</span>
-            )}
-          </div>
+          <EditableReceivedCell 
+            project={project} 
+            onReceivedUpdate={actions.onReceivedUpdate} 
+          />
         )
       },
       enableHiding: true,
@@ -666,7 +902,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
     {
       accessorKey: "pending",
       header: ({ column }) => (
-        <SortableHeader column={column} icon={Clock}>
+        <SortableHeader column={column} icon={ClockIcon}>
           Pending
         </SortableHeader>
       ),
@@ -688,7 +924,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
       {
         accessorKey: "start_date",
         header: ({ column }) => (
-          <SortableHeader column={column} icon={CalendarDays}>
+          <SortableHeader column={column} icon={Calendar01Icon}>
             Start Date
           </SortableHeader>
         ),
@@ -714,7 +950,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
       {
         accessorKey: "due_date",
         header: ({ column }) => (
-          <SortableHeader column={column} icon={Calendar}>
+          <SortableHeader column={column} icon={Calendar01Icon}>
             Due Date
           </SortableHeader>
         ),
@@ -740,7 +976,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
     {
       accessorKey: "recurring_amount",
       header: ({ column }) => (
-        <SortableHeader column={column} icon={DollarSign}>
+        <SortableHeader column={column} icon={RepeatIcon}>
           Recurring Amount
         </SortableHeader>
       ),
@@ -764,7 +1000,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
     {
       accessorKey: "hourly_rate_new",
       header: ({ column }) => (
-        <SortableHeader column={column} icon={Clock}>
+        <SortableHeader column={column} icon={ClockIcon}>
           Hourly Rate
         </SortableHeader>
       ),
@@ -788,24 +1024,17 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
     {
       accessorKey: "actual_hours",
       header: ({ column }) => (
-        <SortableHeader column={column} icon={Activity}>
+        <SortableHeader column={column} icon={ActivityIcon}>
           Actual Hours
         </SortableHeader>
       ),
       cell: ({ row }) => {
         const project = row.original
-        const actualHours = project.actual_hours || project.total_hours_logged || 0
-        const estimatedHours = project.estimated_hours || 0
-        
         return (
-          <div className="w-full">
-            <span className="truncate font-normal text-sm">
-              {actualHours > 0 || estimatedHours > 0
-                ? `${actualHours}${estimatedHours > 0 ? `/${estimatedHours}` : ''}h`
-                : '—'
-              }
-            </span>
-          </div>
+          <EditableActualHoursCell 
+            project={project} 
+            onActualHoursUpdate={actions.onActualHoursUpdate} 
+          />
         )
       },
       enableHiding: true,

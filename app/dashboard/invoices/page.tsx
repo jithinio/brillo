@@ -1,5 +1,6 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import { useState } from "react"
 import React from "react"
 import { useRouter } from "next/navigation"
@@ -7,7 +8,7 @@ import { GenericTableWrapper } from "@/components/table/GenericTableWrapper"
 import { createInvoiceColumns } from "@/components/invoices/generic-columns"
 import { useInvoices } from "@/hooks/use-invoices"
 import { Button } from "@/components/ui/button"
-import { Plus } from "lucide-react"
+import { PlusSignIcon, AddInvoiceIcon } from '@hugeicons/core-free-icons'
 import { InvoiceMetrics } from "@/components/invoices/InvoiceMetrics"
 import { EntityActions } from "@/components/table/types"
 import { DataHookReturn } from "@/components/table/types"
@@ -351,7 +352,7 @@ export default function InvoicesPage() {
                             size="sm"
               className="h-8"
             >
-              <Plus className="h-4 w-4 mr-1" />
+              <HugeiconsIcon icon={AddInvoiceIcon} className="h-4 w-4 mr-1"  />
                             Create Invoice
                           </Button>
           }

@@ -1,23 +1,9 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import * as React from "react"
 import type { ColumnDef } from "@tanstack/react-table"
-import {
-  ArrowUpDown,
-  MoreHorizontal,
-  Edit,
-  FileText,
-  FolderPlus,
-  Trash2,
-  Mail,
-  Phone,
-  Building,
-  MapPin,
-  Copy,
-  CheckCircle,
-  Clock,
-  GitBranch,
-} from "lucide-react"
+import { ArrowUpDownIcon, MoreHorizontalIcon, Edit03Icon, DocumentAttachmentIcon, FolderAddIcon, Delete01Icon, MailIcon, PhoneIcon, Building01Icon, LocationIcon, CopyIcon, CheckmarkCircleIcon, ClockIcon, GitBranchIcon, UserIcon, Activity03Icon, WorkIcon, AddInvoiceIcon, FilterIcon } from '@hugeicons/core-free-icons'
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -87,19 +73,19 @@ const statusConfig = {
 const clientStatusConfig = {
   active: {
     label: "Active",
-    icon: CheckCircle,
+    icon: CheckmarkCircleIcon,
     variant: "outline" as const,
     iconClassName: "text-blue-500",
   },
   pipeline: {
     label: "Pipeline",
-    icon: GitBranch,
+    icon: FilterIcon,
     variant: "outline" as const,
     iconClassName: "text-sky-500",
   },
   closed: {
     label: "Closed",
-    icon: Clock,
+    icon: ClockIcon,
     variant: "outline" as const,
     iconClassName: "text-muted-foreground",
   },
@@ -156,7 +142,7 @@ function ClientStatusCell({ client, actions }: { client: Client; actions: Column
       <Popover open={isOpen} onOpenChange={setIsOpen}>
         <PopoverTrigger asChild>
           <Badge variant={config.variant} className="cursor-pointer hover:bg-muted transition-colors font-normal text-sm focus:outline-none focus-visible:outline-none">
-            <Icon className={`mr-1.5 h-3 w-3 ${config.iconClassName}`} />
+
             {config.label}
           </Badge>
         </PopoverTrigger>
@@ -169,7 +155,7 @@ function ClientStatusCell({ client, actions }: { client: Client; actions: Column
               onClick={() => handleStatusChange('active')}
               disabled={client.status === 'active'}
             >
-              <CheckCircle className="mr-2 h-3 w-3 text-green-500" />
+              <HugeiconsIcon icon={CheckmarkCircleIcon} className="mr-2 h-3 w-3 text-green-500"  />
               Active
             </Button>
             <Button
@@ -179,7 +165,7 @@ function ClientStatusCell({ client, actions }: { client: Client; actions: Column
               onClick={() => handleStatusChange('pipeline')}
               disabled={client.status === 'pipeline'}
             >
-              <GitBranch className="mr-2 h-3 w-3 text-purple-500" />
+              <HugeiconsIcon icon={FilterIcon} className="mr-2 h-3 w-3 text-purple-500"  />
               Pipeline
             </Button>
             <Button
@@ -189,7 +175,7 @@ function ClientStatusCell({ client, actions }: { client: Client; actions: Column
               onClick={() => handleStatusChange('closed')}
               disabled={client.status === 'closed'}
             >
-              <Clock className="mr-2 h-3 w-3 text-muted-foreground" />
+              <HugeiconsIcon icon={ClockIcon} className="mr-2 h-3 w-3 text-muted-foreground"  />
               Closed
             </Button>
           </div>
@@ -234,10 +220,11 @@ export function createColumns(actions: ColumnActions): ColumnDef<Client>[] {
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="h-auto p-0 font-normal"
+            className="h-auto p-0 font-normal flex items-center gap-2"
           >
+            <HugeiconsIcon icon={UserIcon} className="h-3 w-3 text-muted-foreground"  />
             Name
-            <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
+            <HugeiconsIcon icon={ArrowUpDownIcon} className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }}  />
           </Button>
         )
       },
@@ -273,10 +260,11 @@ export function createColumns(actions: ColumnActions): ColumnDef<Client>[] {
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="h-auto p-0 font-normal"
+            className="h-auto p-0 font-normal flex items-center gap-2"
           >
+            <HugeiconsIcon icon={Building01Icon} className="h-3 w-3 text-muted-foreground"  />
             Company
-            <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
+            <HugeiconsIcon icon={ArrowUpDownIcon} className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }}  />
           </Button>
         )
       },
@@ -284,7 +272,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Client>[] {
         const company = row.getValue("company") as string
         return company ? (
           <div className="flex items-center space-x-2 min-w-[180px]">
-            <Building className="h-4 w-4 text-muted-foreground shrink-0" />
+            <HugeiconsIcon icon={Building01Icon} className="h-4 w-4 text-muted-foreground shrink-0"  />
             <span className="truncate" title={company}>
               {company}
             </span>
@@ -303,10 +291,11 @@ export function createColumns(actions: ColumnActions): ColumnDef<Client>[] {
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="h-auto p-0 font-normal"
+            className="h-auto p-0 font-normal flex items-center gap-2"
           >
+            <HugeiconsIcon icon={MailIcon} className="h-3 w-3 text-muted-foreground"  />
             Email
-            <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
+            <HugeiconsIcon icon={ArrowUpDownIcon} className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }}  />
           </Button>
         )
       },
@@ -324,7 +313,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Client>[] {
         
         return email ? (
           <div className="flex items-center space-x-2 min-w-[220px] group">
-            <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+            <HugeiconsIcon icon={MailIcon} className="h-4 w-4 text-muted-foreground shrink-0"  />
             <span className="truncate lowercase" title={email}>
               {email}
             </span>
@@ -334,7 +323,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Client>[] {
               className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity ml-auto"
               onClick={handleCopyEmail}
             >
-              <Copy className="h-3 w-3" />
+              <HugeiconsIcon icon={CopyIcon} className="h-3 w-3"  />
             </Button>
           </div>
         ) : (
@@ -346,12 +335,24 @@ export function createColumns(actions: ColumnActions): ColumnDef<Client>[] {
     },
     {
       accessorKey: "phone",
-      header: "Phone",
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+            className="h-auto p-0 font-normal flex items-center gap-2"
+          >
+            <HugeiconsIcon icon={PhoneIcon} className="h-3 w-3 text-muted-foreground"  />
+            Phone
+            <HugeiconsIcon icon={ArrowUpDownIcon} className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }}  />
+          </Button>
+        )
+      },
       cell: ({ row }) => {
         const phone = row.getValue("phone") as string
         return phone ? (
           <div className="flex items-center space-x-2 min-w-[140px]">
-            <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
+            <HugeiconsIcon icon={PhoneIcon} className="h-4 w-4 text-muted-foreground shrink-0"  />
             <span className="truncate" title={phone}>
               {phone}
             </span>
@@ -370,10 +371,11 @@ export function createColumns(actions: ColumnActions): ColumnDef<Client>[] {
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="h-auto p-0 font-normal"
+            className="h-auto p-0 font-normal flex items-center gap-2"
           >
+            <HugeiconsIcon icon={Activity03Icon} className="h-3 w-3 text-muted-foreground"  />
             Status
-            <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
+            <HugeiconsIcon icon={ArrowUpDownIcon} className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }}  />
           </Button>
         )
       },
@@ -388,13 +390,25 @@ export function createColumns(actions: ColumnActions): ColumnDef<Client>[] {
     },
     {
       id: "location",
-      header: "Location",
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+            className="h-auto p-0 font-normal flex items-center gap-2"
+          >
+            <HugeiconsIcon icon={LocationIcon} className="h-3 w-3 text-muted-foreground"  />
+            Location
+            <HugeiconsIcon icon={ArrowUpDownIcon} className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }}  />
+          </Button>
+        )
+      },
       cell: ({ row }) => {
         const client = row.original
         const location = client.city || client.state
         return location ? (
           <div className="flex items-center space-x-2 min-w-[140px]">
-            <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
+            <HugeiconsIcon icon={LocationIcon} className="h-4 w-4 text-muted-foreground shrink-0"  />
             <span
               className="truncate"
               title={`${client.city}${client.city && client.state ? ", " : ""}${client.state}`}
@@ -413,7 +427,19 @@ export function createColumns(actions: ColumnActions): ColumnDef<Client>[] {
     },
     {
       id: "projects",
-      header: "Projects",
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+            className="h-auto p-0 font-normal flex items-center gap-2"
+          >
+            <HugeiconsIcon icon={WorkIcon} className="h-3 w-3 text-muted-foreground"  />
+            Projects
+            <HugeiconsIcon icon={ArrowUpDownIcon} className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }}  />
+          </Button>
+        )
+      },
       cell: ({ row }) => {
         const client = row.original
         if (client.projects && client.projects.length > 0) {
@@ -461,10 +487,11 @@ export function createColumns(actions: ColumnActions): ColumnDef<Client>[] {
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="h-auto p-0 font-normal"
+            className="h-auto p-0 font-normal flex items-center gap-2"
           >
+            <HugeiconsIcon icon={ClockIcon} className="h-3 w-3 text-muted-foreground"  />
             Client Since
-            <ArrowUpDown className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }} />
+            <HugeiconsIcon icon={ArrowUpDownIcon} className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }}  />
           </Button>
         )
       },
@@ -503,23 +530,23 @@ export function createColumns(actions: ColumnActions): ColumnDef<Client>[] {
                   size="sm"
                   className="h-8 w-8 p-0 border-dashed hover:border-solid"
                 >
-                  <MoreHorizontal className="h-4 w-4" />
+                  <HugeiconsIcon icon={MoreHorizontalIcon} className="h-4 w-4"  />
                   <span className="sr-only">Open actions menu</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-40">
                 <DropdownMenuLabel className="whitespace-nowrap">Actions</DropdownMenuLabel>
                 <DropdownMenuItem onClick={() => actions.onEditClient(client)} className="whitespace-nowrap">
-                  <Edit className="mr-2 h-4 w-4" />
+                  <HugeiconsIcon icon={Edit03Icon} className="mr-2 h-4 w-4"  />
                   Edit Client
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => actions.onCreateInvoice(client)} className="whitespace-nowrap">
-                  <FileText className="mr-2 h-4 w-4" />
+                  <HugeiconsIcon icon={AddInvoiceIcon} className="mr-2 h-4 w-4"  />
                   Create Invoice
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => actions.onNewProject(client)} className="whitespace-nowrap">
-                  <FolderPlus className="mr-2 h-4 w-4" />
+                  <HugeiconsIcon icon={FolderAddIcon} className="mr-2 h-4 w-4"  />
                   New Project
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
@@ -527,7 +554,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Client>[] {
                   className="text-destructive whitespace-nowrap"
                   onClick={() => actions.onDeleteClient(client)}
                 >
-                  <Trash2 className="mr-2 h-4 w-4" />
+                  <HugeiconsIcon icon={Delete01Icon} className="mr-2 h-4 w-4"  />
                   Delete Client
                 </DropdownMenuItem>
               </DropdownMenuContent>

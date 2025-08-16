@@ -669,6 +669,191 @@ export function useInfiniteProjects(filters: ProjectFilters = {}, pageSize: numb
     },
   })
 
+  // Field update mutations following the invoice pattern
+  const updateBudgetMutation = useMutation({
+    mutationFn: async ({ id, budget }: { id: string; budget: number }) => {
+      // Get the current session for auth
+      const { data: { session } } = await supabase.auth.getSession()
+      const response = await fetch('/api/projects/update', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': session?.access_token ? `Bearer ${session.access_token}` : '',
+        },
+        body: JSON.stringify({ projectId: id, field: 'total_budget', value: budget }),
+      })
+      if (!response.ok) throw new Error('Failed to update budget')
+      return response.json()
+    },
+    onMutate: async ({ id, budget }) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.projectsInfinite(filters) })
+      const previousPages = queryClient.getQueryData(queryKeys.projectsInfinite(filters))
+      
+      queryClient.setQueryData(queryKeys.projectsInfinite(filters), (old: any) => {
+        if (!old?.pages) return old
+        return {
+          ...old,
+          pages: old.pages.map((page: any) => ({
+            ...page,
+            data: page.data.map((project: Project) =>
+              project.id === id ? { ...project, total_budget: budget } : project
+            )
+          }))
+        }
+      })
+      return { previousPages }
+    },
+    onError: (err, variables, context) => {
+      if (context?.previousPages) {
+        queryClient.setQueryData(queryKeys.projectsInfinite(filters), context.previousPages)
+      }
+      toast.error('Failed to update budget')
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.projectsInfinite(filters) })
+      queryClient.invalidateQueries({ queryKey: ['database-metrics'] })
+      queryClient.invalidateQueries({ queryKey: ['filtered-metrics', filters] })
+    }
+  })
+
+  const updateExpensesMutation = useMutation({
+    mutationFn: async ({ id, expenses }: { id: string; expenses: number }) => {
+      // Get the current session for auth
+      const { data: { session } } = await supabase.auth.getSession()
+      const response = await fetch('/api/projects/update', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': session?.access_token ? `Bearer ${session.access_token}` : '',
+        },
+        body: JSON.stringify({ projectId: id, field: 'expenses', value: expenses }),
+      })
+      if (!response.ok) throw new Error('Failed to update expenses')
+      return response.json()
+    },
+    onMutate: async ({ id, expenses }) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.projectsInfinite(filters) })
+      const previousPages = queryClient.getQueryData(queryKeys.projectsInfinite(filters))
+      
+      queryClient.setQueryData(queryKeys.projectsInfinite(filters), (old: any) => {
+        if (!old?.pages) return old
+        return {
+          ...old,
+          pages: old.pages.map((page: any) => ({
+            ...page,
+            data: page.data.map((project: Project) =>
+              project.id === id ? { ...project, expenses } : project
+            )
+          }))
+        }
+      })
+      return { previousPages }
+    },
+    onError: (err, variables, context) => {
+      if (context?.previousPages) {
+        queryClient.setQueryData(queryKeys.projectsInfinite(filters), context.previousPages)
+      }
+      toast.error('Failed to update expenses')
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.projectsInfinite(filters) })
+      queryClient.invalidateQueries({ queryKey: ['database-metrics'] })
+      queryClient.invalidateQueries({ queryKey: ['filtered-metrics', filters] })
+    }
+  })
+
+  const updateReceivedMutation = useMutation({
+    mutationFn: async ({ id, received }: { id: string; received: number }) => {
+      // Get the current session for auth
+      const { data: { session } } = await supabase.auth.getSession()
+      const response = await fetch('/api/projects/update', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': session?.access_token ? `Bearer ${session.access_token}` : '',
+        },
+        body: JSON.stringify({ projectId: id, field: 'received', value: received }),
+      })
+      if (!response.ok) throw new Error('Failed to update received amount')
+      return response.json()
+    },
+    onMutate: async ({ id, received }) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.projectsInfinite(filters) })
+      const previousPages = queryClient.getQueryData(queryKeys.projectsInfinite(filters))
+      
+      queryClient.setQueryData(queryKeys.projectsInfinite(filters), (old: any) => {
+        if (!old?.pages) return old
+        return {
+          ...old,
+          pages: old.pages.map((page: any) => ({
+            ...page,
+            data: page.data.map((project: Project) =>
+              project.id === id ? { ...project, received } : project
+            )
+          }))
+        }
+      })
+      return { previousPages }
+    },
+    onError: (err, variables, context) => {
+      if (context?.previousPages) {
+        queryClient.setQueryData(queryKeys.projectsInfinite(filters), context.previousPages)
+      }
+      toast.error('Failed to update received amount')
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.projectsInfinite(filters) })
+      queryClient.invalidateQueries({ queryKey: ['database-metrics'] })
+      queryClient.invalidateQueries({ queryKey: ['filtered-metrics', filters] })
+    }
+  })
+
+  const updateActualHoursMutation = useMutation({
+    mutationFn: async ({ id, actualHours }: { id: string; actualHours: number }) => {
+      // Get the current session for auth
+      const { data: { session } } = await supabase.auth.getSession()
+      const response = await fetch('/api/projects/update', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': session?.access_token ? `Bearer ${session.access_token}` : '',
+        },
+        body: JSON.stringify({ projectId: id, field: 'actual_hours', value: actualHours }),
+      })
+      if (!response.ok) throw new Error('Failed to update actual hours')
+      return response.json()
+    },
+    onMutate: async ({ id, actualHours }) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.projectsInfinite(filters) })
+      const previousPages = queryClient.getQueryData(queryKeys.projectsInfinite(filters))
+      
+      queryClient.setQueryData(queryKeys.projectsInfinite(filters), (old: any) => {
+        if (!old?.pages) return old
+        return {
+          ...old,
+          pages: old.pages.map((page: any) => ({
+            ...page,
+            data: page.data.map((project: Project) =>
+              project.id === id ? { ...project, actual_hours: actualHours } : project
+            )
+          }))
+        }
+      })
+      return { previousPages }
+    },
+    onError: (err, variables, context) => {
+      if (context?.previousPages) {
+        queryClient.setQueryData(queryKeys.projectsInfinite(filters), context.previousPages)
+      }
+      toast.error('Failed to update actual hours')
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.projectsInfinite(filters) })
+      queryClient.invalidateQueries({ queryKey: ['database-metrics'] })
+      queryClient.invalidateQueries({ queryKey: ['filtered-metrics', filters] })
+    }
+  })
+
   // Load more function for infinite scroll
   const loadMore = useCallback(() => {
     if (infiniteQuery.hasNextPage && !infiniteQuery.isFetchingNextPage) {
@@ -722,6 +907,10 @@ export function useInfiniteProjects(filters: ProjectFilters = {}, pageSize: numb
     // Mutations
     updateStatus: updateStatusMutation.mutate,
     isUpdating: updateStatusMutation.isPending,
+    updateBudget: updateBudgetMutation.mutate,
+    updateExpenses: updateExpensesMutation.mutate,
+    updateReceived: updateReceivedMutation.mutate,
+    updateActualHours: updateActualHoursMutation.mutate,
     
     // Search
     searchQuery,

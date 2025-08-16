@@ -1,5 +1,6 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import { useState } from "react"
 import { useDraggable } from "@dnd-kit/core"
 import { Card, CardContent } from "@/components/ui/card"
@@ -30,7 +31,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { MoreVertical, User, DollarSign, CheckCircle, Trash2 } from "lucide-react"
+import { More01Icon, UserIcon, DollarCircleIcon, CheckmarkCircleIcon, Delete01Icon } from '@hugeicons/core-free-icons'
 import { convertProjectToActive, deletePipelineProject } from "@/lib/project-pipeline"
 import { formatLargeNumber } from "@/lib/utils"
 import { getCurrencySymbol } from "@/lib/currency"
@@ -146,7 +147,7 @@ export function PipelineCard({ project, onProjectUpdate, isDragging }: PipelineC
                 </h3>
                 {project.clients && (
                   <div className="flex items-center text-xs text-muted-foreground mt-1">
-                    <User className="w-3 h-3 mr-1" />
+                    <HugeiconsIcon icon={UserIcon} className="w-3 h-3 mr-1"  />
                     <span className="truncate">{project.clients.name}</span>
                   </div>
                 )}
@@ -161,16 +162,16 @@ export function PipelineCard({ project, onProjectUpdate, isDragging }: PipelineC
                       className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity -mt-1 -mr-1"
                       disabled={isCardDragging}
                     >
-                      <MoreVertical className="h-4 w-4" />
+                      <HugeiconsIcon icon={More01Icon} className="h-4 w-4"  />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={handleTitleClick}>
-                      <MoreVertical className="mr-2 h-4 w-4" />
+                      <HugeiconsIcon icon={More01Icon} className="mr-2 h-4 w-4"  />
                       Edit Project
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={handleConvertToActive}>
-                      <CheckCircle className="mr-2 h-4 w-4" />
+                      <HugeiconsIcon icon={CheckmarkCircleIcon} className="mr-2 h-4 w-4"  />
                       Convert to Active
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
@@ -178,7 +179,7 @@ export function PipelineCard({ project, onProjectUpdate, isDragging }: PipelineC
                       onClick={() => setShowDeleteDialog(true)}
                       className="text-red-600 focus:text-red-600"
                     >
-                      <Trash2 className="mr-2 h-4 w-4" />
+                      <HugeiconsIcon icon={Delete01Icon} className="mr-2 h-4 w-4"  />
                       Delete Project
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -190,7 +191,7 @@ export function PipelineCard({ project, onProjectUpdate, isDragging }: PipelineC
             {project.budget && (
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center text-muted-foreground">
-                  <DollarSign className="w-3 h-3 mr-1" />
+                  <HugeiconsIcon icon={DollarCircleIcon} className="w-3 h-3 mr-1"  />
                   <span>Budget</span>
                 </div>
                 <span className={`font-medium ${
@@ -239,11 +240,11 @@ export function PipelineCard({ project, onProjectUpdate, isDragging }: PipelineC
         
         <ContextMenuContent>
           <ContextMenuItem onClick={handleTitleClick}>
-            <MoreVertical className="mr-2 h-4 w-4" />
+            <HugeiconsIcon icon={More01Icon} className="mr-2 h-4 w-4"  />
             Edit Project
           </ContextMenuItem>
           <ContextMenuItem onClick={handleConvertToActive}>
-            <CheckCircle className="mr-2 h-4 w-4" />
+            <HugeiconsIcon icon={CheckmarkCircleIcon} className="mr-2 h-4 w-4"  />
             Convert to Active
           </ContextMenuItem>
           <ContextMenuSeparator />
@@ -251,7 +252,7 @@ export function PipelineCard({ project, onProjectUpdate, isDragging }: PipelineC
             onClick={() => setShowDeleteDialog(true)}
             className="text-red-600 focus:text-red-600"
           >
-            <Trash2 className="mr-2 h-4 w-4" />
+            <HugeiconsIcon icon={Delete01Icon} className="mr-2 h-4 w-4"  />
             Delete Project
           </ContextMenuItem>
         </ContextMenuContent>

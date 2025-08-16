@@ -1,5 +1,6 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import type React from "react"
 
 import { useState } from "react"
@@ -16,7 +17,7 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Eye, EyeOff } from "lucide-react"
+import { EyeIcon, ViewOffIcon } from '@hugeicons/core-free-icons'
 import { useAuth } from "@/components/auth-provider"
 
 export function LoginForm({
@@ -27,6 +28,7 @@ export function LoginForm({
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [isSuccess, setIsSuccess] = useState(false)
   const [error, setError] = useState("")
   const router = useRouter()
   const { signIn } = useAuth()
@@ -35,6 +37,7 @@ export function LoginForm({
     e.preventDefault()
     setIsLoading(true)
     setError("")
+    setIsSuccess(false)
 
     try {
       if (!email || !password) {
@@ -47,7 +50,11 @@ export function LoginForm({
       if (error) {
         setError(error.message)
       } else {
-        router.push("/dashboard")
+        setIsSuccess(true)
+        // Show success message for 1.5 seconds before redirecting
+        setTimeout(() => {
+          router.push("/dashboard")
+        }, 1500)
       }
     } catch (error) {
       setError("Login failed. Please try again.")
@@ -125,13 +132,13 @@ export function LoginForm({
                       className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                       onClick={() => setShowPassword(!showPassword)}
                     >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showPassword ? <HugeiconsIcon icon={ViewOffIcon} className="h-4 w-4"  /> : <HugeiconsIcon icon={EyeIcon} className="h-4 w-4"  />}
                     </Button>
                   </div>
                 </div>
                 {error && <div className="text-sm text-destructive">{error}</div>}
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Signing in..." : "Login"}
+                <Button type="submit" className="w-full" disabled={isLoading || isSuccess}>
+                  {isSuccess ? "Login successful!" : isLoading ? "Signing in..." : "Login"}
                 </Button>
               </div>
               <div className="relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t after:border-border">

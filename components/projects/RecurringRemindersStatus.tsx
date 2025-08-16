@@ -1,11 +1,12 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Bell, Calendar, CheckCircle, XCircle, AlertCircle, RefreshCw } from 'lucide-react'
+import { NotificationIcon, Calendar01Icon, CheckmarkCircleIcon, CancelCircleIcon, AlertCircleIcon, RefreshIcon } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 
@@ -95,11 +96,11 @@ export function RecurringRemindersStatus({
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'sent':
-        return <Badge variant="default" className="bg-green-500"><CheckCircle className="w-3 h-3 mr-1" />Sent</Badge>
+        return <Badge variant="default" className="bg-green-500"><HugeiconsIcon icon={CheckmarkCircleIcon} className="w-3 h-3 mr-1"  />Sent</Badge>
       case 'failed':
-        return <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" />Failed</Badge>
+        return <Badge variant="destructive"><HugeiconsIcon icon={CancelCircleIcon} className="w-3 h-3 mr-1"  />Failed</Badge>
       case 'pending':
-        return <Badge variant="secondary"><AlertCircle className="w-3 h-3 mr-1" />Pending</Badge>
+        return <Badge variant="secondary"><HugeiconsIcon icon={AlertCircleIcon} className="w-3 h-3 mr-1"  />Pending</Badge>
       default:
         return <Badge variant="outline">{status}</Badge>
     }
@@ -115,7 +116,7 @@ export function RecurringRemindersStatus({
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="flex items-center gap-2">
-              <Bell className="w-5 h-5" />
+              <HugeiconsIcon icon={NotificationIcon} className="w-5 h-5"  />
               Invoice Reminders
             </CardTitle>
             <CardDescription>
@@ -128,7 +129,7 @@ export function RecurringRemindersStatus({
             onClick={triggerReminder}
             disabled={triggering || !isActive}
           >
-            <RefreshCw className={`w-4 h-4 mr-2 ${triggering ? 'animate-spin' : ''}`} />
+            <HugeiconsIcon icon={RefreshIcon} className={`w-4 h-4 mr-2 ${triggering ? 'animate-spin' : ''}`}  />
             Trigger Check
           </Button>
         </div>
@@ -150,7 +151,7 @@ export function RecurringRemindersStatus({
           </div>
         ) : reminders.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            <Bell className="w-12 h-12 mx-auto mb-2 opacity-50" />
+            <HugeiconsIcon icon={NotificationIcon} className="w-12 h-12 mx-auto mb-2 opacity-50"  />
             <p>No reminders scheduled yet</p>
             <p className="text-sm mt-1">Reminders will be created automatically based on your project schedule</p>
           </div>

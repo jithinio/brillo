@@ -1,7 +1,8 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import { motion, AnimatePresence } from 'framer-motion'
-import { LogOut, Loader2 } from 'lucide-react'
+import { Loading03Icon } from '@hugeicons/core-free-icons'
 
 interface LogoutOverlayProps {
   isVisible: boolean
@@ -25,11 +26,6 @@ export function LogoutOverlay({ isVisible }: LogoutOverlayProps) {
             transition={{ duration: 0.3 }}
             className="text-center space-y-4"
           >
-            {/* Simple icon */}
-            <div className="flex justify-center">
-              <LogOut className="w-6 h-6 text-muted-foreground" />
-            </div>
-
             {/* Title */}
             <div>
               <h2 className="text-lg font-medium mb-2">Signing Out</h2>
@@ -40,7 +36,7 @@ export function LogoutOverlay({ isVisible }: LogoutOverlayProps) {
 
             {/* Loading indicator */}
             <div className="flex items-center justify-center gap-3">
-              <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+              <HugeiconsIcon icon={Loading03Icon} className="w-4 h-4 animate-spin text-muted-foreground" />
               <span className="text-sm text-muted-foreground">Clearing session data</span>
             </div>
           </motion.div>

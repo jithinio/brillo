@@ -1,9 +1,10 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Loader } from '@/components/ui/loader'
-import { Sparkles, Check } from 'lucide-react'
+import { SparklesIcon, Tick02Icon } from '@hugeicons/core-free-icons'
 import { cn } from '@/lib/utils'
 
 interface UpgradeLoaderProps {
@@ -113,7 +114,7 @@ export function UpgradeLoader({ isVisible, onComplete, className }: UpgradeLoade
                             }}
                             className="relative z-10 flex items-center justify-center"
                           >
-                            <Check className="h-6 w-6 text-white stroke-[3]" />
+                            <HugeiconsIcon icon={Tick02Icon} className="h-6 w-6 text-white stroke-[3]"  />
                           </motion.div>
                         </motion.div>
                       ) : (
@@ -133,7 +134,7 @@ export function UpgradeLoader({ isVisible, onComplete, className }: UpgradeLoade
                             transition={{ delay: 0.2, duration: 0.4 }}
                             className="relative z-10"
                           >
-                            <Sparkles className="h-6 w-6 text-primary fill-primary" />
+                            <HugeiconsIcon icon={SparklesIcon} className="h-6 w-6 text-primary fill-primary"  />
                           </motion.div>
                         </motion.div>
                       )}

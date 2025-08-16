@@ -1,11 +1,12 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
-import { Zap, Activity, Globe, Database, Server, Gauge } from 'lucide-react'
+import { ZapIcon, ActivityIcon, GlobeIcon, DatabaseIcon, ServerIcon, DashboardCircleIcon } from '@hugeicons/core-free-icons'
 
 interface PerformanceMetrics {
   // Core Web Vitals
@@ -124,7 +125,7 @@ export function PerformanceMonitor() {
       <Card className="w-full max-w-4xl mx-auto">
         <CardHeader>
           <div className="flex items-center space-x-2">
-            <Gauge className="h-5 w-5 animate-spin" />
+                            <HugeiconsIcon icon={DashboardCircleIcon} className="h-5 w-5 animate-spin"  />
             <CardTitle>Performance Monitor</CardTitle>
           </div>
           <CardDescription>Measuring performance metrics...</CardDescription>
@@ -153,7 +154,7 @@ export function PerformanceMonitor() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <Activity className="h-5 w-5 text-green-600" />
+              <HugeiconsIcon icon={ActivityIcon} className="h-5 w-5 text-green-600"  />
               <CardTitle>Performance Monitor</CardTitle>
               <Badge variant="outline" className="text-xs">
                 Real-time
@@ -161,11 +162,11 @@ export function PerformanceMonitor() {
             </div>
             <div className="flex items-center space-x-2">
               <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                <Server className="h-3 w-3 mr-1" />
+                <HugeiconsIcon icon={ServerIcon} className="h-3 w-3 mr-1"  />
                 {metrics.region}
               </Badge>
               <Badge variant="secondary" className="bg-green-100 text-green-800">
-                <Globe className="h-3 w-3 mr-1" />
+                <HugeiconsIcon icon={GlobeIcon} className="h-3 w-3 mr-1"  />
                 Edge
               </Badge>
             </div>
@@ -179,7 +180,7 @@ export function PerformanceMonitor() {
           {/* Core Web Vitals */}
           <div>
             <h3 className="text-lg font-semibold mb-4 flex items-center">
-              <Zap className="h-4 w-4 mr-2 text-yellow-500" />
+              <HugeiconsIcon icon={ZapIcon} className="h-4 w-4 mr-2 text-yellow-500"  />
               Core Web Vitals
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -254,7 +255,7 @@ export function PerformanceMonitor() {
           {/* Additional Metrics */}
           <div>
             <h3 className="text-lg font-semibold mb-4 flex items-center">
-              <Database className="h-4 w-4 mr-2 text-blue-500" />
+              <HugeiconsIcon icon={DatabaseIcon} className="h-4 w-4 mr-2 text-blue-500"  />
               System Performance
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

@@ -1,7 +1,8 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import { useState, useEffect } from "react"
-import { Check, ChevronsUpDown } from "lucide-react"
+import { Tick01Icon, ArrowDown01Icon } from '@hugeicons/core-free-icons'
 import {
   Dialog,
   DialogContent,
@@ -274,7 +275,7 @@ export function EditProjectDialog({ open, onOpenChange, onProjectUpdate, project
                         {clientsLoading ? "Loading..." : "Select client"}
                       </span>
                     )}
-                    <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+                    <HugeiconsIcon icon={ArrowDown01Icon} className="h-4 w-4 shrink-0 opacity-50"  />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
@@ -309,12 +310,12 @@ export function EditProjectDialog({ open, onOpenChange, onProjectUpdate, project
                                   <div className="text-xs text-muted-foreground">{client.email}</div>
                                 )}
                               </div>
-                              <Check
+                              <HugeiconsIcon icon={Tick01Icon}
                                 className={cn(
                                   "ml-auto h-4 w-4",
                                   selectedClient?.id === client.id ? "opacity-100" : "opacity-0"
                                 )}
-                              />
+                               />
                             </CommandItem>
                           ))}
                           {displayedClients.length < filteredClients.length && (

@@ -1,7 +1,8 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import type * as React from "react"
-import { Bot, Gauge, GalleryVerticalEnd, PieChart, ReceiptText, TrendingUp } from "lucide-react"
+import { UserAccountIcon, DashboardCircleIcon, FilterIcon, Archive02Icon, Invoice01Icon, PieChart01Icon } from '@hugeicons/core-free-icons'
 import Link from "next/link"
 
 import { NavMain } from "@/components/nav-main"
@@ -18,28 +19,36 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 
+// Create icon components that wrap HugeiconsIcon
+const DashboardIcon = () => <HugeiconsIcon icon={DashboardCircleIcon} />
+const ClientsIcon = () => <HugeiconsIcon icon={UserAccountIcon} />
+const PipelineIcon = () => <HugeiconsIcon icon={FilterIcon} />
+const ProjectsIcon = () => <HugeiconsIcon icon={Archive02Icon} />
+const InvoicesIcon = () => <HugeiconsIcon icon={Invoice01Icon} />
+const AnalyticsIcon = () => <HugeiconsIcon icon={PieChart01Icon} />
+
 const data = {
   navMain: [
     {
       title: "Dashboard",
       url: "/dashboard",
-      icon: Gauge,
+      icon: DashboardIcon,
     },
 
     {
       title: "Clients",
       url: "/dashboard/clients",
-      icon: Bot,
+      icon: ClientsIcon,
     },
     {
       title: "Pipeline",
       url: "/dashboard/pipeline",
-      icon: TrendingUp,
+      icon: PipelineIcon,
     },
     {
       title: "Projects",
       url: "/dashboard/projects",
-      icon: GalleryVerticalEnd,
+      icon: ProjectsIcon,
       items: [
         {
           title: "Active",
@@ -70,7 +79,7 @@ const data = {
     {
       title: "Invoices",
       url: "/dashboard/invoices",
-      icon: ReceiptText,
+      icon: InvoicesIcon,
       proFeature: "invoicing",
       items: [
         {
@@ -90,7 +99,7 @@ const data = {
     {
       title: "Analytics",
       url: "/dashboard/analytics",
-      icon: PieChart,
+      icon: AnalyticsIcon,
       proFeature: "advanced_analytics",
     },
   ],

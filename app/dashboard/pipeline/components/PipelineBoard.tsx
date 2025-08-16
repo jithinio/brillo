@@ -1,5 +1,6 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import { useState, useCallback, useEffect, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Badge } from "@/components/ui/badge"
@@ -21,7 +22,7 @@ import { updateProjectStage, groupProjectsByStage, convertProjectToActive, conve
 import type { PipelineProject, PipelineStage } from "@/lib/types/pipeline"
 import { toast } from "sonner"
 import confetti from 'canvas-confetti'
-import { History, User, DollarSign, MoreVertical, RotateCcw, Trash2 } from "lucide-react"
+import { TransactionHistoryIcon, UserIcon, DollarCircleIcon, More01Icon, RotateLeftIcon, Delete01Icon } from '@hugeicons/core-free-icons'
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Input } from "@/components/ui/input"
@@ -120,7 +121,7 @@ function ClosedColumn({ isDragging, onShowLostClients }: { isDragging: boolean, 
             onClick={onShowLostClients}
             className="w-full h-6 text-xs text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/30 border-none"
           >
-            <History className="h-3 w-3 mr-1" />
+            <HugeiconsIcon icon={TransactionHistoryIcon} className="h-3 w-3 mr-1"  />
             History
           </Button>
         </div>
@@ -176,7 +177,7 @@ function LostClientCard({ project, onRestore, onEdit, onDelete, onProjectUpdate,
               </div>
               {project.clients && (
                 <div className="flex items-center text-xs text-muted-foreground">
-                  <User className="w-3 h-3 mr-1" />
+                  <HugeiconsIcon icon={UserIcon} className="w-3 h-3 mr-1"  />
                   <span className="truncate">{project.clients.name}</span>
                 </div>
               )}
@@ -190,30 +191,30 @@ function LostClientCard({ project, onRestore, onEdit, onDelete, onProjectUpdate,
                     size="sm" 
                     className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity -mt-1 -mr-1"
                   >
-                    <MoreVertical className="h-4 w-4" />
+                    <HugeiconsIcon icon={More01Icon} className="h-4 w-4"  />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={handleCardClick}>
-                    <MoreVertical className="mr-2 h-4 w-4" />
+                    <HugeiconsIcon icon={More01Icon} className="mr-2 h-4 w-4"  />
                     Edit Project
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => handleRestore('lead')}>
-                    <RotateCcw className="mr-2 h-4 w-4" />
+                    <HugeiconsIcon icon={RotateLeftIcon} className="mr-2 h-4 w-4"  />
                     Restore to Lead
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleRestore('pitched')}>
-                    <RotateCcw className="mr-2 h-4 w-4" />
+                    <HugeiconsIcon icon={RotateLeftIcon} className="mr-2 h-4 w-4"  />
                     Restore to Pitched
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleRestore('in discussion')}>
-                    <RotateCcw className="mr-2 h-4 w-4" />
+                    <HugeiconsIcon icon={RotateLeftIcon} className="mr-2 h-4 w-4"  />
                     Restore to Discussion
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleDelete} className="text-destructive">
-                    <Trash2 className="mr-2 h-4 w-4" />
+                    <HugeiconsIcon icon={Delete01Icon} className="mr-2 h-4 w-4"  />
                     Delete Project
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -227,7 +228,7 @@ function LostClientCard({ project, onRestore, onEdit, onDelete, onProjectUpdate,
           {project.budget && (
             <div className="flex items-center justify-between text-sm">
               <div className="flex items-center text-muted-foreground">
-                <DollarSign className="w-3 h-3 mr-1" />
+                <HugeiconsIcon icon={DollarCircleIcon} className="w-3 h-3 mr-1"  />
                 <span>Budget</span>
               </div>
               <span className="font-medium text-foreground">
@@ -704,7 +705,7 @@ export function PipelineBoard({
         <SheetContent side="right" className="w-[400px] sm:w-[500px] transform-gpu will-change-transform">
           <SheetHeader>
             <SheetTitle className="flex items-center gap-2">
-              <History className="h-5 w-5 text-red-600" />
+              <HugeiconsIcon icon={TransactionHistoryIcon} className="h-5 w-5 text-red-600"  />
               Lost Clients History
             </SheetTitle>
           </SheetHeader>

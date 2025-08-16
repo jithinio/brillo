@@ -1,5 +1,6 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import { useState, useRef } from "react"
 import React from "react"
 import { useRouter } from "next/navigation"
@@ -20,7 +21,7 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Upload, User, Crown } from "lucide-react"
+import { PlusSignIcon, Upload01Icon, UserIcon, Crown02Icon } from '@hugeicons/core-free-icons'
 import Link from "next/link"
 import { ClientMetrics } from "@/components/clients/ClientMetrics"
 import { DataHookReturn, EntityActions } from "@/components/table/types"
@@ -75,7 +76,7 @@ const ClientDialogForm = React.memo(({
           <AvatarImage src={avatarPreview} alt={formData.name} />
         ) : (
           <AvatarFallback className="text-lg">
-            {formData.name ? getInitials(formData.name) : <User className="h-10 w-10 text-muted-foreground" />}
+            {formData.name ? getInitials(formData.name) : <HugeiconsIcon icon={UserIcon} className="h-10 w-10 text-muted-foreground"  />}
           </AvatarFallback>
         )}
       </Avatar>
@@ -87,7 +88,7 @@ const ClientDialogForm = React.memo(({
           size="sm"
           onClick={() => fileInputRef.current?.click()}
         >
-          <Upload className="h-4 w-4 mr-2" />
+          <HugeiconsIcon icon={Upload01Icon} className="h-4 w-4 mr-2"  />
           {avatarPreview ? "Change Photo" : "Upload Photo"}
                 </Button>
         <input
@@ -928,7 +929,7 @@ export default function ClientsPage() {
             {!canCreateResource('clients') && (
               <Button asChild variant="outline" size="sm" className="h-8">
                 <Link href="/pricing">
-                  <Crown className="h-3 w-3 mr-1" />
+                  <HugeiconsIcon icon={Crown02Icon} className="h-3 w-3 mr-1"  />
                   Upgrade to Pro
                 </Link>
               </Button>
@@ -942,7 +943,7 @@ export default function ClientsPage() {
               className="h-8"
               disabled={!canCreateResource('clients')}
             >
-              <Plus className="h-4 w-4 mr-1" />
+              <HugeiconsIcon icon={PlusSignIcon} className="h-4 w-4 mr-1"  />
               Add Client
             </Button>
           </div>

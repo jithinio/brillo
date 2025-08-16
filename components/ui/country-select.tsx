@@ -1,7 +1,8 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import * as React from "react"
-import { ChevronDown, Check } from "lucide-react"
+import { ArrowDown01Icon, Tick02Icon as Check } from '@hugeicons/core-free-icons'
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
@@ -74,7 +75,7 @@ export function CountrySelect({
             disabled={disabled}
           >
             {selectedCountry ? selectedCountry.name : placeholder}
-            <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            <HugeiconsIcon icon={ArrowDown01Icon} className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[350px] p-0 max-h-[300px]" align="start">
@@ -100,7 +101,7 @@ export function CountrySelect({
                         <span className="text-sm text-muted-foreground font-mono">{country.code}</span>
                       </div>
                       {selectedCountry?.code === country.code && (
-                        <Check className="h-4 w-4 flex-shrink-0" />
+                        <HugeiconsIcon icon={Tick02Icon} className="h-4 w-4 flex-shrink-0"  />
                       )}
                     </CommandItem>
                   ))}

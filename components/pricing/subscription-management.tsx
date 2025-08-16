@@ -1,7 +1,8 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import { useState } from "react"
-import { Calendar, CreditCard, ExternalLink, Package, Trash2, RefreshCw } from "lucide-react"
+import { Calendar01Icon, CreditCardIcon, ArrowUpRight01Icon, PackageIcon, Delete01Icon, RefreshIcon } from '@hugeicons/core-free-icons'
 import { Button } from "@/components/ui/button"
 import { Loader } from "@/components/ui/loader"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -386,7 +387,7 @@ export function SubscriptionManagement() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
-                <Package className="w-5 h-5" />
+                <HugeiconsIcon icon={PackageIcon} className="w-5 h-5"  />
                 Current Plan
               </CardTitle>
               <CardDescription>Manage your subscription and billing</CardDescription>
@@ -430,10 +431,10 @@ export function SubscriptionManagement() {
                   {isManaging ? (
                     <Loader size="sm" variant="default" className="mr-2" />
                   ) : (
-                    <CreditCard className="w-4 h-4 mr-2" />
+                    <HugeiconsIcon icon={CreditCardIcon} className="w-4 h-4 mr-2"  />
                   )}
                   Manage Billing
-                  <ExternalLink className="w-3 h-3 ml-1" />
+                  <HugeiconsIcon icon={ArrowUpRight01Icon} className="w-3 h-3 ml-1"  />
                 </Button>
               )}
 
@@ -449,7 +450,7 @@ export function SubscriptionManagement() {
                     {isManaging ? (
                       <Loader size="sm" variant="default" className="mr-2" />
                     ) : (
-                      <RefreshCw className="w-4 h-4 mr-2" />
+                      <HugeiconsIcon icon={RefreshIcon} className="w-4 h-4 mr-2"  />
                     )}
                     Resume Subscription
                   </Button>
@@ -463,7 +464,7 @@ export function SubscriptionManagement() {
                         disabled={isManaging || isLoading}
                         className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
                       >
-                        <Trash2 className="w-4 h-4 mr-2 text-red-600" />
+                        <HugeiconsIcon icon={Delete01Icon} className="w-4 h-4 mr-2 text-red-600"  />
                         Cancel Subscription
                       </Button>
                     </AlertDialogTrigger>
@@ -505,7 +506,7 @@ export function SubscriptionManagement() {
               {isSyncing ? (
                 <Loader size="sm" variant="default" className="mr-2" />
               ) : (
-                <RefreshCw className="w-4 h-4 mr-2" />
+                <HugeiconsIcon icon={RefreshIcon} className="w-4 h-4 mr-2"  />
               )}
               Sync Data
             </Button>
@@ -515,7 +516,7 @@ export function SubscriptionManagement() {
             <div className="pt-4 border-t">
               <Button asChild>
                 <a href="/pricing">
-                  <Package className="w-4 h-4 mr-2" />
+                  <HugeiconsIcon icon={PackageIcon} className="w-4 h-4 mr-2"  />
                   Upgrade to Pro
                 </a>
               </Button>
@@ -545,7 +546,7 @@ export function SubscriptionManagement() {
                 {isRefreshingUsage ? (
                   <Loader size="sm" variant="default" />
                 ) : (
-                  <RefreshCw className="w-4 h-4" />
+                  <HugeiconsIcon icon={RefreshIcon} className="w-4 h-4"  />
                 )}
               </Button>
             </div>

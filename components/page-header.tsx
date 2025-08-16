@@ -1,3 +1,4 @@
+import { HugeiconsIcon } from '@hugeicons/react';
 import type React from "react"
 import {
   Breadcrumb,
@@ -10,7 +11,7 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertTriangle } from "lucide-react"
+import { Alert01Icon } from '@hugeicons/core-free-icons'
 
 interface PageHeaderProps {
   title: string
@@ -75,7 +76,7 @@ export function PageTitle({
       <h1 className="text-xl font-normal tracking-tight">{title}</h1>
       {error && (
         <Alert className="border-yellow-200 bg-yellow-50">
-          <AlertTriangle className="h-4 w-4 text-yellow-600" />
+          <HugeiconsIcon icon={Alert01Icon} className="h-4 w-4 text-yellow-600"  />
           <AlertDescription className="text-yellow-800">
             {error}
           </AlertDescription>

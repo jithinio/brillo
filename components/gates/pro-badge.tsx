@@ -1,6 +1,7 @@
 "use client"
 
-import { Crown, Sparkles } from "lucide-react"
+import { HugeiconsIcon } from '@hugeicons/react';
+import { Crown02Icon, SparklesIcon } from '@hugeicons/core-free-icons'
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useSubscription } from "@/components/providers/subscription-provider"
@@ -162,8 +163,8 @@ export function ProBadge({
         className
       )}
     >
-      {variant !== 'minimal' && <Crown className={getIconSize()} />}
-      {variant === 'minimal' && <Sparkles className={getIconSize()} />}
+      {variant !== 'minimal' && <HugeiconsIcon icon={Crown02Icon} className={getIconSize()}  />}
+      {variant === 'minimal' && <HugeiconsIcon icon={SparklesIcon} className={getIconSize()}  />}
       Pro
     </Badge>
   )

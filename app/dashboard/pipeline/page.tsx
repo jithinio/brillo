@@ -1,5 +1,6 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import { useState, useEffect } from "react"
 import { PageHeader, PageContent } from "@/components/page-header"
 import { PipelineMetrics } from "./components/PipelineMetrics"
@@ -7,7 +8,7 @@ import { PipelineBoard } from "./components/PipelineBoard"
 import { EnhancedAddProjectDialog } from "@/components/projects/EnhancedAddProjectDialog"
 import { fetchPipelineProjects, fetchPipelineStages, calculateProjectPipelineMetrics } from "@/lib/project-pipeline"
 import type { PipelineProject, PipelineStage, PipelineMetrics as PipelineMetricsType } from "@/lib/types/pipeline"
-import { Search, X, Plus, Crown } from "lucide-react"
+import { SearchIcon, CancelIcon, PlusSignIcon, Crown02Icon } from '@hugeicons/core-free-icons'
 import { Input } from "@/components/ui/input"
 import { Loader } from "@/components/ui/loader"
 import { Button } from "@/components/ui/button"
@@ -195,7 +196,7 @@ export default function PipelinePage() {
                 {isSearching ? (
                   <Loader size="sm" variant="primary" className="absolute left-3 top-2" />
                 ) : (
-                  <Search className="absolute left-3 top-2 h-4 w-4 text-muted-foreground" />
+                  <HugeiconsIcon icon={SearchIcon} className="absolute left-3 top-2 h-4 w-4 text-muted-foreground"  />
                 )}
                 <Input
                   placeholder="Search projects..."
@@ -218,7 +219,7 @@ export default function PipelinePage() {
                     className="absolute right-1 top-0.5 h-6 w-6 p-0 hover:bg-muted"
                     onClick={() => setSearchQuery("")}
                   >
-                    <X className="h-3 w-3" />
+                    <HugeiconsIcon icon={CancelIcon} className="h-3 w-3"  />
                   </Button>
                 )}
               </div>
@@ -240,7 +241,7 @@ export default function PipelinePage() {
                 {!canCreateResource('projects') && (
                   <Button asChild variant="outline" size="sm" className="h-8">
                     <Link href="/pricing">
-                      <Crown className="h-3 w-3 mr-1" />
+                      <HugeiconsIcon icon={Crown02Icon} className="h-3 w-3 mr-1"  />
                       Upgrade to Pro
                     </Link>
                   </Button>
@@ -251,7 +252,7 @@ export default function PipelinePage() {
                   className="h-8"
                   disabled={!canCreateResource('projects')}
                 >
-                  <Plus className="h-4 w-4 mr-1" />
+                  <HugeiconsIcon icon={PlusSignIcon} className="h-4 w-4 mr-1"  />
                   New Lead
                 </Button>
               </div>

@@ -1,11 +1,12 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import type { ChartConfig } from "@/components/ui/chart"
 import { Bar, BarChart, XAxis, YAxis, ResponsiveContainer, ReferenceLine } from "recharts"
-import { TrendingUp, TrendingDown, DollarSign, BarChart3 } from "lucide-react"
+import { TradeUpIcon, TradeDownIcon, DollarCircleIcon, BarChartIcon } from '@hugeicons/core-free-icons'
 import { formatLargeNumber } from "@/lib/utils"
 import { getCurrencySymbol } from "@/lib/currency"
 import { useSettings } from "@/components/settings-provider"
@@ -70,7 +71,7 @@ export function CashFlowChart({
       <CardHeader className="p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <HugeiconsIcon icon={DollarCircleIcon} className="h-4 w-4 text-muted-foreground"  />
             <CardTitle className="text-sm font-medium text-muted-foreground">
               {title}
             </CardTitle>
@@ -109,9 +110,9 @@ export function CashFlowChart({
                 {netCashFlowTrend && (
                   <div className="flex items-center gap-1">
                     {netCashFlowTrend.direction === 'up' ? (
-                      <TrendingUp className="h-3 w-3 text-green-600" />
+                      <HugeiconsIcon icon={TradeUpIcon} className="h-3 w-3 text-green-600"  />
                     ) : (
-                      <TrendingDown className="h-3 w-3 text-red-600" />
+                      <HugeiconsIcon icon={TradeDownIcon} className="h-3 w-3 text-red-600"  />
                     )}
                     <span className={`text-xs font-normal ${
                       netCashFlowTrend.direction === 'up' ? 'text-green-600' : 'text-red-600'
@@ -135,7 +136,7 @@ export function CashFlowChart({
               /* Empty State */
               <div className="flex flex-col items-center justify-center h-full text-center space-y-3">
                 <div className="flex items-center justify-center w-12 h-12 rounded-full bg-muted">
-                  <BarChart3 className="w-6 h-6 text-muted-foreground" />
+                  <HugeiconsIcon icon={BarChartIcon} className="w-6 h-6 text-muted-foreground"  />
                 </div>
                 <div className="space-y-1">
                   <h3 className="font-medium text-sm">No cash flow data</h3>

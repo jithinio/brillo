@@ -1,9 +1,10 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
-import { TrendingUp, TrendingDown, BarChart3 } from "lucide-react"
+import { TradeUpIcon, TradeDownIcon, BarChartIcon } from '@hugeicons/core-free-icons'
 import { formatLargeNumber } from "@/lib/utils"
 import { formatCurrency, getCurrencySymbol } from "@/lib/currency"
 import { useSettings } from "@/components/settings-provider"
@@ -17,7 +18,7 @@ interface MetricCardProps {
     percentage: number
     label?: string
   }
-  icon?: React.ComponentType<{ className?: string }>
+  icon?: any
   isLoading?: boolean
   error?: string | null
   formatValue?: (value: number) => string
@@ -122,7 +123,7 @@ const MetricCard = ({
       <CardHeader className={styles.header}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            {Icon && <Icon className={`${styles.icon} text-muted-foreground`} />}
+            {Icon && <HugeiconsIcon icon={Icon} className={`${styles.icon} text-muted-foreground`} />}
             <CardTitle className={`${styles.title} font-medium text-muted-foreground`}>
               {title}
             </CardTitle>
@@ -164,9 +165,9 @@ const MetricCard = ({
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1">
                   {trend.direction === 'up' ? (
-                    <TrendingUp className="h-3 w-3 text-green-600" />
+                    <HugeiconsIcon icon={TradeUpIcon} className="h-3 w-3 text-green-600"  />
                   ) : (
-                    <TrendingDown className="h-3 w-3 text-red-600" />
+                    <HugeiconsIcon icon={TradeDownIcon} className="h-3 w-3 text-red-600"  />
                   )}
                   <span className={`text-xs font-normal ${
                     trend.direction === 'up' ? 'text-green-600' : 'text-red-600'

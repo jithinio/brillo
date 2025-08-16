@@ -1,5 +1,6 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -7,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import type { ChartConfig } from "@/components/ui/chart"
 import { Line, LineChart, Bar, BarChart, XAxis, YAxis, LabelList, ReferenceLine } from "recharts"
-import { TrendingUp, TrendingDown, Calendar, DollarSign, CalendarIcon, RefreshCw, AlertCircle } from "lucide-react"
+import { TradeUpIcon, TradeDownIcon, Calendar01Icon, DollarCircleIcon, RefreshIcon, AlertCircleIcon } from '@hugeicons/core-free-icons'
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { format, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear, subMonths, subQuarters, subYears } from "date-fns"
@@ -622,9 +623,9 @@ const MetricCard = ({
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1">
                 {trend === 'up' ? (
-                  <TrendingUp className="h-3 w-3 text-green-600" />
+                  <HugeiconsIcon icon={TradeUpIcon} className="h-3 w-3 text-green-600"  />
                 ) : (
-                  <TrendingDown className="h-3 w-3 text-red-600" />
+                  <HugeiconsIcon icon={TradeDownIcon} className="h-3 w-3 text-red-600"  />
                 )}
                 <span className={`text-xs font-normal ${trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
                   {percentage.toFixed(1)}%
@@ -818,9 +819,9 @@ const RevenueChart = ({
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1">
                 {dynamicTrend.trend === 'up' ? (
-                  <TrendingUp className="h-3 w-3 text-green-600" />
+                  <HugeiconsIcon icon={TradeUpIcon} className="h-3 w-3 text-green-600"  />
                 ) : (
-                  <TrendingDown className="h-3 w-3 text-red-600" />
+                  <HugeiconsIcon icon={TradeDownIcon} className="h-3 w-3 text-red-600"  />
                 )}
                 <span className={`text-xs font-normal ${dynamicTrend.trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
                   {dynamicTrend.percentage}%
@@ -958,9 +959,9 @@ const YearlyBarChart = ({
                   return (
                     <>
                       {trend === 'up' ? (
-                        <TrendingUp className="h-3 w-3 text-green-600" />
+                        <HugeiconsIcon icon={TradeUpIcon} className="h-3 w-3 text-green-600"  />
                       ) : (
-                        <TrendingDown className="h-3 w-3 text-red-600" />
+                        <HugeiconsIcon icon={TradeDownIcon} className="h-3 w-3 text-red-600"  />
                       )}
                       <span className={`text-xs font-normal ${trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
                         {Math.abs(growthPercentage).toFixed(1)}%
@@ -1076,7 +1077,7 @@ export default function DashboardPage() {
             disabled={loading}
             className="h-8 w-8 p-0"
           >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            <HugeiconsIcon icon={RefreshIcon} className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`}  />
           </Button>
         }
       />
@@ -1089,7 +1090,7 @@ export default function DashboardPage() {
               {/* Error Alert */}
               {error && (
                 <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
+                  <HugeiconsIcon icon={AlertCircleIcon} className="h-4 w-4"  />
                   <AlertDescription>
                     Failed to load dashboard data: {error}
                     <Button 

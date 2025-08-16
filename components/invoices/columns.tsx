@@ -1,25 +1,8 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import type { ColumnDef } from "@tanstack/react-table"
-import {
-  ArrowUpDown,
-  MoreHorizontal,
-  CheckCircle,
-  Clock,
-  Send,
-  XCircle,
-  Eye,
-  Edit,
-  Download,
-  Trash2,
-  User,
-  Calendar,
-  FileText,
-  DollarSign,
-  Check,
-  X,
-  ChevronRight,
-} from "lucide-react"
+import { ArrowUpDownIcon, MoreHorizontalIcon, Tick01Icon, ClockIcon, DollarSend01Icon, CancelCircleIcon, ViewIcon, Edit03Icon, DownloadIcon, Delete01Icon, UserIcon, Calendar01Icon, DocumentAttachmentIcon, DollarCircleIcon, CancelIcon, ArrowRight01Icon, Activity03Icon, WorkIcon, MoneyReceiveCircleIcon, CashbackIcon, MailSend02Icon, CheckmarkCircle04Icon } from '@hugeicons/core-free-icons'
 import { Button } from "@/components/ui/button"
 import { Loader } from "@/components/ui/loader"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -79,47 +62,29 @@ function EditablePaymentCell({
   }
 
   return (
-    <div className="min-w-[148px] max-w-[148px] overflow-hidden">
+    <div className="w-[148px] max-w-[148px] overflow-hidden">
       {isEditing ? (
-        <div className="flex items-center gap-1 w-full overflow-hidden">
-          <Input
-            type="number"
-            value={editValue}
-            onChange={(e) => setEditValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-            onBlur={handleSave}
-            className="h-8 text-sm border border-input bg-background px-2 py-1 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex-1 min-w-0"
-            step="0.01"
-            min="0"
-            max={invoice.total_amount || 0}
-            autoFocus
-          />
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={handleSave}
-            className="h-8 w-6 p-0 flex-shrink-0"
-          >
-            <Check className="h-3 w-3" />
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={handleCancel}
-            className="h-8 w-6 p-0 flex-shrink-0"
-          >
-            <X className="h-3 w-3" />
-          </Button>
-        </div>
+        <Input
+          type="number"
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={handleSave}
+          className="h-8 text-sm border border-input bg-background px-2 py-1 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 w-full max-w-full"
+          step="0.01"
+          min="0"
+          max={invoice.total_amount || 0}
+          autoFocus
+        />
       ) : (
         <div 
-          className="cursor-pointer hover:bg-muted rounded px-2 py-1"
+          className="cursor-pointer overflow-hidden flex items-center group/payment"
           onClick={handleEdit}
         >
-          <span className="font-normal">
+          <span className="font-normal text-sm truncate flex-1 min-w-0">
             {formatCurrency(paymentReceived, invoiceCurrency)}
           </span>
-          <Edit className="ml-1 h-3 w-3 opacity-0 group-hover:opacity-100 inline" />
+          <Edit className="ml-1 h-3 w-3 opacity-0 group-hover/payment:opacity-100 flex-shrink-0" />
         </div>
       )}
     </div>
@@ -159,7 +124,8 @@ export type Invoice = {
   }
   items?: {
     id: string
-    description: string
+    item_name: string
+    item_description: string
     quantity: number
     rate: number
     amount: number
@@ -169,37 +135,37 @@ export type Invoice = {
 const statusConfig = {
   draft: {
     label: "Draft",
-    icon: Clock,
+    icon: ClockIcon,
     variant: "outline" as const,
     iconClassName: "text-muted-foreground",
   },
   sent: {
     label: "Sent",
-    icon: Send,
+    icon: SentIcon,
     variant: "outline" as const,
     iconClassName: "text-blue-500",
   },
   partially_paid: {
     label: "Partially Paid",
-    icon: CheckCircle,
+    icon: CheckmarkCircle04Icon,
     variant: "outline" as const,
     iconClassName: "text-yellow-500",
   },
   paid: {
     label: "Paid",
-    icon: CheckCircle,
+    icon: CheckmarkCircle04Icon,
     variant: "outline" as const,
     iconClassName: "text-green-500",
   },
   overdue: {
     label: "Overdue",
-    icon: XCircle,
+    icon: CancelCircleIcon,
     variant: "outline" as const,
     iconClassName: "text-red-500",
   },
   cancelled: {
     label: "Cancelled",
-    icon: XCircle,
+    icon: CancelCircleIcon,
     variant: "outline" as const,
     iconClassName: "text-muted-foreground",
   },
@@ -256,7 +222,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
             className="h-auto p-0 font-normal w-full max-w-full overflow-hidden flex items-center justify-start"
           >
             <span className="truncate min-w-0 flex-1 text-left">Invoice Number</span>
-            <ArrowUpDown className="ml-2 h-3 w-3 flex-shrink-0" style={{ width: '12px', height: '12px' }} />
+            <HugeiconsIcon icon={ArrowUpDownIcon} className="ml-2 h-3 w-3 flex-shrink-0" style={{ width: '12px', height: '12px' }}  />
           </Button>
         )
       },
@@ -265,7 +231,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
         return (
           <div className="min-w-[120px] max-w-[150px]">
             <div className="flex items-center space-x-2">
-              <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+              <HugeiconsIcon icon={DocumentAttachmentIcon} className="h-4 w-4 text-muted-foreground shrink-0"  />
               <Button
                 variant="ghost"
                 className="p-0 h-auto font-medium text-sm"
@@ -291,7 +257,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
             className="h-auto p-0 font-normal w-full max-w-full overflow-hidden flex items-center justify-start"
           >
             <span className="truncate min-w-0 flex-1 text-left">Client</span>
-            <ArrowUpDown className="ml-2 h-3 w-3 flex-shrink-0" style={{ width: '12px', height: '12px' }} />
+            <HugeiconsIcon icon={ArrowUpDownIcon} className="ml-2 h-3 w-3 flex-shrink-0" style={{ width: '12px', height: '12px' }}  />
           </Button>
         )
       },
@@ -299,7 +265,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
         const client = row.original.clients
         return client ? (
           <div className="flex items-center space-x-2 min-w-[120px] max-w-[150px]">
-            <User className="h-4 w-4 text-muted-foreground shrink-0" />
+            <HugeiconsIcon icon={UserIcon} className="h-4 w-4 text-muted-foreground shrink-0"  />
             <Button
               variant="ghost"
               className="p-0 h-auto font-medium text-sm"
@@ -318,7 +284,17 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
     },
     {
       id: "project",
-      header: "Project",
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="h-auto p-0 font-normal flex items-center gap-2"
+        >
+          <HugeiconsIcon icon={WorkIcon} className="h-3 w-3 text-muted-foreground"  />
+          Project
+          <HugeiconsIcon icon={ArrowUpDownIcon} className="ml-2 h-3 w-3" style={{ width: '12px', height: '12px' }}  />
+        </Button>
+      ),
       cell: ({ row }) => {
         const project = row.original.projects
         return project ? (
@@ -355,8 +331,9 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
             className="h-auto p-0 font-normal w-full max-w-full overflow-hidden flex items-center justify-start"
           >
+            <HugeiconsIcon icon={Activity03Icon} className="mr-2 h-3 w-3 text-muted-foreground"  />
             <span className="truncate min-w-0 flex-1 text-left">Status</span>
-            <ArrowUpDown className="ml-2 h-3 w-3 flex-shrink-0" style={{ width: '12px', height: '12px' }} />
+            <HugeiconsIcon icon={ArrowUpDownIcon} className="ml-2 h-3 w-3 flex-shrink-0" style={{ width: '12px', height: '12px' }}  />
           </Button>
         )
       },
@@ -376,7 +353,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
               variant={config.variant}
               className="text-zinc-700 font-normal text-sm whitespace-nowrap"
             >
-              <Icon className={`mr-1.5 h-3 w-3 ${config.iconClassName}`} />
+
               {config.label}
             </Badge>
           </div>
@@ -396,7 +373,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
             className="h-auto p-0 font-normal w-full max-w-full overflow-hidden flex items-center justify-start"
           >
             <span className="truncate min-w-0 flex-1 text-left">Total Amount</span>
-            <ArrowUpDown className="ml-2 h-3 w-3 flex-shrink-0" style={{ width: '12px', height: '12px' }} />
+            <HugeiconsIcon icon={ArrowUpDownIcon} className="ml-2 h-3 w-3 flex-shrink-0" style={{ width: '12px', height: '12px' }}  />
           </Button>
         )
       },
@@ -440,8 +417,9 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
             className="h-auto p-0 font-normal w-full max-w-full overflow-hidden flex items-center justify-start"
           >
+            <HugeiconsIcon icon={MoneyReceiveCircleIcon} className="mr-2 h-3 w-3 text-muted-foreground"  />
             <span className="truncate min-w-0 flex-1 text-left">Received</span>
-            <ArrowUpDown className="ml-2 h-3 w-3 flex-shrink-0" style={{ width: '12px', height: '12px' }} />
+            <HugeiconsIcon icon={ArrowUpDownIcon} className="ml-2 h-3 w-3 flex-shrink-0" style={{ width: '12px', height: '12px' }}  />
           </Button>
         )
       },
@@ -467,8 +445,9 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
             className="h-auto p-0 font-normal w-full max-w-full overflow-hidden flex items-center justify-start"
           >
+            <HugeiconsIcon icon={CashbackIcon} className="mr-2 h-3 w-3 text-muted-foreground"  />
             <span className="truncate min-w-0 flex-1 text-left">Balance Due</span>
-            <ArrowUpDown className="ml-2 h-3 w-3 flex-shrink-0" style={{ width: '12px', height: '12px' }} />
+            <HugeiconsIcon icon={ArrowUpDownIcon} className="ml-2 h-3 w-3 flex-shrink-0" style={{ width: '12px', height: '12px' }}  />
           </Button>
         )
       },
@@ -481,8 +460,8 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
         const isOverdue = invoice.status === 'overdue'
         
         return (
-          <div className="min-w-[120px] max-w-[180px]">
-            <span className={`font-normal ${isOverdue && balanceDue > 0 ? 'text-red-600' : ''}`}>
+          <div className="min-w-[120px] max-w-[140px] overflow-hidden">
+            <span className={`font-normal text-sm truncate block ${isOverdue && balanceDue > 0 ? 'text-red-600' : ''}`}>
               {formatCurrency(balanceDue, invoiceCurrency)}
             </span>
           </div>
@@ -501,7 +480,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
             className="h-auto p-0 font-normal w-full max-w-full overflow-hidden flex items-center justify-start"
           >
             <span className="truncate min-w-0 flex-1 text-left">Issue Date</span>
-            <ArrowUpDown className="ml-2 h-3 w-3 flex-shrink-0" style={{ width: '12px', height: '12px' }} />
+            <HugeiconsIcon icon={ArrowUpDownIcon} className="ml-2 h-3 w-3 flex-shrink-0" style={{ width: '12px', height: '12px' }}  />
           </Button>
         )
       },
@@ -533,7 +512,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
             className="h-auto p-0 font-normal w-full max-w-full overflow-hidden flex items-center justify-start"
           >
             <span className="truncate min-w-0 flex-1 text-left">Due Date</span>
-            <ArrowUpDown className="ml-2 h-3 w-3 flex-shrink-0" style={{ width: '12px', height: '12px' }} />
+            <HugeiconsIcon icon={ArrowUpDownIcon} className="ml-2 h-3 w-3 flex-shrink-0" style={{ width: '12px', height: '12px' }}  />
           </Button>
         )
       },
@@ -597,7 +576,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
             className="h-auto p-0 font-normal w-full max-w-full overflow-hidden flex items-center justify-start"
           >
             <span className="truncate min-w-0 flex-1 text-left">Created At</span>
-            <ArrowUpDown className="ml-2 h-3 w-3 flex-shrink-0" style={{ width: '12px', height: '12px' }} />
+            <HugeiconsIcon icon={ArrowUpDownIcon} className="ml-2 h-3 w-3 flex-shrink-0" style={{ width: '12px', height: '12px' }}  />
           </Button>
         )
       },
@@ -628,13 +607,13 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
                   size="sm"
                   className="h-8 w-8 p-0 border-dashed hover:border-solid"
                 >
-                  <MoreHorizontal className="h-4 w-4" />
+                  <HugeiconsIcon icon={MoreHorizontalIcon} className="h-4 w-4"  />
                   <span className="sr-only">Open actions menu</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem onClick={() => actions.onViewDetails(invoice)} className="whitespace-nowrap">
-                  <Eye className="mr-2 h-4 w-4" />
+                  <HugeiconsIcon icon={ViewIcon} className="mr-2 h-4 w-4"  />
                   View Details
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => actions.onEditInvoice(invoice)} className="whitespace-nowrap">
@@ -646,7 +625,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
                 {/* Status Change Submenu */}
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger className="whitespace-nowrap">
-                    <CheckCircle className="mr-2 h-4 w-4" />
+                    <HugeiconsIcon icon={Tick01Icon} className="mr-2 h-4 w-4"  />
                     Change Status
                   </DropdownMenuSubTrigger>
                   <DropdownMenuSubContent>
@@ -654,42 +633,42 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
                       onClick={() => actions.onStatusChange(invoice, 'draft')}
                       disabled={invoice.status === 'draft'}
                     >
-                      <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
+                      <HugeiconsIcon icon={ClockIcon} className="mr-2 h-4 w-4 text-muted-foreground"  />
                       Draft
                     </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={() => actions.onStatusChange(invoice, 'sent')}
                       disabled={invoice.status === 'sent'}
                     >
-                      <Send className="mr-2 h-4 w-4 text-blue-600" />
+                      <HugeiconsIcon icon={DollarSend01Icon} className="mr-2 h-4 w-4 text-blue-600"  />
                       Sent
                     </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={() => actions.onStatusChange(invoice, 'partially_paid')}
                       disabled={invoice.status === 'partially_paid'}
                     >
-                      <CheckCircle className="mr-2 h-4 w-4 text-yellow-600" />
+                      <HugeiconsIcon icon={Tick01Icon} className="mr-2 h-4 w-4 text-yellow-600"  />
                       Partially Paid
                     </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={() => actions.onStatusChange(invoice, 'paid')}
                       disabled={invoice.status === 'paid'}
                     >
-                      <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
+                      <HugeiconsIcon icon={Tick01Icon} className="mr-2 h-4 w-4 text-green-600"  />
                       Paid
                     </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={() => actions.onStatusChange(invoice, 'overdue')}
                       disabled={invoice.status === 'overdue'}
                     >
-                      <XCircle className="mr-2 h-4 w-4 text-red-600" />
+                      <HugeiconsIcon icon={CancelCircleIcon} className="mr-2 h-4 w-4 text-red-600"  />
                       Overdue
                     </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={() => actions.onStatusChange(invoice, 'cancelled')}
                       disabled={invoice.status === 'cancelled'}
                     >
-                      <XCircle className="mr-2 h-4 w-4 text-muted-foreground" />
+                      <HugeiconsIcon icon={CancelCircleIcon} className="mr-2 h-4 w-4 text-muted-foreground"  />
                       Cancelled
                     </DropdownMenuItem>
                   </DropdownMenuSubContent>
@@ -697,14 +676,14 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
                 
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => actions.onSendInvoice(invoice)} className="whitespace-nowrap">
-                  <Send className="mr-2 h-4 w-4" />
+                  <HugeiconsIcon icon={MailSend02Icon} className="mr-2 h-4 w-4"  />
                   Send Invoice
                 </DropdownMenuItem>
                 <DropdownMenuItem 
                   onClick={() => actions.onViewInvoice(invoice)} 
                   className="whitespace-nowrap"
                 >
-                  <Eye className="mr-2 h-4 w-4" />
+                  <HugeiconsIcon icon={ViewIcon} className="mr-2 h-4 w-4"  />
                   View PDF
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
@@ -712,7 +691,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
                   onClick={() => actions.onDeleteInvoice(invoice)}
                   className="text-destructive whitespace-nowrap"
                 >
-                  <Trash2 className="mr-2 h-4 w-4" />
+                  <HugeiconsIcon icon={Delete01Icon} className="mr-2 h-4 w-4"  />
                   Delete Invoice
                 </DropdownMenuItem>
               </DropdownMenuContent>

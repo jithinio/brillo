@@ -1,11 +1,7 @@
 "use client"
 
-import {
-  ChevronDownIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  ChevronUpIcon,
-} from "lucide-react"
+import { HugeiconsIcon } from '@hugeicons/react';
+import { ArrowDown01Icon as ChevronDown, ArrowLeft01Icon as ChevronLeft, ArrowRight01Icon as ChevronRight, ArrowUp01Icon as ChevronUp } from '@hugeicons/core-free-icons'
 import * as React from "react"
 import { DayFlag, DayPicker, SelectionState, UI, getDefaultClassNames } from "react-day-picker"
 
@@ -98,15 +94,15 @@ export const Calendar = ({
         Chevron: ({ orientation = "left" }) => {
           switch (orientation) {
             case "left":
-              return <ChevronLeftIcon className="h-4 w-4" />
+              return <HugeiconsIcon icon={ChevronLeft} className="h-4 w-4" />
             case "right":
-              return <ChevronRightIcon className="h-4 w-4" />
+              return <HugeiconsIcon icon={ChevronRight} className="h-4 w-4" />
             case "up":
-              return <ChevronUpIcon className="h-4 w-4" />
+              return <HugeiconsIcon icon={ChevronUp} className="h-4 w-4" />
             case "down":
-              return <ChevronDownIcon className="h-4 w-4" />
+              return <HugeiconsIcon icon={ChevronDown} className="h-4 w-4" />
             default:
-              return <ChevronLeftIcon className="h-4 w-4" />
+              return <HugeiconsIcon icon={ChevronLeft} className="h-4 w-4" />
           }
         },
         CaptionLabel: ({ children, ...props }) => {
@@ -114,7 +110,7 @@ export const Calendar = ({
             return (
               <span {...props} aria-hidden="true">
                 {children}
-                <ChevronDownIcon className="h-4 w-4 text-muted-foreground" />
+                <HugeiconsIcon icon={ChevronDown} className="h-4 w-4 text-muted-foreground" />
               </span>
             )
           }

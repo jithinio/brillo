@@ -1,8 +1,9 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import { ReactNode, memo, useState, useEffect } from "react"
 import Link from "next/link"
-import { Crown } from "lucide-react"
+import { Crown02Icon } from '@hugeicons/core-free-icons'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -113,7 +114,7 @@ const ProFeatureGateComponent = ({
           <CardHeader className="text-center pb-4">
             <div className="flex justify-center mb-4">
               <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center">
-                <Crown className="w-6 h-6 text-white" />
+                <HugeiconsIcon icon={Crown02Icon} className="w-6 h-6 text-white"  />
               </div>
             </div>
             <CardTitle className="text-center">
@@ -150,7 +151,7 @@ const ProFeatureGateComponent = ({
         <CardHeader className="text-center pb-4">
           <div className="flex justify-center mb-4">
             <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center">
-              <Crown className="w-6 h-6 text-white" />
+              <HugeiconsIcon icon={Crown02Icon} className="w-6 h-6 text-white"  />
             </div>
           </div>
           <CardTitle className="text-center">
@@ -168,7 +169,7 @@ const ProFeatureGateComponent = ({
           <div className="flex flex-col sm:flex-row gap-2 justify-center">
             <Button asChild className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600">
               <Link href="/pricing">
-                <Crown className="w-4 h-4 mr-2" />
+                <HugeiconsIcon icon={Crown02Icon} className="w-4 h-4 mr-2"  />
                 Upgrade to Pro
               </Link>
             </Button>

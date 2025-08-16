@@ -1,5 +1,6 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -13,7 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Switch } from "@/components/ui/switch"
 import { DatePicker } from "@/components/ui/date-picker"
 import { formatDateForDatabase } from "@/lib/date-format"
-import { Plus, Trash2, Send, Save, UserPlus, Building, Mail, Phone, MapPin, Receipt, Download, CheckCircle, CalendarDays, Plus as PlusIcon, RefreshCw, Check, Users, Calendar, DollarSign, FileText, AlertTriangle, X, ChevronDown, ChevronsUpDown, User, Edit3, Copy, XCircle, Clock } from "lucide-react"
+import { PlusSignIcon, Delete01Icon, DollarSend01Icon, FloppyDiskIcon, UserAddIcon, Building01Icon, MailIcon, PhoneIcon, LocationIcon, ReceiptDollarIcon, DownloadIcon, CheckmarkCircleIcon, CalendarDaysIcon, RefreshIcon, Tick01Icon, Group01Icon, Calendar01Icon, DollarCircleIcon, Document01Icon, Alert01Icon, CancelIcon, ArrowDown01Icon, ChevronUpDownIcon, UserIcon, Edit03Icon, CopyIcon, CancelCircleIcon, ClockIcon, Invoice04Icon, CalculateIcon } from '@hugeicons/core-free-icons'
 import { toast } from "sonner"
 import { Loader } from "@/components/ui/loader"
 import { formatCurrency, CURRENCIES, getDefaultCurrency } from "@/lib/currency"
@@ -29,11 +30,13 @@ import { useRouter } from "next/navigation"
 import { ClientAvatar } from "@/components/ui/client-avatar"
 import { CurrencySelector } from "@/components/ui/currency-selector"
 import { InvoicingGate } from "@/components/gates/pro-feature-gate"
+import { CurrencyConverterWidget } from "@/components/currency-converter-widget"
 
 
 interface InvoiceItem {
   id: string
-  description: string
+  item_name: string
+  item_description: string
   quantity: number
   rate: number
 }
@@ -57,7 +60,7 @@ export default function GenerateInvoicePage() {
   const [clientCurrency, setClientCurrency] = useState(settings.defaultCurrency || 'USD')
   const [notes, setNotes] = useState("")
   const [paymentTerms, setPaymentTerms] = useState("Net 30")
-  const [items, setItems] = useState<InvoiceItem[]>([{ id: "1", description: "", quantity: 1, rate: 0 }])
+  const [items, setItems] = useState<InvoiceItem[]>([{ id: "1", item_name: "", item_description: "", quantity: 1, rate: 0 }])
   
   // Tax state
   const [taxEnabled, setTaxEnabled] = useState(settings.autoCalculateTax)
@@ -99,6 +102,9 @@ export default function GenerateInvoicePage() {
   const [reservedNumber, setReservedNumber] = useState<string>("")
   const [numberReservationExpiry, setNumberReservationExpiry] = useState<Date | null>(null)
   const [editInvoiceId, setEditInvoiceId] = useState<string | null>(null)
+  
+  // Currency converter widget state
+  const [isCurrencyConverterOpen, setIsCurrencyConverterOpen] = useState(false)
   
 
 
@@ -304,7 +310,8 @@ export default function GenerateInvoicePage() {
         if (editInfo.items && editInfo.items.length > 0) {
           setItems(editInfo.items.map((item: any, index: number) => ({
             id: (index + 1).toString(),
-            description: item.description || '',
+            item_name: item.item_name || item.description || '',
+            item_description: item.item_description || '',
             quantity: item.quantity || 1,
             rate: item.rate || 0
           })))
@@ -566,7 +573,8 @@ export default function GenerateInvoicePage() {
   const addItem = () => {
     const newItem: InvoiceItem = {
       id: Date.now().toString(),
-      description: "",
+      item_name: "",
+      item_description: "",
       quantity: 1,
       rate: 0,
     }
@@ -598,7 +606,7 @@ export default function GenerateInvoicePage() {
   const isReadyToGenerate = () => {
     return selectedClient && 
            items.length > 0 && 
-           items.every(item => item.description.trim() && item.rate > 0) &&
+           items.every(item => item.item_name.trim() && item.rate > 0) &&
            invoiceDate &&
            dueDate
   }
@@ -614,8 +622,8 @@ export default function GenerateInvoicePage() {
       errors.push("At least one invoice item is required")
     } else {
       items.forEach((item, index) => {
-        if (!item.description.trim()) {
-          errors.push(`Item ${index + 1}: Description is required`)
+        if (!item.item_name.trim()) {
+          errors.push(`Item ${index + 1}: Item name is required`)
         }
         if (item.rate <= 0) {
           errors.push(`Item ${index + 1}: Rate must be greater than 0`)
@@ -751,7 +759,8 @@ export default function GenerateInvoicePage() {
           terms: String(paymentTerms || '').substring(0, 500), // Limit terms length
           items: items.map(item => ({
             id: item.id,
-            description: item.description,
+            item_name: item.item_name,
+            item_description: item.item_description,
             quantity: item.quantity,
             rate: item.rate,
             amount: item.quantity * item.rate
@@ -1086,7 +1095,8 @@ export default function GenerateInvoicePage() {
           terms: String(paymentTerms || '').substring(0, 500), // Limit terms length
           items: items.map(item => ({
             id: item.id,
-            description: item.description,
+            item_name: item.item_name,
+            item_description: item.item_description,
             quantity: item.quantity,
             rate: item.rate,
             amount: item.quantity * item.rate
@@ -1611,13 +1621,22 @@ export default function GenerateInvoicePage() {
             <Button 
               variant="outline" 
               size="sm" 
+              onClick={() => setIsCurrencyConverterOpen(true)}
+            >
+              <HugeiconsIcon icon={CalculateIcon} className="mr-1.5 h-4 w-4"  />
+              Converter
+            </Button>
+
+            <Button 
+              variant="outline" 
+              size="sm" 
               onClick={handleSaveDraft}
               disabled={isSavingDraft || !selectedClient || !invoiceDate || isGenerating}
             >
               {isSavingDraft ? (
                 <Loader className="mr-1.5 h-4 w-4 animate-spin text-muted-foreground" />
               ) : (
-                <Save className="mr-1.5 h-4 w-4" />
+                <HugeiconsIcon icon={FloppyDiskIcon} className="mr-1.5 h-4 w-4"  />
               )}
               {isSavingDraft ? "Saving..." : "Save Draft"}
             </Button>
@@ -1630,7 +1649,7 @@ export default function GenerateInvoicePage() {
               {isGenerating ? (
                 <Loader className="mr-1.5 h-4 w-4 animate-spin text-muted-foreground" />
               ) : (
-                <Download className="mr-1.5 h-4 w-4" />
+                <HugeiconsIcon icon={Invoice04Icon} className="mr-1.5 h-4 w-4"  />
               )}
               {isGenerating ? (
                 isEditMode ? "Updating..." : "Generating..."
@@ -1739,7 +1758,7 @@ export default function GenerateInvoicePage() {
                     onClick={() => setShowNewClientDialog(true)}
                     title="Add New Client"
                   >
-                    <UserPlus className="h-4 w-4" />
+                    <HugeiconsIcon icon={UserAddIcon} className="h-4 w-4"  />
                   </Button>
                 </div>
               </div>
@@ -1849,36 +1868,37 @@ export default function GenerateInvoicePage() {
                   <CardDescription>Add services or products to this invoice.</CardDescription>
                 </div>
                 <Button onClick={addItem} variant="secondary" size="sm">
-                  <Plus className="h-4 w-4" />
+                  <HugeiconsIcon icon={PlusSignIcon} className="h-4 w-4"  />
                 </Button>
               </div>
             </CardHeader>
             <CardContent className="pt-6">
               <div className="space-y-4 w-full">
                 {items.map((item, index) => (
-                  <div key={item.id} className="grid grid-cols-12 gap-4 items-start w-full">
-                    <div className="col-span-5">
-                      <Label htmlFor={`description-${item.id}`} className="font-normal text-secondary-foreground mb-2 block">Description</Label>
-                      <Input
-                        id={`description-${item.id}`}
-                        placeholder="Service or product description"
-                        value={item.description}
-                        onChange={(e) => updateItem(item.id, "description", e.target.value)}
-                        className="w-full"
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <Label htmlFor={`quantity-${item.id}`} className="font-normal text-secondary-foreground mb-2 block">Qty</Label>
-                      <Input
-                        id={`quantity-${item.id}`}
-                        type="number"
-                        min="1"
-                        value={item.quantity}
-                        onChange={(e) => updateItem(item.id, "quantity", Number.parseInt(e.target.value) || 1)}
-                        className="w-full"
-                      />
-                    </div>
-                    <div className="col-span-2">
+                  <div key={item.id} className="space-y-4 p-4 border rounded-lg">
+                    <div className="grid grid-cols-12 gap-4 items-end w-full">
+                      <div className="col-span-5">
+                        <Label htmlFor={`item-name-${item.id}`} className="font-normal text-secondary-foreground mb-2 block">Item Name</Label>
+                        <Input
+                          id={`item-name-${item.id}`}
+                          placeholder="Service or product name"
+                          value={item.item_name}
+                          onChange={(e) => updateItem(item.id, "item_name", e.target.value)}
+                          className="w-full"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <Label htmlFor={`quantity-${item.id}`} className="font-normal text-secondary-foreground mb-2 block">Qty</Label>
+                        <Input
+                          id={`quantity-${item.id}`}
+                          type="number"
+                          min="1"
+                          value={item.quantity}
+                          onChange={(e) => updateItem(item.id, "quantity", Number.parseInt(e.target.value) || 1)}
+                          className="w-full"
+                        />
+                      </div>
+                      <div className="col-span-2">
                       <Label htmlFor={`rate-${item.id}`} className="font-normal text-secondary-foreground mb-2 block">Rate</Label>
                       <Input
                         id={`rate-${item.id}`}
@@ -1923,24 +1943,36 @@ export default function GenerateInvoicePage() {
                           }
                         }}
                         className="w-full"
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <Label className="font-normal text-secondary-foreground mb-2 block">Amount</Label>
-                      <div className="h-9 flex items-center font-medium w-full">
-                        {formatCurrency(item.quantity * item.rate, clientCurrency)}
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <Label className="font-normal text-secondary-foreground mb-2 block">Amount</Label>
+                        <div className="h-9 flex items-center font-medium w-full">
+                          {formatCurrency(item.quantity * item.rate, clientCurrency)}
+                        </div>
+                      </div>
+                      <div className="col-span-1">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => removeItem(item.id)}
+                          disabled={items.length <= 1}
+                          className="w-full h-9 flex items-center justify-center"
+                        >
+                          <HugeiconsIcon icon={Delete01Icon} className="h-4 w-4"  />
+                        </Button>
                       </div>
                     </div>
-                    <div className="col-span-1 flex flex-col justify-end">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => removeItem(item.id)}
-                        disabled={items.length <= 1}
-                        className="w-full h-9 flex items-center justify-center"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                    <div className="w-full mt-4">
+                      <Label htmlFor={`item-description-${item.id}`} className="font-normal text-secondary-foreground mb-2 block">Item Description</Label>
+                      <textarea
+                        id={`item-description-${item.id}`}
+                        placeholder="Optional detailed description..."
+                        value={item.item_description}
+                        onChange={(e) => updateItem(item.id, "item_description", e.target.value)}
+                        className="w-full min-h-[80px] px-3 py-2 border border-input bg-background rounded-md text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-y"
+                        rows={3}
+                      />
                     </div>
                   </div>
                 ))}
@@ -2018,7 +2050,7 @@ export default function GenerateInvoicePage() {
               <div className="flex justify-between items-start mb-6">
                 <div className="space-y-3">
                   <div className="bg-muted border border-border rounded-full p-2.5 w-fit shadow-sm">
-                    <Receipt className="h-5 w-5 text-muted-foreground" />
+                    <HugeiconsIcon icon={ReceiptDollarIcon} className="h-5 w-5 text-muted-foreground"  />
                   </div>
                   <div>
                     <h3 className="text-lg font-medium text-foreground">Invoice summary</h3>
@@ -2032,12 +2064,12 @@ export default function GenerateInvoicePage() {
                     <div className="flex items-center justify-end mt-1">
                       {isPreviewNumber ? (
                         <div className="flex items-center space-x-1">
-                          <Clock className="h-3 w-3 text-muted-foreground" />
+                          <HugeiconsIcon icon={ClockIcon} className="h-3 w-3 text-muted-foreground"  />
                           <p className="text-xs text-muted-foreground">Preview</p>
                         </div>
                       ) : reservedNumber ? (
                         <div className="flex items-center space-x-1">
-                          <Check className="h-3 w-3 text-green-600" />
+                          <HugeiconsIcon icon={Tick01Icon} className="h-3 w-3 text-green-600"  />
                           <p className="text-xs text-green-600">Reserved</p>
                         </div>
                       ) : null}
@@ -2084,7 +2116,7 @@ export default function GenerateInvoicePage() {
                       <div key={item.id} className="flex justify-between items-center">
                         <div className="flex items-center space-x-4 flex-1 min-w-0">
                           <p className="text-sm font-medium text-foreground truncate">
-                            {item.description || `Item ${index + 1}`}
+                            {item.item_name || `Item ${index + 1}`}
                           </p>
                           <span className="text-xs text-muted-foreground">•</span>
                           <p className="text-xs text-muted-foreground shrink-0">
@@ -2155,7 +2187,7 @@ export default function GenerateInvoicePage() {
           {/* Currency Override Warning - Moved outside summary card */}
           {clientCurrency !== getDefaultCurrency() && (
             <Alert>
-              <AlertTriangle className="h-4 w-4" />
+              <HugeiconsIcon icon={Alert01Icon} className="h-4 w-4"  />
               <AlertTitle>Currency Override</AlertTitle>
               <AlertDescription>
                 This invoice uses {CURRENCIES[clientCurrency].name} instead of the default {CURRENCIES[getDefaultCurrency()].name}
@@ -2304,7 +2336,7 @@ export default function GenerateInvoicePage() {
             <div className="flex justify-between items-start">
               <div className="space-y-3">
                 <div className="bg-green-100 border border-green-200 rounded-full p-2.5 w-fit shadow-sm">
-                  <Check className="h-5 w-5 text-green-600" />
+                  <HugeiconsIcon icon={Tick01Icon} className="h-5 w-5 text-green-600"  />
                 </div>
                 <div>
                   <h3 className="text-lg font-medium text-foreground">
@@ -2362,7 +2394,7 @@ export default function GenerateInvoicePage() {
                         <div key={index} className="flex justify-between items-center">
                           <div className="flex items-center space-x-4 flex-1 min-w-0">
                             <p className="text-sm font-medium text-foreground truncate">
-                              {item.description || `Item ${index + 1}`}
+                              {item.item_name || `Item ${index + 1}`}
                             </p>
                             <span className="text-xs text-muted-foreground">•</span>
                             <p className="text-xs text-muted-foreground shrink-0">
@@ -2415,7 +2447,7 @@ export default function GenerateInvoicePage() {
                     size="sm"
                     className="flex-1"
                   >
-                    <Download className="mr-1.5 h-4 w-4" />
+                    <HugeiconsIcon icon={DownloadIcon} className="mr-1.5 h-4 w-4"  />
                     {isDownloading ? 'Generating PDF...' : 'Download PDF'}
                   </Button>
                   
@@ -2426,7 +2458,7 @@ export default function GenerateInvoicePage() {
                     disabled={isSending || !generatedInvoiceData.client.email}
                     className="flex-1"
                   >
-                    <Send className="mr-2 h-4 w-4" />
+                    <HugeiconsIcon icon={DollarSend01Icon} className="mr-2 h-4 w-4"  />
                     {isSending ? 'Sending...' : 'Send Invoice'}
                   </Button>
                 </div>
@@ -2441,6 +2473,13 @@ export default function GenerateInvoicePage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Currency Converter Widget */}
+      <CurrencyConverterWidget
+        isOpen={isCurrencyConverterOpen}
+        onClose={() => setIsCurrencyConverterOpen(false)}
+        defaultToCurrency={clientCurrency}
+      />
 
       </div>
     </InvoicingGate>

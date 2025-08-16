@@ -1,7 +1,8 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import { useState } from "react"
-import { Check, Sparkles } from "lucide-react"
+import { Tick02Icon, SparklesIcon } from '@hugeicons/core-free-icons'
 import { Button } from "@/components/ui/button"
 import { Loader } from "@/components/ui/loader"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -55,7 +56,7 @@ export function PricingCard({ plan, isCurrentPlan = false, className }: PricingC
     )}>
       {plan.popular && (
         <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-xs font-medium py-1 px-3 rounded-bl-lg">
-          <Sparkles className="w-3 h-3 inline mr-1" />
+          <HugeiconsIcon icon={SparklesIcon} className="w-3 h-3 inline mr-1"  />
           Most Popular
         </div>
       )}
@@ -99,7 +100,7 @@ export function PricingCard({ plan, isCurrentPlan = false, className }: PricingC
           <ul className="space-y-2">
             {plan.features.map((feature, index) => (
               <li key={index} className="flex items-start gap-3">
-                <Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                <HugeiconsIcon icon={Tick02Icon} className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0"  />
                 <span className="text-sm">{feature}</span>
               </li>
             ))}
@@ -114,7 +115,7 @@ export function PricingCard({ plan, isCurrentPlan = false, className }: PricingC
             <ul className="space-y-2">
               {plan.proFeatures.map((feature, index) => (
                 <li key={index} className="flex items-start gap-3">
-                  <Sparkles className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                  <HugeiconsIcon icon={SparklesIcon} className="w-4 h-4 text-primary mt-0.5 flex-shrink-0"  />
                   <span className="text-sm font-medium">{feature}</span>
                 </li>
               ))}

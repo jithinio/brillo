@@ -1,7 +1,8 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import { useState } from "react"
-import { Check, ChevronsUpDown, DollarSign } from "lucide-react"
+import { Tick02Icon, ArrowDown01Icon, DollarCircleIcon } from '@hugeicons/core-free-icons'
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
@@ -89,12 +90,12 @@ export function CurrencySelector({
               )
             ) : (
               <>
-                <DollarSign className="h-4 w-4 shrink-0" />
+                <HugeiconsIcon icon={DollarCircleIcon} className="h-4 w-4 shrink-0"  />
                 <span className="truncate">{compact ? "Currency" : placeholder}</span>
               </>
             )}
           </div>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          <HugeiconsIcon icon={ArrowDown01Icon} className="ml-2 h-4 w-4 shrink-0 opacity-50"  />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-full p-0" align="start">
@@ -115,12 +116,12 @@ export function CurrencySelector({
                     setOpen(false)
                   }}
                 >
-                  <Check
+                  <HugeiconsIcon icon={Tick02Icon}
                     className={cn(
                       "mr-2 h-4 w-4",
                       value === currency.code ? "opacity-100" : "opacity-0"
                     )}
-                  />
+                   />
                   <div className="flex items-center gap-2">
                     <span className="font-medium min-w-[2ch]">{currency.symbol}</span>
                     <span className="font-medium">{currency.code}</span>

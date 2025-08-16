@@ -1,5 +1,6 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import type React from "react"
 
 import { useState } from "react"
@@ -16,7 +17,7 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Eye, EyeOff } from "lucide-react"
+import { EyeIcon, ViewOffIcon } from '@hugeicons/core-free-icons'
 import { useAuth } from "@/components/auth-provider"
 import { validatePassword } from "@/lib/input-validation"
 import { PasswordStrengthIndicator } from "@/components/ui/password-strength"
@@ -165,7 +166,7 @@ export function SignupForm({ className, ...props }: React.ComponentProps<"div">)
                       className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                       onClick={() => setShowPassword(!showPassword)}
                     >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showPassword ? <HugeiconsIcon icon={ViewOffIcon} className="h-4 w-4"  /> : <HugeiconsIcon icon={EyeIcon} className="h-4 w-4"  />}
                     </Button>
                   </div>
                   <PasswordStrengthIndicator password={password} />
@@ -188,7 +189,7 @@ export function SignupForm({ className, ...props }: React.ComponentProps<"div">)
                       className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     >
-                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showConfirmPassword ? <HugeiconsIcon icon={ViewOffIcon} className="h-4 w-4"  /> : <HugeiconsIcon icon={EyeIcon} className="h-4 w-4"  />}
                     </Button>
                   </div>
                 </div>

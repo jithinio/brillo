@@ -1,27 +1,9 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import {
-  Calculator,
-  Calendar,
-  CreditCard,
-  Settings,
-  User,
-  Plus,
-  Users,
-  FolderPlus,
-  FileText,
-  Search,
-  Home,
-  BarChart3,
-  Receipt,
-  Building,
-  Palette,
-  Bell,
-  Shield,
-  LogOut,
-} from "lucide-react"
+import { CalculateIcon, Calendar01Icon, CreditCardIcon, SettingsIcon, UserIcon, PlusSignIcon, Group01Icon, FolderAddIcon, DocumentAttachmentIcon as Document01Icon, SearchIcon, HomeIcon, BarChartIcon, ReceiptDollarIcon, Building01Icon, ColorPickerIcon, NotificationIcon, ShieldIcon, LogoutIcon, AddInvoiceIcon } from '@hugeicons/core-free-icons'
 
 import {
   CommandDialog,
@@ -259,17 +241,17 @@ export function CommandMenu() {
         {/* Quick Actions */}
         <CommandGroup heading="Quick Actions">
           <CommandItem onSelect={() => handleAction("add-client")}>
-            <Users className="mr-2 h-4 w-4" />
+            <HugeiconsIcon icon={Group01Icon} className="mr-2 h-4 w-4"  />
             <span>Add Client</span>
             <CommandShortcut>⌘N</CommandShortcut>
           </CommandItem>
           <CommandItem onSelect={() => handleAction("add-project")}>
-            <FolderPlus className="mr-2 h-4 w-4" />
+            <HugeiconsIcon icon={FolderAddIcon} className="mr-2 h-4 w-4"  />
             <span>Add Project</span>
             <CommandShortcut>⌘P</CommandShortcut>
           </CommandItem>
           <CommandItem onSelect={() => handleAction("create-invoice")}>
-            <FileText className="mr-2 h-4 w-4" />
+            <HugeiconsIcon icon={AddInvoiceIcon} className="mr-2 h-4 w-4"  />
             <span>Create Invoice</span>
             <CommandShortcut>⌘I</CommandShortcut>
           </CommandItem>
@@ -280,23 +262,23 @@ export function CommandMenu() {
         {/* Navigation */}
         <CommandGroup heading="Navigation">
           <CommandItem onSelect={() => handleAction("dashboard")}>
-            <Home className="mr-2 h-4 w-4" />
+            <HugeiconsIcon icon={HomeIcon} className="mr-2 h-4 w-4"  />
             <span>Dashboard</span>
           </CommandItem>
           <CommandItem onSelect={() => handleAction("clients")}>
-            <Users className="mr-2 h-4 w-4" />
+            <HugeiconsIcon icon={Group01Icon} className="mr-2 h-4 w-4"  />
             <span>Clients</span>
           </CommandItem>
           <CommandItem onSelect={() => handleAction("projects")}>
-            <FolderPlus className="mr-2 h-4 w-4" />
+            <HugeiconsIcon icon={FolderAddIcon} className="mr-2 h-4 w-4"  />
             <span>Projects</span>
           </CommandItem>
           <CommandItem onSelect={() => handleAction("invoices")}>
-            <Receipt className="mr-2 h-4 w-4" />
+            <HugeiconsIcon icon={ReceiptDollarIcon} className="mr-2 h-4 w-4"  />
             <span>Invoices</span>
           </CommandItem>
           <CommandItem onSelect={() => handleAction("analytics")}>
-            <BarChart3 className="mr-2 h-4 w-4" />
+            <HugeiconsIcon icon={BarChartIcon} className="mr-2 h-4 w-4"  />
             <span>Analytics</span>
           </CommandItem>
         </CommandGroup>
@@ -306,12 +288,12 @@ export function CommandMenu() {
         {/* Settings */}
         <CommandGroup heading="Settings">
           <CommandItem onSelect={() => handleAction("profile")}>
-            <User className="mr-2 h-4 w-4" />
+            <HugeiconsIcon icon={UserIcon} className="mr-2 h-4 w-4"  />
             <span>Profile</span>
             <CommandShortcut>⌘⇧P</CommandShortcut>
           </CommandItem>
           <CommandItem onSelect={() => handleAction("settings")}>
-            <Settings className="mr-2 h-4 w-4" />
+            <HugeiconsIcon icon={SettingsIcon} className="mr-2 h-4 w-4"  />
             <span>Settings</span>
             <CommandShortcut>⌘,</CommandShortcut>
           </CommandItem>
@@ -328,9 +310,9 @@ export function CommandMenu() {
                   value={`${result.name} ${result.company || ''} ${result.client || ''} ${result.email || ''}`}
                   onSelect={() => handleSearchResult(result)}
                 >
-                  {result.type === "client" && <Users className="mr-2 h-4 w-4" />}
-                  {result.type === "project" && <FolderPlus className="mr-2 h-4 w-4" />}
-                  {result.type === "invoice" && <Receipt className="mr-2 h-4 w-4" />}
+                  {result.type === "client" && <HugeiconsIcon icon={Group01Icon} className="mr-2 h-4 w-4"  />}
+                  {result.type === "project" && <HugeiconsIcon icon={FolderAddIcon} className="mr-2 h-4 w-4"  />}
+                  {result.type === "invoice" && <HugeiconsIcon icon={ReceiptDollarIcon} className="mr-2 h-4 w-4"  />}
                   <div className="flex flex-col">
                     <span>{result.name}</span>
                     <span className="text-xs text-muted-foreground">

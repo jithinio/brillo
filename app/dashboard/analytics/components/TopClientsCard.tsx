@@ -1,9 +1,10 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { TrendingUp, TrendingDown, Users, Building } from "lucide-react"
+import { TradeUpIcon, TradeDownIcon, Group01Icon, Building01Icon } from '@hugeicons/core-free-icons'
 import { formatLargeNumber } from "@/lib/utils"
 import { getCurrencySymbol } from "@/lib/currency"
 import type { TopClient } from "@/lib/analytics-calculations"
@@ -30,7 +31,7 @@ export function TopClientsCard({
       <Card>
         <CardHeader className="p-6 pb-4">
           <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <HugeiconsIcon icon={Group01Icon} className="h-4 w-4 text-muted-foreground"  />
             <CardTitle className="text-sm font-medium text-muted-foreground">
               {title}
             </CardTitle>
@@ -62,7 +63,7 @@ export function TopClientsCard({
       <Card>
         <CardHeader className="p-6 pb-4">
           <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <HugeiconsIcon icon={Group01Icon} className="h-4 w-4 text-muted-foreground"  />
             <CardTitle className="text-sm font-medium text-muted-foreground">
               {title}
             </CardTitle>
@@ -87,7 +88,7 @@ export function TopClientsCard({
       <CardHeader className="p-6 pb-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <HugeiconsIcon icon={Group01Icon} className="h-4 w-4 text-muted-foreground"  />
             <CardTitle className="text-sm font-medium text-muted-foreground">
               {title}
             </CardTitle>
@@ -137,7 +138,7 @@ export function TopClientsCard({
                   <h4 className="text-sm font-medium truncate">{client.name}</h4>
                   {client.company && (
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Building className="w-3 h-3" />
+                      <HugeiconsIcon icon={Building01Icon} className="w-3 h-3"  />
                       <span className="truncate max-w-20">{client.company}</span>
                     </div>
                   )}
@@ -152,9 +153,9 @@ export function TopClientsCard({
                   {client.trendPercentage > 0 && (
                     <div className="flex items-center gap-1">
                       {client.trend === 'up' ? (
-                        <TrendingUp className="w-3 h-3 text-green-600" />
+                        <HugeiconsIcon icon={TradeUpIcon} className="w-3 h-3 text-green-600"  />
                       ) : (
-                        <TrendingDown className="w-3 h-3 text-red-600" />
+                        <HugeiconsIcon icon={TradeDownIcon} className="w-3 h-3 text-red-600"  />
                       )}
                       <span className={`text-xs ${
                         client.trend === 'up' ? 'text-green-600' : 'text-red-600'

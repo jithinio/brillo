@@ -1,7 +1,8 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import { useState, useEffect, useMemo } from "react"
-import { Check, ChevronsUpDown, Calculator, Clock, Repeat, DollarSign, Plus } from "lucide-react"
+import { Tick01Icon, ArrowDown01Icon, CalculateIcon, ClockIcon, RepeatIcon, DollarCircleIcon, PlusSignIcon } from '@hugeicons/core-free-icons'
 import {
   Dialog,
   DialogContent,
@@ -193,7 +194,7 @@ const ClientField = ({
                 ) : (
                   "Select client..."
                 )}
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                <HugeiconsIcon icon={ArrowDown01Icon} className="ml-2 h-4 w-4 shrink-0 opacity-50"  />
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-[300px] p-0" align="start">
@@ -228,12 +229,12 @@ const ClientField = ({
                               <div className="text-sm text-muted-foreground truncate">{client.company}</div>
                             )}
                           </div>
-                          <Check
+                          <HugeiconsIcon icon={Tick01Icon}
                             className={cn(
                               "h-4 w-4",
                               selectedClient?.id === client.id ? "opacity-100" : "opacity-0"
                             )}
-                          />
+                           />
                         </div>
                       </CommandItem>
                     ))}
@@ -251,7 +252,7 @@ const ClientField = ({
             className="shrink-0"
             title="Add New Client"
           >
-            <Plus className="h-4 w-4" />
+                            <HugeiconsIcon icon={PlusSignIcon} className="h-4 w-4"  />
           </Button>
         </div>
       </div>
@@ -886,17 +887,17 @@ export function EnhancedAddProjectDialog({
             <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ProjectType)}>
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="fixed" className="flex items-center gap-2">
-                  <DollarSign className="h-4 w-4" />
+                  <HugeiconsIcon icon={DollarCircleIcon} className="h-4 w-4"  />
                   Fixed
                 </TabsTrigger>
-                <TabsTrigger value="recurring" className="flex items-center gap-2">
-                  <Repeat className="h-4 w-4" />
-                  Recurring
-                </TabsTrigger>
-                <TabsTrigger value="hourly" className="flex items-center gap-2">
-                  <Clock className="h-4 w-4" />
-                  Hourly
-                </TabsTrigger>
+                                  <TabsTrigger value="recurring" className="flex items-center gap-2">
+                    <HugeiconsIcon icon={RepeatIcon} className="h-4 w-4"  />
+                    Recurring
+                  </TabsTrigger>
+                                  <TabsTrigger value="hourly" className="flex items-center gap-2">
+                                         <HugeiconsIcon icon={ClockIcon} className="h-4 w-4"  />
+                    Hourly
+                  </TabsTrigger>
               </TabsList>
 
               {/* Fixed Project Tab */}
@@ -1048,7 +1049,7 @@ export function EnhancedAddProjectDialog({
                   {recurringTotal > 0 && (
                     <div className="bg-muted/50 p-4 rounded-lg">
                       <div className="flex items-center gap-2">
-                        <Calculator className="h-4 w-4" />
+                        <HugeiconsIcon icon={CalculateIcon} className="h-4 w-4"  />
                         <span className="font-medium">Calculated Total Budget:</span>
                         <Badge variant="secondary" className="text-lg">
                           {recurringData.currency || defaultCurrency} {recurringTotal.toLocaleString()}
@@ -1164,7 +1165,7 @@ export function EnhancedAddProjectDialog({
                   {hourlyTotal > 0 && (
                     <div className="bg-muted/50 p-4 rounded-lg">
                       <div className="flex items-center gap-2">
-                        <Calculator className="h-4 w-4" />
+                        <HugeiconsIcon icon={CalculateIcon} className="h-4 w-4"  />
                         <span className="font-medium">Initial Estimated Total:</span>
                         <Badge variant="secondary" className="text-lg">
                           {hourlyData.currency || defaultCurrency} {hourlyTotal.toLocaleString()}
@@ -1198,9 +1199,9 @@ export function EnhancedAddProjectDialog({
             ) : (
               <>
                 {isEditMode ? (
-                  <Check className="mr-2 h-4 w-4" />
+                  <HugeiconsIcon icon={Tick01Icon} className="mr-2 h-4 w-4"  />
                 ) : (
-                  <Plus className="mr-2 h-4 w-4" />
+                  <HugeiconsIcon icon={PlusSignIcon} className="mr-2 h-4 w-4"  />
                 )}
                 {isEditMode ? 'Update Project' : 'Create Project'}
               </>

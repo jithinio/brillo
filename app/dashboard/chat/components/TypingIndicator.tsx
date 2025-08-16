@@ -1,9 +1,10 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import { motion } from "framer-motion"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Card, CardContent } from "@/components/ui/card"
-import { Bot } from "lucide-react"
+import { AiUserIcon } from '@hugeicons/core-free-icons'
 
 const dot = {
   initial: { y: 0 },
@@ -29,7 +30,7 @@ export function TypingIndicator() {
       <div className="shrink-0">
         <Avatar className="h-8 w-8">
           <AvatarFallback className="bg-muted">
-            <Bot className="h-4 w-4" />
+            <HugeiconsIcon icon={AiUserIcon} className="h-4 w-4"  />
           </AvatarFallback>
         </Avatar>
       </div>

@@ -1,5 +1,6 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import * as React from "react"
 import {
   type ColumnDef,
@@ -14,7 +15,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { ChevronDown, Settings2, Search, Eye, Edit, FileText, FolderPlus, Trash2, Plus } from "lucide-react"
+import { ArrowDown01Icon, Settings01Icon, SearchIcon, ViewIcon, Edit03Icon, DocumentAttachmentIcon, FolderAddIcon, Delete01Icon, PlusSignIcon } from '@hugeicons/core-free-icons'
 
 import { Button } from "@/components/ui/button"
 import { Loader } from "@/components/ui/loader"
@@ -37,7 +38,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { AlertTriangle } from "lucide-react"
+import { Alert01Icon } from '@hugeicons/core-free-icons'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -220,7 +221,7 @@ export function DataTable<TData, TValue>({
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <div className="relative">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <HugeiconsIcon icon={SearchIcon} className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground"  />
             <Input
               placeholder="Search clients..."
               value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
@@ -231,7 +232,7 @@ export function DataTable<TData, TValue>({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
-                <Settings2 className="mr-1.5 h-4 w-4" />
+                <HugeiconsIcon icon={Settings01Icon} className="mr-1.5 h-4 w-4"  />
                 <span className="hidden lg:inline">View</span>
                 <span className="lg:hidden">View</span>
               </Button>
@@ -283,7 +284,7 @@ export function DataTable<TData, TValue>({
               className="bg-red-100 text-red-600 hover:bg-red-200 rounded-full"
               onClick={handleBatchDelete}
             >
-              <Trash2 className="h-3.5 w-3.5" />
+              <HugeiconsIcon icon={Delete01Icon} className="h-3.5 w-3.5"  />
             </Button>
           )}
           <Button 
@@ -297,7 +298,7 @@ export function DataTable<TData, TValue>({
             }}
             title="Add Client"
           >
-            <Plus className="h-3.5 w-3.5" />
+            <HugeiconsIcon icon={PlusSignIcon} className="h-3.5 w-3.5"  />
           </Button>
         </div>
       </div>
@@ -377,13 +378,13 @@ export function DataTable<TData, TValue>({
                       <ContextMenuItem 
                         onClick={() => contextActions.onCreateInvoice(row.original)}
                       >
-                                                  <FileText className="mr-1.5 h-4 w-4" />
+                                                  <HugeiconsIcon icon={DocumentAttachmentIcon} className="mr-1.5 h-4 w-4"  />
                           Create Invoice
                       </ContextMenuItem>
                       <ContextMenuItem 
                         onClick={() => contextActions.onNewProject(row.original)}
                       >
-                                                  <FolderPlus className="mr-1.5 h-4 w-4" />
+                                                  <HugeiconsIcon icon={FolderAddIcon} className="mr-1.5 h-4 w-4"  />
                           New Project
                       </ContextMenuItem>
                       <ContextMenuSeparator />
@@ -391,7 +392,7 @@ export function DataTable<TData, TValue>({
                         onClick={() => contextActions.onDeleteClient(row.original)}
                         className="text-destructive focus:text-destructive"
                       >
-                                                  <Trash2 className="mr-1.5 h-4 w-4" />
+                                                  <HugeiconsIcon icon={Delete01Icon} className="mr-1.5 h-4 w-4"  />
                           Delete Client
                       </ContextMenuItem>
                     </ContextMenuContent>

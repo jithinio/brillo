@@ -1,7 +1,8 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import * as React from "react"
-import { ChevronDown, Search } from "lucide-react"
+import { ArrowDown01Icon, SearchIcon } from '@hugeicons/core-free-icons'
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -194,7 +195,7 @@ export function PhoneInput({
             className="w-[80px] h-9 justify-between border-r-0 rounded-r-none px-3 py-1 text-base bg-transparent shadow-sm hover:bg-transparent hover:border-ring focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] md:text-sm"
           >
             <span className="text-sm font-medium">{currentCountry.phoneCode}</span>
-            <ChevronDown className="ml-1 h-4 w-4 shrink-0 opacity-50" />
+            <HugeiconsIcon icon={ArrowDown01Icon} className="ml-1 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[280px] p-0 max-h-[300px]" align="start">

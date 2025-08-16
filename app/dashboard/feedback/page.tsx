@@ -1,5 +1,6 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import React, { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -8,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Send, MessageSquare } from "lucide-react"
+import { DollarSend01Icon, Message01Icon } from '@hugeicons/core-free-icons'
 import { toast } from "sonner"
 import { PageHeader, PageContent } from "@/components/page-header"
 import { useAuth } from "@/components/auth-provider"
@@ -186,7 +187,7 @@ export default function FeedbackPage() {
                         </>
                       ) : (
                         <>
-                          <Send className="mr-2 h-4 w-4" />
+                          <HugeiconsIcon icon={DollarSend01Icon} className="mr-2 h-4 w-4"  />
                           Send Feedback
                         </>
                       )}

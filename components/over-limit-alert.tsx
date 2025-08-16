@@ -1,8 +1,9 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
-import { AlertTriangle, Crown } from "lucide-react"
+import { Alert01Icon, Crown02Icon } from '@hugeicons/core-free-icons'
 import Link from "next/link"
 import { useSubscription } from "@/components/providers/subscription-provider"
 
@@ -16,7 +17,7 @@ export function OverLimitAlert() {
 
   return (
     <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20">
-      <AlertTriangle className="h-4 w-4 text-amber-600" />
+      <HugeiconsIcon icon={Alert01Icon} className="h-4 w-4 text-amber-600"  />
       <AlertTitle className="text-amber-800 dark:text-amber-200">
         Account Limit Exceeded
       </AlertTitle>
@@ -30,7 +31,7 @@ export function OverLimitAlert() {
           <div className="pt-2">
             <Button asChild size="sm" className="bg-amber-600 hover:bg-amber-700">
               <Link href="/pricing">
-                <Crown className="w-4 h-4 mr-2" />
+                <HugeiconsIcon icon={Crown02Icon} className="w-4 h-4 mr-2"  />
                 Upgrade to Pro
               </Link>
             </Button>

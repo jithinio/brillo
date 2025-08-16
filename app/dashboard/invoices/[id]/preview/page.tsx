@@ -1,8 +1,9 @@
 'use client'
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import { useEffect, useState } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
-import { ArrowLeft, Download, Edit, Mail } from 'lucide-react'
+import { ArrowLeft01Icon, DownloadIcon, Edit03Icon, MailIcon } from '@hugeicons/core-free-icons'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -573,7 +574,7 @@ export default function InvoicePreviewPage() {
               onClick={handleBack}
               className="gap-2"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <HugeiconsIcon icon={ArrowLeft01Icon} className="h-4 w-4"  />
               Back
             </Button>
             
@@ -583,7 +584,7 @@ export default function InvoicePreviewPage() {
               onClick={handleEdit}
               className="gap-2"
             >
-              <Edit className="h-4 w-4" />
+                              <HugeiconsIcon icon={Edit03Icon} className="h-4 w-4" />
               Edit
             </Button>
             
@@ -595,7 +596,7 @@ export default function InvoicePreviewPage() {
               className="gap-2"
               title={isDemoInvoice ? 'Demo invoices cannot be emailed' : ''}
             >
-              <Mail className="h-4 w-4" />
+              <HugeiconsIcon icon={MailIcon} className="h-4 w-4"  />
               {sendingEmail ? 'Sending...' : isDemoInvoice ? 'Demo Mode' : 'Send Email'}
             </Button>
             
@@ -605,7 +606,7 @@ export default function InvoicePreviewPage() {
               size="sm"
               className="gap-2"
             >
-              <Download className="h-4 w-4" />
+              <HugeiconsIcon icon={DownloadIcon} className="h-4 w-4"  />
               {downloadingPDF ? 'Downloading...' : 'Download PDF'}
             </Button>
           </div>
@@ -658,7 +659,7 @@ export default function InvoicePreviewPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2">
-              <Mail className="h-5 w-5" />
+              <HugeiconsIcon icon={MailIcon} className="h-5 w-5"  />
               <span>Send Invoice</span>
             </DialogTitle>
             <DialogDescription>
@@ -701,7 +702,7 @@ export default function InvoicePreviewPage() {
                 Cancel
               </Button>
               <Button onClick={handleSendEmailSubmit} disabled={sendingEmail}>
-                <Mail className="mr-2 h-4 w-4" />
+                <HugeiconsIcon icon={MailIcon} className="mr-2 h-4 w-4"  />
                 {sendingEmail ? 'Sending...' : 'Send Invoice'}
               </Button>
             </div>

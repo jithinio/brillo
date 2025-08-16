@@ -1,6 +1,7 @@
 "use client"
 
-import { LoaderCircle } from "lucide-react"
+import { HugeiconsIcon } from '@hugeicons/react';
+import { Loading03Icon as LoaderCircle } from '@hugeicons/core-free-icons'
 import { cn } from "@/lib/utils"
 
 interface LoaderProps {
@@ -30,14 +31,12 @@ function Loader({
   className 
 }: LoaderProps) {
   return (
-    <LoaderCircle 
-      className={cn(
+    <HugeiconsIcon icon={LoaderCircle} className={cn(
         "animate-spin",
         sizeClasses[size],
         variantClasses[variant],
         className
-      )} 
-    />
+      )} />
   )
 }
 

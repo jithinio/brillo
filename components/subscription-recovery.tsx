@@ -1,5 +1,6 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -8,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useAuth } from '@/components/auth-provider'
 import { toast } from 'sonner'
-import { Loader2, AlertCircle, CheckCircle } from 'lucide-react'
+import { Loading03Icon, AlertCircleIcon, CheckmarkCircleIcon, RefreshIcon } from '@hugeicons/core-free-icons'
 
 export function SubscriptionRecovery() {
   const { user } = useAuth()
@@ -65,7 +66,7 @@ export function SubscriptionRecovery() {
       </CardHeader>
       <CardContent className="space-y-4">
         <Alert>
-          <AlertCircle className="h-4 w-4" />
+          <HugeiconsIcon icon={AlertCircleIcon} className="h-4 w-4"  />
           <AlertDescription>
             This tool will search for your active Polar subscription and restore your Pro access.
           </AlertDescription>
@@ -90,7 +91,7 @@ export function SubscriptionRecovery() {
         >
           {isRecovering ? (
             <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <HugeiconsIcon icon={RefreshIcon} className="mr-2 h-4 w-4 animate-spin" />
               Recovering...
             </>
           ) : (
@@ -101,9 +102,9 @@ export function SubscriptionRecovery() {
         {result && (
           <Alert variant={result.error ? "destructive" : "default"}>
             {result.error ? (
-              <AlertCircle className="h-4 w-4" />
+              <HugeiconsIcon icon={AlertCircleIcon} className="h-4 w-4"  />
             ) : (
-              <CheckCircle className="h-4 w-4" />
+              <HugeiconsIcon icon={CheckmarkCircleIcon} className="h-4 w-4"  />
             )}
             <AlertDescription>
               {result.error ? (

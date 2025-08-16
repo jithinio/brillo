@@ -1,10 +1,12 @@
 "use client"
 
-import { ChevronRight, type LucideIcon } from "lucide-react"
+
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import * as React from "react"
+import { HugeiconsIcon } from '@hugeicons/react';
+import { ArrowRight01Icon } from '@hugeicons/core-free-icons'
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import {
@@ -28,7 +30,7 @@ function NavItemWithCollapse({
   item: {
     title: string
     url: string
-    icon?: LucideIcon
+    icon?: React.ComponentType<{ className?: string }>
     proFeature?: string
     items?: { title: string; url: string; proFeature?: string }[]
   }
@@ -72,7 +74,7 @@ function NavItemWithCollapse({
               }}
               className="ml-auto"
             >
-              <ChevronRight className="h-4 w-4" />
+              <HugeiconsIcon icon={ArrowRight01Icon} className="h-4 w-4" />
             </motion.div>
           </SidebarMenuButton>
         </CollapsibleTrigger>
@@ -162,7 +164,7 @@ export function NavMain({
   items: {
     title: string
     url: string
-    icon?: LucideIcon
+    icon?: React.ComponentType<{ className?: string }>
     isActive?: boolean
     proFeature?: string
     items?: {

@@ -1,8 +1,9 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import * as React from "react"
 import { format } from "date-fns"
-import { Calendar as CalendarIcon } from "lucide-react"
+import { Calendar01Icon } from '@hugeicons/core-free-icons'
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"

@@ -173,7 +173,12 @@ const InvoiceEmail = ({
                       <table key={index} style={itemRowTable}>
                         <tr>
                           <td style={itemLeftCell}>
-                            <Text style={itemDescription}>{item.description}</Text>
+                            <Text style={itemDescription}>{item.item_name || item.description}</Text>
+                            {item.item_description && (
+                              <Text style={itemDetails}>
+                                {item.item_description}
+                              </Text>
+                            )}
                             <Text style={itemDetails}>
                               {item.quantity} × {formatCurrency(item.rate, currency)}
                             </Text>

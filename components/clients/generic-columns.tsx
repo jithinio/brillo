@@ -1,24 +1,8 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import { ColumnDef } from "@tanstack/react-table"
-import {
-  ArrowUpDown,
-  Mail,
-  Phone,
-  Building,
-  MapPin,
-  CheckCircle,
-  Clock,
-  GitBranch,
-  User,
-  Building2,
-  Briefcase,
-  Activity,
-  Copy,
-  Calendar,
-  RotateCcw,
-  Zap,
-} from "lucide-react"
+import { ArrowUpDownIcon, MailIcon, Call02Icon, Building01Icon, LocationIcon, CheckmarkCircleIcon, ClockIcon, GitBranchIcon, UserIcon, Building02Icon, BriefcaseIcon, ActivityIcon, CopyIcon, Calendar01Icon, UserTime01Icon, ZapIcon, Activity03Icon, WorkIcon, FilterIcon } from '@hugeicons/core-free-icons'
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
@@ -46,19 +30,19 @@ import { formatDateForDatabase } from "@/lib/date-format"
 const clientStatusConfig = {
   active: {
     label: "Active",
-    icon: CheckCircle,
+    icon: CheckmarkCircleIcon,
     variant: "outline" as const,
     iconClassName: "text-green-500",
   },
   pipeline: {
     label: "Pipeline",
-    icon: GitBranch,
+    icon: FilterIcon,
     variant: "outline" as const,
     iconClassName: "text-purple-500",
   },
   closed: {
     label: "Closed",
-    icon: Clock,
+    icon: ClockIcon,
     variant: "outline" as const,
     iconClassName: "text-muted-foreground",
   },
@@ -67,19 +51,19 @@ const clientStatusConfig = {
 const clientRelationshipConfig = {
   recurring: {
     label: "Recurring",
-    icon: RotateCcw,
+    icon: UserTime01Icon,
     variant: "outline" as const,
     iconClassName: "text-blue-500",
   },
   "one-time": {
     label: "One Time",
-    icon: Zap,
+    icon: ZapIcon,
     variant: "outline" as const,
     iconClassName: "text-orange-500",
   },
   regular: {
     label: "Regular",
-    icon: Clock,
+    icon: ClockIcon,
     variant: "outline" as const,
     iconClassName: "text-green-500",
   },
@@ -154,7 +138,7 @@ export function createClientColumns(columnConfig: ClientColumnConfig): ColumnDef
     {
       accessorKey: "name",
       header: ({ column }) => (
-        <SortableHeader column={column} icon={User} className="px-0">
+        <SortableHeader column={column} icon={UserIcon} className="px-0">
           Name
         </SortableHeader>
       ),
@@ -185,7 +169,7 @@ export function createClientColumns(columnConfig: ClientColumnConfig): ColumnDef
     {
       accessorKey: "company",
       header: ({ column }) => (
-        <SortableHeader column={column} icon={Building2} className="px-0">
+        <SortableHeader column={column} icon={Building01Icon} className="px-0">
           Company
         </SortableHeader>
       ),
@@ -205,7 +189,7 @@ export function createClientColumns(columnConfig: ClientColumnConfig): ColumnDef
     {
       accessorKey: "relationship",
       header: ({ column }) => (
-        <SortableHeader column={column} icon={RotateCcw} className="px-0">
+        <SortableHeader column={column} icon={UserTime01Icon} className="px-0">
           Relationship
         </SortableHeader>
       ),
@@ -218,7 +202,7 @@ export function createClientColumns(columnConfig: ClientColumnConfig): ColumnDef
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Badge variant={config.variant} className="flex items-center space-x-1 cursor-pointer font-normal text-sm">
-                <Icon className={`h-3 w-3 ${config.iconClassName}`} />
+                {config.icon && <HugeiconsIcon icon={config.icon} className={`h-3 w-3 ${config.iconClassName}`} />}
                 <span>{config.label}</span>
               </Badge>
             </DropdownMenuTrigger>
@@ -231,7 +215,7 @@ export function createClientColumns(columnConfig: ClientColumnConfig): ColumnDef
                     onClick={() => columnConfig.onRelationshipChange?.(row.original.id, key)}
                     disabled={relationship === key}
                   >
-                    <RelationshipIcon className={`mr-2 h-3 w-3 ${relationshipConfig.iconClassName}`} />
+                    <HugeiconsIcon icon={RelationshipIcon} className={`mr-2 h-3 w-3 ${relationshipConfig.iconClassName}`} />
                     {relationshipConfig.label}
                   </DropdownMenuItem>
                 )
@@ -246,7 +230,7 @@ export function createClientColumns(columnConfig: ClientColumnConfig): ColumnDef
     {
       accessorKey: "status",
       header: ({ column }) => (
-        <SortableHeader column={column} icon={Activity} className="px-0">
+        <SortableHeader column={column} icon={Activity03Icon} className="px-0">
           Status
         </SortableHeader>
       ),
@@ -259,7 +243,7 @@ export function createClientColumns(columnConfig: ClientColumnConfig): ColumnDef
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Badge variant={config.variant} className="flex items-center space-x-1 cursor-pointer font-normal text-sm">
-                <Icon className={`h-3 w-3 ${config.iconClassName}`} />
+                {config.icon && <HugeiconsIcon icon={config.icon} className={`h-3 w-3 ${config.iconClassName}`} />}
                 <span>{config.label}</span>
               </Badge>
             </DropdownMenuTrigger>
@@ -272,7 +256,7 @@ export function createClientColumns(columnConfig: ClientColumnConfig): ColumnDef
                     onClick={() => columnConfig.onStatusChange?.(row.original.id, key)}
                     disabled={status === key}
                   >
-                    <StatusIcon className={`mr-2 h-3 w-3 ${statusConfig.iconClassName}`} />
+                    <HugeiconsIcon icon={StatusIcon} className={`mr-2 h-3 w-3 ${statusConfig.iconClassName}`} />
                     {statusConfig.label}
                   </DropdownMenuItem>
                 )
@@ -287,7 +271,7 @@ export function createClientColumns(columnConfig: ClientColumnConfig): ColumnDef
     {
       accessorKey: "client_since",
       header: ({ column }) => (
-        <SortableHeader column={column} icon={Calendar} className="px-0">
+        <SortableHeader column={column} icon={Calendar01Icon} className="px-0">
           Client Since
         </SortableHeader>
       ),
@@ -319,7 +303,7 @@ export function createClientColumns(columnConfig: ClientColumnConfig): ColumnDef
                   captionLayout="dropdown"
                   fromYear={2004}
                   toYear={new Date().getFullYear()}
-                />
+                 />
               </PopoverContent>
             </Popover>
           </div>
@@ -331,7 +315,7 @@ export function createClientColumns(columnConfig: ClientColumnConfig): ColumnDef
     {
       id: "projects",
       header: ({ column }) => (
-        <SortableHeader column={column} icon={Briefcase} className="px-0">
+        <SortableHeader column={column} icon={WorkIcon} className="px-0">
           Projects
         </SortableHeader>
       ),
@@ -355,7 +339,7 @@ export function createClientColumns(columnConfig: ClientColumnConfig): ColumnDef
     {
       accessorKey: "email",
       header: ({ column }) => (
-        <SortableHeader column={column} icon={Mail} className="px-0">
+        <SortableHeader column={column} icon={MailIcon} className="px-0">
           Email
         </SortableHeader>
       ),
@@ -379,7 +363,7 @@ export function createClientColumns(columnConfig: ClientColumnConfig): ColumnDef
                 handleCopyToClipboard(email, "Email")
               }}
             >
-              <Copy className="h-3 w-3" />
+              <HugeiconsIcon icon={CopyIcon} className="h-3 w-3"  />
             </Button>
           </div>
         ) : (
@@ -392,7 +376,7 @@ export function createClientColumns(columnConfig: ClientColumnConfig): ColumnDef
     {
       accessorKey: "phone",
       header: ({ column }) => (
-        <SortableHeader column={column} icon={Phone} className="px-0">
+        <SortableHeader column={column} icon={Call02Icon} className="px-0">
           Phone
         </SortableHeader>
       ),
@@ -416,7 +400,7 @@ export function createClientColumns(columnConfig: ClientColumnConfig): ColumnDef
                 handleCopyToClipboard(phone, "Phone")
               }}
             >
-              <Copy className="h-3 w-3" />
+              <HugeiconsIcon icon={CopyIcon} className="h-3 w-3"  />
             </Button>
           </div>
         ) : (
@@ -429,7 +413,7 @@ export function createClientColumns(columnConfig: ClientColumnConfig): ColumnDef
     {
       id: "location",
       header: ({ column }) => (
-        <SortableHeader column={column} icon={MapPin} className="px-0">
+        <SortableHeader column={column} icon={LocationIcon} className="px-0">
           Location
         </SortableHeader>
       ),

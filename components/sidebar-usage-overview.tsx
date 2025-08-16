@@ -1,6 +1,7 @@
 "use client"
 
-import { Crown, Users, FolderOpen, CreditCard } from "lucide-react"
+import { HugeiconsIcon } from '@hugeicons/react';
+import { Crown02Icon, Group01Icon, FolderOpenIcon, CreditCardIcon } from '@hugeicons/core-free-icons'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { useSubscription } from "@/components/providers/subscription-provider"
@@ -353,7 +354,7 @@ export function SidebarUsageOverview() {
               <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
             )}
             {usingCachedData && (
-              <span className="text-xs text-muted-foreground opacity-60" title="Using cached data">📦</span>
+              <span className="text-xs text-secondary-foreground opacity-60" title="Using cached data">📦</span>
             )}
           </div>
         </div>
@@ -362,8 +363,8 @@ export function SidebarUsageOverview() {
         <div className="space-y-1">
           <div className="flex items-center justify-between text-xs">
             <div className="flex items-center gap-1.5">
-              <Users className="w-3 h-3 text-muted-foreground" />
-              <span className="text-muted-foreground">Clients</span>
+                              <HugeiconsIcon icon={Group01Icon} className="w-3 h-3 text-secondary-foreground"  />
+              <span className="text-secondary-foreground">Clients</span>
             </div>
             <span className="font-medium">{clientsUsed}/{clientsLimit}</span>
           </div>
@@ -385,8 +386,8 @@ export function SidebarUsageOverview() {
         <div className="space-y-1">
           <div className="flex items-center justify-between text-xs">
             <div className="flex items-center gap-1.5">
-              <FolderOpen className="w-3 h-3 text-muted-foreground" />
-              <span className="text-muted-foreground">Projects</span>
+              <HugeiconsIcon icon={FolderOpenIcon} className="w-3 h-3 text-secondary-foreground"  />
+              <span className="text-secondary-foreground">Projects</span>
             </div>
             <span className="font-medium">{projectsUsed}/{projectsLimit}</span>
           </div>
@@ -417,7 +418,7 @@ export function SidebarUsageOverview() {
               className="w-full h-7 text-xs bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white border-0"
             >
               <Link href="/dashboard/settings?tab=subscription">
-                <CreditCard className="w-3 h-3 mr-1" />
+                <HugeiconsIcon icon={CreditCardIcon} className="w-3 h-3 mr-1"  />
                 Manage Billing
               </Link>
             </Button>
@@ -428,7 +429,7 @@ export function SidebarUsageOverview() {
               className="w-full h-7 text-xs bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white border-0"
             >
               <Link href="/pricing">
-                <Crown className="w-3 h-3 mr-1" />
+                <HugeiconsIcon icon={Crown02Icon} className="w-3 h-3 mr-1"  />
                 Upgrade to Pro
               </Link>
             </Button>

@@ -1,7 +1,8 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import { useState, useEffect, Suspense } from "react"
-import { Check, Crown, FileText, BarChart3, Palette, Zap, Users, CreditCard, ArrowLeft, ChevronDown, Mail } from "lucide-react"
+import { Tick02Icon, Crown02Icon, DocumentAttachmentIcon, BarChartIcon, ColorPickerIcon, ZapIcon, Group01Icon, CreditCardIcon, ArrowLeft01Icon, ArrowDown01Icon, MailIcon } from '@hugeicons/core-free-icons'
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -38,9 +39,9 @@ function PricingContent() {
       description: 'Perfect for getting started',
       price: { monthly: 0, yearly: 0 },
       features: [
-        { icon: Users, text: 'Up to 10 clients' },
-        { icon: FileText, text: 'Up to 20 projects' },
-        { icon: BarChart3, text: 'Basic reporting' },
+        { icon: Group01Icon, text: 'Up to 10 clients' },
+        { icon: DocumentAttachmentIcon, text: 'Up to 20 projects' },
+        { icon: BarChartIcon, text: 'Basic reporting' },
       ],
       limitations: [
         'No invoicing',
@@ -55,12 +56,12 @@ function PricingContent() {
       description: 'Everything you need to grow',
       price: { monthly: 10, yearly: 96 }, // $8/month when billed yearly
       features: [
-        { icon: Users, text: 'Unlimited clients' },
-        { icon: FileText, text: 'Unlimited projects' },
-        { icon: CreditCard, text: 'Full invoicing suite', pro: true },
-        { icon: Palette, text: 'Custom invoice templates', pro: true },
-        { icon: BarChart3, text: 'Advanced analytics', pro: true },
-        { icon: Zap, text: 'API access', pro: true },
+        { icon: Group01Icon, text: 'Unlimited clients' },
+        { icon: DocumentAttachmentIcon, text: 'Unlimited projects' },
+        { icon: CreditCardIcon, text: 'Full invoicing suite', pro: true },
+        { icon: ColorPickerIcon, text: 'Custom invoice templates', pro: true },
+        { icon: BarChartIcon, text: 'Advanced analytics', pro: true },
+        { icon: ZapIcon, text: 'API access', pro: true },
       ],
       buttonText: 'Upgrade to Pro',
       popular: true
@@ -113,7 +114,7 @@ function PricingContent() {
         <div className="mx-auto max-w-[1200px] flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg flex items-center justify-center">
-              <Crown className="w-5 h-5 text-white" />
+              <HugeiconsIcon icon={Crown02Icon} className="w-5 h-5 text-white"  />
             </div>
                             <span className="font-semibold text-lg">Brillo</span>
           </div>
@@ -121,13 +122,13 @@ function PricingContent() {
           <div className="flex items-center gap-3">
             <Button asChild variant="ghost" size="sm">
               <Link href="/dashboard" className="flex items-center gap-2">
-                <ArrowLeft className="w-4 h-4" />
+                <HugeiconsIcon icon={ArrowLeft01Icon} className="w-4 h-4"  />
                 Back
               </Link>
             </Button>
             <Button asChild variant="outline" size="sm">
               <Link href="mailto:support@brillo.so" className="flex items-center gap-2">
-                <Mail className="w-4 h-4" />
+                <HugeiconsIcon icon={MailIcon} className="w-4 h-4"  />
                 Contact
               </Link>
             </Button>
@@ -202,7 +203,7 @@ function PricingContent() {
                 {plan.popular && (
                   <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10">
                     <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-3 py-1 shadow-lg">
-                      <Crown className="w-3 h-3 mr-1" />
+                      <HugeiconsIcon icon={Crown02Icon} className="w-3 h-3 mr-1"  />
                       Most Popular
                     </Badge>
                   </div>
@@ -266,10 +267,10 @@ function PricingContent() {
                             ? "bg-gradient-to-r from-amber-500 to-orange-500" 
                             : "bg-green-100 dark:bg-green-900"
                         )}>
-                          <Check className={cn(
+                          <HugeiconsIcon icon={Tick02Icon} className={cn(
                             "w-3 h-3",
                             feature.pro ? "text-white" : "text-green-600 dark:text-green-400"
-                          )} />
+                          )}  />
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-sm">{feature.text}</span>
@@ -374,7 +375,7 @@ function PricingContent() {
                     transition={{ type: "spring", stiffness: 400, damping: 25 }}
                     className="flex-shrink-0"
                   >
-                    <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                    <HugeiconsIcon icon={ArrowDown01Icon} className="w-5 h-5 text-muted-foreground" />
                   </motion.div>
                 </button>
                 <AnimatePresence>

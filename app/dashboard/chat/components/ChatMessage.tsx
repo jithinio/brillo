@@ -1,12 +1,13 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Bot, User, Copy, ThumbsUp, ThumbsDown } from "lucide-react"
+import { AiUserIcon, UserIcon, CopyIcon, ThumbsUpIcon, ThumbsDownIcon } from '@hugeicons/core-free-icons'
 import { cn } from "@/lib/utils"
 import { formatDistanceToNow } from "date-fns"
 
@@ -87,7 +88,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
               ? "bg-primary text-primary-foreground" 
               : "bg-muted"
           )}>
-            {isUser ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
+            {isUser ? <HugeiconsIcon icon={UserIcon} className="h-4 w-4"  /> : <HugeiconsIcon icon={AiUserIcon} className="h-4 w-4"  />}
           </AvatarFallback>
         </Avatar>
       </div>
@@ -174,21 +175,21 @@ export function ChatMessage({ message }: ChatMessageProps) {
               className="h-6 w-6"
               onClick={copyToClipboard}
             >
-              <Copy className="h-3 w-3" />
+              <HugeiconsIcon icon={CopyIcon} className="h-3 w-3"  />
             </Button>
             <Button
               variant="ghost"
               size="icon"
               className="h-6 w-6"
             >
-              <ThumbsUp className="h-3 w-3" />
+              <HugeiconsIcon icon={ThumbsUpIcon} className="h-3 w-3"  />
             </Button>
             <Button
               variant="ghost"
               size="icon"
               className="h-6 w-6"
             >
-              <ThumbsDown className="h-3 w-3" />
+              <HugeiconsIcon icon={ThumbsDownIcon} className="h-3 w-3"  />
             </Button>
           </motion.div>
         )}

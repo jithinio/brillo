@@ -1,5 +1,6 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import * as React from "react"
 import {
   ColumnDef,
@@ -13,7 +14,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { ChevronDown, Plus, Search, Eye, Edit, Send, Download, Trash2, CheckCircle, Clock, XCircle, Settings2, FileText } from "lucide-react"
+import { ArrowDown01Icon, PlusSignIcon, SearchIcon, ViewIcon, Edit03Icon, DollarSend01Icon, DownloadIcon, Delete01Icon, Tick01Icon, ClockIcon, CancelCircleIcon, Settings01Icon, DocumentAttachmentIcon, Document01Icon, SentIcon, AddInvoiceIcon } from '@hugeicons/core-free-icons'
 
 import { Button } from "@/components/ui/button"
 import { Loader } from "@/components/ui/loader"
@@ -44,7 +45,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { AlertTriangle } from "lucide-react"
+import { Alert01Icon } from '@hugeicons/core-free-icons'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -206,7 +207,7 @@ export function DataTable<TData, TValue>({
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <div className="relative">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                          <HugeiconsIcon icon={SearchIcon} className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground"  />
             <Input
               placeholder="Filter invoices..."
               value={(table.getColumn("invoice_number")?.getFilterValue() as string) ?? ""}
@@ -219,7 +220,7 @@ export function DataTable<TData, TValue>({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
-                <Settings2 className="mr-1.5 h-4 w-4" />
+                <HugeiconsIcon icon={Settings01Icon} className="mr-1.5 h-4 w-4"  />
                 <span className="hidden lg:inline">View</span>
                 <span className="lg:hidden">View</span>
               </Button>
@@ -282,12 +283,12 @@ export function DataTable<TData, TValue>({
               className="bg-red-100 text-red-600 hover:bg-red-200 rounded-full"
               onClick={handleBatchDelete}
             >
-              <Trash2 className="h-3.5 w-3.5" />
+              <HugeiconsIcon icon={Delete01Icon} className="h-3.5 w-3.5"  />
             </Button>
           )}
           {onCreateInvoice && (
             <Button onClick={onCreateInvoice} size="icon" className="rounded-full" title="Create Invoice">
-              <Plus className="h-3.5 w-3.5" />
+              <HugeiconsIcon icon={AddInvoiceIcon} className="h-3.5 w-3.5"  />
             </Button>
           )}
         </div>
@@ -368,7 +369,7 @@ export function DataTable<TData, TValue>({
                         <ContextMenuItem 
                           onClick={() => contextActions.onViewDetails(row.original)}
                         >
-                          <Eye className="mr-1.5 h-4 w-4" />
+                          <HugeiconsIcon icon={ViewIcon} className="mr-1.5 h-4 w-4"  />
                           View Details
                         </ContextMenuItem>
                         <ContextMenuItem 
@@ -381,13 +382,13 @@ export function DataTable<TData, TValue>({
                         <ContextMenuItem 
                           onClick={() => contextActions.onSendInvoice(row.original)}
                         >
-                          <Send className="mr-1.5 h-4 w-4" />
+                          <HugeiconsIcon icon={SentIcon} className="mr-1.5 h-4 w-4"  />
                           Send Invoice
                         </ContextMenuItem>
                         <ContextMenuItem 
                           onClick={() => contextActions.onViewInvoice(row.original)}
                         >
-                          <FileText className="mr-1.5 h-4 w-4" />
+                          <HugeiconsIcon icon={Document01Icon} className="mr-1.5 h-4 w-4"  />
                           View PDF
                         </ContextMenuItem>
                         <ContextMenuSeparator />
@@ -395,32 +396,32 @@ export function DataTable<TData, TValue>({
                         {/* Status Change Submenu */}
                         <ContextMenuSub>
                           <ContextMenuSubTrigger>
-                            <CheckCircle className="mr-1.5 h-4 w-4" />
+                            <HugeiconsIcon icon={Tick01Icon} className="mr-1.5 h-4 w-4"  />
                             Change Status
                           </ContextMenuSubTrigger>
                           <ContextMenuSubContent>
                             <ContextMenuItem 
                               onClick={() => contextActions.onStatusChange(row.original, 'draft')}
                             >
-                              <FileText className="mr-1.5 h-4 w-4 text-muted-foreground" />
+                              <HugeiconsIcon icon={Document01Icon} className="mr-1.5 h-4 w-4 text-muted-foreground"  />
                               Draft
                             </ContextMenuItem>
                             <ContextMenuItem 
                               onClick={() => contextActions.onStatusChange(row.original, 'sent')}
                             >
-                              <Send className="mr-1.5 h-4 w-4 text-blue-600" />
+                              <HugeiconsIcon icon={DollarSend01Icon} className="mr-1.5 h-4 w-4 text-blue-600"  />
                               Sent
                             </ContextMenuItem>
                             <ContextMenuItem 
                               onClick={() => contextActions.onStatusChange(row.original, 'paid')}
                             >
-                              <CheckCircle className="mr-1.5 h-4 w-4 text-green-600" />
+                              <HugeiconsIcon icon={Tick01Icon} className="mr-1.5 h-4 w-4 text-green-600"  />
                               Paid
                             </ContextMenuItem>
                             <ContextMenuItem 
                               onClick={() => contextActions.onStatusChange(row.original, 'overdue')}
                             >
-                              <Clock className="mr-1.5 h-4 w-4 text-red-600" />
+                              <HugeiconsIcon icon={ClockIcon} className="mr-1.5 h-4 w-4 text-red-600"  />
                               Overdue
                             </ContextMenuItem>
                           </ContextMenuSubContent>
@@ -431,7 +432,7 @@ export function DataTable<TData, TValue>({
                           onClick={() => contextActions.onDeleteInvoice(row.original)}
                           className="text-red-600"
                         >
-                          <Trash2 className="mr-1.5 h-4 w-4" />
+                          <HugeiconsIcon icon={Delete01Icon} className="mr-1.5 h-4 w-4"  />
                           Delete Invoice
                         </ContextMenuItem>
                       </ContextMenuContent>

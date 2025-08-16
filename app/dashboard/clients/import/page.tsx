@@ -1,8 +1,9 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Upload, Download, CheckCircle, AlertCircle, FileText } from "lucide-react"
+import { ArrowLeft01Icon as ArrowLeft, Upload03Icon as Upload, FileDownloadIcon as Download, CheckmarkCircleIcon, AlertCircleIcon as AlertCircle, DocumentAttachmentIcon as FileText } from '@hugeicons/core-free-icons'
 import { Button } from "@/components/ui/button"
 import { Loader } from "@/components/ui/loader"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -351,7 +352,7 @@ export default function ClientImportPage() {
         description="Upload a CSV file to import multiple clients at once"
         action={
           <Button variant="outline" size="sm" onClick={handleBack}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
+            <HugeiconsIcon icon={ArrowLeft} className="mr-2 h-4 w-4"  />
             Back to Clients
           </Button>
         }
@@ -410,7 +411,7 @@ export default function ClientImportPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
-                <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                <HugeiconsIcon icon={Upload} className="mx-auto h-12 w-12 text-muted-foreground mb-4"  />
                 <div className="space-y-2">
                   <p className="text-sm text-muted-foreground">
                     Click to select a CSV file or drag and drop
@@ -427,11 +428,11 @@ export default function ClientImportPage() {
               
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <HugeiconsIcon icon={FileText} className="h-4 w-4 text-muted-foreground"  />
                   <span className="text-sm text-muted-foreground">Need a sample file?</span>
                 </div>
                 <Button variant="outline" size="sm" onClick={downloadSample}>
-                  <Download className="mr-2 h-4 w-4" />
+                  <HugeiconsIcon icon={Download} className="mr-2 h-4 w-4"  />
                   Download Sample
                 </Button>
               </div>
@@ -546,7 +547,7 @@ export default function ClientImportPage() {
 
               {errors.length > 0 && (
                 <Alert>
-                  <AlertCircle className="h-4 w-4" />
+                  <HugeiconsIcon icon={AlertCircleIcon} className="h-4 w-4"  />
                   <AlertDescription>
                     <div className="space-y-2">
                       <p className="font-medium">Import Errors:</p>

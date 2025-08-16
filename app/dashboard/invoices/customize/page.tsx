@@ -1,5 +1,6 @@
 'use client'
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import { useState, useEffect } from 'react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,7 +12,7 @@ import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { getDefaultCurrency, getCurrencySymbol, formatPhoneNumber } from '@/lib/currency'
-import { Save, Palette, Settings2, RotateCcw } from 'lucide-react'
+import { FloppyDiskIcon, ColorPickerIcon, Settings01Icon, RotateLeftIcon, WebDesign01Icon, PaintBoardIcon, LayoutGridIcon, ReloadIcon, Loading03Icon } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { PageHeader, PageContent } from '@/components/page-header'
 import { cn } from '@/lib/utils'
@@ -209,22 +210,22 @@ export default function CustomizeInvoicePage() {
     },
     items: [
       {
-        description: 'Professional Services',
-        details: 'Website development and design',
+        item_name: 'Professional Services',
+        item_description: 'Website development and design',
         quantity: 1,
         rate: 5000,
         amount: 5000
       },
       {
-        description: 'Consulting',
-        details: 'Technical architecture consultation',
+        item_name: 'Consulting',
+        item_description: 'Technical architecture consultation',
         quantity: 10,
         rate: 150,
         amount: 1500
       },
       {
-        description: 'Support & Maintenance',
-        details: 'Monthly support package',
+        item_name: 'Support & Maintenance',
+        item_description: 'Monthly support package',
         quantity: 1,
         rate: 1000,
         amount: 1000
@@ -1324,10 +1325,10 @@ export default function CustomizeInvoicePage() {
                 borderBottom: `1px solid ${template.borderColor}40`
               }}>
                 <div>
-                  <div style={{ color: template.primaryColor, fontWeight: '500' }}>{item.description}</div>
-                  {template.showItemDetails && item.details && (
+                  <div style={{ color: template.primaryColor, fontWeight: '500' }}>{item.item_name || item.description}</div>
+                  {template.showItemDetails && (item.item_description || item.details) && (
                     <div style={{ color: template.secondaryColor, fontSize: '14px', marginTop: '4px' }}>
-                      {item.details}
+                      {item.item_description || item.details}
                     </div>
                   )}
                 </div>
@@ -1520,12 +1521,12 @@ export default function CustomizeInvoicePage() {
           <Button size="sm" onClick={saveTemplate} disabled={saving}>
             {saving ? (
               <>
-                <span className="animate-spin mr-2">⏳</span>
+                <HugeiconsIcon icon={Loading03Icon} className="mr-2 h-4 w-4 animate-spin" />
                 Saving...
               </>
             ) : (
               <>
-                <Save className="mr-2 h-4 w-4" />
+                <HugeiconsIcon icon={FloppyDiskIcon} className="mr-2 h-4 w-4"  />
                 Save Template
               </>
             )}
@@ -1538,11 +1539,11 @@ export default function CustomizeInvoicePage() {
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="template" className="flex items-center gap-2">
-                  <Palette className="h-4 w-4" />
+                  <HugeiconsIcon icon={LayoutGridIcon} className="h-4 w-4"  />
                   Template
                 </TabsTrigger>
                 <TabsTrigger value="style" className="flex items-center gap-2">
-                  <Settings2 className="h-4 w-4" />
+                  <HugeiconsIcon icon={PaintBoardIcon} className="h-4 w-4"  />
                   Style
                 </TabsTrigger>
               </TabsList>
@@ -1702,7 +1703,7 @@ export default function CustomizeInvoicePage() {
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-base font-medium">Logo & Branding</CardTitle>
                       <Button variant="ghost" size="sm" onClick={resetBranding} className="h-8 px-2">
-                        <RotateCcw className="h-3 w-3" />
+                        <HugeiconsIcon icon={ReloadIcon} className="h-3 w-3"  />
                       </Button>
                       </div>
                   </CardHeader>
@@ -1744,7 +1745,7 @@ export default function CustomizeInvoicePage() {
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-base font-medium">Typography</CardTitle>
                       <Button variant="ghost" size="sm" onClick={resetTypography} className="h-8 px-2">
-                        <RotateCcw className="h-3 w-3" />
+                        <HugeiconsIcon icon={ReloadIcon} className="h-3 w-3"  />
                       </Button>
                             </div>
                   </CardHeader>
@@ -1818,7 +1819,7 @@ export default function CustomizeInvoicePage() {
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-base font-medium">Colors</CardTitle>
                       <Button variant="ghost" size="sm" onClick={resetColors} className="h-8 px-2">
-                        <RotateCcw className="h-3 w-3" />
+                        <HugeiconsIcon icon={ReloadIcon} className="h-3 w-3"  />
                       </Button>
                     </div>
                   </CardHeader>
@@ -1934,7 +1935,7 @@ export default function CustomizeInvoicePage() {
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-base font-medium">Layout</CardTitle>
                       <Button variant="ghost" size="sm" onClick={resetLayout} className="h-8 px-2">
-                        <RotateCcw className="h-3 w-3" />
+                        <HugeiconsIcon icon={ReloadIcon} className="h-3 w-3"  />
                       </Button>
                     </div>
                   </CardHeader>

@@ -1,7 +1,8 @@
 "use client"
 
+import { HugeiconsIcon } from '@hugeicons/react';
 import { useState } from "react"
-import { MoreHorizontal, Upload, Download, RotateCcw, Calculator } from "lucide-react"
+import { MoreHorizontalIcon, FileImportIcon, FileExportIcon, ReloadIcon, CalculateIcon } from '@hugeicons/core-free-icons'
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -41,10 +42,10 @@ export function PageActionsMenu({ entityType, onExport, onResetColumns, showRese
             variant="outline"
             size="sm"
             onClick={() => setShowCurrencyConverter(true)}
-            className="h-8"
+            className="h-7 px-2"
           >
-            <Calculator className="h-4 w-4 mr-2" />
-            Currency
+                            <HugeiconsIcon icon={CalculateIcon} className="h-3.5 w-3.5 mr-1.5"  />
+            Converter
           </Button>
           <CurrencyConverterWidget
             isOpen={showCurrencyConverter}
@@ -57,24 +58,24 @@ export function PageActionsMenu({ entityType, onExport, onResetColumns, showRese
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-          <MoreHorizontal className="h-4 w-4" />
+          <HugeiconsIcon icon={MoreHorizontalIcon} className="h-4 w-4"  />
           <span className="sr-only">Open menu</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={handleImport}>
-          <Upload className="mr-2 h-4 w-4" />
+          <HugeiconsIcon icon={FileImportIcon} className="mr-2 h-4 w-4"  />
           Import
         </DropdownMenuItem>
         <DropdownMenuItem onClick={handleExport}>
-          <Download className="mr-2 h-4 w-4" />
+          <HugeiconsIcon icon={FileExportIcon} className="mr-2 h-4 w-4"  />
           Export
         </DropdownMenuItem>
         {showResetColumns && onResetColumns && (
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={onResetColumns}>
-              <RotateCcw className="mr-2 h-4 w-4" />
+              <HugeiconsIcon icon={ReloadIcon} className="mr-2 h-4 w-4"  />
               Reset Column Settings
             </DropdownMenuItem>
           </>
