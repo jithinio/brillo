@@ -1,4 +1,6 @@
+import { Suspense } from "react"
 import { ResetPasswordForm } from "@/components/reset-password-form"
+import { Loader } from "@/components/ui/loader"
 
 export default function ResetPasswordPage() {
   return (
@@ -11,7 +13,9 @@ export default function ResetPasswordPage() {
             className="h-6 w-auto"
           />
         </a>
-        <ResetPasswordForm />
+        <Suspense fallback={<div className="flex justify-center py-8"><Loader size="lg" variant="default" /></div>}>
+          <ResetPasswordForm />
+        </Suspense>
       </div>
     </div>
   )

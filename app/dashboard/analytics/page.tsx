@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import type { ChartConfig } from "@/components/ui/chart"
 import { Bar, BarChart, XAxis, YAxis, Line, LineChart } from "recharts"
-import { DollarCircleIcon, TradeUpIcon, TradeDownIcon, DocumentAttachmentIcon, Group01Icon, Calendar01Icon, ActivityIcon, BarChartIcon, WalletIcon, ClockIcon, DocumentIcon } from '@hugeicons/core-free-icons'
+import { DollarCircleIcon, TradeUpIcon, TradeDownIcon, DocumentAttachmentIcon, Group01Icon, Calendar01Icon, ActivityIcon, BarChartIcon, WalletIcon, ClockIcon } from '@hugeicons/core-free-icons'
 
 import { PageHeader } from "@/components/page-header"
 import { Loader } from "@/components/ui/loader"
@@ -281,7 +281,7 @@ export default function AnalyticsPage() {
                         percentage: filteredMetrics.totalProjects.percentage,
                         label: "vs previous period"
                       }}
-                      icon={DocumentIcon}
+                      icon={DocumentAttachmentIcon}
                       variant="number"
                       isLoading={false}
                       error={error}

@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader } from "@/components/ui/loader"
-import { PasswordStrength } from "@/components/ui/password-strength"
+import { PasswordStrengthIndicator } from "@/components/ui/password-strength"
 import { EyeIcon, ViewOffIcon, CheckmarkCircleIcon, AlertCircleIcon, ShieldIcon } from '@hugeicons/core-free-icons'
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { useAuth } from "@/components/auth-provider"
@@ -243,7 +243,7 @@ export function ResetPasswordForm({
                     )}
                   </Button>
                 </div>
-                {password && <PasswordStrength password={password} />}
+                {password && <PasswordStrengthIndicator password={password} />}
               </div>
               
               <div className="grid gap-3">
