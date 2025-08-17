@@ -189,6 +189,8 @@ export function DataTable<TData, TValue>({
     }
   }
 
+
+
   const handleUndo = (items: TData[]) => {
     // This will be called by the parent component to restore items
   }
@@ -287,6 +289,7 @@ export function DataTable<TData, TValue>({
               <HugeiconsIcon icon={Delete01Icon} className="h-3.5 w-3.5"  />
             </Button>
           )}
+
           <Button 
             type="button"
             size="icon" 

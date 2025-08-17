@@ -34,6 +34,7 @@ import { cn } from "@/lib/utils"
 import { useCanPerformAction } from "@/components/over-limit-alert"
 import { useSubscription } from "@/components/providers/subscription-provider"
 import { countries } from "@/lib/countries"
+import { exportClients } from "@/lib/csv-export"
 
 interface ClientFormData {
   name: string
@@ -599,7 +600,14 @@ export default function ClientsPage() {
       }
     },
     onExport: () => {
-      toast.info('Export feature coming soon')
+      try {
+        const exportData = clientsData.data || []
+        exportClients(exportData)
+        toast.success(`Exported ${exportData.length} clients to CSV`)
+      } catch (error) {
+        console.error('Export error:', error)
+        toast.error('Failed to export clients')
+      }
     },
     // Context menu specific actions
     customActions: {

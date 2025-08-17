@@ -41,6 +41,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { ClientAvatar } from "@/components/ui/client-avatar"
 import { toast } from "sonner"
 import { EnhancedAddProjectDialog } from "./EnhancedAddProjectDialog"
+import { exportProjects } from "@/lib/csv-export"
 
 import { useInfiniteProjects } from "@/hooks/use-infinite-projects"
 import { useProjectFiltersV2 } from "@/hooks/use-project-filters-v2"
@@ -1139,7 +1140,14 @@ export function ProjectsTableWrapper({
   }
 
   const handleExport = () => {
-    console.log('Export projects')
+    try {
+      const exportData = projects || []
+      exportProjects(exportData)
+      toast.success(`Exported ${exportData.length} projects to CSV`)
+    } catch (error) {
+      console.error('Export error:', error)
+      toast.error('Failed to export projects')
+    }
   }
 
   // Helper function to get proper column display names

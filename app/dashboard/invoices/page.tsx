@@ -19,6 +19,7 @@ import { useSettings } from "@/components/settings-provider"
 import { useCurrencyCache } from "@/hooks/use-currency-cache"
 import { InvoicingGate } from "@/components/gates/pro-feature-gate"
 import { formatCurrency } from "@/lib/currency"
+import { exportInvoices } from "@/lib/csv-export"
 
 export default function InvoicesPage() {
   const router = useRouter()
@@ -241,7 +242,14 @@ export default function InvoicesPage() {
       }
     },
     onExport: () => {
-      toast.info('Export feature coming soon')
+      try {
+        const exportData = invoicesData.data || []
+        exportInvoices(exportData)
+        toast.success(`Exported ${exportData.length} invoices to CSV`)
+      } catch (error) {
+        console.error('Export error:', error)
+        toast.error('Failed to export invoices')
+      }
     },
     // New context menu specific actions
     customActions: {
