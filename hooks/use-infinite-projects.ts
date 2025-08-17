@@ -656,16 +656,47 @@ export function useInfiniteProjects(filters: ProjectFilters = {}, pageSize: numb
       })
     },
     onSuccess: (data, { id, status }) => {
-      // Complete cache invalidation after status update
-      cacheUtils.invalidateAllProjectRelatedData(queryClient)
+      // Selective cache invalidation - preserve analytics updates without refreshing the table
+      // Clear localStorage caches for analytics and dashboard data
+      cacheUtils.clearLocalStorageCaches()
       
-      toast.success(`Project status updated to ${status}`, {
-        description: `${data.name} has been updated successfully`
+      // Clear unified projects localStorage cache specifically for dashboard updates
+      try {
+        localStorage.removeItem('unified-projects-data')
+        console.log('🔄 Cleared unified projects cache for dashboard refresh')
+      } catch (error) {
+        console.warn('Failed to clear unified projects cache:', error)
+      }
+      
+      // Invalidate analytics and dashboard queries (needed for metrics updates)
+      cacheUtils.invalidateAnalytics(queryClient)
+      cacheUtils.invalidateAnalyticsData(queryClient)
+      queryClient.invalidateQueries({ queryKey: ['analytics'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['database-metrics'] })
+      queryClient.invalidateQueries({ queryKey: ['filtered-metrics'] })
+      
+      // CRITICAL: Invalidate ALL infinite project queries for different status filters
+      // This ensures pages like Active, Completed, etc. show updated data immediately
+      queryClient.invalidateQueries({ 
+        queryKey: ['projects', 'infinite'],
+        exact: false // This will match all infinite project queries regardless of filters
       })
+      
+      // Trigger analytics cache invalidation event for dashboard updates
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('project-cache-invalidated', {
+          detail: { reason: 'status change' }
+        }))
+      }
+      
+      // Don't show toast here - it's handled by the StatusCell component with undo functionality
     },
-    onSettled: () => {
-      // Always refetch after error or success
-      queryClient.invalidateQueries({ queryKey: queryKeys.projectsInfinite(filters) })
+    onSettled: (data, error) => {
+      // Only refetch if there was an error, otherwise optimistic updates are sufficient
+      if (error) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.projectsInfinite(filters) })
+      }
     },
   })
 

@@ -456,12 +456,21 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
         const invoiceCurrency = invoice.currency || getDefaultCurrency()
         const balanceDue = invoice.balance_due || (invoice.total_amount || 0) - (invoice.payment_received || 0)
         
-        // Check if invoice is overdue
+        // Check if due date has passed
+        const dueDate = new Date(invoice.due_date)
+        const today = new Date()
+        today.setHours(0, 0, 0, 0) // Reset time to start of day for accurate day calculation
+        const dueDateOnly = new Date(dueDate)
+        dueDateOnly.setHours(0, 0, 0, 0)
+        const isDueDatePassed = dueDateOnly.getTime() < today.getTime()
+        
+        // Check if invoice is overdue or due date has passed
         const isOverdue = invoice.status === 'overdue'
+        const shouldShowRed = (isOverdue || isDueDatePassed) && balanceDue > 0
         
         return (
           <div className="min-w-[120px] max-w-[140px] overflow-hidden">
-            <span className={`font-normal text-sm truncate block ${isOverdue && balanceDue > 0 ? 'text-red-600' : ''}`}>
+            <span className={`font-normal text-sm truncate block ${shouldShowRed ? 'text-red-600' : ''}`}>
               {formatCurrency(balanceDue, invoiceCurrency)}
             </span>
           </div>

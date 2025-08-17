@@ -426,7 +426,7 @@ export function useInvoices(filters: InvoiceFilters = {}): DataHookReturn<Invoic
       toast.error('Failed to update invoice status')
     },
     onSuccess: () => {
-      toast.success('Invoice status updated')
+      // No toast here - handled by the UI layer with more details and undo functionality
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['invoices', filters] })

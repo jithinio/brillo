@@ -3,7 +3,7 @@
 import { HugeiconsIcon } from '@hugeicons/react';
 import { useEffect, useState } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
-import { ArrowLeft01Icon, DownloadIcon, Edit03Icon, MailIcon } from '@hugeicons/core-free-icons'
+import { ArrowLeft01Icon, DownloadIcon, Edit03Icon, MailIcon, FileDownloadIcon } from '@hugeicons/core-free-icons'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -69,6 +69,16 @@ export default function InvoicePreviewPage() {
   const [invoiceHTML, setInvoiceHTML] = useState<string>('')
   const [isDemoInvoice, setIsDemoInvoice] = useState(false)
   
+  // Check if we're navigating from generate page to maintain loading state
+  const [isNavigationLoading, setIsNavigationLoading] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('invoice-navigation-loading') === 'true'
+    }
+    return false
+  })
+  
+
+  
   // Send email dialog state
   const [sendEmailOpen, setSendEmailOpen] = useState(false)
   const [sendForm, setSendForm] = useState({
@@ -89,14 +99,32 @@ export default function InvoicePreviewPage() {
   useEffect(() => {
     // If settings.invoiceTemplate is empty, try to load from localStorage
     if (!settings.invoiceTemplate || Object.keys(settings.invoiceTemplate).length === 0) {
-      const savedTemplate = localStorage.getItem('invoice-template-settings')
-      if (savedTemplate) {
-        try {
-          const parsed = JSON.parse(savedTemplate)
-          setLocalTemplateSettings(parsed)
-        } catch (error) {
-          console.error('Error parsing localStorage template:', error)
-        }
+      // Use requestIdleCallback to avoid blocking the main thread
+      if ('requestIdleCallback' in window) {
+        window.requestIdleCallback(() => {
+          const savedTemplate = localStorage.getItem('invoice-template-settings')
+          if (savedTemplate) {
+            try {
+              const parsed = JSON.parse(savedTemplate)
+              setLocalTemplateSettings(parsed)
+            } catch (error) {
+              console.error('Error parsing localStorage template:', error)
+            }
+          }
+        })
+      } else {
+        // Fallback for browsers without requestIdleCallback
+        setTimeout(() => {
+          const savedTemplate = localStorage.getItem('invoice-template-settings')
+          if (savedTemplate) {
+            try {
+              const parsed = JSON.parse(savedTemplate)
+              setLocalTemplateSettings(parsed)
+            } catch (error) {
+              console.error('Error parsing localStorage template:', error)
+            }
+          }
+        }, 0)
       }
     }
   }, [settings.invoiceTemplate])
@@ -124,13 +152,38 @@ export default function InvoicePreviewPage() {
   useEffect(() => {
     loadInvoice()
   }, [params.id])
+  
+  // Clear navigation loading flag when invoice is loaded
+  useEffect(() => {
+    if (invoice && isNavigationLoading) {
+      setIsNavigationLoading(false)
+      sessionStorage.removeItem('invoice-navigation-loading')
+    }
+  }, [invoice, isNavigationLoading])
+  
+  // Fallback: clear navigation loading after timeout to prevent infinite loading
+  useEffect(() => {
+    if (isNavigationLoading) {
+      const timeout = setTimeout(() => {
+        setIsNavigationLoading(false)
+        sessionStorage.removeItem('invoice-navigation-loading')
+      }, 10000) // 10 second timeout
+      
+      return () => clearTimeout(timeout)
+    }
+  }, [isNavigationLoading])
+
+
 
   useEffect(() => {
     async function renderInvoice() {
       if (invoice) {
         try {
-          const html = await renderInvoiceForPreview(invoice, finalTemplateSettings, settings)
-          setInvoiceHTML(html)
+          // Use requestAnimationFrame to avoid blocking the main thread
+          requestAnimationFrame(async () => {
+            const html = await renderInvoiceForPreview(invoice, finalTemplateSettings, settings)
+            setInvoiceHTML(html)
+          })
         } catch (error) {
           console.error('Error rendering invoice HTML:', error)
           toast.error('Failed to render invoice preview')
@@ -164,10 +217,10 @@ export default function InvoicePreviewPage() {
       logoUrl: settings.companyLogo || ''
     }
     
-    // Try to load company info from localStorage
-    const savedCompanyInfo = localStorage.getItem('company-info')
-    if (savedCompanyInfo) {
-      try {
+    // Try to load company info from localStorage (use cached if available)
+    try {
+      const savedCompanyInfo = localStorage.getItem('company-info')
+      if (savedCompanyInfo) {
         const parsed = JSON.parse(savedCompanyInfo)
         companyInfo = {
           companyName: parsed.companyName || settings.companyName || companyInfo.companyName,
@@ -177,9 +230,10 @@ export default function InvoicePreviewPage() {
           companyTaxId: parsed.companyTaxId || '',
           logoUrl: parsed.logoUrl || settings.companyLogo || companyInfo.logoUrl
         }
-      } catch (error) {
-        console.error('Error parsing company info:', error)
       }
+    } catch (error) {
+      console.error('Error parsing company info:', error)
+      // Continue with default companyInfo if parsing fails
     }
     
     // Create full template with all settings - use saved templateId if available
@@ -224,7 +278,8 @@ export default function InvoicePreviewPage() {
     try {
       setLoading(true)
       
-
+      // Start loading immediately to improve perceived performance
+      const loadingStartTime = performance.now()
       
       if (isSupabaseConfigured()) {
         // Load from Supabase
@@ -263,6 +318,12 @@ export default function InvoicePreviewPage() {
         console.log('Loaded invoice from Supabase:', invoiceWithItems)
         setInvoice(invoiceWithItems)
         setIsDemoInvoice(false)
+        
+        // Log loading performance
+        const loadingTime = performance.now() - loadingStartTime
+        if (loadingTime > 100) {
+          console.warn(`🐌 Slow invoice loading: ${loadingTime.toFixed(2)}ms`)
+        }
       } else {
         // Load from sessionStorage for demo mode
         const demoInvoices = JSON.parse(sessionStorage.getItem('demo-invoices') || '[]')
@@ -462,12 +523,6 @@ export default function InvoicePreviewPage() {
   function handleEdit() {
     if (!invoice) return
     
-    // Show loading toast
-    toast.loading(`Loading invoice ${invoice.invoice_number} for editing...`, {
-      id: `edit-${invoice.id}`,
-      duration: 10000 // 10 second timeout
-    })
-    
     // Store invoice data for editing
     const editData = {
       invoiceId: invoice.id,
@@ -489,6 +544,8 @@ export default function InvoicePreviewPage() {
     }
     
     sessionStorage.setItem('edit-invoice-data', JSON.stringify(editData))
+    
+    // Navigate directly - the generate page has its own overlay loader
     router.push('/dashboard/invoices/generate?edit=true')
   }
 
@@ -506,22 +563,36 @@ export default function InvoicePreviewPage() {
 
   // Show success toast based on action (only once, then remove from URL)
   useEffect(() => {
+    // Only show toast if we have an invoice loaded and action is not 'view'
+    if (!invoice || action === 'view') {
+      return
+    }
+    
+    // Use sessionStorage to prevent duplicate toasts across component remounts (React Strict Mode)
+    const toastKey = `toast-shown-${params.id}-${action}`
+    
+    if (sessionStorage.getItem(toastKey)) {
+      return
+    }
+    
     if (action === 'created') {
       toast.success('Invoice created successfully!', {
         description: 'Your invoice has been created and is ready to download or send.'
       })
-      // Remove action from URL to prevent showing toast on refresh
+      sessionStorage.setItem(toastKey, 'true')
       window.history.replaceState({}, '', window.location.pathname)
     } else if (action === 'updated') {
       toast.success('Invoice updated successfully!', {
         description: 'Your invoice has been updated and saved.'
       })
-      // Remove action from URL to prevent showing toast on refresh
+      sessionStorage.setItem(toastKey, 'true')
       window.history.replaceState({}, '', window.location.pathname)
     }
-  }, [action])
+  }, [action, params.id, invoice])
 
-  if (loading) {
+
+
+  if (loading || isNavigationLoading) {
     return (
       <>
         <PageHeader
@@ -531,7 +602,9 @@ export default function InvoicePreviewPage() {
           <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center" style={{left: 'var(--sidebar-width, 16rem)'}}>
             <div className="flex items-center space-x-3">
               <Loader className="h-5 w-5 animate-spin text-muted-foreground" />
-              <p className="font-medium">Loading invoice...</p>
+              <p className="font-medium">
+                {isNavigationLoading ? "Processing invoice..." : "Loading invoice..."}
+              </p>
             </div>
           </div>
         </PageContent>
@@ -606,7 +679,7 @@ export default function InvoicePreviewPage() {
               size="sm"
               className="gap-2"
             >
-              <HugeiconsIcon icon={DownloadIcon} className="h-4 w-4"  />
+              <HugeiconsIcon icon={FileDownloadIcon} className="h-4 w-4"  />
               {downloadingPDF ? 'Downloading...' : 'Download PDF'}
             </Button>
           </div>

@@ -188,18 +188,21 @@ export function DataTable<TData, TValue>({
     }
   }
 
-  // Don't render table until preferences are loaded to prevent layout shift
-  if (preferencesLoading || !preferencesLoaded) {
-    return (
-      <div className="w-full space-y-4">
-        <div className="h-96 flex items-center justify-center">
-          <div className="text-center">
-            <Loader size="lg" variant="primary" className="mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">Loading table preferences...</p>
-          </div>
-        </div>
-      </div>
-    )
+  // Show table with minimal preferences loading delay to improve perceived performance
+  if (preferencesLoading && !preferencesLoaded) {
+    // Use defaults while loading to prevent white screen
+    const defaultVisibility = {
+      amount: window.innerWidth > 768,
+      due_date: window.innerWidth > 1024,
+      created_at: window.innerWidth > 1200,
+    }
+    
+    // Render table with defaults while preferences load in background
+    if (Object.keys(columnVisibility).length === 0) {
+      React.useEffect(() => {
+        setColumnVisibility(defaultVisibility)
+      }, [])
+    }
   }
 
   return (

@@ -21,7 +21,7 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { PlusSignIcon, Upload01Icon, UserIcon, Crown02Icon } from '@hugeicons/core-free-icons'
+import { PlusSignIcon, Upload01Icon, UserIcon, Crown02Icon, ImageUploadIcon } from '@hugeicons/core-free-icons'
 import Link from "next/link"
 import { ClientMetrics } from "@/components/clients/ClientMetrics"
 import { DataHookReturn, EntityActions } from "@/components/table/types"
@@ -88,7 +88,7 @@ const ClientDialogForm = React.memo(({
           size="sm"
           onClick={() => fileInputRef.current?.click()}
         >
-          <HugeiconsIcon icon={Upload01Icon} className="h-4 w-4 mr-2"  />
+          <HugeiconsIcon icon={ImageUploadIcon} className="h-4 w-4 mr-2"  />
           {avatarPreview ? "Change Photo" : "Upload Photo"}
                 </Button>
         <input

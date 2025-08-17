@@ -26,6 +26,12 @@ export default function InvoicesPage() {
   const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null)
   const { formatDate } = useSettings()
   
+  // Memoize the invoice click handler for better performance
+  const handleInvoiceClick = React.useCallback((invoice: any) => {
+    // Navigate directly - the preview page has its own loading overlay
+    router.push(`/dashboard/invoices/${invoice.id}/preview`)
+  }, [router])
+  
   // Initialize currency cache management
   useCurrencyCache()
   
@@ -95,15 +101,8 @@ export default function InvoicesPage() {
       
       sessionStorage.setItem('edit-invoice-data', JSON.stringify(editData))
       
-      // Show loading toast
-      toast.loading(`Loading invoice ${invoice.invoice_number} for editing...`, {
-        id: `edit-${invoice.id}`
-      })
-      
-      // Navigate with a small delay to show loading
-      setTimeout(() => {
-        router.push('/dashboard/invoices/generate?edit=true')
-      }, 100)
+      // Navigate directly - the generate page has its own overlay loader
+      router.push('/dashboard/invoices/generate?edit=true')
     },
     onDelete: async (invoice: any) => {
       // Store the full invoice data for potential restoration
@@ -320,7 +319,7 @@ export default function InvoicesPage() {
                 },
               })
             },
-            onInvoiceClick: (invoice) => router.push(`/dashboard/invoices/${invoice.id}/preview`),
+            onInvoiceClick: handleInvoiceClick,
             editingInvoiceId: editingInvoiceId,
             formatDate: formatDate,
           })}

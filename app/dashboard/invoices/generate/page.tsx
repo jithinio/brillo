@@ -376,9 +376,6 @@ export default function GenerateInvoicePage() {
         // Clear the session storage after loading
         sessionStorage.removeItem('edit-invoice-data')
         
-        // Clear any loading toasts
-        toast.dismiss(`edit-${editInfo.invoiceId}`)
-        
         // Show success notification
         toast.success(`Invoice ${editInfo.invoiceNumber} loaded for editing`)
       } catch (error) {
@@ -1247,6 +1244,9 @@ export default function GenerateInvoicePage() {
         
         // Invalidate invoice cache to ensure fresh data when navigating back
         queryClient.invalidateQueries({ queryKey: ['invoices'] })
+        
+        // Set navigation loading flag to prevent flash between pages
+        sessionStorage.setItem('invoice-navigation-loading', 'true')
         
         // Redirect to preview page with appropriate action
         router.push(`/dashboard/invoices/${invoiceData.id}/preview?action=${isEditMode ? 'updated' : 'created'}`)
