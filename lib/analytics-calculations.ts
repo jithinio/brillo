@@ -167,14 +167,43 @@ const calculateTrendData = (current: number, previous: number): AnalyticsResult 
 // Main calculation functions
 export const calculateOverallRevenue = (projects: Project[], dateRange?: { start: Date; end: Date }): AnalyticsResult => {
   const now = new Date()
-  const currentStart = dateRange?.start || startOfYear(now)
-  const currentEnd = dateRange?.end || now
+  
+  // If no date range is provided, use all projects for all-time calculation
+  if (!dateRange) {
+    console.log('💰 Analytics: Calculating Overall Revenue (All Time)', {
+      totalProjects: projects.length,
+      dateRange: 'All time',
+      hasProjects: projects.length > 0
+    })
+
+    // For all-time calculation, use all valid projects and compare with previous year
+    const allValidProjects = projects.filter(isValidForAnalytics)
+    const previousYearStart = startOfYear(subYears(now, 1))
+    const previousYearEnd = endOfYear(subYears(now, 1))
+    const previousYearProjects = filterProjectsByDateRange(projects, previousYearStart, previousYearEnd)
+
+    const current = allValidProjects.reduce((sum, project) => sum + getProjectValue(project), 0)
+    const previous = previousYearProjects.reduce((sum, project) => sum + getProjectValue(project), 0)
+
+    console.log('💰 Analytics: All-time revenue calculation', {
+      allProjectsCount: allValidProjects.length,
+      previousYearProjectsCount: previousYearProjects.length,
+      currentValue: current,
+      previousValue: previous
+    })
+
+    return calculateTrendData(current, previous)
+  }
+
+  // If date range is provided, use the original filtering logic
+  const currentStart = dateRange.start
+  const currentEnd = dateRange.end
   const previousStart = startOfYear(subYears(currentStart, 1))
   const previousEnd = subYears(currentEnd, 1)
 
   console.log('💰 Analytics: Calculating Overall Revenue', {
     totalProjects: projects.length,
-    dateRange: dateRange ? `${currentStart.toISOString()} to ${currentEnd.toISOString()}` : 'Year to date',
+    dateRange: `${currentStart.toISOString()} to ${currentEnd.toISOString()}`,
     hasProjects: projects.length > 0
   })
 
@@ -231,8 +260,36 @@ export const calculateOverallRevenue = (projects: Project[], dateRange?: { start
 
 export const calculateOverallExpenses = (projects: Project[], dateRange?: { start: Date; end: Date }): AnalyticsResult => {
   const now = new Date()
-  const currentStart = dateRange?.start || startOfYear(now)
-  const currentEnd = dateRange?.end || now
+  
+  // If no date range is provided, use all projects for all-time calculation
+  if (!dateRange) {
+    console.log('💸 Analytics: Calculating Overall Expenses (All Time)', {
+      totalProjects: projects.length,
+      dateRange: 'All time'
+    })
+
+    // For all-time calculation, use all valid projects and compare with previous year
+    const allValidProjects = projects.filter(isValidForAnalytics)
+    const previousYearStart = startOfYear(subYears(now, 1))
+    const previousYearEnd = endOfYear(subYears(now, 1))
+    const previousYearProjects = filterProjectsByDateRange(projects, previousYearStart, previousYearEnd)
+
+    const current = allValidProjects.reduce((sum, project) => sum + getProjectExpenses(project), 0)
+    const previous = previousYearProjects.reduce((sum, project) => sum + getProjectExpenses(project), 0)
+
+    console.log('💸 Analytics: All-time expenses calculation', {
+      allProjectsCount: allValidProjects.length,
+      previousYearProjectsCount: previousYearProjects.length,
+      currentValue: current,
+      previousValue: previous
+    })
+
+    return calculateTrendData(current, previous)
+  }
+
+  // If date range is provided, use the original filtering logic
+  const currentStart = dateRange.start
+  const currentEnd = dateRange.end
   const previousStart = startOfYear(subYears(currentStart, 1))
   const previousEnd = subYears(currentEnd, 1)
 
@@ -247,14 +304,42 @@ export const calculateOverallExpenses = (projects: Project[], dateRange?: { star
 
 export const calculateTotalProjects = (projects: Project[], dateRange?: { start: Date; end: Date }): AnalyticsResult => {
   const now = new Date()
-  const currentStart = dateRange?.start || startOfYear(now)
-  const currentEnd = dateRange?.end || now
+  
+  // If no date range is provided, use all projects for all-time calculation
+  if (!dateRange) {
+    console.log('📊 Analytics: Calculating Total Projects (All Time)', {
+      totalProjects: projects.length,
+      dateRange: 'All time'
+    })
+
+    // For all-time calculation, count all valid projects and compare with previous year
+    const allValidProjects = projects.filter(isValidForAnalytics)
+    const previousYearStart = startOfYear(subYears(now, 1))
+    const previousYearEnd = endOfYear(subYears(now, 1))
+    const previousYearProjects = filterProjectsByDateRange(projects, previousYearStart, previousYearEnd)
+
+    const current = allValidProjects.length
+    const previous = previousYearProjects.length
+
+    console.log('📊 Analytics: All-time project count calculation', {
+      allProjectsCount: current,
+      previousYearProjectsCount: previous,
+      pipelineProjectsExcluded: projects.filter(p => p.status === 'pipeline').length,
+      totalProjectsBeforeFilter: projects.length
+    })
+
+    return calculateTrendData(current, previous)
+  }
+
+  // If date range is provided, use the original filtering logic
+  const currentStart = dateRange.start
+  const currentEnd = dateRange.end
   const previousStart = startOfYear(subYears(currentStart, 1))
   const previousEnd = subYears(currentEnd, 1)
 
   console.log('📊 Analytics: Calculating Total Projects', {
     totalProjects: projects.length,
-    dateRange: dateRange ? `${currentStart.toISOString()} to ${currentEnd.toISOString()}` : 'Year to date'
+    dateRange: `${currentStart.toISOString()} to ${currentEnd.toISOString()}`
   })
 
   const currentProjects = filterProjectsByDateRange(projects, currentStart, currentEnd)
@@ -610,14 +695,60 @@ export const calculateNetProfit = (projects: Project[], dateRange?: { start: Dat
 
 export const calculateTotalPending = (projects: Project[], dateRange?: { start: Date; end: Date }): AnalyticsResult => {
   const now = new Date()
-  const currentStart = dateRange?.start || startOfYear(now)
-  const currentEnd = dateRange?.end || now
+  
+  // If no date range is provided, use all projects for all-time calculation
+  if (!dateRange) {
+    console.log('⏳ Analytics: Calculating Total Pending (All Time)', {
+      totalProjects: projects.length,
+      dateRange: 'All time'
+    })
+
+    // For all-time calculation, use all active/due projects and compare with previous year
+    const allActiveDueProjects = projects.filter(project => 
+      (project.status === 'active' || project.status === 'due') &&
+      (project as any).pipeline_stage !== 'lost'
+    )
+    
+    const previousYearStart = startOfYear(subYears(now, 1))
+    const previousYearEnd = endOfYear(subYears(now, 1))
+    const previousYearProjects = filterProjectsByDateRange(projects, previousYearStart, previousYearEnd)
+    const previousActiveDueProjects = previousYearProjects.filter(project => 
+      project.status === 'active' || project.status === 'due'
+    )
+
+    const current = allActiveDueProjects.reduce((sum, project) => {
+      const budget = project.total_budget || project.budget || 0
+      const received = project.payment_received || 0
+      const pending = Math.max(0, budget - received)
+      return sum + pending
+    }, 0)
+
+    const previous = previousActiveDueProjects.reduce((sum, project) => {
+      const budget = project.total_budget || project.budget || 0
+      const received = project.payment_received || 0
+      const pending = Math.max(0, budget - received)
+      return sum + pending
+    }, 0)
+
+    console.log('⏳ Analytics: All-time pending calculation', {
+      allActiveDueProjectsCount: allActiveDueProjects.length,
+      previousYearActiveDueCount: previousActiveDueProjects.length,
+      currentValue: current,
+      previousValue: previous
+    })
+
+    return calculateTrendData(current, previous)
+  }
+
+  // If date range is provided, use the original filtering logic
+  const currentStart = dateRange.start
+  const currentEnd = dateRange.end
   const previousStart = startOfYear(subYears(currentStart, 1))
   const previousEnd = subYears(currentEnd, 1)
 
   console.log('⏳ Analytics: Calculating Total Pending', {
     totalProjects: projects.length,
-    dateRange: dateRange ? `${currentStart.toISOString()} to ${currentEnd.toISOString()}` : 'Year to date'
+    dateRange: `${currentStart.toISOString()} to ${currentEnd.toISOString()}`
   })
 
   const currentProjects = filterProjectsByDateRange(projects, currentStart, currentEnd)

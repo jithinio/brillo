@@ -230,6 +230,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Clear any cached authentication state
       setUser(null)
       setCachedUser(null) // Clear user cache
+      
+      // Keep loading as true to prevent dashboard flash
+      // The loading state will prevent the dashboard from rendering
+      // until the redirect to login happens
       setLoading(true)
       
       // Clear all caches before signing out
@@ -249,8 +253,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null)
       setCachedUser(null) // Clear user cache
       clearAllCaches()
+      // Keep loading as true to prevent dashboard flash even on error
+      setLoading(true)
     } finally {
-      setLoading(false)
+      // Don't set loading to false here - this was causing the flash
+      // The loading state will be reset when the user navigates to login
+      // or when a new auth session is established
       setSigningOut(false) // Hide logout overlay
     }
   }

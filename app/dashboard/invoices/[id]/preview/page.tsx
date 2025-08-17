@@ -18,6 +18,7 @@ import { Loader } from '@/components/ui/loader'
 import { renderInvoiceHTML } from '@/lib/invoice-renderer'
 import { useQueryClient } from '@tanstack/react-query'
 import { CURRENCIES } from '@/lib/currency'
+import { InvoiceStatusBadge } from '@/components/ui/invoice-status-badge'
 
 interface Invoice {
   id: string
@@ -699,19 +700,36 @@ export default function InvoicePreviewPage() {
             >
               {/* Clean container for PDF generation */}
               {invoiceHTML ? (
-                <div 
-                  id="invoice-preview"
-                  className="print:shadow-none w-full"
-                  style={{ 
-                    backgroundColor: finalTemplateSettings?.backgroundColor || '#FFFFFF',
-                    minHeight: '297mm', // A4 height
-                    isolation: 'isolate', // Create stacking context to prevent style bleed
-                    position: 'relative'
-                  }}
-                  dangerouslySetInnerHTML={{ 
-                    __html: invoiceHTML 
-                  }}
-                />
+                <div className="relative">
+                  {/* Status Badge - Only visible in preview, hidden in PDF and email */}
+                  <div 
+                    className="absolute -top-3 left-4 z-50 print:hidden"
+                    style={{ 
+                      display: 'block' // Always visible in preview
+                    }}
+                    data-html2canvas-ignore="true" // Exclude from PDF generation
+                  >
+                    <InvoiceStatusBadge 
+                      status={invoice?.status || 'draft'} 
+                      variant="default"
+                      size="sm"
+                    />
+                  </div>
+                  
+                  <div 
+                    id="invoice-preview"
+                    className="print:shadow-none w-full"
+                    style={{ 
+                      backgroundColor: finalTemplateSettings?.backgroundColor || '#FFFFFF',
+                      minHeight: '297mm', // A4 height
+                      isolation: 'isolate', // Create stacking context to prevent style bleed
+                      position: 'relative'
+                    }}
+                    dangerouslySetInnerHTML={{ 
+                      __html: invoiceHTML 
+                    }}
+                  />
+                </div>
               ) : (
                 <div className="shadow-lg rounded-lg overflow-hidden border bg-background">
                   <div className="p-8 text-center">

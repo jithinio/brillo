@@ -1,9 +1,10 @@
 "use client"
 
 import { HugeiconsIcon } from '@hugeicons/react';
-import { Crown02Icon, Group01Icon, FolderOpenIcon, CreditCardIcon } from '@hugeicons/core-free-icons'
+import { Crown02Icon, Group01Icon, FolderOpenIcon, CreditCardIcon, ArrowDown01Icon } from '@hugeicons/core-free-icons'
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { motion, AnimatePresence } from "framer-motion"
 import { useSubscription } from "@/components/providers/subscription-provider"
 import { isProPlan } from "@/lib/subscription-plans"
 import { useAuth } from "@/components/auth-provider"
@@ -21,6 +22,7 @@ export function SidebarUsageOverview() {
   const [isInitialized, setIsInitialized] = useState(false)
   const [shouldRender, setShouldRender] = useState(false)
   const [isVisible, setIsVisible] = useState(false)
+  const [isCollapsed, setIsCollapsed] = useState(false)
   const subscriptionsRef = useRef<any[]>([])
   const { user } = useAuth()
   const pathname = usePathname()
@@ -46,6 +48,31 @@ export function SidebarUsageOverview() {
 
   // Persistent cache key for localStorage
   const getCacheKey = () => user?.id ? `sidebar-usage-${user.id}` : null
+  
+  // Get collapsed state cache key
+  const getCollapsedCacheKey = () => user?.id ? `sidebar-usage-collapsed-${user.id}` : 'sidebar-usage-collapsed-global'
+  
+  // Load collapsed state from localStorage
+  const loadCollapsedState = () => {
+    try {
+      const cacheKey = getCollapsedCacheKey()
+      const cached = localStorage.getItem(cacheKey)
+      return cached === 'true'
+    } catch (error) {
+      console.error('Error loading collapsed state:', error)
+      return false
+    }
+  }
+  
+  // Save collapsed state to localStorage
+  const saveCollapsedState = (collapsed: boolean) => {
+    try {
+      const cacheKey = getCollapsedCacheKey()
+      localStorage.setItem(cacheKey, collapsed.toString())
+    } catch (error) {
+      console.error('Error saving collapsed state:', error)
+    }
+  }
 
   // Load cached data from localStorage - try multiple approaches
   const loadCachedData = () => {
@@ -115,6 +142,9 @@ export function SidebarUsageOverview() {
       if (cached) {
         setCachedUsage(cached)
       }
+      // Load collapsed state
+      const collapsed = loadCollapsedState()
+      setIsCollapsed(collapsed)
       setIsInitialized(true)
     }
   }, [isInitialized])
@@ -252,7 +282,6 @@ export function SidebarUsageOverview() {
   }
 
   const displayUsage = getDisplayUsage()
-  
 
 
   // Track previous counts to detect actual changes (with safety checks)
@@ -343,99 +372,140 @@ export function SidebarUsageOverview() {
   const usingCachedData = displayUsage === cachedUsage && cachedUsage !== null
   
   return (
-    <Card className={`mb-2 transition-all duration-300 ease-out ${
-      isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
-    }`}>
-      <CardContent className="p-3 space-y-4">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-medium">Free Plan</span>
-          <div className="flex items-center gap-1">
-            {isLoading && (
-              <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
-            )}
-            {usingCachedData && (
-              <span className="text-xs text-secondary-foreground opacity-60" title="Using cached data">📦</span>
-            )}
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ 
+        opacity: isVisible ? 1 : 0, 
+        y: isVisible ? 0 : 8 
+      }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
+    >
+      <Card className="mb-2">
+        <CardHeader 
+          className="p-3 cursor-pointer hover:bg-accent/50 active:bg-accent transition-colors duration-200"
+          onClick={() => {
+            const newCollapsed = !isCollapsed
+            setIsCollapsed(newCollapsed)
+            saveCollapsedState(newCollapsed)
+          }}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium">Free Plan</span>
+            <div className="flex items-center gap-1">
+              {isLoading && (
+                <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+              )}
+              {usingCachedData && (
+                <span className="text-xs text-secondary-foreground opacity-60" title="Using cached data">📦</span>
+              )}
+              <motion.div
+                animate={{ rotate: isCollapsed ? 180 : 0 }}
+                transition={{ duration: 0.15, ease: "easeInOut" }}
+              >
+                <HugeiconsIcon 
+                  icon={ArrowDown01Icon} 
+                  className="w-4 h-4 text-secondary-foreground"
+                />
+              </motion.div>
+            </div>
           </div>
-        </div>
+        </CardHeader>
         
-        {/* Clients Usage */}
-        <div className="space-y-1">
-          <div className="flex items-center justify-between text-xs">
-            <div className="flex items-center gap-1.5">
-                              <HugeiconsIcon icon={Group01Icon} className="w-3 h-3 text-secondary-foreground"  />
-              <span className="text-secondary-foreground">Clients</span>
-            </div>
-            <span className="font-medium">{clientsUsed}/{clientsLimit}</span>
-          </div>
-          <div className="w-full bg-secondary rounded-full h-2">
-            <div 
-              className={`h-2 rounded-full transition-all duration-300 ${
-                clientsPercentage >= 90 
-                  ? 'bg-destructive' 
-                  : clientsPercentage >= 75 
-                    ? 'bg-orange-500' 
-                    : 'bg-primary'
-              }`}
-              style={{ width: `${Math.min(clientsPercentage, 100)}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Projects Usage */}
-        <div className="space-y-1">
-          <div className="flex items-center justify-between text-xs">
-            <div className="flex items-center gap-1.5">
-              <HugeiconsIcon icon={FolderOpenIcon} className="w-3 h-3 text-secondary-foreground"  />
-              <span className="text-secondary-foreground">Projects</span>
-            </div>
-            <span className="font-medium">{projectsUsed}/{projectsLimit}</span>
-          </div>
-          <div className="w-full bg-secondary rounded-full h-2">
-            <div 
-              className={`h-2 rounded-full transition-all duration-300 ${
-                projectsPercentage >= 90 
-                  ? 'bg-destructive' 
-                  : projectsPercentage >= 75 
-                    ? 'bg-orange-500' 
-                    : 'bg-primary'
-              }`}
-              style={{ width: `${Math.min(projectsPercentage, 100)}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Upgrade/Manage Button */}
-        {!isLoading && (
-          (() => {
-            const isPro = isProPlan(subscription.planId)
-            console.log('🔍 Button logic: planId=', subscription.planId, 'isPro=', isPro)
-            return isPro
-          })() ? (
-            <Button 
-              asChild 
-              size="sm" 
-              className="w-full h-7 text-xs bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white border-0"
+        <AnimatePresence initial={false}>
+          {!isCollapsed && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ 
+                duration: 0.2, 
+                ease: "easeInOut",
+                opacity: { duration: 0.15 }
+              }}
+              style={{ overflow: "hidden" }}
             >
-              <Link href="/dashboard/settings?tab=subscription">
-                <HugeiconsIcon icon={CreditCardIcon} className="w-3 h-3 mr-1"  />
-                Manage Billing
-              </Link>
-            </Button>
-          ) : (
-            <Button 
-              asChild 
-              size="sm" 
-              className="w-full h-7 text-xs bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white border-0"
-            >
-              <Link href="/pricing">
-                <HugeiconsIcon icon={Crown02Icon} className="w-3 h-3 mr-1"  />
-                Upgrade to Pro
-              </Link>
-            </Button>
-          )
-        )}
-      </CardContent>
-    </Card>
+              <CardContent className="p-3 pt-2 space-y-4">
+            {/* Clients Usage */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-1.5">
+                  <HugeiconsIcon icon={Group01Icon} className="w-3 h-3 text-secondary-foreground"  />
+                  <span className="text-secondary-foreground">Clients</span>
+                </div>
+                <span className="font-medium">{clientsUsed}/{clientsLimit}</span>
+              </div>
+              <div className="w-full bg-secondary rounded-full h-2">
+                <div 
+                  className={`h-2 rounded-full transition-all duration-300 ${
+                    clientsPercentage >= 90 
+                      ? 'bg-destructive' 
+                      : clientsPercentage >= 75 
+                        ? 'bg-orange-500' 
+                        : 'bg-primary'
+                  }`}
+                  style={{ width: `${Math.min(clientsPercentage, 100)}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Projects Usage */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-1.5">
+                  <HugeiconsIcon icon={FolderOpenIcon} className="w-3 h-3 text-secondary-foreground"  />
+                  <span className="text-secondary-foreground">Projects</span>
+                </div>
+                <span className="font-medium">{projectsUsed}/{projectsLimit}</span>
+              </div>
+              <div className="w-full bg-secondary rounded-full h-2">
+                <div 
+                  className={`h-2 rounded-full transition-all duration-300 ${
+                    projectsPercentage >= 90 
+                      ? 'bg-destructive' 
+                      : projectsPercentage >= 75 
+                        ? 'bg-orange-500' 
+                        : 'bg-primary'
+                  }`}
+                  style={{ width: `${Math.min(projectsPercentage, 100)}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Upgrade/Manage Button */}
+            {!isLoading && (
+              (() => {
+                const isPro = isProPlan(subscription.planId)
+                console.log('🔍 Button logic: planId=', subscription.planId, 'isPro=', isPro)
+                return isPro
+              })() ? (
+                <Button 
+                  asChild 
+                  size="sm" 
+                  className="w-full h-7 text-xs bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white border-0"
+                >
+                  <Link href="/dashboard/settings?tab=subscription">
+                    <HugeiconsIcon icon={CreditCardIcon} className="w-3 h-3 mr-1"  />
+                    Manage Billing
+                  </Link>
+                </Button>
+              ) : (
+                <Button 
+                  asChild 
+                  size="sm" 
+                  className="w-full h-7 text-xs bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white border-0"
+                >
+                  <Link href="/pricing">
+                    <HugeiconsIcon icon={Crown02Icon} className="w-3 h-3 mr-1"  />
+                    Upgrade to Pro
+                  </Link>
+                </Button>
+              )
+              )}
+              </CardContent>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </Card>
+    </motion.div>
   )
 }
