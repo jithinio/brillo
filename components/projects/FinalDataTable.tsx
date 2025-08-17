@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/context-menu"
 import { Edit03Icon, DocumentAttachmentIcon, CheckmarkCircleIcon, ClockIcon, PauseIcon, CancelCircleIcon, GitBranchIcon, Tick02Icon, CopyIcon, Activity03Icon, AddInvoiceIcon, FilterIcon } from '@hugeicons/core-free-icons'
 import { toast } from "sonner"
+import { useRouter } from "next/navigation"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { formatCurrencyAbbreviated } from "../../lib/currency-utils"
 import { useQueryClient } from "@tanstack/react-query"
@@ -188,6 +189,7 @@ function FinalDataTableComponent({
   preferencesLoaded,
 }: FinalDataTableProps) {
   const tableRef = React.useRef<HTMLDivElement>(null)
+  const router = useRouter()
   
   // Query client for cache invalidation
   const queryClient = useQueryClient()
@@ -476,9 +478,23 @@ function FinalDataTableComponent({
                           Duplicate Project
                         </ContextMenuItem>
                         <ContextMenuItem onClick={() => {
-                          toast.info(`Creating invoice for ${project.name}`, {
-                            description: "This feature will be available soon"
-                          })
+                          // Store project data for invoice creation
+                          // Use stored payment_pending field, fallback to calculation if not available
+                          const budget = project.total_budget || project.budget || 0
+                          const pending = project.payment_pending ?? Math.max(0, budget - (project.payment_received || project.received || 0))
+                          
+                          const projectData = {
+                            projectId: project.id,
+                            projectName: project.name,
+                            clientId: project.clients?.id || project.client_id,
+                            clientName: project.clients?.name || 'Unknown Client',
+                            clientCompany: project.clients?.company,
+                            projectPending: pending,
+                            projectBudget: budget
+                          }
+                          
+                          sessionStorage.setItem('invoice-project-data', JSON.stringify(projectData))
+                          router.push('/dashboard/invoices/generate')
                         }}>
                           <HugeiconsIcon icon={AddInvoiceIcon} className="mr-2 h-4 w-4"  />
                           Create Invoice

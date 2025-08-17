@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import { HugeiconsIcon } from '@hugeicons/react';
 import { useState, useEffect } from 'react'
 import { Button } from "@/components/ui/button"
@@ -8,6 +9,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
@@ -84,6 +87,8 @@ export default function CustomizeInvoicePage() {
   const { settings, isLoading, updateSetting, formatDate } = useSettings()
   const [activeTab, setActiveTab] = useState('template')
   const [saving, setSaving] = useState(false)
+  const [fontDropdownOpen, setFontDropdownOpen] = useState(false)
+  const fontTriggerRef = React.useRef<HTMLButtonElement>(null)
   const [template, setTemplate] = useState({
     templateId: 'modern',
     logoUrl: '',
@@ -1752,19 +1757,71 @@ export default function CustomizeInvoicePage() {
                   <CardContent className="space-y-5">
                     <div className="space-y-2">
                       <Label className="text-sm font-normal">Font Family</Label>
-                      <Select value={template.fontFamily} onValueChange={(value) => setTemplate(prev => ({ ...prev, fontFamily: value }))}>
-                        <SelectTrigger className="h-9">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {fontFamilies.map((font) => (
-                            <SelectItem key={font.id} value={font.id}>
-                              <span style={{ fontFamily: font.name }}>{font.name}</span>
-                              <span className="text-xs text-muted-foreground ml-2">({font.category})</span>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Popover open={fontDropdownOpen} onOpenChange={setFontDropdownOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            ref={fontTriggerRef}
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={fontDropdownOpen}
+                            className="h-9 w-full justify-between font-normal"
+                          >
+                            {template.fontFamily
+                              ? (() => {
+                                  const selectedFont = fontFamilies.find(font => font.id === template.fontFamily)
+                                  return (
+                                    <span className="flex items-center">
+                                      <span style={{ fontFamily: selectedFont?.name }}>{selectedFont?.name}</span>
+                                      <span className="text-xs text-muted-foreground ml-2">({selectedFont?.category})</span>
+                                    </span>
+                                  )
+                                })()
+                              : "Select font..."}
+                            <svg className="ml-2 h-4 w-4 shrink-0 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+                            </svg>
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent 
+                          className="p-0" 
+                          style={{ width: fontTriggerRef.current?.offsetWidth }}
+                        >
+                          <Command>
+                            <CommandInput placeholder="Search fonts..." />
+                            <CommandEmpty>No font found.</CommandEmpty>
+                            <CommandList>
+                              <CommandGroup>
+                                {fontFamilies.map((font) => (
+                                  <CommandItem
+                                    key={font.id}
+                                    value={`${font.name} ${font.category}`}
+                                    onSelect={() => {
+                                      setTemplate(prev => ({ ...prev, fontFamily: font.id }))
+                                      setFontDropdownOpen(false)
+                                    }}
+                                  >
+                                    <svg 
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        template.fontFamily === font.id ? "opacity-100" : "opacity-0"
+                                      )}
+                                      fill="none" 
+                                      stroke="currentColor" 
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    <div className="flex items-center">
+                                      <span style={{ fontFamily: font.name }}>{font.name}</span>
+                                      <span className="text-xs text-muted-foreground ml-2">({font.category})</span>
+                                    </div>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                           </div>
 
                     <div className="space-y-2">

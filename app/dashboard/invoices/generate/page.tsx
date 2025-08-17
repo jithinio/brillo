@@ -27,6 +27,7 @@ import { invoiceNumberManager } from "@/lib/invoice-number-manager"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { ClientAvatar } from "@/components/ui/client-avatar"
 import { CurrencySelector } from "@/components/ui/currency-selector"
 import { InvoicingGate } from "@/components/gates/pro-feature-gate"
@@ -105,6 +106,13 @@ export default function GenerateInvoicePage() {
   
   // Currency converter widget state
   const [isCurrencyConverterOpen, setIsCurrencyConverterOpen] = useState(false)
+  
+  // Client data loading overlay state
+  const [isWaitingForClientData, setIsWaitingForClientData] = useState(false)
+  
+  // Template settings state
+  const [templateSettings, setTemplateSettings] = useState<any>(null)
+  const [isLoadingTemplateSettings, setIsLoadingTemplateSettings] = useState(true)
   
 
 
@@ -193,13 +201,18 @@ export default function GenerateInvoicePage() {
     const storedProjectData = sessionStorage.getItem('invoice-project-data')
     const storedClientData = sessionStorage.getItem('invoice-client-data')
     
+    // Set loading state if we have client data to process
+    if (storedClientData || storedProjectData) {
+      setIsWaitingForClientData(true)
+    }
+    
     if (storedProjectData) {
       try {
         const projectInfo = JSON.parse(storedProjectData)
         setProjectData(projectInfo)
         
         // Find and select the client
-        const matchingClient = clients.find(c => c.name === projectInfo.clientName)
+        const matchingClient = clients.find(c => c.id === projectInfo.clientId)
         if (matchingClient) {
           setSelectedClientId(matchingClient.id)
           setSelectedClient(matchingClient)
@@ -212,28 +225,39 @@ export default function GenerateInvoicePage() {
               name: projectInfo.projectName
             })
           })
+          
+          // Calculate suggested amount from project data
+          const suggestedAmount = projectInfo.projectPending || projectInfo.projectBudget || 0
+          
+          // Create default invoice item for the project
+          setItems([{
+            id: "1",
+            item_name: projectInfo.projectName,
+            item_description: `${projectInfo.projectName} - Project development and implementation`,
+            quantity: 1,
+            rate: suggestedAmount
+          }])
+          
+          // Clear the session storage only after successfully processing
+          sessionStorage.removeItem('invoice-project-data')
+          
+          // Clear loading state
+          setIsWaitingForClientData(false)
+          
+          // Show success notification
+          toast.success(`Invoice auto-populated from "${projectInfo.projectName}"`, {
+            description: `${suggestedAmount > 0 ? `Suggested amount: ${formatCurrency(suggestedAmount)}` : 'Please set the invoice amount.'}`
+          })
+        } else if (clients.length > 0) {
+          // If we have clients loaded but can't find a match, it means the client doesn't exist
+          sessionStorage.removeItem('invoice-project-data')
+          setIsWaitingForClientData(false)
+          toast.error(`Client "${projectInfo.clientName}" not found for project "${projectInfo.projectName}". Please select manually.`)
         }
-        
-        // Calculate suggested amount from project data
-        const suggestedAmount = projectInfo.projectPending || projectInfo.projectBudget || 0
-        
-        // Create default invoice item for the project
-        setItems([{
-          id: "1",
-          description: `${projectInfo.projectName} - Project development and implementation`,
-          quantity: 1,
-          rate: suggestedAmount
-        }])
-        
-        // Clear the session storage after loading
-        sessionStorage.removeItem('invoice-project-data')
-        
-        // Show success notification
-        toast.success(`Invoice auto-populated from "${projectInfo.projectName}"`, {
-          description: `${suggestedAmount > 0 ? `Suggested amount: ${formatCurrency(suggestedAmount)}` : 'Please set the invoice amount.'}`
-        })
+        // If clients.length === 0, don't clear sessionStorage yet - wait for clients to load
       } catch (error) {
         console.error('Error parsing project data:', error)
+        setIsWaitingForClientData(false)
         toast.error("Could not load project data. Please fill the form manually.")
       }
     } else if (storedClientData) {
@@ -246,21 +270,120 @@ export default function GenerateInvoicePage() {
         if (matchingClient) {
           setSelectedClientId(matchingClient.id)
           setSelectedClient(matchingClient)
+          
+          // Clear the session storage only after successfully finding and selecting the client
+          sessionStorage.removeItem('invoice-client-data')
+          
+          // Clear loading state
+          setIsWaitingForClientData(false)
+          
+          // Show success notification
+          toast.success(`Invoice auto-populated for "${clientInfo.clientName}"`)
+        } else if (clients.length > 0) {
+          // If we have clients loaded but can't find a match, it means the client doesn't exist
+          // Clear the session storage and show an error
+          sessionStorage.removeItem('invoice-client-data')
+          setIsWaitingForClientData(false)
+          toast.error(`Client "${clientInfo.clientName}" not found. Please select a client manually.`)
         }
-        
-        // Clear the session storage after loading
-        sessionStorage.removeItem('invoice-client-data')
-        
-        // Show success notification
-        toast.success(`Invoice auto-populated for "${clientInfo.clientName}"`)
+        // If clients.length === 0, don't clear sessionStorage yet - wait for clients to load
       } catch (error) {
         console.error('Error parsing client data:', error)
-                  toast.error("Could not load client data. Please fill the form manually.")
+        sessionStorage.removeItem('invoice-client-data')
+        setIsWaitingForClientData(false)
+        toast.error("Could not load client data. Please fill the form manually.")
       }
     }
   }, [clients, toast])
 
+  // Clear loading state if clients are loaded but there's no stored data
+  useEffect(() => {
+    if (clients.length > 0 && isWaitingForClientData) {
+      const storedProjectData = sessionStorage.getItem('invoice-project-data')
+      const storedClientData = sessionStorage.getItem('invoice-client-data')
+      
+      // If clients are loaded but there's no more stored data, clear the loading state
+      if (!storedProjectData && !storedClientData) {
+        setIsWaitingForClientData(false)
+      }
+    }
+  }, [clients.length, isWaitingForClientData])
 
+  // Load template settings on component mount
+  useEffect(() => {
+    const loadTemplateSettings = async () => {
+      try {
+        setIsLoadingTemplateSettings(true)
+        
+        // Template ID migration mapping
+        const migrateTemplateId = (templateId: string) => {
+          const migrationMap: { [key: string]: string } = {
+            'stripe-inspired': 'modern',
+            'classic': 'modern'
+          }
+          return migrationMap[templateId] || templateId
+        }
+        
+        let loadedTemplateSettings = null
+        
+        // First try to get from settings (Supabase)
+        if (settings.invoiceTemplate && Object.keys(settings.invoiceTemplate).length > 0) {
+          loadedTemplateSettings = {
+            ...settings.invoiceTemplate,
+            templateId: migrateTemplateId(settings.invoiceTemplate.templateId)
+          }
+        } else {
+          // Fallback to localStorage if no Supabase template exists
+          const savedTemplate = localStorage.getItem('invoice-template-settings')
+          if (savedTemplate) {
+            try {
+              const parsed = JSON.parse(savedTemplate)
+              loadedTemplateSettings = {
+                ...parsed,
+                templateId: migrateTemplateId(parsed.templateId)
+              }
+            } catch (error) {
+              console.error('Error parsing saved template:', error)
+            }
+          }
+        }
+        
+        // Set default values for missing properties
+        const defaultTemplate = {
+          showItemDetails: true, // Default to true
+          showLogo: true,
+          showInvoiceNumber: true,
+          showDates: true,
+          showPaymentTerms: true,
+          showNotes: true,
+          showTaxId: false
+        }
+        
+        const finalSettings = {
+          ...defaultTemplate,
+          ...loadedTemplateSettings
+        }
+        
+        setTemplateSettings(finalSettings)
+      } catch (error) {
+        console.error('Error loading template settings:', error)
+        // Set default values on error
+        setTemplateSettings({
+          showItemDetails: true,
+          showLogo: true,
+          showInvoiceNumber: true,
+          showDates: true,
+          showPaymentTerms: true,
+          showNotes: true,
+          showTaxId: false
+        })
+      } finally {
+        setIsLoadingTemplateSettings(false)
+      }
+    }
+    
+    loadTemplateSettings()
+  }, [settings.invoiceTemplate])
 
   // Handle edit mode data loading when clients are available
   useEffect(() => {
@@ -1612,6 +1735,16 @@ export default function GenerateInvoicePage() {
         </div>
       )}
       
+      {/* Loading overlay for client data population */}
+      {isWaitingForClientData && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center" style={{left: 'var(--sidebar-width, 16rem)'}}>
+          <div className="flex items-center space-x-3">
+            <Loader className="h-5 w-5 animate-spin text-muted-foreground" />
+            <p className="font-medium">Loading client information...</p>
+          </div>
+        </div>
+      )}
+      
       <div className="relative">
       
       <PageHeader
@@ -1965,14 +2098,28 @@ export default function GenerateInvoicePage() {
                     </div>
                     <div className="w-full mt-4">
                       <Label htmlFor={`item-description-${item.id}`} className="font-normal text-secondary-foreground mb-2 block">Item Description</Label>
-                      <textarea
-                        id={`item-description-${item.id}`}
-                        placeholder="Optional detailed description..."
-                        value={item.item_description}
-                        onChange={(e) => updateItem(item.id, "item_description", e.target.value)}
-                        className="w-full min-h-[80px] px-3 py-2 border border-input bg-background rounded-md text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-y"
-                        rows={3}
-                      />
+                      {templateSettings?.showItemDetails === false ? (
+                        <div className="w-full min-h-[80px] px-3 py-2 border border-dashed border-muted-foreground/30 bg-muted/10 rounded-md text-sm flex items-center justify-center">
+                          <div className="text-center text-muted-foreground">
+                            <p className="mb-2">Item descriptions are currently disabled.</p>
+                            <Link 
+                              href="/dashboard/invoices/customize" 
+                              className="text-primary hover:underline font-medium"
+                            >
+                              Enable this feature in template settings →
+                            </Link>
+                          </div>
+                        </div>
+                      ) : (
+                        <textarea
+                          id={`item-description-${item.id}`}
+                          placeholder="Optional detailed description..."
+                          value={item.item_description}
+                          onChange={(e) => updateItem(item.id, "item_description", e.target.value)}
+                          className="w-full min-h-[80px] px-3 py-2 border border-input bg-background rounded-md text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-y"
+                          rows={3}
+                        />
+                      )}
                     </div>
                   </div>
                 ))}
@@ -2024,25 +2171,6 @@ export default function GenerateInvoicePage() {
         </div>
 
         <div className="space-y-4">
-          {/* Status Alerts - Moved outside summary card */}
-          {projectData && (
-            <div className="p-3 bg-green-50 border border-green-200 rounded-md">
-              <div className="text-sm text-green-800">
-                <span className="font-medium">✓ Auto-populated from project:</span>
-                <div className="mt-1">{projectData.projectName}</div>
-              </div>
-            </div>
-          )}
-          
-          {clientData && (
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
-              <div className="text-sm text-blue-800">
-                <span className="font-medium">✓ Auto-populated from client:</span>
-                <div className="mt-1">{clientData.clientName}</div>
-              </div>
-            </div>
-          )}
-
           {/* Modern Summary Card */}
           <Card className="border border-border bg-background">            
             <CardContent className="p-6">
@@ -2183,6 +2311,27 @@ export default function GenerateInvoicePage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Auto-populated alerts */}
+          {projectData && (
+            <Alert className="border-muted">
+              <HugeiconsIcon icon={CheckmarkCircleIcon} className="h-4 w-4" />
+              <AlertTitle>Auto-populated from project</AlertTitle>
+              <AlertDescription>
+                {projectData.projectName} • {projectData.clientName}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {clientData && (
+            <Alert className="border-muted">
+              <HugeiconsIcon icon={CheckmarkCircleIcon} className="h-4 w-4" />
+              <AlertTitle>Auto-populated from client</AlertTitle>
+              <AlertDescription>
+                {clientData.clientName}
+              </AlertDescription>
+            </Alert>
+          )}
 
           {/* Currency Override Warning - Moved outside summary card */}
           {clientCurrency !== getDefaultCurrency() && (

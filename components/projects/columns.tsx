@@ -365,6 +365,8 @@ export type Project = {
   expenses?: number
   received?: number
   pending?: number
+  payment_received?: number
+  payment_pending?: number
   recurring_amount?: number
   hourly_rate?: number
   hourly_rate_new?: number
@@ -908,10 +910,8 @@ export function createColumns(actions: ColumnActions): ColumnDef<Project>[] {
       ),
       cell: ({ row }) => {
         const project = row.original
-        // Auto-calculate pending amount: Use total_budget for new project types, budget for legacy
-        const budget = project.total_budget || project.budget || 0
-        const received = project.payment_received || project.received || 0
-        const pending = Math.max(0, budget - received) // Ensure it's not negative
+        // Use stored payment_pending field, fallback to calculation if not available
+        const pending = project.payment_pending ?? Math.max(0, (project.total_budget || project.budget || 0) - (project.payment_received || project.received || 0))
         
         return (
           <div className="w-full">

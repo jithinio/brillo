@@ -73,6 +73,7 @@ import { formatCurrencyAbbreviated } from "@/lib/currency-utils"
 import { useCanPerformAction } from "@/components/over-limit-alert"
 import { useSubscription } from "@/components/providers/subscription-provider"
 import { formatDateForDatabase } from "@/lib/date-format"
+import { useRouter } from "next/navigation"
 
 // Types
 interface Client {
@@ -155,6 +156,9 @@ export function ProjectsTableWrapper({
   
   // Query client for cache invalidation
   const queryClient = useQueryClient()
+  
+  // Router for navigation
+  const router = useRouter()
   
   // Initialize filters on mount
   React.useEffect(() => {
@@ -527,9 +531,23 @@ export function ProjectsTableWrapper({
     const columns = createColumns({
       onEditProject: handleEditProject,
       onCreateInvoice: (project: any) => {
-        toast.info(`Creating invoice for ${project.name}`, {
-          description: "This feature will be available soon"
-        })
+        // Store project data for invoice creation
+        // Use stored payment_pending field, fallback to calculation if not available
+        const budget = project.total_budget || project.budget || 0
+        const pending = project.payment_pending ?? Math.max(0, budget - (project.payment_received || project.received || 0))
+        
+        const projectData = {
+          projectId: project.id,
+          projectName: project.name,
+          clientId: project.clients?.id || project.client_id,
+          clientName: project.clients?.name || 'Unknown Client',
+          clientCompany: project.clients?.company,
+          projectPending: pending,
+          projectBudget: budget
+        }
+        
+        sessionStorage.setItem('invoice-project-data', JSON.stringify(projectData))
+        router.push('/dashboard/invoices/generate')
       },
       onDeleteProject: async (project: any) => {
         const confirmed = window.confirm(`Are you sure you want to delete "${project.name}"?`)
