@@ -647,17 +647,26 @@ export function ProjectsTableWrapper({
       onDateChange: async (project: any, field: 'start_date' | 'due_date', date: Date | undefined) => {
         try {
           if (isSupabaseConfigured()) {
-            const updateData = {
-              [field]: formatDateForDatabase(date),
-              updated_at: new Date().toISOString()
+            // Use the API route for date updates to trigger auto-calculation
+            const { data: { session: currentSession } } = await supabase.auth.getSession()
+            
+            const response = await fetch('/api/projects/update', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${currentSession?.access_token}`,
+              },
+              body: JSON.stringify({
+                projectId: project.id,
+                field: field,
+                value: formatDateForDatabase(date)
+              })
+            })
+
+            if (!response.ok) {
+              const errorData = await response.json()
+              throw new Error(errorData.error || 'Failed to update date')
             }
-
-            const { error } = await supabase
-              .from('projects')
-              .update(updateData)
-              .eq('id', project.id)
-
-            if (error) throw error
 
             toast.success(`${field === 'start_date' ? 'Start' : 'Due'} date updated successfully`)
             refetch()

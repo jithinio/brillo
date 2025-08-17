@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate field
-    const allowedFields = ['total_budget', 'expenses', 'received', 'actual_hours']
+    const allowedFields = ['total_budget', 'expenses', 'received', 'actual_hours', 'due_date', 'start_date']
     if (!allowedFields.includes(field)) {
       return NextResponse.json(
         { error: `Field must be one of: ${allowedFields.join(', ')}` },
@@ -49,21 +49,44 @@ export async function POST(request: NextRequest) {
       'total_budget': 'total_budget',
       'expenses': 'expenses', 
       'received': 'payment_received', // Map 'received' to 'payment_received' in database
-      'actual_hours': 'actual_hours'
+      'actual_hours': 'actual_hours',
+      'due_date': 'due_date',
+      'start_date': 'start_date'
     }
     const dbField = fieldMap[field] || field
 
-    // Validate value
-    if (typeof value !== 'number' || value < 0) {
-      return NextResponse.json(
-        { error: 'Value must be a non-negative number' },
-        { status: 400 }
-      )
+    // Validate value based on field type
+    if (['due_date', 'start_date'].includes(field)) {
+      // For dates, value should be a string in ISO format or null
+      if (value !== null && typeof value !== 'string') {
+        return NextResponse.json(
+          { error: 'Date value must be a string in ISO format or null' },
+          { status: 400 }
+        )
+      }
+      // Validate date format if not null
+      if (value && typeof value === 'string') {
+        const dateValue = new Date(value)
+        if (isNaN(dateValue.getTime())) {
+          return NextResponse.json(
+            { error: 'Invalid date format' },
+            { status: 400 }
+          )
+        }
+      }
+    } else {
+      // For numeric fields
+      if (typeof value !== 'number' || value < 0) {
+        return NextResponse.json(
+          { error: 'Value must be a non-negative number' },
+          { status: 400 }
+        )
+      }
     }
 
-    // For actual_hours, allow decimal values but for financial fields, ensure reasonable precision
+    // Additional validation for numeric fields
     if (['total_budget', 'expenses', 'received'].includes(field)) {
-      if (value > 999999999.99) { // Reasonable max value
+      if (typeof value === 'number' && value > 999999999.99) { // Reasonable max value
         return NextResponse.json(
           { error: 'Value is too large' },
           { status: 400 }
@@ -71,7 +94,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (field === 'actual_hours' && value > 99999) { // Reasonable max hours
+    if (field === 'actual_hours' && typeof value === 'number' && value > 99999) { // Reasonable max hours
       return NextResponse.json(
         { error: 'Hours value is too large' },
         { status: 400 }
@@ -107,6 +130,22 @@ export async function POST(request: NextRequest) {
         { error: `Failed to update project: ${error.message}` },
         { status: 500 }
       )
+    }
+
+    // If we updated a date field on a recurring or hourly project with auto-calculation enabled,
+    // trigger recalculation using the database function
+    if (['due_date', 'start_date'].includes(field) && 
+        data && 
+        data.auto_calculate_total && 
+        ['recurring', 'hourly'].includes(data.project_type)) {
+      
+      try {
+        await supabase.rpc('recalculate_project_total', { project_id: projectId })
+        console.log(`Triggered recalculation for ${data.project_type} project ${projectId} after ${field} update`)
+      } catch (recalcError) {
+        console.error('Error triggering recalculation:', recalcError)
+        // Don't fail the request if recalculation fails, just log the error
+      }
     }
 
     return NextResponse.json({
