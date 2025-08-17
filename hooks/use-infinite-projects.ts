@@ -819,7 +819,13 @@ export function useInfiniteProjects(filters: ProjectFilters = {}, pageSize: numb
           pages: old.pages.map((page: any) => ({
             ...page,
             data: page.data.map((project: Project) =>
-              project.id === id ? { ...project, received } : project
+              project.id === id ? { 
+                ...project, 
+                payment_received: received,
+                received: received, // Keep both for compatibility
+                // Recalculate payment_pending optimistically
+                payment_pending: Math.max(0, (project.total_budget || project.budget || 0) - received)
+              } : project
             )
           }))
         }

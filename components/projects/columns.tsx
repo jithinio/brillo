@@ -222,7 +222,7 @@ function EditableReceivedCell({
   project: Project, 
   onReceivedUpdate?: (project: Project, received: number) => void 
 }) {
-  const received = project.received || 0
+  const received = project.payment_received || project.received || 0
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState(received.toString())
 

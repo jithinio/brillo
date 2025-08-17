@@ -427,13 +427,13 @@ export function ProjectsTableWrapper({
     const budget = newProject.budget ? parseFloat(newProject.budget) : 0
     const expenses = newProject.expenses ? parseFloat(newProject.expenses) : 0
     const received = newProject.received ? parseFloat(newProject.received) : 0
-    const pending = Math.max(0, budget - received)
+    // Don't calculate pending manually - let the database trigger handle it
 
     try {
       if (selectedProject) {
         // Editing existing project
         if (isSupabaseConfigured()) {
-          // Prepare update data
+          // Prepare update data - don't include payment_pending, let the database trigger calculate it
           const updateData: any = {
             name: newProject.name,
             status: newProject.status,
@@ -442,7 +442,7 @@ export function ProjectsTableWrapper({
             budget: budget || null,
             expenses: expenses,
             payment_received: received,
-            payment_pending: pending,
+            // payment_pending will be calculated by the database trigger
             description: newProject.description || null,
             pipeline_notes: newProject.pipeline_notes || null,
             client_id: newProject.client_id || null,
@@ -497,7 +497,7 @@ export function ProjectsTableWrapper({
               budget: budget || null,
               expenses: expenses,
               payment_received: received,
-              payment_pending: pending,
+              // payment_pending will be calculated by the database trigger
               description: newProject.description || null,
               pipeline_notes: newProject.pipeline_notes || null,
               client_id: newProject.client_id || null,
