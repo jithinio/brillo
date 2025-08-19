@@ -7,9 +7,11 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { ClientAvatar } from "@/components/ui/client-avatar"
+import { SourceLabel } from "@/components/ui/source-label"
 import { formatCurrency } from "@/lib/currency"
 import { Client } from "@/hooks/use-clients"
 import { SortableHeader } from "@/components/table/column-utils"
+
 import { toast } from "sonner"
 import { countries } from "@/lib/countries"
 import {
@@ -226,7 +228,22 @@ export function createClientColumns(columnConfig: ClientColumnConfig): ColumnDef
       },
       size: 130,
     },
-    // 4. Status
+    // 4. Source
+    {
+      id: "source",
+      accessorKey: "source",
+      header: ({ column }) => (
+        <SortableHeader column={column} icon={ZapIcon} className="px-0">
+          Source
+        </SortableHeader>
+      ),
+      cell: ({ row }) => {
+        const source = row.getValue("source") as string
+        return <SourceLabel value={source} />
+      },
+      size: 140,
+    },
+    // 5. Status
     {
       accessorKey: "status",
       header: ({ column }) => (
@@ -267,7 +284,7 @@ export function createClientColumns(columnConfig: ClientColumnConfig): ColumnDef
       },
       size: 120,
     },
-    // 5. Client since
+    // 6. Client since
     {
       accessorKey: "client_since",
       header: ({ column }) => (
@@ -311,7 +328,7 @@ export function createClientColumns(columnConfig: ClientColumnConfig): ColumnDef
       },
       size: 140,
     },
-    // 6. Projects
+    // 7. Projects
     {
       id: "projects",
       header: ({ column }) => (
@@ -335,7 +352,7 @@ export function createClientColumns(columnConfig: ClientColumnConfig): ColumnDef
       footer: footerFunctions.totalProjects,
       size: 120,
     },
-    // 7. Email
+    // 8. Email
     {
       accessorKey: "email",
       header: ({ column }) => (
@@ -372,7 +389,7 @@ export function createClientColumns(columnConfig: ClientColumnConfig): ColumnDef
       },
       size: 250,
     },
-    // 8. Phone
+    // 9. Phone
     {
       accessorKey: "phone",
       header: ({ column }) => (
@@ -409,7 +426,7 @@ export function createClientColumns(columnConfig: ClientColumnConfig): ColumnDef
       },
       size: 150,
     },
-    // 9. Location
+    // 10. Location
     {
       id: "location",
       header: ({ column }) => (

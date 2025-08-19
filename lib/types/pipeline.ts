@@ -26,6 +26,7 @@ export interface PipelineClient {
   potential_value?: number
   deal_probability: number
   pipeline_notes?: string
+  source?: string
   created_at: string
   updated_at?: string
 }

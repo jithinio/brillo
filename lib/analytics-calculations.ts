@@ -29,6 +29,7 @@ export interface Client {
   id: string
   name: string
   company?: string
+  source?: string
   created_at: string
   projects?: Project[]
 }

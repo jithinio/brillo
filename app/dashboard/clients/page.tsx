@@ -21,6 +21,7 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { SourceSelector } from "@/components/ui/source-selector"
 import { PlusSignIcon, Upload01Icon, UserIcon, Crown02Icon, ImageUploadIcon } from '@hugeicons/core-free-icons'
 import Link from "next/link"
 import { ClientMetrics } from "@/components/clients/ClientMetrics"
@@ -48,6 +49,7 @@ interface ClientFormData {
   country: string
   notes: string
   avatar_url?: string
+  source: string
   status: string
   client_since?: Date
   relationship?: string
@@ -132,7 +134,7 @@ const ClientDialogForm = React.memo(({
             </div>
           </div>
         
-        <div className="grid grid-cols-1 gap-4">
+        <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="relationship" className="text-sm font-medium">
               Relationship Type
@@ -147,6 +149,16 @@ const ClientDialogForm = React.memo(({
                 <SelectItem value="regular">Regular</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="source" className="text-sm font-medium">
+              Source
+            </Label>
+            <SourceSelector
+              value={formData.source || ""}
+              onValueChange={(value) => updateFormField('source', value)}
+              placeholder="How did they find you?"
+            />
           </div>
         </div>
     </div>
@@ -282,6 +294,14 @@ export default function ClientsPage() {
   const [filters, setFilters] = useState({})
   const clientsData = useClients(filters)
 
+  // Handle filter changes from GenericTableWrapper
+  const handleFiltersChange = React.useCallback((newFilters: any) => {
+    setFilters(prevFilters => ({
+      ...prevFilters,
+      ...newFilters
+    }))
+  }, [])
+
   // Form data state
   const [formData, setFormData] = useState<ClientFormData>({
     name: "",
@@ -294,6 +314,7 @@ export default function ClientsPage() {
     zip_code: "",
     country: "US",
     notes: "",
+    source: "",
     status: "active",
     relationship: "regular",
   })
@@ -327,6 +348,7 @@ export default function ClientsPage() {
         country: client.country || "US",
         notes: client.notes || "",
         avatar_url: client.avatar_url || "",
+        source: client.source || "",
         status: client.status || "active",
         relationship: client.relationship || "regular",
         client_since: client.client_since ? new Date(client.client_since) : undefined,
@@ -391,6 +413,7 @@ export default function ClientsPage() {
                   country: deletedClientData.country,
                   notes: deletedClientData.notes,
                   avatar_url: deletedClientData.avatar_url,
+                  source: deletedClientData.source,
                   status: deletedClientData.status,
                   pipeline_stage: deletedClientData.pipeline_stage,
                   potential_value: deletedClientData.potential_value,
@@ -523,6 +546,7 @@ export default function ClientsPage() {
                   country: client.country,
                   notes: client.notes,
                   avatar_url: client.avatar_url,
+                  source: client.source,
                   status: client.status,
                   pipeline_stage: client.pipeline_stage,
                   potential_value: client.potential_value,
@@ -679,6 +703,7 @@ export default function ClientsPage() {
       zip_code: "",
       country: "US",
       notes: "",
+      source: "",
       status: "active",
       relationship: "regular",
     })
@@ -701,6 +726,7 @@ export default function ClientsPage() {
       zip_code: data.zip_code?.trim() || null,
       country: data.country?.trim() || "US",
       notes: data.notes?.trim() || null,
+      source: data.source?.trim() || null,
     }
   }
 
@@ -956,6 +982,7 @@ export default function ClientsPage() {
             </Button>
           </div>
         }
+        onFiltersChange={handleFiltersChange}
       />
 
       {/* Add Client Dialog */}

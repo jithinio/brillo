@@ -130,6 +130,7 @@ export class BusinessFunctionHandler {
       zip_code: null,
       country: 'United States',
       notes: null,
+      source: null,
       status: 'active',
       client_since: new Date().toISOString(),
       relationship: 'regular',

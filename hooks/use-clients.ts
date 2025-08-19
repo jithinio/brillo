@@ -21,6 +21,7 @@ export interface Client {
   avatar_url?: string | null
   status?: string
   relationship?: string
+  source?: string | null
   created_at: string
   updated_at?: string
   client_since?: string | null
@@ -34,6 +35,7 @@ export interface Client {
 interface ClientFilters {
   status?: string[]
   search?: string
+  source?: string[]
 }
 
 async function fetchClients(filters: ClientFilters = {}): Promise<{
@@ -75,6 +77,9 @@ async function fetchClients(filters: ClientFilters = {}): Promise<{
     // Apply filters
     if (filters.status?.length) {
       query = query.in('status', filters.status)
+    }
+    if (filters.source?.length) {
+      query = query.in('source', filters.source)
     }
     if (filters.search) {
       query = query.or(`name.ilike.%${filters.search}%,email.ilike.%${filters.search}%,company.ilike.%${filters.search}%`)

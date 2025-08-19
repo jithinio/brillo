@@ -39,6 +39,7 @@ export type Client = {
   notes?: string | null
   avatar_url?: string | null
   status?: string
+  source?: string | null
   created_at: string
   projects?: Array<{
     id: string

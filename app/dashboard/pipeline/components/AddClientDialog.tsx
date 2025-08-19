@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { SourceSelector } from "@/components/ui/source-selector"
 import { supabase } from "@/lib/supabase"
 import { toast } from "sonner"
 
@@ -29,6 +31,7 @@ interface NewClientData {
   email: string
   phone: string
   notes: string
+  source: string
 }
 
 export function AddClientDialog({ open, onOpenChange, onClientUpdate, context = 'pipeline' }: AddClientDialogProps) {
@@ -39,6 +42,7 @@ export function AddClientDialog({ open, onOpenChange, onClientUpdate, context = 
     email: "",
     phone: "",
     notes: "",
+    source: "",
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -58,6 +62,7 @@ export function AddClientDialog({ open, onOpenChange, onClientUpdate, context = 
         email: newClient.email.trim() || undefined,
         phone: newClient.phone.trim() || undefined,
         notes: newClient.notes.trim() || undefined,
+        source: newClient.source.trim() || undefined,
         status: context === 'pipeline' ? 'pipeline' : 'active',
         ...(context === 'pipeline' && {
           pipeline_stage: 'lead',
@@ -104,6 +109,7 @@ export function AddClientDialog({ open, onOpenChange, onClientUpdate, context = 
       email: "",
       phone: "",
       notes: "",
+      source: "",
     })
   }
 
@@ -142,6 +148,15 @@ export function AddClientDialog({ open, onOpenChange, onClientUpdate, context = 
                 value={newClient.company}
                 onChange={(e) => setNewClient({ ...newClient, company: e.target.value })}
                 placeholder="Company name"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="source">Source</Label>
+              <SourceSelector
+                value={newClient.source}
+                onValueChange={(value) => setNewClient({ ...newClient, source: value })}
+                placeholder="How did they find you?"
               />
             </div>
             

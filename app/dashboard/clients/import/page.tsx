@@ -260,7 +260,8 @@ export default function ClientImportPage() {
                 state: clientData.state || null,
                 zip_code: clientData.zip_code || null,
                 country: clientData.country || 'United States',
-                notes: clientData.notes || null
+                notes: clientData.notes || null,
+                source: clientData.source || null
               }])
 
             if (insertError) throw insertError

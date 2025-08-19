@@ -42,6 +42,7 @@ import { Badge } from "@/components/ui/badge"
 import { formatCurrencyAbbreviated } from "@/lib/currency-utils"
 import { useProjectFiltersV2 } from "@/hooks/use-project-filters-v2"
 import { getTimePeriodLabel } from "@/lib/project-filters-v2"
+import { SearchableSourceFilter } from "@/components/ui/searchable-source-filter"
 
 interface GenericTableWrapperProps<T extends GenericEntity> {
   entityType: string
@@ -140,6 +141,8 @@ export function GenericTableWrapper<T extends GenericEntity>({
   const [invoiceStatusOpen, setInvoiceStatusOpen] = React.useState(false)
   const [relationship, setRelationship] = React.useState<string[]>([])
   const [relationshipOpen, setRelationshipOpen] = React.useState(false)
+  const [sourceFilter, setSourceFilter] = React.useState<string[]>([])
+  const [sourceFilterOpen, setSourceFilterOpen] = React.useState(false)
 
   // Create sorting functions
   const [sortBy, setSortBy] = React.useState<string | null>(null)
@@ -246,6 +249,13 @@ export function GenericTableWrapper<T extends GenericEntity>({
       })
     }
 
+    // Apply source filtering (for clients)
+    if (entityType === "clients" && sourceFilter.length > 0) {
+      result = result.filter((item: any) => {
+        return sourceFilter.includes(item.source || '')
+      })
+    }
+
     // Apply sorting
     if (sortBy && sortDirection) {
       result = [...result].sort((a: any, b: any) => {
@@ -299,12 +309,14 @@ export function GenericTableWrapper<T extends GenericEntity>({
       const savedSorting = getTablePreference(TABLE_NAME, "sorting", { sortBy: null, sortDirection: null })
 
       // Always set column widths (either saved or defaults)
-      setColumnWidths(savedWidths)
+      setColumnWidths(savedWidths || defaultColumnWidths)
       
-      if (savedOrder.length > 0) {
+      if (savedOrder && savedOrder.length > 0) {
         setColumnOrder(savedOrder)
       }
-      if (Object.keys(savedVisibility).length > 0) {
+      
+      // Apply saved visibility if it exists
+      if (savedVisibility !== null && savedVisibility !== undefined && Object.keys(savedVisibility).length > 0) {
         setColumnVisibility(savedVisibility)
       }
       
@@ -571,21 +583,22 @@ export function GenericTableWrapper<T extends GenericEntity>({
 
   // Reset columns
   const handleResetColumns = React.useCallback(() => {
-    // Clear local storage for this table
-    updateTablePreference(TABLE_NAME, "column_widths", {})
-    updateTablePreference(TABLE_NAME, "column_order", [])
-    updateTablePreference(TABLE_NAME, "column_visibility", {})
-    
-    // Reset state to defaults
+    // Calculate defaults
     const defaultOrder = allColumns.map((col: any) => col.id || col.accessorKey)
     const defaultVisibility = allColumns.reduce((acc: any, col: any) => {
       acc[col.id || col.accessorKey] = true
       return acc
     }, {})
     
+    // Reset state to defaults
     setColumnWidths(defaultColumnWidths)
     setColumnOrder(defaultOrder)
     setColumnVisibility(defaultVisibility)
+    
+    // Save the default state to preferences (not empty objects)
+    updateTablePreference(TABLE_NAME, "column_widths", defaultColumnWidths)
+    updateTablePreference(TABLE_NAME, "column_order", defaultOrder)
+    updateTablePreference(TABLE_NAME, "column_visibility", defaultVisibility)
     
     toast.success('Table columns reset to defaults')
   }, [TABLE_NAME, allColumns, defaultColumnWidths, updateTablePreference])
@@ -661,10 +674,11 @@ export function GenericTableWrapper<T extends GenericEntity>({
         timePeriod: timePeriod,
         status: invoiceStatus.length > 0 ? invoiceStatus : undefined,
         relationship: relationship.length > 0 ? relationship : undefined,
+        source: sourceFilter.length > 0 ? sourceFilter : undefined,
       }
       onFiltersChange(filters)
     }
-  }, [debouncedSearchQuery, timePeriod, invoiceStatus, relationship, onFiltersChange])
+  }, [debouncedSearchQuery, timePeriod, invoiceStatus, relationship, sourceFilter, onFiltersChange])
 
   return (
     <div className={cn("w-full h-screen flex flex-col", className)}>
@@ -864,6 +878,14 @@ export function GenericTableWrapper<T extends GenericEntity>({
               </Popover>
             )}
 
+            {/* Source Filter - Only show for clients */}
+            {entityType === "clients" && (
+              <SearchableSourceFilter
+                selectedSources={sourceFilter}
+                onSourcesChange={setSourceFilter}
+              />
+            )}
+
             {/* Column View Filter */}
             <ColumnViewFilter
               columns={columnMetadata}
@@ -872,7 +894,7 @@ export function GenericTableWrapper<T extends GenericEntity>({
             />
 
             {/* Clear Filters Button */}
-            {(searchQuery || timePeriod || invoiceStatus.length > 0 || relationship.length > 0) && (
+            {(searchQuery || timePeriod || invoiceStatus.length > 0 || relationship.length > 0 || sourceFilter.length > 0) && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -881,6 +903,7 @@ export function GenericTableWrapper<T extends GenericEntity>({
                   setTimePeriod(null)
                   setInvoiceStatus([])
                   setRelationship([])
+                  setSourceFilter([])
                 }}
                 className="h-8 text-sm font-normal text-muted-foreground hover:text-foreground"
               >

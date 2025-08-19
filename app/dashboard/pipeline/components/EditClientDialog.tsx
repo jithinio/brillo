@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { SourceSelector } from "@/components/ui/source-selector"
 import { updatePipelineClient } from "@/lib/pipeline"
 import { toast } from "sonner"
 import type { PipelineClient } from "@/lib/types/pipeline"
@@ -31,6 +33,7 @@ interface EditClientData {
   phone: string
   potential_value: string
   pipeline_notes: string
+  source: string
 }
 
 export function EditClientDialog({ open, onOpenChange, onClientUpdate, client }: EditClientDialogProps) {
@@ -42,6 +45,7 @@ export function EditClientDialog({ open, onOpenChange, onClientUpdate, client }:
     phone: "",
     potential_value: "",
     pipeline_notes: "",
+    source: "",
   })
 
   // Update form data when client changes
@@ -54,6 +58,7 @@ export function EditClientDialog({ open, onOpenChange, onClientUpdate, client }:
         phone: client.phone || "",
         potential_value: client.potential_value?.toString() || "",
         pipeline_notes: client.pipeline_notes || "",
+        source: client.source || "",
       })
     }
   }, [client])
@@ -76,6 +81,7 @@ export function EditClientDialog({ open, onOpenChange, onClientUpdate, client }:
         phone: editClient.phone.trim() || undefined,
         potential_value: editClient.potential_value ? parseFloat(editClient.potential_value) : undefined,
         pipeline_notes: editClient.pipeline_notes.trim() || undefined,
+        source: editClient.source.trim() || undefined,
       }
 
       const result = await updatePipelineClient(client.id, clientData)
@@ -131,6 +137,15 @@ export function EditClientDialog({ open, onOpenChange, onClientUpdate, client }:
                 value={editClient.company}
                 onChange={(e) => setEditClient({ ...editClient, company: e.target.value })}
                 placeholder="Company name"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="edit-source">Source</Label>
+              <SourceSelector
+                value={editClient.source}
+                onValueChange={(value) => setEditClient({ ...editClient, source: value })}
+                placeholder="How did they find you?"
               />
             </div>
             
