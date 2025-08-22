@@ -4,7 +4,7 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import type { ColumnDef } from "@tanstack/react-table"
 import * as React from "react"
 import { useState } from "react"
-import { ArrowUpDownIcon, MoreHorizontalIcon, CheckmarkCircleIcon, ClockIcon, PauseIcon, CancelCircleIcon, ViewIcon, Edit03Icon, DocumentAttachmentIcon, Delete01Icon, Calendar01Icon, GitBranchIcon, UserIcon, ActivityIcon, DollarCircleIcon, MinusSignIcon, PlusSignIcon, Building02Icon, ArrowUp01Icon, ArrowDown01Icon, Tick01Icon, CancelIcon, RepeatIcon, TimerIcon, Activity03Icon, WorkIcon, File01Icon, MoneyReceiveCircleIcon, MoneySendCircleIcon, FilterIcon } from '@hugeicons/core-free-icons'
+import { ArrowUpDownIcon, MoreHorizontalIcon, CheckmarkCircleIcon, ClockIcon, PauseIcon, CancelCircleIcon, ViewIcon, Edit03Icon, DocumentAttachmentIcon, Delete01Icon, Calendar01Icon, GitBranchIcon, UserIcon, ActivityIcon, DollarCircleIcon, MinusSignIcon, PlusSignIcon, Building02Icon, ArrowUp01Icon, ArrowDown01Icon, Tick01Icon, CancelIcon, RepeatIcon, TimerIcon, Activity03Icon, WorkIcon, File01Icon, MoneyReceiveCircleIcon, MoneySendCircleIcon, FilterIcon, SparklesIcon } from '@hugeicons/core-free-icons'
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -91,8 +91,12 @@ function EditableBudgetCell({
   const budget = project.total_budget || 0
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState(budget.toString())
+  
+  // Only allow editing for Fixed projects
+  const isEditable = project.project_type === 'fixed'
 
   const handleEdit = () => {
+    if (!isEditable) return
     setIsEditing(true)
     setEditValue(budget.toString())
   }
@@ -118,6 +122,17 @@ function EditableBudgetCell({
     }
   }
 
+  // Show tooltip for non-editable projects
+  const getTooltipText = () => {
+    if (project.project_type === 'recurring') {
+      return 'Budget is calculated automatically based on recurring amount and period'
+    }
+    if (project.project_type === 'hourly') {
+      return 'Budget is calculated automatically based on hourly rate and logged hours'
+    }
+    return 'Click to edit budget'
+  }
+
   return (
     <div className="w-[148px] max-w-[148px] overflow-hidden">
       {isEditing ? (
@@ -134,13 +149,22 @@ function EditableBudgetCell({
         />
       ) : (
         <div 
-          className="cursor-pointer overflow-hidden flex items-center group/budget"
+          className={cn(
+            "overflow-hidden flex items-center group/budget",
+            isEditable ? "cursor-pointer" : "cursor-default opacity-75"
+          )}
           onClick={handleEdit}
+          title={getTooltipText()}
         >
           <span className="font-normal text-sm truncate flex-1 min-w-0">
             {budget ? formatCurrency(budget) : formatCurrency(0)}
           </span>
-          <HugeiconsIcon icon={Edit03Icon} className="ml-1 h-3 w-3 opacity-0 group-hover/budget:opacity-100 flex-shrink-0" />
+          {isEditable && (
+            <HugeiconsIcon icon={Edit03Icon} className="ml-1 h-3 w-3 opacity-0 group-hover/budget:opacity-100 flex-shrink-0" />
+          )}
+          {!isEditable && (
+            <HugeiconsIcon icon={SparklesIcon} className="ml-1 h-3 w-3 text-muted-foreground opacity-60" />
+          )}
         </div>
       )}
     </div>
