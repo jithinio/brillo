@@ -31,11 +31,6 @@ const BADGE_POSITION = {
   right: '24px'
 }
 
-const LOADER_POSITION = {
-  bottom: '24px',
-  right: '24px'
-}
-
 // Custom scrollbar styles with performance optimizations
 const scrollbarStyles = `
   .custom-scrollbar::-webkit-scrollbar {
@@ -139,6 +134,42 @@ const scrollbarStyles = `
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
   }
+
+  /* Inline loader row animations - fade only */
+  .loader-content {
+    opacity: 0;
+    transition: opacity 0.2s ease-out;
+  }
+
+  .loader-content.show {
+    opacity: 1;
+  }
+
+  /* Floating loader positioning within table */
+  .table-floating-loader {
+    position: absolute;
+    bottom: 10px;
+    left: 12px;
+    z-index: 30;
+    pointer-events: none;
+    transform: translateZ(0);
+    transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+  }
+
+  .table-floating-loader.entering {
+    opacity: 0;
+    transform: translateY(10px) translateZ(0);
+  }
+
+  .table-floating-loader.entered {
+    opacity: 1;
+    transform: translateY(0) translateZ(0);
+  }
+
+  .table-floating-loader.exiting {
+    opacity: 0;
+    transform: translateY(-5px) translateZ(0);
+  }
 `
 
 interface FinalDataTableProps {
@@ -188,6 +219,7 @@ function FinalDataTableComponent({
   preferencesLoading,
   preferencesLoaded,
 }: FinalDataTableProps) {
+  
   const tableRef = React.useRef<HTMLDivElement>(null)
   const router = useRouter()
   
@@ -255,7 +287,7 @@ function FinalDataTableComponent({
       },
       {
         threshold: 0,
-        rootMargin: '100px 0px 300px 0px' // Load earlier for smoother experience
+        rootMargin: '200px 0px 500px 0px' // Load much earlier for immediate response
       }
     )
 
@@ -580,24 +612,32 @@ function FinalDataTableComponent({
                     </ContextMenu>
                   ))}
 
-                  {/* All loaded indicator - positioned relative to table end */}
-                  {!hasNextPage && projects.length > 0 && !isFetchingNextPage && hasLoadedNextPage && (
-                                            <div className="h-12 relative">
-                      <div className="absolute z-10" style={BADGE_POSITION}>
-                        <Badge 
-                          variant="outline" 
-                          className="flex items-center gap-1 text-xs bg-background/80 backdrop-blur-sm border-border/50"
-                        >
-                                                        <HugeiconsIcon icon={Tick02Icon} className="w-2 h-2"  />
-                          <span className="text-xs">All loaded</span>
-                        </Badge>
-                      </div>
+                  {/* Loading/completion indicator - fixed height to prevent layout jump */}
+                  {(hasNextPage || isFetchingNextPage) && (
+                    <div className="flex border-b border-border/20 h-12 w-full" data-table-body>
+                      {isFetchingNextPage ? (
+                        <div className={`w-full h-full px-4 py-3 flex items-center gap-3 text-left bg-muted/20 loader-content ${isFetchingNextPage ? 'show' : ''}`}>
+                          <Loader size="xs" variant="default" />
+                          <span className="text-xs text-muted-foreground font-medium">
+                            Loading more projects...
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="w-full h-full" /> // Invisible placeholder to maintain height
+                      )}
                     </div>
                   )}
 
-                  {/* Invisible spacer for proper scrolling detection - only when needed */}
-                  {(hasNextPage || isFetchingNextPage) && (
-                    <div className="h-8 w-full" data-table-body />
+                  {/* All loaded indicator - only when completely done */}
+                  {!hasNextPage && projects.length > 0 && !isFetchingNextPage && hasLoadedNextPage && (
+                    <div className="flex border-b border-border/10 h-10">
+                      <div className="px-4 py-2 flex items-center gap-2 text-left">
+                        <HugeiconsIcon icon={Tick02Icon} className="w-3 h-3 text-green-600"  />
+                        <span className="text-xs text-muted-foreground font-medium">
+                          All projects loaded
+                        </span>
+                      </div>
+                    </div>
                   )}
                 </>
               )}
@@ -628,21 +668,7 @@ function FinalDataTableComponent({
 
       </div>
 
-      {/* Loading and completion indicators */}
-      {isFetchingNextPage && (
-        <div
-          className="fixed z-50 pointer-events-none"
-          style={LOADER_POSITION}
-        >
-          <Badge 
-            variant="secondary" 
-            className="flex items-center gap-2 text-xs shadow-lg border bg-background/95"
-          >
-            <Loader size="xs" variant="default" />
-            <span>Loading more projects...</span>
-          </Badge>
-        </div>
-      )}
+
     </div>
   )
 }
