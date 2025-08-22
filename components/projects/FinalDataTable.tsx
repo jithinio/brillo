@@ -17,19 +17,13 @@ import {
   ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu"
-import { Edit03Icon, DocumentAttachmentIcon, CheckmarkCircleIcon, ClockIcon, PauseIcon, CancelCircleIcon, GitBranchIcon, Tick02Icon, CopyIcon, Activity03Icon, AddInvoiceIcon, FilterIcon } from '@hugeicons/core-free-icons'
+import { Edit03Icon, CheckmarkCircleIcon, ClockIcon, PauseIcon, CancelCircleIcon, Tick02Icon, CopyIcon, Activity03Icon, AddInvoiceIcon, FilterIcon } from '@hugeicons/core-free-icons'
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { formatCurrencyAbbreviated } from "../../lib/currency-utils"
 import { useQueryClient } from "@tanstack/react-query"
 import { cacheUtils } from "@/components/query-provider"
-
-// Position constants for floating indicators
-const BADGE_POSITION = {
-  bottom: '24px',
-  right: '24px'
-}
 
 // Custom scrollbar styles with performance optimizations
 const scrollbarStyles = `
@@ -235,6 +229,17 @@ function FinalDataTableComponent({
   // Track if we've ever loaded more than the first page
   const [hasLoadedNextPage, setHasLoadedNextPage] = React.useState(false)
   
+  // Track if we should show the full overlay loader (until all initial data is loaded)
+  const [showFullOverlay, setShowFullOverlay] = React.useState(true)
+  
+  // Reset overlay state when starting a new data fetch (e.g., filter changes)
+  React.useEffect(() => {
+    if (isLoading && !isFetchingNextPage) {
+      setShowFullOverlay(true)
+      setHasLoadedOnce(false)
+    }
+  }, [isLoading, isFetchingNextPage])
+  
   // Mark as loaded when we get data
   React.useEffect(() => {
     if (projects && projects.length > 0) {
@@ -248,6 +253,18 @@ function FinalDataTableComponent({
       setHasLoadedNextPage(true)
     }
   }, [isFetchingNextPage])
+  
+  // Hide full overlay when initial loading is complete (whether we have data or empty state)
+  React.useEffect(() => {
+    // Hide overlay when loading is complete, regardless of whether we have data or not
+    if (!isLoading && !isFetching) {
+      // Add a small delay to ensure smooth transition
+      const timer = setTimeout(() => {
+        setShowFullOverlay(false)
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+  }, [isLoading, isFetching])
   
   // Selected rows for batch operations
   const selectedProjects = React.useMemo(() => {
@@ -356,8 +373,8 @@ function FinalDataTableComponent({
 
       {/* Table Container with div-based sticky structure */}
       <div ref={tableRef} className="flex-1 overflow-auto relative border-l border-border custom-scrollbar table-container">
-        {/* Table Loading Overlay - Only show for preferences loading, not for data loading since we have skeleton rows */}
-        {(preferencesLoading || !preferencesLoaded) && (
+        {/* Table Loading Overlay - Show for preferences loading OR initial data loading */}
+        {(preferencesLoading || !preferencesLoaded || showFullOverlay) && (
           <div className="absolute inset-0 bg-background/95 backdrop-blur-sm z-50 flex items-center justify-center">
             <Badge 
               variant="secondary" 
@@ -428,8 +445,8 @@ function FinalDataTableComponent({
 
             {/* Table Body - Div-based */}
             <div className="bg-background relative" data-table-body>
-              {/* Show skeleton rows during initial loading to prevent layout shift */}
-              {(isLoading && !hasLoadedOnce && projects.length === 0) ? (
+              {/* Show skeleton rows when the full overlay is active (they'll be hidden behind the overlay) */}
+              {showFullOverlay ? (
                 <>
                   {Array.from({ length: 10 }).map((_, index) => (
                     <div key={`skeleton-${index}`} className="flex h-11 border-b border-border animate-pulse">
