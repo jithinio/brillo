@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { ClientAvatar } from "@/components/ui/client-avatar"
 import { SourceLabel } from "@/components/ui/source-label"
+import { InlineSourceSelector } from "@/components/ui/inline-source-selector"
 import { formatCurrency } from "@/lib/currency"
 import { Client } from "@/hooks/use-clients"
 import { SortableHeader } from "@/components/table/column-utils"
@@ -74,6 +75,7 @@ const clientRelationshipConfig = {
 interface ClientColumnConfig {
   onStatusChange?: (clientId: string, newStatus: string) => void
   onRelationshipChange?: (clientId: string, newRelationship: string) => void
+  onSourceChange?: (clientId: string, newSource: string) => void
   onProjectClick?: (projectId: string) => void
   onEditClient?: (client: any) => void
   refetch?: () => void
@@ -238,8 +240,20 @@ export function createClientColumns(columnConfig: ClientColumnConfig): ColumnDef
         </SortableHeader>
       ),
       cell: ({ row }) => {
+        const client = row.original
         const source = row.getValue("source") as string
-        return <SourceLabel value={source} />
+        
+        return (
+          <InlineSourceSelector
+            value={source}
+            onValueChange={(newSource) => {
+              if (columnConfig.onSourceChange) {
+                columnConfig.onSourceChange(client.id, newSource)
+              }
+            }}
+            className="max-w-[120px]"
+          />
+        )
       },
       size: 140,
     },

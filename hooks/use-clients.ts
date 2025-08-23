@@ -141,6 +141,18 @@ export function useClients(filters: ClientFilters = {}): DataHookReturn<Client> 
         return { id, client_since: dateStr }
       }
       
+      // Handle source updates
+      if (status.startsWith('source:')) {
+        const sourceValue = status.replace('source:', '')
+        const { error } = await supabase
+          .from('clients')
+          .update({ source: sourceValue })
+          .eq('id', id)
+        
+        if (error) throw error
+        return { id, source: sourceValue }
+      }
+      
       // Handle relationship updates
       if (['recurring', 'one-time', 'regular'].includes(status)) {
         const { error } = await supabase
@@ -176,6 +188,11 @@ export function useClients(filters: ClientFilters = {}): DataHookReturn<Client> 
               if (status.startsWith('client_since:')) {
                 const dateStr = status.replace('client_since:', '')
                 return { ...client, client_since: dateStr }
+              }
+              // Handle source updates
+              if (status.startsWith('source:')) {
+                const sourceValue = status.replace('source:', '')
+                return { ...client, source: sourceValue }
               }
               // Handle relationship updates
               if (['recurring', 'one-time', 'regular'].includes(status)) {

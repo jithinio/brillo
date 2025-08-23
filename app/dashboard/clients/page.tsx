@@ -933,6 +933,9 @@ export default function ClientsPage() {
         createColumns={(actions: any) => createClientColumns({
           onStatusChange: clientsData.updateStatus,
           onRelationshipChange: clientsData.updateStatus,
+          onSourceChange: (clientId: string, newSource: string) => {
+            clientsData.updateStatus(clientId, `source:${newSource}`)
+          },
           onEditClient: entityActions.onEdit,
           formatDate: formatDate,
         })}
