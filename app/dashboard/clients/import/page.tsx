@@ -191,6 +191,9 @@ const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     setCurrentOperation('Preparing import...')
     setErrors([])
 
+    // Show info about data validation
+    toast.info('Import started. Data will be automatically validated and truncated if needed to fit database constraints.')
+
     const mappedFields = fieldMappings.filter(m => m.mapped)
     const totalRows = csvData.rows.length
     let successCount = 0
@@ -216,6 +219,29 @@ const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         if (!clientData.name) {
           throw new Error('Name is required')
         }
+
+        // Validate and truncate field lengths to match database constraints
+        const validateAndTruncate = (value: string | null, maxLength: number, fieldName: string): string | null => {
+          if (!value) return null
+          if (value.length > maxLength) {
+            console.warn(`${fieldName} truncated from ${value.length} to ${maxLength} characters for row ${i + 1}`)
+            return value.substring(0, maxLength)
+          }
+          return value
+        }
+
+        // Apply field length validations based on typical database constraints
+        clientData.name = validateAndTruncate(clientData.name, 255, 'name')
+        clientData.email = validateAndTruncate(clientData.email, 255, 'email')
+        clientData.phone = validateAndTruncate(clientData.phone, 20, 'phone')
+        clientData.company = validateAndTruncate(clientData.company, 255, 'company')
+        clientData.address = validateAndTruncate(clientData.address, 500, 'address')
+        clientData.city = validateAndTruncate(clientData.city, 100, 'city')
+        clientData.state = validateAndTruncate(clientData.state, 50, 'state')
+        clientData.zip_code = validateAndTruncate(clientData.zip_code, 20, 'zip_code')
+        clientData.country = validateAndTruncate(clientData.country, 100, 'country')
+        clientData.notes = validateAndTruncate(clientData.notes, 1000, 'notes')
+        clientData.source = validateAndTruncate(clientData.source, 100, 'source')
 
         if (isSupabaseConfigured()) {
           // Real database import with duplicate checking
@@ -295,11 +321,33 @@ const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
           // Handle Supabase/database errors
           const dbError = error as any
           if (dbError.message) {
-            errorMessage += `Database error: ${dbError.message}`
+            // Make database errors more user-friendly
+            let friendlyMessage = dbError.message
+            
+            // Handle common database constraint errors
+            if (dbError.message.includes('value too long for type character varying')) {
+              const match = dbError.message.match(/character varying\((\d+)\)/)
+              const maxLength = match ? match[1] : 'unknown'
+              friendlyMessage = `Data too long (max ${maxLength} characters allowed)`
+            } else if (dbError.message.includes('duplicate key value')) {
+              friendlyMessage = 'Duplicate entry - client already exists'
+            } else if (dbError.message.includes('violates not-null constraint')) {
+              friendlyMessage = 'Required field is missing'
+            } else if (dbError.message.includes('violates foreign key constraint')) {
+              friendlyMessage = 'Invalid reference to related data'
+            }
+            
+            errorMessage += `Database error: ${friendlyMessage}`
             if (dbError.details) errorMessage += ` - ${dbError.details}`
             if (dbError.hint) errorMessage += ` (Hint: ${dbError.hint})`
           } else {
-            errorMessage += `Object error: ${JSON.stringify(error)}`
+            // Handle empty objects or objects without message
+            const errorStr = JSON.stringify(error)
+            if (errorStr === '{}') {
+              errorMessage += 'Unknown database error (empty error object)'
+            } else {
+              errorMessage += `Object error: ${errorStr}`
+            }
           }
           console.error('Client import object error:', { row: i + 1, error, rowData: row })
         } else {
@@ -548,7 +596,7 @@ const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
 
               {errors.length > 0 && (
                 <Alert>
-                  <HugeiconsIcon icon={AlertCircleIcon} className="h-4 w-4"  />
+                  <HugeiconsIcon icon={AlertCircle} className="h-4 w-4"  />
                   <AlertDescription>
                     <div className="space-y-2">
                       <p className="font-medium">Import Errors:</p>

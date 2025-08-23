@@ -3,7 +3,7 @@
 import { HugeiconsIcon } from '@hugeicons/react';
 import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft01Icon, Upload03Icon, FileDownloadIcon, CheckmarkCircleIcon, AlertCircleIcon, DocumentAttachmentIcon, Group01Icon, Alert01Icon } from '@hugeicons/core-free-icons'
+import { ArrowLeft01Icon, Upload03Icon, FileDownloadIcon, CheckmarkCircleIcon, AlertCircleIcon, DocumentAttachmentIcon, Group01Icon, Alert01Icon, Settings02Icon, InformationCircleIcon } from '@hugeicons/core-free-icons'
 import { Button } from "@/components/ui/button"
 import { Loader } from "@/components/ui/loader"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -33,6 +33,11 @@ interface FieldMapping {
   mapped: boolean
 }
 
+interface StatusMapping {
+  csvValue: string
+  standardValue: string
+}
+
 interface ClientData {
   name: string
   company?: string
@@ -47,6 +52,7 @@ interface ClientData {
 
 const PROJECT_FIELDS = [
   { key: 'name', label: 'Project Name', required: true },
+  { key: 'project_type', label: 'Project Type', required: false },
   { key: 'total_budget', label: 'Total Budget', required: false },
   { key: 'budget', label: 'Budget', required: false },
   { key: 'status', label: 'Status', required: false },
@@ -63,6 +69,7 @@ const PROJECT_FIELDS = [
   { key: 'invoice_amount', label: 'Invoice Amount', required: false },
   { key: 'payment_received', label: 'Payment Received', required: false },
   { key: 'payment_pending', label: 'Payment Pending', required: false },
+  { key: 'recurring_amount', label: 'Recurring Amount', required: false },
   
   // Time tracking fields (legacy)
   { key: 'hourly_rate', label: 'Hourly Rate', required: false },
@@ -277,6 +284,7 @@ export default function ProjectImportPage() {
   const [csvData, setCsvData] = useState<CsvData | null>(null)
   const [fieldMappings, setFieldMappings] = useState<FieldMapping[]>([])
   const [clientMappings, setClientMappings] = useState<FieldMapping[]>([])
+  const [customStatusMappings, setCustomStatusMappings] = useState<StatusMapping[]>([])
   const [hasClientData, setHasClientData] = useState(false)
   const [importClients, setImportClients] = useState(false)
   const [detectedClients, setDetectedClients] = useState<ClientData[]>([])
@@ -476,6 +484,18 @@ export default function ProjectImportPage() {
   const normalizeStatus = (statusValue: string): string => {
     if (!statusValue) return 'active'
     
+    // First check custom mappings if they exist
+    if (customStatusMappings.length > 0) {
+      const customMapping = customStatusMappings.find(mapping => 
+        mapping.csvValue === statusValue
+      )
+      if (customMapping) {
+        console.log(`✅ Status "${statusValue}" mapped to "${customMapping.standardValue}" via custom mapping`)
+        return customMapping.standardValue
+      }
+    }
+    
+    // Fall back to default mapping
     const normalizedInput = statusValue.toLowerCase().trim()
     const mappedStatus = STATUS_MAPPING[normalizedInput]
     
@@ -562,6 +582,109 @@ export default function ProjectImportPage() {
     return 'USD'
   }
 
+  // Helper function to get unique status values from CSV
+  const getUniqueStatusValues = (statusField: string): string[] => {
+    if (!csvData) return []
+    
+    const statusColumnIndex = csvData.headers.indexOf(statusField)
+    if (statusColumnIndex === -1) return []
+    
+    const uniqueValues = new Set<string>()
+    csvData.rows.forEach(row => {
+      const value = row[statusColumnIndex]
+      if (value && value.trim() && value !== 'N/A') {
+        uniqueValues.add(value.trim())
+      }
+    })
+    
+    return Array.from(uniqueValues).sort()
+  }
+
+  // Helper function to initialize custom status mappings
+  const initializeStatusMappings = (statusField: string) => {
+    const uniqueValues = getUniqueStatusValues(statusField)
+    const mappings: StatusMapping[] = uniqueValues.map(csvValue => {
+      const normalizedValue = csvValue.toLowerCase().trim()
+      const standardValue = STATUS_MAPPING[normalizedValue] || 'active'
+      return {
+        csvValue,
+        standardValue
+      }
+    })
+    setCustomStatusMappings(mappings)
+  }
+
+  // Helper function to safely handle UUID values (client_id, project_id, etc.)
+  const safeUuidValue = (value: string | null | undefined): string | null => {
+    if (!value || 
+        value === 'null' || 
+        value === 'undefined' || 
+        value === 'NULL' ||
+        value === 'Null' ||
+        (typeof value === 'string' && value.trim() === '') ||
+        (typeof value === 'string' && value.toLowerCase() === 'null') ||
+        (typeof value === 'string' && value.trim().toLowerCase() === 'null')) {
+      return null
+    }
+    
+    return typeof value === 'string' ? value.trim() : String(value)
+  }
+
+  // Helper function to safely handle client ID values (alias for backward compatibility)
+  const safeClientId = (clientId: string | null | undefined): string | null => {
+    return safeUuidValue(clientId)
+  }
+
+  // Helper function to normalize project type values
+  const normalizeProjectType = (typeValue: string): string => {
+    if (!typeValue) return 'fixed'
+    
+    const normalizedInput = typeValue.toLowerCase().trim()
+    
+    // Map various project type names to standardized types
+    const typeMap: { [key: string]: string } = {
+      'fixed': 'fixed',
+      'fixed-price': 'fixed',
+      'fixed_price': 'fixed',
+      'fixedprice': 'fixed',
+      'one-time': 'fixed',
+      'onetime': 'fixed',
+      'one_time': 'fixed',
+      'project': 'fixed',
+      'contract': 'fixed',
+      
+      'recurring': 'recurring',
+      'subscription': 'recurring',
+      'monthly': 'recurring',
+      'weekly': 'recurring',
+      'yearly': 'recurring',
+      'annual': 'recurring',
+      'repeat': 'recurring',
+      'retainer': 'recurring',
+      
+      'hourly': 'hourly',
+      'time-based': 'hourly',
+      'time_based': 'hourly',
+      'timebased': 'hourly',
+      'time': 'hourly',
+      'hours': 'hourly',
+      'per-hour': 'hourly',
+      'per_hour': 'hourly',
+      'perhour': 'hourly'
+    }
+    
+    const mappedType = typeMap[normalizedInput]
+    
+    if (mappedType) {
+      console.log(`✅ Project type "${typeValue}" mapped to "${mappedType}"`)
+      return mappedType
+    }
+    
+    // If no mapping found, default to fixed
+    console.log(`⚠️ Project type "${typeValue}" not recognized, defaulting to "fixed"`)
+    return 'fixed'
+  }
+
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
@@ -614,7 +737,13 @@ export default function ProjectImportPage() {
           }
         } else if (char === ',' && !inQuotes) {
           // Found delimiter outside quotes
-          result.push(current.trim())
+          const trimmedValue = current.trim()
+          // Convert string "null" to actual null (empty string)
+          if (trimmedValue.toLowerCase() === 'null' || trimmedValue === 'NULL' || trimmedValue === 'Null') {
+            result.push('')
+          } else {
+            result.push(trimmedValue)
+          }
           current = ''
           i++
         } else {
@@ -624,7 +753,13 @@ export default function ProjectImportPage() {
       }
       
       // Add the last field
-      result.push(current.trim())
+      const trimmedValue = current.trim()
+      // Convert string "null" to actual null (empty string)
+      if (trimmedValue.toLowerCase() === 'null' || trimmedValue === 'NULL' || trimmedValue === 'Null') {
+        result.push('')
+      } else {
+        result.push(trimmedValue)
+      }
       
       return result
     }
@@ -635,7 +770,12 @@ export default function ProjectImportPage() {
     
     const rows = lines.slice(1).map((line, index) => {
       const parsedRow = parseCSVLine(line)
-      console.log(`Row ${index + 1} parsed (${parsedRow.length} columns):`, parsedRow)
+      
+      // Log first few rows for debugging
+      if (index < 3) {
+        console.log(`Row ${index + 1} parsed (${parsedRow.length} columns):`, parsedRow)
+      }
+      
       return parsedRow
     })
     
@@ -695,6 +835,10 @@ export default function ProjectImportPage() {
             (normalizedHeader === 'title' && field.key === 'name') ||
             (normalizedHeader === 'projectstatus' && field.key === 'status') ||
             (normalizedHeader === 'status' && field.key === 'status') ||
+            (normalizedHeader === 'projecttype' && field.key === 'project_type') ||
+            (normalizedHeader === 'type' && field.key === 'project_type') ||
+            (normalizedHeader === 'recurringamount' && field.key === 'recurring_amount') ||
+            (normalizedHeader === 'recurring' && field.key === 'recurring_amount') ||
             (normalizedHeader === 'startdate' && field.key === 'start_date') ||
             (normalizedHeader === 'enddate' && field.key === 'due_date') ||
             // Total Budget mappings (more comprehensive terms)
@@ -864,6 +1008,17 @@ export default function ProjectImportPage() {
           ? { ...mapping, dbField: dbField === 'none' ? '' : dbField, mapped: dbField !== 'none' && dbField !== '' }
           : mapping
       ))
+      
+      // Initialize status mappings when status field is mapped
+      if (dbField === 'status') {
+        initializeStatusMappings(csvField)
+      } else if (dbField === 'none') {
+        // Clear status mappings if status field is unmapped
+        const wasStatusField = fieldMappings.find(m => m.csvField === csvField)?.dbField === 'status'
+        if (wasStatusField) {
+          setCustomStatusMappings([])
+        }
+      }
     }
   }
 
@@ -1098,6 +1253,17 @@ export default function ProjectImportPage() {
     setCurrentOperation('Preparing import...')
     setErrors([])
     setClientCache(new Map()) // Clear client cache for new import
+    
+    // Get authenticated user for project ownership
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (!user?.id) {
+      setErrors(['User not authenticated. Please log in and try again.'])
+      setStep('upload')
+      return
+    }
+    
+    const currentUserId = user.id
 
     const mappedProjectFields = fieldMappings.filter(m => m.mapped)
     const mappedClientFields = clientMappings.filter(m => m.mapped)
@@ -1193,7 +1359,7 @@ export default function ProjectImportPage() {
       
       try {
         let clientId: string | null = null
-
+        
         // Import client first if needed
         if (importClients && hasClientData) {
           const clientData: any = {}
@@ -1234,7 +1400,7 @@ export default function ProjectImportPage() {
             const cachedClientId = clientCache.get(cacheKey)
             
             if (cachedClientId) {
-              clientId = cachedClientId
+              clientId = safeClientId(cachedClientId)
               console.log(`Using cached client ID for "${clientData.name}": ${clientId}`)
             } else if (isSupabaseConfigured()) {
               try {
@@ -1289,24 +1455,30 @@ export default function ProjectImportPage() {
                   console.log(`Client "${clientData.name}" already exists with ID: ${clientId}`)
                   
                   // Cache the result for future rows (only if valid ID)
-                  if (clientId) {
-                    setClientCache(prev => new Map(prev.set(cacheKey, clientId)))
+                  const validClientId = safeClientId(clientId)
+                  if (validClientId) {
+                    setClientCache(prev => new Map(prev.set(cacheKey, validClientId)))
                   }
                 } else {
                   // If client does not exist OR we're allowing duplicates, insert new client
+                  // Clean client data to prevent string "null" values
+                  const cleanClientData = {
+                    name: clientData.name,
+                    company: safeUuidValue(clientData.company) || null,
+                    email: safeUuidValue(clientData.email) || null,
+                    phone: safeUuidValue(clientData.phone) || null,
+                    address: safeUuidValue(clientData.address) || null,
+                    city: safeUuidValue(clientData.city) || null,
+                    state: safeUuidValue(clientData.state) || null,
+                    zip_code: safeUuidValue(clientData.zip_code) || null,
+                    country: safeUuidValue(clientData.country) || 'United States'
+                  }
+                  
+                  console.log('Inserting client data:', cleanClientData)
+                  
                   const { data: newClientResult, error: newClientError } = await supabase
                     .from('clients')
-                    .insert([{
-                      name: clientData.name,
-                      company: clientData.company || null,
-                      email: clientData.email || null,
-                      phone: clientData.phone || null,
-                      address: clientData.address || null,
-                      city: clientData.city || null,
-                      state: clientData.state || null,
-                      zip_code: clientData.zip_code || null,
-                      country: clientData.country || 'United States'
-                    }])
+                    .insert([cleanClientData])
                     .select()
 
                   if (newClientError) throw newClientError
@@ -1317,8 +1489,9 @@ export default function ProjectImportPage() {
                     console.log('New client created with ID:', clientId)
                     
                     // Cache the newly created client (only if valid ID)
-                    if (clientId) {
-                      setClientCache(prev => new Map(prev.set(cacheKey, clientId)))
+                    const validClientId = safeClientId(clientId)
+                    if (validClientId) {
+                      setClientCache(prev => new Map(prev.set(cacheKey, validClientId)))
                     }
                   }
                 }
@@ -1359,9 +1532,12 @@ export default function ProjectImportPage() {
         mappedProjectFields.forEach(mapping => {
           const csvIndex = csvData.headers.indexOf(mapping.csvField)
           if (csvIndex !== -1) {
-            let value: string | number | null = row[csvIndex] || null
-            
-            console.log(`Mapping "${mapping.csvField}" (${mapping.dbField}) = "${value}"`)
+            let rawValue = row[csvIndex]
+            let value: string | number | null = rawValue
+            // Clean up CSV values that might be string "null"
+            if (rawValue === 'null' || rawValue === 'NULL' || rawValue === 'undefined' || rawValue === '' || rawValue === undefined) {
+              value = null
+            }
             
             // Prevent mapping to created_at - it should always be current timestamp
             if (mapping.dbField === 'created_at') {
@@ -1373,32 +1549,46 @@ export default function ProjectImportPage() {
             if (mapping.dbField === 'budget' || mapping.dbField === 'total_budget' || mapping.dbField === 'hourly_rate' || 
                 mapping.dbField === 'expenses' || mapping.dbField === 'revenue' || 
                 mapping.dbField === 'invoice_amount' || mapping.dbField === 'payment_received' || 
-                mapping.dbField === 'payment_pending') {
-              if (value) {
+                mapping.dbField === 'payment_pending' || mapping.dbField === 'recurring_amount') {
+              if (value && value !== 'null' && value !== 'NULL' && value !== 'Null') {
                 // Remove currency symbols and commas
                 const cleanValue = value.toString().replace(/[₹$€£¥,]/g, '')
                 const numValue = parseFloat(cleanValue)
                 if (isNaN(numValue)) {
                   console.warn(`Invalid numeric value for ${mapping.dbField}: "${value}" -> "${cleanValue}"`)
-                  value = 0
+                  // For optional fields, use null; for required fields, use 0
+                  value = mapping.dbField === 'recurring_amount' ? null : 0
                 } else {
-                  value = numValue
+                  // Round to 2 decimal places for recurring_amount
+                  if (mapping.dbField === 'recurring_amount') {
+                    value = Math.round(numValue * 100) / 100
+                  } else {
+                    value = numValue
+                  }
                 }
               } else {
-                value = 0
+                // For optional fields, use null; for required fields, use 0
+                value = mapping.dbField === 'recurring_amount' ? null : 0
               }
             } else if (mapping.dbField === 'estimated_hours' || mapping.dbField === 'actual_hours' || 
                        mapping.dbField === 'progress' || mapping.dbField === 'profit_margin') {
-              if (value) {
+              if (value && value !== 'null' && value !== 'NULL' && value !== 'Null') {
                 const numValue = parseFloat(value.toString())
                 if (isNaN(numValue)) {
                   console.warn(`Invalid numeric value for ${mapping.dbField}: "${value}"`)
-                  value = 0
+                  // For optional fields, use null; for required fields, use 0
+                  value = mapping.dbField === 'estimated_hours' ? null : 0
                 } else {
-                  value = numValue
+                  // Round to 2 decimal places for actual_hours and recurring_amount
+                  if (mapping.dbField === 'actual_hours') {
+                    value = Math.round(numValue * 100) / 100
+                  } else {
+                    value = numValue
+                  }
                 }
               } else {
-                value = 0
+                // For optional fields, use null; for required fields, use 0
+                value = mapping.dbField === 'estimated_hours' ? null : 0
               }
             } else if (mapping.dbField === 'start_date' || mapping.dbField === 'due_date') {
               // Use flexible date parsing
@@ -1412,6 +1602,22 @@ export default function ProjectImportPage() {
             } else if (mapping.dbField === 'currency') {
               // Use currency normalization
               value = normalizeCurrency(value as string)
+            } else if (mapping.dbField === 'project_type') {
+              // Normalize project type values
+              value = normalizeProjectType(value as string)
+            } else if (mapping.dbField === 'client_id') {
+              // Special handling for client_id
+              if (!importClients) {
+                console.warn('Ignoring direct client_id mapping from CSV - not importing clients')
+                return // Skip this mapping entirely when not importing clients
+              }
+              console.warn('Direct client_id mapping detected in CSV (while importing clients)')
+              if (value === 'null' || value === 'NULL' || value === 'Null' || 
+                  (typeof value === 'string' && value.toLowerCase() === 'null') || 
+                  value === '' || value === undefined) {
+                console.warn('Converting string "null" or empty client_id to actual null')
+                value = null
+              }
             }
             
             projectData[mapping.dbField] = value
@@ -1419,6 +1625,11 @@ export default function ProjectImportPage() {
         })
 
         console.log('Project data to import:', projectData)
+        
+        if (projectData.client_id !== undefined && !importClients) {
+          console.warn('ALERT: CSV has client_id field but not importing clients - will be ignored')
+          delete projectData.client_id // Remove it to avoid confusion
+        }
 
         // Validate required fields
         if (!projectData.name) {
@@ -1442,13 +1653,25 @@ export default function ProjectImportPage() {
         if (isSupabaseConfigured()) {
           // Check for existing project with same name, client, and key details
           // Only skip if it's truly identical (name + client + budget)
-          const safeClientId = (clientId && clientId !== 'null') ? clientId : null
-          const { data: existingProject, error: existingProjectError } = await supabase
+          const safeClientIdValue = safeClientId(clientId)
+          
+          // Use proper client_id for duplicate check
+          const duplicateCheckClientId = importClients ? safeClientIdValue : null
+          
+          let query = supabase
             .from('projects')
             .select('id, name, budget, client_id')
             .eq('name', projectData.name)
-            .eq('client_id', safeClientId)
             .eq('budget', budget)
+          
+          // Handle null client_id properly for PostgREST
+          if (duplicateCheckClientId === null) {
+            query = query.is('client_id', null)
+          } else {
+            query = query.eq('client_id', duplicateCheckClientId)
+          }
+          
+          const { data: existingProject, error: existingProjectError } = await query
 
           if (existingProjectError) {
             throw existingProjectError
@@ -1462,15 +1685,19 @@ export default function ProjectImportPage() {
           }
 
           // Real database import
-          const projectInsertData = {
+          const projectInsertData: any = {
             name: projectData.name,
             status: projectData.status || 'active',
+            project_type: projectData.project_type || 'fixed',
             start_date: projectData.start_date,
             due_date: projectData.due_date,
             budget: budget,
             total_budget: totalBudget,
             description: projectData.description || null,
-            client_id: (clientId && clientId !== 'null') ? clientId : null,
+            user_id: currentUserId,
+            // When not importing clients, always use the managed clientId (which will be null)
+            // Never use direct CSV mapping for client_id
+            client_id: importClients ? safeUuidValue(clientId) : null,
             
             // Financial tracking fields
             expenses: projectData.expenses || 0,
@@ -1481,6 +1708,7 @@ export default function ProjectImportPage() {
             invoice_amount: projectData.invoice_amount || 0,
             payment_received: projectData.payment_received || 0,
             payment_pending: projectData.payment_pending || 0,
+            recurring_amount: projectData.recurring_amount || null,
             
             // Time tracking fields (legacy)
             progress: projectData.progress || 0,
@@ -1489,15 +1717,107 @@ export default function ProjectImportPage() {
             hourly_rate: projectData.hourly_rate || null,
             notes: projectData.notes || null
           }
+          
+          // CRITICAL: Remove any fields that might have been accidentally added from CSV
+          // Only keep the fields we explicitly want
+          const allowedFields = [
+            'name', 'status', 'project_type', 'start_date', 'due_date', 'budget', 'total_budget',
+            'description', 'user_id', 'client_id', 'expenses', 'revenue', 'profit_margin', 'currency',
+            'payment_status', 'invoice_amount', 'payment_received', 'payment_pending',
+            'recurring_amount', 'progress', 'actual_hours', 'estimated_hours', 'hourly_rate', 'notes'
+          ]
+          
+          // Remove any fields not in our allowed list
+          Object.keys(projectInsertData).forEach(key => {
+            if (!allowedFields.includes(key)) {
+              console.warn(`Removing unexpected field from project data: ${key} = ${projectInsertData[key]}`)
+              delete projectInsertData[key]
+            }
+          })
+
+          // Comprehensive validation to catch any string "null" values
+          Object.keys(projectInsertData).forEach(key => {
+            const value = (projectInsertData as any)[key]
+            if (value === 'null' || value === 'undefined' || value === 'NULL' || 
+                (typeof value === 'string' && value.toLowerCase() === 'null')) {
+              console.warn(`Found string "${value}" in field ${key}, converting to null`)
+              ;(projectInsertData as any)[key] = null
+            }
+          })
 
           console.log('Inserting project into database:', projectInsertData)
+          console.log('Final client_id value:', projectInsertData.client_id, typeof projectInsertData.client_id)
+          
+          // Extra validation for client_id before insertion
+          if (projectInsertData.client_id === 'null' || 
+              projectInsertData.client_id === 'NULL' || 
+              projectInsertData.client_id === 'Null' ||
+              (typeof projectInsertData.client_id === 'string' && projectInsertData.client_id.toLowerCase() === 'null')) {
+            console.error('CRITICAL: client_id contains string "null", forcing to actual null')
+            projectInsertData.client_id = null
+          }
 
+          // Final aggressive validation - check every field for string "null"
+          const finalValidatedData = { ...projectInsertData }
+          Object.entries(finalValidatedData).forEach(([key, value]) => {
+            if (value === 'null' || value === 'NULL' || value === 'undefined' || value === 'Null') {
+              console.error(`CRITICAL: Found string "${value}" in field "${key}" - converting to null`)
+              ;(finalValidatedData as any)[key] = null
+            }
+            // Also check for empty strings that should be null for UUID fields
+            if ((key === 'client_id' || key === 'id') && value === '') {
+              console.error(`CRITICAL: Found empty string in UUID field "${key}" - converting to null`)
+              ;(finalValidatedData as any)[key] = null
+            }
+          })
+
+          console.log('Final validated data before insertion:', JSON.stringify(finalValidatedData, null, 2))
+          
+          // Final validation: Ensure no string "null" values remain
+          Object.entries(finalValidatedData).forEach(([key, value]) => {
+            if (typeof value === 'string' && 
+                (value === 'null' || value === 'NULL' || value.toLowerCase() === 'null')) {
+              console.warn(`Converting string "${value}" to null in field ${key}`)
+              ;(finalValidatedData as any)[key] = null
+            }
+          })
+
+
+
+          // Ensure client_id is properly set when not importing clients
+          if (!importClients) {
+            finalValidatedData.client_id = null
+          }
+          
           const { error: projectError } = await supabase
             .from('projects')
-            .insert([projectInsertData])
+            .insert([finalValidatedData])
 
           if (projectError) {
             console.error('Database insertion error:', projectError)
+            console.error('Failed project data:', JSON.stringify(finalValidatedData, null, 2))
+            console.error('Original project data:', JSON.stringify(projectInsertData, null, 2))
+            console.error('Full error object:', JSON.stringify(projectError, null, 2))
+            
+            // Check for UUID-related errors and provide more specific information
+            if (projectError.message && projectError.message.includes('invalid input syntax for type uuid')) {
+              // Check all possible UUID fields in the data
+              const allFields = Object.keys(finalValidatedData)
+              const problematicFields = allFields.filter(field => {
+                const value = (finalValidatedData as any)[field]
+                return value === 'null' || value === 'undefined' || value === 'NULL' || 
+                       (typeof value === 'string' && (value.trim() === '' || value === 'null'))
+              })
+              
+              console.error('Problematic fields found:', problematicFields)
+              console.error('All field values:', Object.entries(finalValidatedData).map(([k, v]) => `${k}: ${v} (${typeof v})`))
+              
+              if (problematicFields.length > 0) {
+                throw new Error(`Database error: Field(s) [${problematicFields.join(', ')}] contain invalid UUID values. Check console for details. Original error: ${projectError.message}`)
+              } else {
+                throw new Error(`Database UUID error but no obvious problematic fields found. Check console logs. Original error: ${projectError.message}`)
+              }
+            }
             throw new Error(`Database error: ${projectError.message}${projectError.details ? ` - ${projectError.details}` : ''}`)
           }
           
@@ -1513,11 +1833,13 @@ export default function ProjectImportPage() {
             id: `demo-project-${Date.now()}-${i}`,
             name: projectData.name,
             status: projectData.status || 'active',
+            project_type: projectData.project_type || 'fixed',
             start_date: projectData.start_date,
             due_date: projectData.due_date,
             budget: budget,
             total_budget: totalBudget,
             description: projectData.description || null,
+            user_id: currentUserId || 'demo-user',
             
             // Financial tracking fields
             expenses: projectData.expenses || 0,
@@ -1528,6 +1850,7 @@ export default function ProjectImportPage() {
             invoice_amount: projectData.invoice_amount || 0,
             payment_received: projectData.payment_received || 0,
             payment_pending: projectData.payment_pending || 0,
+            recurring_amount: projectData.recurring_amount || null,
             
             // Time tracking fields (legacy)
             progress: projectData.progress || 0,
@@ -1774,7 +2097,7 @@ Data Analytics Platform,on_hold,2024-02-15,2024-05-15,18000,3000,15000,USD,parti
                             warningMessage = 'Status appears to be numeric. Expected text like "active", "active", "completed"'
                           } else if (!canBeMapped && sampleValue && sampleValue !== 'N/A') {
                             hasWarning = true
-                            warningMessage = `Status "${sampleValue}" will be used as-is. Common statuses: active, active, completed`
+                            warningMessage = `Status "${sampleValue}" will be mapped using custom mapping below. You can adjust the mapping as needed.`
                           }
                         } else if (mapping.dbField === 'start_date' || mapping.dbField === 'due_date') {
                           const parsedDate = parseFlexibleDate(sampleValue.toString())
@@ -1806,6 +2129,14 @@ Data Analytics Platform,on_hold,2024-02-15,2024-05-15,18000,3000,15000,USD,parti
                           if (!supportedCurrencies.includes(normalizedValue) && sampleValue && sampleValue !== 'N/A') {
                             hasWarning = true
                             warningMessage = `Currency "${sampleValue}" will be mapped to USD. Supported: ${supportedCurrencies.join(', ')}`
+                          }
+                        } else if (mapping.dbField === 'project_type') {
+                          const normalizedValue = sampleValue.toString().toLowerCase().trim()
+                          const supportedTypes = ['fixed', 'recurring', 'hourly']
+                          const typeMap = ['fixed', 'fixed-price', 'one-time', 'recurring', 'subscription', 'monthly', 'hourly', 'time-based']
+                          if (!typeMap.includes(normalizedValue) && sampleValue && sampleValue !== 'N/A') {
+                            hasWarning = true
+                            warningMessage = `Project type "${sampleValue}" will be mapped to "fixed". Supported: ${supportedTypes.join(', ')}`
                           }
                         }
                       }
@@ -1859,6 +2190,82 @@ Data Analytics Platform,on_hold,2024-02-15,2024-05-15,18000,3000,15000,USD,parti
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Status Mapping Sub-section */}
+              {customStatusMappings.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <HugeiconsIcon icon={Settings02Icon} className="h-5 w-5" />
+                      Status Mapping
+                    </CardTitle>
+                    <CardDescription>
+                      Map your CSV status values to standard project statuses. This ensures consistent status handling in your project management.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid gap-4">
+                      {customStatusMappings.map((statusMapping, index) => (
+                        <div key={index} className="flex items-center gap-4 p-4 border rounded-lg">
+                          <div className="flex-1">
+                            <Label className="text-sm font-medium">CSV Status: "{statusMapping.csvValue}"</Label>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Found in your CSV data
+                            </p>
+                          </div>
+                          <div className="flex-1">
+                            <Label className="text-sm font-medium mb-2 block">Maps to Standard Status:</Label>
+                            <Select
+                              value={statusMapping.standardValue}
+                              onValueChange={(value) => {
+                                setCustomStatusMappings(prev => 
+                                  prev.map(mapping => 
+                                    mapping.csvValue === statusMapping.csvValue 
+                                      ? { ...mapping, standardValue: value }
+                                      : mapping
+                                  )
+                                )
+                              }}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {STANDARD_STATUSES.map(status => (
+                                  <SelectItem key={status.value} value={status.value}>
+                                    {status.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="w-20">
+                            <Badge variant="secondary" className="text-xs">
+                              Custom
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <HugeiconsIcon icon={InformationCircleIcon} className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium text-blue-900">Status Mapping Guide</p>
+                          <ul className="text-xs text-blue-700 mt-2 space-y-1">
+                            <li><strong>Active:</strong> Projects currently being worked on</li>
+                            <li><strong>Pipeline:</strong> Potential projects, leads, or proposals</li>
+                            <li><strong>Completed:</strong> Finished and delivered projects</li>
+                            <li><strong>On Hold:</strong> Paused or waiting projects</li>
+                            <li><strong>Due:</strong> Projects past their deadline or urgent</li>
+                            <li><strong>Cancelled:</strong> Terminated or rejected projects</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Show client mapping for ALL CSV fields, not just auto-mapped ones */}
               <Card>

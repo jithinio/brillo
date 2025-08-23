@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { toast } from "sonner"
+import { useAuth } from "@/components/auth-provider"
 
 // Default source options
 const DEFAULT_SOURCES = [
@@ -22,38 +23,71 @@ export interface SourceOption {
   isCustom?: boolean
 }
 
-const STORAGE_KEY = "client_custom_sources"
+const STORAGE_KEY_PREFIX = "client_custom_sources"
 
 export function useCustomSources() {
+  const { user, loading: authLoading } = useAuth()
   const [customSources, setCustomSources] = useState<SourceOption[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
+  // Create user-specific storage key
+  const getStorageKey = useCallback(() => {
+    if (!user?.id) return `${STORAGE_KEY_PREFIX}_anonymous`
+    return `${STORAGE_KEY_PREFIX}_${user.id}`
+  }, [user?.id])
+
   // Load custom sources from localStorage on mount
   useEffect(() => {
+    // Don't load if auth is still loading
+    if (authLoading) {
+      return
+    }
+
+    setIsLoading(true)
+    
     try {
-      const stored = localStorage.getItem(STORAGE_KEY)
+      const storageKey = getStorageKey()
+      let stored = localStorage.getItem(storageKey)
+      
+      // Migration: Check for old global storage key and migrate to user-specific key
+      if (!stored && user?.id) {
+        const oldKey = "client_custom_sources"
+        const oldStored = localStorage.getItem(oldKey)
+        if (oldStored) {
+          // Migrate old data to new user-specific key
+          localStorage.setItem(storageKey, oldStored)
+          localStorage.removeItem(oldKey) // Clean up old key
+          stored = oldStored
+          console.log("Migrated custom sources to user-specific storage")
+        }
+      }
+      
       if (stored) {
         const parsed = JSON.parse(stored) as SourceOption[]
         setCustomSources(parsed)
+      } else {
+        setCustomSources([])
       }
     } catch (error) {
       console.error("Failed to load custom sources:", error)
       toast.error("Failed to load custom sources")
+      setCustomSources([])
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [getStorageKey, user?.id, authLoading])
 
   // Save custom sources to localStorage
   const saveCustomSources = useCallback((sources: SourceOption[]) => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(sources))
+      const storageKey = getStorageKey()
+      localStorage.setItem(storageKey, JSON.stringify(sources))
       setCustomSources(sources)
     } catch (error) {
       console.error("Failed to save custom sources:", error)
       toast.error("Failed to save custom source")
     }
-  }, [])
+  }, [getStorageKey])
 
   // Add a new custom source
   const addCustomSource = useCallback((label: string) => {

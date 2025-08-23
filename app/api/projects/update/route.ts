@@ -132,20 +132,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // If we updated a date field on a recurring or hourly project with auto-calculation enabled,
-    // trigger recalculation using the database function
+    // Note: Recalculation is now handled automatically by the database trigger
+    // The master_project_calculation() function triggers on all project updates
     if (['due_date', 'start_date'].includes(field) && 
         data && 
         data.auto_calculate_total && 
         ['recurring', 'hourly'].includes(data.project_type)) {
-      
-      try {
-        await supabase.rpc('recalculate_project_total', { project_id: projectId })
-        console.log(`Triggered recalculation for ${data.project_type} project ${projectId} after ${field} update`)
-      } catch (recalcError) {
-        console.error('Error triggering recalculation:', recalcError)
-        // Don't fail the request if recalculation fails, just log the error
-      }
+      console.log(`Date ${field} updated for ${data.project_type} project ${projectId} - recalculation handled by database trigger`)
     }
 
     return NextResponse.json({

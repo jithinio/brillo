@@ -1,8 +1,11 @@
--- Fix for Fixed Project Budget Editing Issue
--- Problem: Database trigger prevents manual total_budget updates for Fixed projects
--- Solution: Allow manual updates while preserving auto-calculation protection
+-- Fix hourly project calculation issue
+-- This fixes the missing hours syncing logic in the master_project_calculation function
 
--- Create improved master function that distinguishes between manual and automatic updates
+-- Drop the existing trigger and function
+DROP TRIGGER IF EXISTS master_project_calculation_trigger ON projects;
+DROP FUNCTION IF EXISTS master_project_calculation() CASCADE;
+
+-- Create the fixed master function with proper hourly calculation
 CREATE OR REPLACE FUNCTION master_project_calculation()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -20,10 +23,9 @@ DECLARE
     days_diff INTEGER;
     current_date_val DATE := CURRENT_DATE;
 BEGIN
-    -- Step 1: Determine if this is a manual budget change
+    -- Step 1: Detect manual budget changes (only for Fixed projects)
     IF TG_OP = 'UPDATE' THEN
         is_manual_budget_change := (
-            OLD.total_budget IS DISTINCT FROM NEW.total_budget AND
             -- Only allow manual budget changes for Fixed projects
             NEW.project_type = 'fixed' AND
             -- Only consider it manual if other auto-calculation fields haven't changed
@@ -82,43 +84,42 @@ BEGIN
                     
                     -- Calculate based on whether there's an end date
                     IF NEW.recurring_end_date IS NULL AND NEW.due_date IS NULL THEN
-                        -- No end date: assume 12 months from start for calculation
-                        end_date_val := start_date_val + INTERVAL '12 months';
-                    ELSE
-                        -- Use whichever end date is provided (recurring_end_date takes precedence)
-                        end_date_val := COALESCE(NEW.recurring_end_date, NEW.due_date);
-                    END IF;
-                    
-                    -- Calculate number of days between start and end
-                    days_diff := (end_date_val - start_date_val);
-                    
-                    -- Calculate periods based on frequency
-                    CASE NEW.recurring_frequency
-                        WHEN 'daily' THEN
-                            periods_count := days_diff;
-                        WHEN 'weekly' THEN
-                            periods_count := CEIL(days_diff / 7.0);
-                        WHEN 'biweekly' THEN
-                            periods_count := CEIL(days_diff / 14.0);
-                        WHEN 'monthly' THEN
-                            periods_count := CEIL(days_diff / 30.44); -- Average days per month
-                        WHEN 'quarterly' THEN
-                            periods_count := CEIL(days_diff / 91.31); -- Average days per quarter  
-                        WHEN 'yearly' THEN
-                            periods_count := CEIL(days_diff / 365.25); -- Average days per year
+                        -- No end date: calculate elapsed periods since start
+                        days_diff := current_date_val - start_date_val;
+                        IF days_diff < 0 THEN
+                            periods_count := 1;
                         ELSE
-                            periods_count := 1; -- Default fallback
-                    END CASE;
-                    
-                    -- Ensure at least 1 period
-                    periods_count := GREATEST(1, periods_count);
+                            CASE NEW.recurring_frequency
+                                WHEN 'weekly' THEN periods_count := GREATEST(1, CEIL(days_diff / 7.0));
+                                WHEN 'monthly' THEN periods_count := GREATEST(1, CEIL(days_diff / 30.44));
+                                WHEN 'quarterly' THEN periods_count := GREATEST(1, CEIL(days_diff / 91.31));
+                                WHEN 'yearly' THEN periods_count := GREATEST(1, CEIL(days_diff / 365.25));
+                                ELSE periods_count := 1;
+                            END CASE;
+                        END IF;
+                    ELSE
+                        -- Has end date: calculate total periods from start to end
+                        end_date_val := COALESCE(NEW.recurring_end_date, NEW.due_date);
+                        days_diff := end_date_val - start_date_val;
+                        IF days_diff <= 0 THEN
+                            periods_count := 1;
+                        ELSE
+                            CASE NEW.recurring_frequency
+                                WHEN 'weekly' THEN periods_count := CEIL(days_diff / 7.0);
+                                WHEN 'monthly' THEN periods_count := CEIL(days_diff / 30.44);
+                                WHEN 'quarterly' THEN periods_count := CEIL(days_diff / 91.31);
+                                WHEN 'yearly' THEN periods_count := CEIL(days_diff / 365.25);
+                                ELSE periods_count := 1;
+                            END CASE;
+                        END IF;
+                    END IF;
                     
                     calculated_budget := NEW.recurring_amount * periods_count;
                     NEW.total_budget := calculated_budget;
                 END IF;
                 
             WHEN 'hourly' THEN
-                -- Sync hours first - prioritize actual_hours, fall back to estimated_hours
+                -- FIXED: Sync hours first - prioritize actual_hours, fall back to estimated_hours
                 IF NEW.actual_hours IS NOT NULL AND NEW.actual_hours > 0 THEN
                     NEW.total_hours_logged := NEW.actual_hours;
                 ELSIF NEW.estimated_hours IS NOT NULL AND NEW.estimated_hours > 0 THEN
@@ -148,7 +149,7 @@ BEGIN
         RAISE EXCEPTION 'Manual budget changes are not allowed for % projects. Budget is calculated automatically.', NEW.project_type;
     END IF;
     
-    -- Step 4: ALWAYS calculate payment_pending correctly (this is the most critical part)
+    -- Step 4: ALWAYS calculate payment_pending correctly
     final_budget := COALESCE(NEW.total_budget, 0);
     final_received := COALESCE(NEW.payment_received, 0);
     final_pending := GREATEST(0, final_budget - final_received);
@@ -156,20 +157,16 @@ BEGIN
     -- Ensure we never have negative payment_pending
     NEW.payment_pending := final_pending;
     
-    -- Step 5: Debug logging for all scenarios
+    -- Step 5: Debug logging
     IF TG_OP = 'UPDATE' THEN
-        -- Due date changes
-        IF OLD.due_date IS DISTINCT FROM NEW.due_date THEN
-            RAISE NOTICE 'DUE DATE CHANGE: % project % due_date: % -> %', 
-                NEW.project_type, NEW.id, OLD.due_date, NEW.due_date;
+        -- Alert if payment_pending becomes 0 unexpectedly
+        IF final_pending = 0 AND final_budget > 0 AND final_received = 0 THEN
+            RAISE WARNING 'POTENTIAL ISSUE: Project % has budget % but payment_pending is 0', NEW.id, final_budget;
         END IF;
         
-        -- Payment changes
-        IF OLD.payment_received IS DISTINCT FROM NEW.payment_received THEN
-            RAISE NOTICE 'PAYMENT CHANGE: % project % payment_received: % -> %, payment_pending: % -> %', 
-                NEW.project_type, NEW.id, 
-                COALESCE(OLD.payment_received, 0), COALESCE(NEW.payment_received, 0),
-                COALESCE(OLD.payment_pending, 0), NEW.payment_pending;
+        -- Alert if payment_pending is negative (should never happen)
+        IF final_pending < 0 THEN
+            RAISE WARNING 'CRITICAL ISSUE: Project % has negative payment_pending: %', NEW.id, final_pending;
         END IF;
     END IF;
     
@@ -182,30 +179,34 @@ EXCEPTION
 END;
 $$ LANGUAGE plpgsql;
 
--- Step 3: Create ONE trigger to rule them all
-DROP TRIGGER IF EXISTS master_project_calculation_trigger ON projects;
+-- Create the trigger
 CREATE TRIGGER master_project_calculation_trigger
     BEFORE INSERT OR UPDATE ON projects
     FOR EACH ROW
     EXECUTE FUNCTION master_project_calculation();
 
--- Step 4: Add comments explaining the behavior
-COMMENT ON FUNCTION master_project_calculation() IS 'Master function that handles all project calculations while allowing manual budget updates for Fixed projects';
-COMMENT ON TRIGGER master_project_calculation_trigger ON projects IS 'Handles auto-calculation for recurring/hourly projects while preserving manual budget changes for Fixed projects';
+-- Add comments explaining the behavior
+COMMENT ON FUNCTION master_project_calculation() IS 'Master function that handles all project calculations with FIXED hourly hours syncing logic. Allows manual budget updates for Fixed projects while preventing them for hourly/recurring projects.';
+COMMENT ON TRIGGER master_project_calculation_trigger ON projects IS 'Handles auto-calculation for recurring/hourly projects with proper hours syncing, while preserving manual budget changes for Fixed projects';
 
--- Step 5: Test the fix with a sample update (commented out for production)
--- Update this to test with your actual Fixed project ID
-/*
--- Test manual budget update on a Fixed project
+-- Fix any existing hourly projects that may have 0 budget due to the bug
 UPDATE projects 
-SET total_budget = 5000 
-WHERE project_type = 'fixed' 
-AND id = 'your-fixed-project-id-here'
-LIMIT 1;
+SET updated_at = NOW()
+WHERE project_type = 'hourly' 
+  AND auto_calculate_total = true 
+  AND total_budget = 0 
+  AND hourly_rate_new > 0 
+  AND (actual_hours > 0 OR estimated_hours > 0);
 
--- Verify the change went through
-SELECT id, name, project_type, total_budget, payment_pending 
-FROM projects 
-WHERE project_type = 'fixed' 
-AND id = 'your-fixed-project-id-here';
-*/
+-- Log the results
+DO $$
+DECLARE
+    fixed_count INTEGER;
+BEGIN
+    GET DIAGNOSTICS fixed_count = ROW_COUNT;
+    RAISE NOTICE '=== HOURLY PROJECT CALCULATION FIX COMPLETE ===';
+    RAISE NOTICE 'Fixed % hourly projects with zero budget', fixed_count;
+    RAISE NOTICE 'Hourly projects will now properly sync hours and calculate budget';
+    RAISE NOTICE 'Logic: actual_hours > 0 ? use actual_hours : use estimated_hours';
+    RAISE NOTICE 'Budget = hourly_rate_new * total_hours_logged';
+END $$;
