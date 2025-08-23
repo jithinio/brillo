@@ -29,19 +29,19 @@ export function ClientMetrics({ metrics }: ClientMetricsProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-0 w-full">
       <div className="px-6 py-4 border-r border-border last:border-r-0">
-        <div className="text-lg font-medium text-black dark:text-white">{metrics.totalClients}</div>
+        <div className="text-lg font-medium text-foreground">{metrics.totalClients}</div>
         <h3 className="text-xs font-medium text-muted-foreground mt-1">Total Clients</h3>
       </div>
       <div className="px-6 py-4 border-r border-border last:border-r-0">
-        <div className="text-lg font-medium text-black dark:text-white">{metrics.activeClients}</div>
+        <div className="text-lg font-medium text-foreground">{metrics.activeClients}</div>
         <h3 className="text-xs font-medium text-muted-foreground mt-1">Active Clients</h3>
       </div>
       <div className="px-6 py-4 border-r border-border last:border-r-0">
-        <div className="text-lg font-medium text-black dark:text-white">{metrics.totalProjects}</div>
+        <div className="text-lg font-medium text-foreground">{metrics.totalProjects}</div>
         <h3 className="text-xs font-medium text-muted-foreground mt-1">Total Projects</h3>
       </div>
       <div className="px-6 py-4 border-r border-border last:border-r-0">
-        <div className="text-lg font-medium text-black dark:text-white">{formatCurrencyAbbreviated(metrics.totalRevenue)}</div>
+        <div className="text-lg font-medium text-foreground">{formatCurrencyAbbreviated(metrics.totalRevenue)}</div>
         <h3 className="text-xs font-medium text-muted-foreground mt-1">Total Revenue</h3>
       </div>
     </div>

@@ -144,15 +144,15 @@
 
 .dark {
   --background: oklch(0.2071 0.0042 128.6869);
-  --foreground: oklch(0.9868 0.0028 128.4921);
+  --foreground: oklch(0.8577 0.0071 124.4644);
   --card: oklch(0.2071 0.0042 128.6869);
-  --card-foreground: oklch(0.9868 0.0028 128.4921);
+  --card-foreground: oklch(0.8577 0.0071 124.4644);
   --popover: oklch(0.2419 0.0082 169.6131);
   --popover-foreground: oklch(0.9868 0.0028 128.4921);
   --primary: oklch(0.8305 0.1687 134.5390);
   --primary-foreground: oklch(0.1617 0.0044 128.7697);
   --secondary: oklch(0.2419 0.0082 169.6131);
-  --secondary-foreground: oklch(0.9418 0.0029 128.4940);
+  --secondary-foreground: oklch(0.7430 0.0030 128.5058);
   --muted: oklch(0.2829 0.0056 121.8103);
   --muted-foreground: oklch(0.6246 0.0113 131.4246);
   --accent: oklch(0.2826 0.0101 151.4572);
