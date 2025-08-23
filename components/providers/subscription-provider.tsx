@@ -105,10 +105,22 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
       setError(null)
     }
 
+    const handleSubscriptionCacheClear = (event: CustomEvent) => {
+      console.log('🔄 Subscription Provider: Manual cache clear requested', event.detail)
+      
+      if (user?.id) {
+        SubscriptionCache.clear(user.id)
+        // Force reload subscription data
+        loadSubscriptionData(true)
+      }
+    }
+
     window.addEventListener('auth-logout', handleLogout)
+    window.addEventListener('subscription-cache-clear', handleSubscriptionCacheClear as EventListener)
     
     return () => {
       window.removeEventListener('auth-logout', handleLogout)
+      window.removeEventListener('subscription-cache-clear', handleSubscriptionCacheClear as EventListener)
     }
   }, [user?.id])
 
@@ -230,12 +242,8 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
       setIsLoading(false) // Set loading false immediately for cached data
       setHasCheckedInitialCache(true)
       
-      // Update usage in background - skip entirely for pro users
-      if (!isProPlan(cached.planId)) {
-        setTimeout(() => updateUsageLimits(cached.planId), 100)
-      } else {
-        console.log('⚡ Skipping background usage update for cached pro user')
-      }
+      // Update usage in background - always update to ensure correct limits
+      setTimeout(() => updateUsageLimits(cached.planId), 100)
       return true
     }
     
@@ -408,12 +416,8 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
         
         console.log(`✅ Subscription loaded: ${isProPlan(subscriptionData.planId) ? 'Pro' : 'Free'} user (conditional rendering)`)
 
-        // Only update usage for non-pro plans to save API calls
-        if (!isProPlan(subscriptionData.planId)) {
-          await updateUsageLimits(subscriptionData.planId)
-        } else {
-          console.log('⚡ Skipping usage calculation for pro user during initial load')
-        }
+        // Always update usage limits - Pro users need unlimited limits set
+        await updateUsageLimits(subscriptionData.planId)
         setError(null)
         endTiming('subscription_load', true)
         setIsLoading(false)
@@ -463,7 +467,6 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     if (!user) return
     
     const plan = getPlan(planId)
-    
     // 🚀 PERFORMANCE OPTIMIZATION: Skip API calls for pro users entirely
     // Pro users have unlimited access, so we don't need to calculate actual usage
     if (isProPlan(planId)) {
@@ -471,17 +474,17 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
       const unlimitedUsage = {
         projects: { 
           current: 0, // We don't track actual usage for unlimited plans
-          limit: plan.limits.projects, 
+          limit: 'unlimited' as const, // Always unlimited for Pro users
           canCreate: true // Always true for unlimited
         },
         clients: { 
           current: 0, // We don't track actual usage for unlimited plans
-          limit: plan.limits.clients, 
+          limit: 'unlimited' as const, // Always unlimited for Pro users
           canCreate: true // Always true for unlimited
         },
         invoices: { 
           current: 0, // We don't track actual usage for unlimited plans
-          limit: plan.limits.invoices, 
+          limit: 'unlimited' as const, // Always unlimited for Pro users
           canCreate: true // Always true for unlimited
         }
       }

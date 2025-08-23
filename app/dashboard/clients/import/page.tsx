@@ -61,7 +61,7 @@ export default function ClientImportPage() {
   const [importResults, setImportResults] = useState<{ success: number; errors: number; total: number }>({ success: 0, errors: 0, total: 0 })
   const [errors, setErrors] = useState<string[]>([])
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
 
