@@ -3,26 +3,63 @@ import type { PipelineClient, PipelineStage, PipelineMetrics } from './types/pip
 
 export async function fetchPipelineStages(): Promise<PipelineStage[]> {
   try {
-    const { data, error } = await supabase
-      .from('pipeline_stages')
-      .select('*')
-      .order('order_index', { ascending: true })
+    // Always return simplified stages for all users
+    console.log('🎯 Returning simplified pipeline stages for all users')
+    const simplifiedStages = await getSimplifiedPipelineStages()
+    return simplifiedStages
+  } catch (error) {
+    console.error('Error fetching pipeline stages:', error)
+    return []
+  }
+}
 
-    if (error) {
-      console.error('Error fetching pipeline stages:', error)
+async function getSimplifiedPipelineStages(): Promise<PipelineStage[]> {
+  try {
+    // Get current user
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    
+    if (userError || !user) {
+      console.error('Error getting user for pipeline stages:', userError)
       return []
     }
 
-    // If no stages found, initialize default stages for new user
-    if (!data || data.length === 0) {
-      console.log('No pipeline stages found, initializing defaults')
-      const defaultStages = await initializeDefaultPipelineStages()
-      return defaultStages
-    }
+    // Return hardcoded simplified stages - no database dependency
+    const simplifiedStages: PipelineStage[] = [
+      {
+        id: `${user.id}-lead`,
+        user_id: user.id,
+        name: 'Lead',
+        order_index: 1,
+        color: '#3b82f6', // Blue
+        default_probability: 10,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      {
+        id: `${user.id}-pitched`,
+        user_id: user.id,
+        name: 'Pitched',
+        order_index: 2,
+        color: '#8b5cf6', // Purple
+        default_probability: 40,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      {
+        id: `${user.id}-discussion`,
+        user_id: user.id,
+        name: 'In Discussion',
+        order_index: 3,
+        color: '#f59e0b', // Amber
+        default_probability: 70,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+    ]
 
-    return data || []
+    return simplifiedStages
   } catch (error) {
-    console.error('Error fetching pipeline stages:', error)
+    console.error('Error getting simplified pipeline stages:', error)
     return []
   }
 }
@@ -48,24 +85,17 @@ async function initializeDefaultPipelineStages(): Promise<PipelineStage[]> {
       },
       {
         user_id: user.id,
-        name: 'Qualified',
+        name: 'Pitched',
         order_index: 2,
         color: '#8b5cf6', // Purple
-        default_probability: 25
+        default_probability: 40
       },
       {
         user_id: user.id,
-        name: 'Proposal',
+        name: 'In Discussion',
         order_index: 3,
         color: '#f59e0b', // Amber
-        default_probability: 50
-      },
-      {
-        user_id: user.id,
-        name: 'Negotiation',
-        order_index: 4,
-        color: '#10b981', // Emerald
-        default_probability: 75
+        default_probability: 70
       }
     ]
 
@@ -221,9 +251,9 @@ export async function createPipelineClient(clientData: Partial<PipelineClient>):
 }
 
 export function calculatePipelineMetrics(clients: PipelineClient[], stages: PipelineStage[]): PipelineMetrics {
-  const leadCount = clients.filter(c => c.pipeline_stage === 'lead').length
-  const pitchedCount = clients.filter(c => c.pipeline_stage === 'pitched').length
-  const discussionCount = clients.filter(c => c.pipeline_stage === 'in discussion').length
+  const leadCount = clients.filter(c => c.pipeline_stage?.toLowerCase() === 'lead').length
+  const pitchedCount = clients.filter(c => c.pipeline_stage?.toLowerCase() === 'pitched').length
+  const discussionCount = clients.filter(c => c.pipeline_stage?.toLowerCase() === 'in discussion').length
   
   // Calculate total potential value
   const totalValue = clients.reduce((sum, client) => {

@@ -532,7 +532,7 @@ export function SubscriptionManagement() {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="flex items-center gap-2">
-                  <Calendar className="w-5 h-5" />
+                  <HugeiconsIcon icon={Calendar01Icon} className="w-5 h-5" />
                   Usage Overview
                 </CardTitle>
                 <CardDescription>Current usage against your plan limits</CardDescription>

@@ -283,9 +283,9 @@ const updateProjectStatus = async ({ id, status }: { id: string; status: string 
   
   // If moving to pipeline, set default pipeline fields
   if (status === 'pipeline') {
-    updateData.pipeline_stage = 'lead'
+    updateData.pipeline_stage = 'Lead'
     updateData.deal_probability = 10
-    console.log('✅ Setting pipeline_stage to "lead" and deal_probability to 10')
+    console.log('✅ Setting pipeline_stage to "Lead" and deal_probability to 10')
   } else {
     // If moving away from pipeline, clear pipeline fields
     updateData.pipeline_stage = null
@@ -357,14 +357,15 @@ async function fetchDatabaseMetrics(): Promise<{
 
     if (error) throw error
 
-    // Filter out lost projects from all metrics (lost projects have status=null or pipeline_stage='lost')
+    // Filter out lost projects and pipeline projects from all metrics 
+    // (lost projects have status=null or pipeline_stage='lost', pipeline projects are potential work not confirmed)
     const validProjects = projects?.filter(p => 
-      p.status !== null && (p as any).pipeline_stage !== 'lost'
+      p.status !== null && (p as any).pipeline_stage !== 'lost' && p.status !== 'pipeline'
     ) || []
 
     const totalProjects = validProjects.length
     const activeProjects = validProjects.filter(p => p.status === 'active').length
-    const pipelineProjects = validProjects.filter(p => p.status === 'pipeline').length
+    const pipelineProjects = projects?.filter(p => p.status === 'pipeline').length || 0 // Keep separate count for reference
     const completedProjects = validProjects.filter(p => p.status === 'completed').length
     const onHoldProjects = validProjects.filter(p => p.status === 'on_hold').length
     const cancelledProjects = validProjects.filter(p => p.status === 'cancelled').length
@@ -473,22 +474,25 @@ async function fetchFilteredMetrics(filters: ProjectFilters = {}): Promise<{
 
     if (error) throw error
 
-    const totalProjects = projects?.length || 0
-    const activeProjects = projects?.filter(p => p.status === 'active').length || 0
-    const pipelineProjects = projects?.filter(p => p.status === 'pipeline').length || 0
-    const completedProjects = projects?.filter(p => p.status === 'completed').length || 0
-    const onHoldProjects = projects?.filter(p => p.status === 'on_hold').length || 0
-    const cancelledProjects = projects?.filter(p => p.status === 'cancelled').length || 0
-    const dueProjects = projects?.filter(p => p.status === 'due').length || 0
+    // Filter out pipeline projects from metrics calculations (pipeline projects are potential work not confirmed)
+    const validProjects = projects?.filter(p => p.status !== 'pipeline') || []
+
+    const totalProjects = validProjects.length
+    const activeProjects = validProjects.filter(p => p.status === 'active').length
+    const pipelineProjects = projects?.filter(p => p.status === 'pipeline').length || 0 // Keep separate count for reference
+    const completedProjects = validProjects.filter(p => p.status === 'completed').length
+    const onHoldProjects = validProjects.filter(p => p.status === 'on_hold').length
+    const cancelledProjects = validProjects.filter(p => p.status === 'cancelled').length
+    const dueProjects = validProjects.filter(p => p.status === 'due').length
     
-    const totalBudget = projects?.reduce((sum, p) => sum + (p.budget || p.total_budget || 0), 0) || 0
-    const totalExpenses = projects?.reduce((sum, p) => sum + (p.expenses || 0), 0) || 0
-    const totalReceived = projects?.reduce((sum, p) => sum + (p.payment_received || 0), 0) || 0
-    const totalPending = projects?.reduce((sum, p) => {
+    const totalBudget = validProjects.reduce((sum, p) => sum + (p.budget || p.total_budget || 0), 0)
+    const totalExpenses = validProjects.reduce((sum, p) => sum + (p.expenses || 0), 0)
+    const totalReceived = validProjects.reduce((sum, p) => sum + (p.payment_received || 0), 0)
+    const totalPending = validProjects.reduce((sum, p) => {
       const budget = p.budget || p.total_budget || 0
       const received = p.payment_received || 0
       return sum + Math.max(0, budget - received)
-    }, 0) || 0
+    }, 0)
 
     return {
       totalProjects,

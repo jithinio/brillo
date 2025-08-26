@@ -4,26 +4,181 @@ import { formatDateForDatabase } from './date-format'
 
 export async function fetchPipelineStages(): Promise<PipelineStage[]> {
   try {
-    const { data, error } = await supabase
-      .from('pipeline_stages')
-      .select('*')
-      .order('order_index', { ascending: true })
+    // Always return simplified stages for all users
+    console.log('🎯 Returning simplified pipeline stages for all users')
+    const simplifiedStages = await getSimplifiedPipelineStages()
+    return simplifiedStages
+  } catch (error) {
+    console.error('Error fetching pipeline stages:', error)
+    return []
+  }
+}
 
-    if (error) {
-      console.error('Error fetching pipeline stages:', error)
+async function getSimplifiedPipelineStages(): Promise<PipelineStage[]> {
+  try {
+    // Get current user
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    
+    if (userError || !user) {
+      console.error('Error getting user for pipeline stages:', userError)
       return []
     }
 
-    // If no stages found, initialize default stages for new user
-    if (!data || data.length === 0) {
-      console.log('No pipeline stages found, initializing defaults')
-      const defaultStages = await initializeDefaultPipelineStages()
-      return defaultStages
+    // Return hardcoded simplified stages - no database dependency
+    const simplifiedStages: PipelineStage[] = [
+      {
+        id: `${user.id}-lead`,
+        user_id: user.id,
+        name: 'Lead',
+        order_index: 1,
+        color: '#3b82f6', // Blue
+        default_probability: 10,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      {
+        id: `${user.id}-pitched`,
+        user_id: user.id,
+        name: 'Pitched',
+        order_index: 2,
+        color: '#8b5cf6', // Purple
+        default_probability: 40,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      {
+        id: `${user.id}-discussion`,
+        user_id: user.id,
+        name: 'In Discussion',
+        order_index: 3,
+        color: '#f59e0b', // Amber
+        default_probability: 70,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+    ]
+
+    return simplifiedStages
+  } catch (error) {
+    console.error('Error getting simplified pipeline stages:', error)
+    return []
+  }
+}
+
+export async function resetPipelineStages(): Promise<PipelineStage[]> {
+  try {
+    // Get current user
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    
+    if (userError || !user) {
+      console.error('Error getting user for pipeline reset:', userError)
+      return []
     }
 
-    return data || []
+    console.log('🔄 Starting pipeline stage reset for user:', user.id)
+
+    // First, get existing projects and map them to new stages
+    const { data: existingProjects, error: projectsError } = await supabase
+      .from('projects')
+      .select('id, pipeline_stage')
+      .eq('status', 'pipeline')
+      .not('pipeline_stage', 'is', null)
+
+    if (projectsError) {
+      console.error('Error fetching existing projects:', projectsError)
+    }
+
+    // Create stage mapping for existing projects
+    const stageMapping: { [key: string]: string } = {
+      'lead': 'Lead',
+      'qualified': 'Pitched', 
+      'proposal': 'In Discussion',
+      'negotiation': 'In Discussion',
+      'pitched': 'Pitched',
+      'in discussion': 'In Discussion'
+    }
+
+    // Update existing projects to use new stage names
+    if (existingProjects && existingProjects.length > 0) {
+      console.log(`📝 Updating ${existingProjects.length} existing pipeline projects`)
+      
+      for (const project of existingProjects) {
+        if (project.pipeline_stage) {
+          const oldStage = project.pipeline_stage.toLowerCase()
+          const newStage = stageMapping[oldStage] || 'Lead' // Default to Lead if not mapped
+          
+          if (newStage !== project.pipeline_stage) {
+            const { error: updateError } = await supabase
+              .from('projects')
+              .update({ 
+                pipeline_stage: newStage,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', project.id)
+
+            if (updateError) {
+              console.error(`Error updating project ${project.id}:`, updateError)
+            } else {
+              console.log(`✅ Updated project ${project.id}: ${project.pipeline_stage} → ${newStage}`)
+            }
+          }
+        }
+      }
+    }
+
+    // Delete existing pipeline stages
+    const { error: deleteError } = await supabase
+      .from('pipeline_stages')
+      .delete()
+      .eq('user_id', user.id)
+
+    if (deleteError) {
+      console.error('Error deleting existing pipeline stages:', deleteError)
+      throw deleteError
+    }
+
+    console.log('🗑️ Deleted existing pipeline stages')
+
+    // Create new simplified stages
+    const newStages = [
+      {
+        user_id: user.id,
+        name: 'Lead',
+        order_index: 1,
+        color: '#3b82f6', // Blue
+        default_probability: 10
+      },
+      {
+        user_id: user.id,
+        name: 'Pitched',
+        order_index: 2,
+        color: '#8b5cf6', // Purple
+        default_probability: 40
+      },
+      {
+        user_id: user.id,
+        name: 'In Discussion',
+        order_index: 3,
+        color: '#f59e0b', // Amber
+        default_probability: 70
+      }
+    ]
+
+    const { data: createdStages, error: createError } = await supabase
+      .from('pipeline_stages')
+      .insert(newStages)
+      .select('*')
+      .order('order_index', { ascending: true })
+
+    if (createError) {
+      console.error('Error creating new pipeline stages:', createError)
+      throw createError
+    }
+
+    console.log('✅ Created new simplified pipeline stages:', createdStages?.length)
+    return createdStages || []
   } catch (error) {
-    console.error('Error fetching pipeline stages:', error)
+    console.error('Error resetting pipeline stages:', error)
     return []
   }
 }
@@ -49,24 +204,17 @@ async function initializeDefaultPipelineStages(): Promise<PipelineStage[]> {
       },
       {
         user_id: user.id,
-        name: 'Qualified',
+        name: 'Pitched',
         order_index: 2,
         color: '#8b5cf6', // Purple
-        default_probability: 25
+        default_probability: 40
       },
       {
         user_id: user.id,
-        name: 'Proposal',
+        name: 'In Discussion',
         order_index: 3,
         color: '#f59e0b', // Amber
-        default_probability: 50
-      },
-      {
-        user_id: user.id,
-        name: 'Negotiation',
-        order_index: 4,
-        color: '#10b981', // Emerald
-        default_probability: 75
+        default_probability: 70
       }
     ]
 
@@ -357,9 +505,9 @@ export async function createPipelineProject(projectData: Partial<PipelineProject
 // Note: Lost stage is now created via SQL script instead of programmatically
 
 export async function calculateProjectPipelineMetrics(projects: PipelineProject[], stages: PipelineStage[]): Promise<PipelineMetrics> {
-  const leadCount = projects.filter(p => p.pipeline_stage === 'lead').length
-  const pitchedCount = projects.filter(p => p.pipeline_stage === 'pitched').length
-  const discussionCount = projects.filter(p => p.pipeline_stage === 'in discussion').length
+  const leadCount = projects.filter(p => p.pipeline_stage?.toLowerCase() === 'lead').length
+  const pitchedCount = projects.filter(p => p.pipeline_stage?.toLowerCase() === 'pitched').length
+  const discussionCount = projects.filter(p => p.pipeline_stage?.toLowerCase() === 'in discussion').length
   
   // Calculate total potential value (total_budget)
   const totalValue = projects.reduce((sum, project) => {

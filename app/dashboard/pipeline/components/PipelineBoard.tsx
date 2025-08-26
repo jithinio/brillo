@@ -200,15 +200,15 @@ function LostClientCard({ project, onRestore, onEdit, onDelete, onProjectUpdate,
                     Edit Project
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => handleRestore('lead')}>
+                  <DropdownMenuItem onClick={() => handleRestore('Lead')}>
                     <HugeiconsIcon icon={RotateLeftIcon} className="mr-2 h-4 w-4"  />
                     Restore to Lead
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleRestore('pitched')}>
+                  <DropdownMenuItem onClick={() => handleRestore('Pitched')}>
                     <HugeiconsIcon icon={RotateLeftIcon} className="mr-2 h-4 w-4"  />
                     Restore to Pitched
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleRestore('in discussion')}>
+                  <DropdownMenuItem onClick={() => handleRestore('In Discussion')}>
                     <HugeiconsIcon icon={RotateLeftIcon} className="mr-2 h-4 w-4"  />
                     Restore to Discussion
                   </DropdownMenuItem>

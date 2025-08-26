@@ -51,16 +51,20 @@ const data = {
       icon: ProjectsIcon,
       items: [
         {
+          title: "All Projects",
+          url: "/dashboard/projects",
+        },
+        {
           title: "Active",
           url: "/dashboard/projects/active",
         },
         {
-          title: "Due",
-          url: "/dashboard/projects/due",
-        },
-        {
           title: "Completed",
           url: "/dashboard/projects/completed",
+        },
+        {
+          title: "Due",
+          url: "/dashboard/projects/due",
         },
         {
           title: "On Hold",
@@ -69,10 +73,6 @@ const data = {
         {
           title: "Cancelled",
           url: "/dashboard/projects/cancelled",
-        },
-        {
-          title: "All Projects",
-          url: "/dashboard/projects",
         },
       ],
     },
