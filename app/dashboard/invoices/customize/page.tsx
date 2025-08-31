@@ -200,7 +200,7 @@ export default function CustomizeInvoicePage() {
       phone: settings.companyPhone || companyInfo.phone,
       address: settings.companyAddress || companyInfo.address,
       website: settings.companyWebsite || companyInfo.website,
-      taxId: settings.companyRegistration || settings.taxId || companyInfo.taxId,
+      taxId: settings.taxId || settings.companyRegistration || companyInfo.taxId,
       taxName: settings.taxName || companyInfo.taxName,
       taxDocumentName: settings.taxDocumentName || companyInfo.taxDocumentName || 'SSN',
       taxDocumentNumber: settings.taxDocumentNumber || companyInfo.taxDocumentNumber || '123-45-6789',
@@ -217,7 +217,7 @@ export default function CustomizeInvoicePage() {
         updatedCompanyInfo.phone = parsed.companyPhone || updatedCompanyInfo.phone
         updatedCompanyInfo.address = parsed.companyAddress || updatedCompanyInfo.address
         updatedCompanyInfo.website = parsed.companyWebsite || updatedCompanyInfo.website
-        updatedCompanyInfo.taxId = parsed.companyRegistration || updatedCompanyInfo.taxId
+        updatedCompanyInfo.taxId = parsed.companyTaxId || settings.taxId || updatedCompanyInfo.taxId
 
         // Load tax info from localStorage too
         const savedTaxInfo = localStorage.getItem('tax-info')
