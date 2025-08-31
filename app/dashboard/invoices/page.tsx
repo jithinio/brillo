@@ -95,7 +95,10 @@ export default function InvoicesPage() {
         issueDate: invoice.issue_date,
         dueDate: invoice.due_date,
         notes: invoice.notes,
+        invoiceDescription: invoice.invoice_description,
+        taxSummary: invoice.tax_summary,
         paymentTerms: invoice.terms,
+        quantityLabel: invoice.quantity_label,
         items: invoice.items || [],
         projectName: invoice.projects?.name
       }

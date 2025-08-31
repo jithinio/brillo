@@ -25,12 +25,18 @@ interface AppSettings {
   taxId: string
   taxJurisdiction: string
   taxAddress: string
+  taxDocumentName: string
+  taxDocumentNumber: string
   includeTaxInPrices: boolean
   autoCalculateTax: boolean
   invoicePrefix: string
   dateFormat: DateFormat
   invoiceTemplate?: any
   defaultInvoiceNotes: string
+  defaultInvoiceDescription: string
+  defaultTaxSummary: string
+  authorizedSignature: string
+  quantityLabel: string
 }
 
 interface SettingsContextType {
@@ -55,11 +61,17 @@ const defaultSettings: AppSettings = {
   taxId: "",
   taxJurisdiction: "",
   taxAddress: "",
+  taxDocumentName: "",
+  taxDocumentNumber: "",
   includeTaxInPrices: false,
   autoCalculateTax: true,
   invoicePrefix: "INV",
   dateFormat: "MM/DD/YYYY",
   defaultInvoiceNotes: "",
+  defaultInvoiceDescription: "",
+  defaultTaxSummary: "",
+  authorizedSignature: "",
+  quantityLabel: "Qty",
 }
 
 const SettingsContext = createContext<SettingsContextType>({
@@ -171,11 +183,17 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             taxId: dbSettings.tax_id || loadedSettings.taxId,
             taxJurisdiction: dbSettings.tax_jurisdiction || loadedSettings.taxJurisdiction,
             taxAddress: dbSettings.tax_address || loadedSettings.taxAddress,
+            taxDocumentName: dbSettings.tax_document_name || loadedSettings.taxDocumentName,
+            taxDocumentNumber: dbSettings.tax_document_number || loadedSettings.taxDocumentNumber,
             includeTaxInPrices: dbSettings.include_tax_in_prices || loadedSettings.includeTaxInPrices,
             autoCalculateTax: dbSettings.auto_calculate_tax || loadedSettings.autoCalculateTax,
             invoicePrefix: dbSettings.invoice_prefix || loadedSettings.invoicePrefix,
             invoiceTemplate: dbSettings.invoice_template || loadedSettings.invoiceTemplate,
             defaultInvoiceNotes: dbSettings.default_invoice_notes || loadedSettings.defaultInvoiceNotes,
+            defaultInvoiceDescription: dbSettings.default_invoice_description || loadedSettings.defaultInvoiceDescription,
+            defaultTaxSummary: dbSettings.default_tax_summary || loadedSettings.defaultTaxSummary,
+            authorizedSignature: dbSettings.authorized_signature || loadedSettings.authorizedSignature,
+            quantityLabel: dbSettings.quantity_label || loadedSettings.quantityLabel,
             dateFormat: (dbSettings.date_format as DateFormat) || loadedSettings.dateFormat, // Load date format from database
           }
           
@@ -230,11 +248,17 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                   taxId: dbSettings.tax_id || loadedSettings.taxId,
                   taxJurisdiction: dbSettings.tax_jurisdiction || loadedSettings.taxJurisdiction,
                   taxAddress: dbSettings.tax_address || loadedSettings.taxAddress,
+                  taxDocumentName: dbSettings.tax_document_name || loadedSettings.taxDocumentName,
+                  taxDocumentNumber: dbSettings.tax_document_number || loadedSettings.taxDocumentNumber,
                   includeTaxInPrices: dbSettings.include_tax_in_prices || loadedSettings.includeTaxInPrices,
                   autoCalculateTax: dbSettings.auto_calculate_tax || loadedSettings.autoCalculateTax,
                   invoicePrefix: dbSettings.invoice_prefix || loadedSettings.invoicePrefix,
                   invoiceTemplate: parsedLocalTemplate, // Use localStorage template
                   defaultInvoiceNotes: dbSettings.default_invoice_notes || loadedSettings.defaultInvoiceNotes,
+                  defaultInvoiceDescription: dbSettings.default_invoice_description || loadedSettings.defaultInvoiceDescription,
+                  defaultTaxSummary: dbSettings.default_tax_summary || loadedSettings.defaultTaxSummary,
+                  authorizedSignature: dbSettings.authorized_signature || loadedSettings.authorizedSignature,
+                  quantityLabel: dbSettings.quantity_label || loadedSettings.quantityLabel,
                   dateFormat: (dbSettings.date_format as DateFormat) || loadedSettings.dateFormat, // Sync date format
                 }
                 
@@ -373,6 +397,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         case 'taxAddress':
           dbSettingsUpdate.tax_address = value
           break
+        case 'taxDocumentName':
+          dbSettingsUpdate.tax_document_name = value
+          break
+        case 'taxDocumentNumber':
+          dbSettingsUpdate.tax_document_number = value
+          break
         case 'includeTaxInPrices':
           dbSettingsUpdate.include_tax_in_prices = value
           break
@@ -390,6 +420,18 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           break
         case 'defaultInvoiceNotes':
           dbSettingsUpdate.default_invoice_notes = value
+          break
+        case 'defaultInvoiceDescription':
+          dbSettingsUpdate.default_invoice_description = value
+          break
+        case 'defaultTaxSummary':
+          dbSettingsUpdate.default_tax_summary = value
+          break
+        case 'authorizedSignature':
+          dbSettingsUpdate.authorized_signature = value
+          break
+        case 'quantityLabel':
+          dbSettingsUpdate.quantity_label = value
           break
       }
       

@@ -104,6 +104,8 @@ export type Invoice = {
   issue_date: string
   due_date: string
   notes?: string
+  invoice_description?: string
+  tax_summary?: string
   terms?: string
   created_at: string
   updated_at?: string

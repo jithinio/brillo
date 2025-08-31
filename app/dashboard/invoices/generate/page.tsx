@@ -32,6 +32,7 @@ import { ClientAvatar } from "@/components/ui/client-avatar"
 import { CurrencySelector } from "@/components/ui/currency-selector"
 import { InvoicingGate } from "@/components/gates/pro-feature-gate"
 import { CurrencyConverterWidget } from "@/components/currency-converter-widget"
+import { useCustomQuantityLabels } from "@/hooks/use-custom-quantity-labels"
 
 
 interface InvoiceItem {
@@ -48,6 +49,7 @@ export default function GenerateInvoicePage() {
   const router = useRouter()
   const { settings, isLoading: settingsLoading, formatDate } = useSettings()
   const queryClient = useQueryClient()
+  const { customLabels } = useCustomQuantityLabels()
   
   // Check if we're in edit mode
   const [isEditMode, setIsEditMode] = useState(false)
@@ -60,8 +62,11 @@ export default function GenerateInvoicePage() {
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined)
   const [clientCurrency, setClientCurrency] = useState(settings.defaultCurrency || 'USD')
   const [notes, setNotes] = useState("")
+  const [invoiceDescription, setInvoiceDescription] = useState("")
+  const [taxSummary, setTaxSummary] = useState("")
   const [paymentTerms, setPaymentTerms] = useState("Net 30")
   const [items, setItems] = useState<InvoiceItem[]>([{ id: "1", item_name: "", item_description: "", quantity: 1, rate: 0 }])
+  const [quantityLabel, setQuantityLabel] = useState(settings.quantityLabel || "Qty")
   
   // Tax state
   const [taxEnabled, setTaxEnabled] = useState(settings.autoCalculateTax)
@@ -195,6 +200,22 @@ export default function GenerateInvoicePage() {
       setNotes(settings.defaultInvoiceNotes)
     }
   }, [settings.defaultInvoiceNotes, isEditMode, editInvoiceId, notes])
+
+  // Auto-populate default invoice description (only for truly new invoices)
+  useEffect(() => {
+    const hasEditData = sessionStorage.getItem('edit-invoice-data')
+    if (!isEditMode && !editInvoiceId && !hasEditData && !invoiceDescription && settings.defaultInvoiceDescription) {
+      setInvoiceDescription(settings.defaultInvoiceDescription)
+    }
+  }, [settings.defaultInvoiceDescription, isEditMode, editInvoiceId, invoiceDescription])
+
+  // Auto-populate default tax summary (only for truly new invoices)
+  useEffect(() => {
+    const hasEditData = sessionStorage.getItem('edit-invoice-data')
+    if (!isEditMode && !editInvoiceId && !hasEditData && !taxSummary && settings.defaultTaxSummary) {
+      setTaxSummary(settings.defaultTaxSummary)
+    }
+  }, [settings.defaultTaxSummary, isEditMode, editInvoiceId, taxSummary])
 
   // Load project or client data from sessionStorage when component mounts
   useEffect(() => {
@@ -424,9 +445,24 @@ export default function GenerateInvoicePage() {
           setNotes(editInfo.notes)
         }
         
+        // Set invoice description
+        if (editInfo.invoiceDescription) {
+          setInvoiceDescription(editInfo.invoiceDescription)
+        }
+        
+        // Set tax summary
+        if (editInfo.taxSummary) {
+          setTaxSummary(editInfo.taxSummary)
+        }
+        
         // Set payment terms
         if (editInfo.paymentTerms) {
           setPaymentTerms(editInfo.paymentTerms)
+        }
+        
+        // Set quantity label
+        if (editInfo.quantityLabel) {
+          setQuantityLabel(editInfo.quantityLabel)
         }
         
         // Set items
@@ -876,7 +912,10 @@ export default function GenerateInvoicePage() {
           issue_date: formatDateForDatabase(invoiceDate),
           due_date: formatDateForDatabase(dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
           notes: String(notes || '').substring(0, 1000), // Limit notes length
+          invoice_description: String(invoiceDescription || '').substring(0, 1000), // Limit description length
+          tax_summary: String(taxSummary || '').substring(0, 1000), // Limit tax summary length
           terms: String(paymentTerms || '').substring(0, 500), // Limit terms length
+          quantity_label: String(quantityLabel || 'Qty').substring(0, 50), // Limit quantity label length
           items: items.map(item => ({
             id: item.id,
             item_name: item.item_name,
@@ -1146,7 +1185,8 @@ export default function GenerateInvoicePage() {
         taxEnabled,
         taxRate: customTaxRate,
         taxName: settings.taxName,
-        invoiceNumber: finalInvoiceNumber
+        invoiceNumber: finalInvoiceNumber,
+        quantityLabel: quantityLabel
       }
 
       // Save invoice to database or add to session storage for demo
@@ -1212,7 +1252,10 @@ export default function GenerateInvoicePage() {
           issue_date: formatDateForDatabase(invoiceDate),
           due_date: formatDateForDatabase(dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
           notes: String(notes || '').substring(0, 1000), // Limit notes length
+          invoice_description: String(invoiceDescription || '').substring(0, 1000), // Limit description length
+          tax_summary: String(taxSummary || '').substring(0, 1000), // Limit tax summary length
           terms: String(paymentTerms || '').substring(0, 500), // Limit terms length
+          quantity_label: String(quantityLabel || 'Qty').substring(0, 50), // Limit quantity label length
           items: items.map(item => ({
             id: item.id,
             item_name: item.item_name,
@@ -1635,16 +1678,226 @@ export default function GenerateInvoicePage() {
         throw new Error(`PDF generation failed: ${errorData.details}`)
       }
 
-      // Download the PDF
-      const pdfBlob = await response.blob()
-      const url = window.URL.createObjectURL(pdfBlob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `invoice-${mockInvoice.invoice_number}.pdf`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
+      // Get the HTML response and convert to PDF on client side
+      const responseData = await response.json()
+      
+      if (!responseData.html) {
+        throw new Error('No HTML content received from server')
+      }
+      
+      // Create a temporary div to render the HTML
+      const tempDiv = document.createElement('div')
+      tempDiv.innerHTML = responseData.html
+      tempDiv.style.position = 'absolute'
+      tempDiv.style.left = '-9999px'
+      tempDiv.style.top = '0'
+      tempDiv.style.width = '210mm' // A4 width
+      document.body.appendChild(tempDiv)
+      
+      try {
+        // Dynamically import html2canvas-pro and jsPDF
+        const [html2canvas, { jsPDF }] = await Promise.all([
+          import('html2canvas-pro'),
+          import('jspdf')
+        ])
+
+        // Generate canvas from HTML
+        const canvas = await html2canvas.default(tempDiv, {
+          scale: 2, // Higher resolution
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: fullTemplate?.backgroundColor || '#FFFFFF',
+          width: tempDiv.scrollWidth,
+          height: tempDiv.scrollHeight,
+          scrollX: 0,
+          scrollY: 0,
+          // Optimize for invoice content
+          ignoreElements: (el) => {
+            // Skip elements that might add unwanted height
+            return el.classList.contains('print:hidden') || 
+                   el.hasAttribute('data-html2canvas-ignore')
+          },
+          // Ensure we capture tight bounds
+          letterRendering: true,
+          removeContainer: true
+        })
+        
+        console.log(`🖼️ Canvas capture: ${canvas.width}x${canvas.height}px from element ${tempDiv.scrollWidth}x${tempDiv.scrollHeight}px`)
+
+        // Create PDF
+        const pdf = new jsPDF({
+          orientation: 'portrait',
+          unit: 'mm',
+          format: 'a4',
+          compress: true,
+        })
+
+        // Calculate dimensions for A4
+        const imgWidth = 210 // A4 width in mm
+        const a4Height = 297 // Actual A4 height in mm
+        const singlePageLimit = a4Height + 10 // Allow 10mm over A4 for single page
+        const imgHeight = (canvas.height * imgWidth) / canvas.width
+        
+        console.log(`📏 PDF Dimensions: Canvas ${canvas.width}x${canvas.height}px → PDF ${imgWidth}x${imgHeight.toFixed(1)}mm`)
+        console.log(`📐 A4 height: ${a4Height}mm, single page limit: ${singlePageLimit}mm`)
+        console.log(`🔍 Fits on one page? ${imgHeight.toFixed(2)} <= ${singlePageLimit} = ${imgHeight <= singlePageLimit}`)
+        
+        // Check if content fits on one page (A4 height + small tolerance)
+        if (imgHeight <= singlePageLimit) {
+          // Single page - fits entirely
+          console.log(`✅ Single page PDF: Content fits within ${singlePageLimit}mm limit`)
+          pdf.addImage(
+            canvas.toDataURL('image/png', 1.0),
+            'PNG',
+            0,
+            0,
+            imgWidth,
+            imgHeight,
+            undefined,
+            'FAST'
+          )
+        } else {
+          // Multiple pages needed - split the content using canvas cropping
+          const imageData = canvas.toDataURL('image/png', 1.0)
+          const totalPages = Math.ceil(imgHeight / a4Height)
+          
+          console.log(`📄 PDF Pagination: Content height ${imgHeight.toFixed(1)}mm requires ${totalPages} pages`)
+          
+          // Use Promise to handle async image processing
+          await new Promise<void>((resolve, reject) => {
+            const img = new Image()
+            img.onload = () => {
+              try {
+                const sourceWidth = canvas.width
+                const sourceHeight = canvas.height
+                
+                // Calculate pixels per page based on original canvas dimensions
+                const pixelsPerPage = Math.ceil((sourceHeight * a4Height) / imgHeight)
+                
+                for (let pageIndex = 0; pageIndex < totalPages; pageIndex++) {
+                  if (pageIndex > 0) {
+                    pdf.addPage()
+                  }
+                  
+                  // Calculate the crop area for this page with proper bounds checking
+                  const cropY = Math.floor(pageIndex * pixelsPerPage)
+                  const remainingHeight = sourceHeight - cropY
+                  const cropHeight = Math.min(Math.ceil(pixelsPerPage), remainingHeight)
+                  
+                  // Validate dimensions to prevent corrupt canvas
+                  if (cropHeight <= 0 || cropY >= sourceHeight || sourceWidth <= 0) {
+                    console.warn(`Skipping page ${pageIndex + 1} due to invalid dimensions:`, {
+                      cropY, cropHeight, sourceWidth, sourceHeight
+                    })
+                    continue
+                  }
+                  
+                  // Create a temporary canvas for this page
+                  const pageCanvas = document.createElement('canvas')
+                  const pageCtx = pageCanvas.getContext('2d')
+                  
+                  if (!pageCtx) {
+                    throw new Error('Failed to get canvas 2D context')
+                  }
+                  
+                  // Set canvas dimensions with integer values
+                  pageCanvas.width = Math.floor(sourceWidth)
+                  pageCanvas.height = Math.floor(cropHeight)
+                  
+                  // Clear the canvas
+                  pageCtx.clearRect(0, 0, pageCanvas.width, pageCanvas.height)
+                  
+                  // Draw the cropped portion with validated dimensions
+                  pageCtx.drawImage(
+                    img,
+                    0, cropY, sourceWidth, cropHeight, // Source rectangle
+                    0, 0, pageCanvas.width, pageCanvas.height // Destination rectangle
+                  )
+                  
+                  // Calculate the actual height for this page in the PDF
+                  const pageHeightInPDF = (pageCanvas.height * imgWidth) / pageCanvas.width
+                  
+                  // Validate the canvas has valid content before converting to data URL
+                  const imageData = pageCtx.getImageData(0, 0, pageCanvas.width, pageCanvas.height)
+                  if (imageData.data.length === 0) {
+                    console.warn(`Skipping page ${pageIndex + 1} due to empty canvas`)
+                    continue
+                  }
+                  
+                  // Convert to data URL and validate
+                  const dataURL = pageCanvas.toDataURL('image/png', 1.0)
+                  if (!dataURL || dataURL === 'data:,') {
+                    console.warn(`Skipping page ${pageIndex + 1} due to invalid data URL`)
+                    continue
+                  }
+                  
+                  // Add the page to PDF
+                  pdf.addImage(
+                    dataURL,
+                    'PNG',
+                    0,
+                    0,
+                    imgWidth,
+                    pageHeightInPDF,
+                    undefined,
+                    'FAST'
+                  )
+                }
+                
+                resolve()
+              } catch (error) {
+                console.error('Error during canvas processing:', error)
+                // Fallback: create single page PDF if pagination fails
+                console.warn('📄 Falling back to single-page PDF due to pagination error')
+                try {
+                  pdf.addImage(
+                    canvas.toDataURL('image/png', 1.0),
+                    'PNG',
+                    0,
+                    0,
+                    imgWidth,
+                    imgHeight,
+                    undefined,
+                    'FAST'
+                  )
+                  resolve()
+                } catch (fallbackError) {
+                  reject(new Error(`PDF generation failed: ${fallbackError instanceof Error ? fallbackError.message : 'Unknown error'}`))
+                }
+              }
+            }
+            
+            img.onerror = () => {
+              console.error('Failed to load image for pagination, using fallback')
+              // Fallback: create single page PDF if image loading fails
+              try {
+                pdf.addImage(
+                  canvas.toDataURL('image/png', 1.0),
+                  'PNG',
+                  0,
+                  0,
+                  imgWidth,
+                  imgHeight,
+                  undefined,
+                  'FAST'
+                )
+                resolve()
+              } catch (fallbackError) {
+                reject(new Error(`PDF generation failed: ${fallbackError instanceof Error ? fallbackError.message : 'Unknown error'}`))
+              }
+            }
+            
+            img.src = imageData
+          })
+        }
+
+        // Save PDF
+        pdf.save(`invoice-${mockInvoice.invoice_number}.pdf`)
+        
+      } finally {
+        // Clean up the temporary div
+        document.body.removeChild(tempDiv)
+      }
       
       toast.success("Invoice PDF downloaded successfully")
     } catch (error) {
@@ -1954,6 +2207,8 @@ export default function GenerateInvoicePage() {
                 />
               </div>
 
+
+
               {/* Tax Settings */}
               <div className="border-t pt-4">
                 <div className="flex items-center justify-between">
@@ -2000,9 +2255,40 @@ export default function GenerateInvoicePage() {
                   <CardTitle className="text-xl font-medium">Invoice Items</CardTitle>
                   <CardDescription>Add services or products to this invoice.</CardDescription>
                 </div>
-                <Button onClick={addItem} variant="secondary" size="sm">
-                  <HugeiconsIcon icon={PlusSignIcon} className="h-4 w-4"  />
-                </Button>
+                <div className="flex items-center gap-3">
+                  {/* Quantity Label Selector */}
+                  <div className="flex items-center gap-2">
+                    <Label className="text-sm text-muted-foreground whitespace-nowrap">Quantity Label:</Label>
+                    <Select value={quantityLabel} onValueChange={setQuantityLabel}>
+                      <SelectTrigger className="w-24 h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {/* Default presets */}
+                        <SelectItem value="Qty">Qty</SelectItem>
+                        <SelectItem value="Hours">Hours</SelectItem>
+                        <SelectItem value="Days">Days</SelectItem>
+                        <SelectItem value="Units">Units</SelectItem>
+                        <SelectItem value="Sessions">Sessions</SelectItem>
+                        <SelectItem value="Items">Items</SelectItem>
+                        
+                        {/* User's custom labels */}
+                        {customLabels.length > 0 && (
+                          <>
+                            {customLabels.map((label) => (
+                              <SelectItem key={label.id} value={label.label}>
+                                {label.label}
+                              </SelectItem>
+                            ))}
+                          </>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button onClick={addItem} variant="secondary" size="sm">
+                    <HugeiconsIcon icon={PlusSignIcon} className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="pt-6">
@@ -2021,7 +2307,7 @@ export default function GenerateInvoicePage() {
                         />
                       </div>
                       <div className="col-span-2">
-                        <Label htmlFor={`quantity-${item.id}`} className="font-normal text-secondary-foreground mb-2 block">Qty</Label>
+                        <Label htmlFor={`quantity-${item.id}`} className="font-normal text-secondary-foreground mb-2 block">{quantityLabel}</Label>
                         <Input
                           id={`quantity-${item.id}`}
                           type="number"
@@ -2135,6 +2421,20 @@ export default function GenerateInvoicePage() {
             <CardContent>
               <div className="space-y-4">
                 <div className="space-y-2">
+                  <Label htmlFor="invoiceDescription" className="font-normal text-secondary-foreground mb-2 block">Invoice Description</Label>
+                  <Textarea
+                    id="invoiceDescription"
+                    value={invoiceDescription}
+                    onChange={(e) => setInvoiceDescription(e.target.value)}
+                    placeholder="Enter description for this invoice..."
+                    rows={3}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    This description will appear below the invoice title.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="paymentTerms" className="font-normal text-secondary-foreground mb-2 block">Payment Terms</Label>
                   <Select value={paymentTerms} onValueChange={setPaymentTerms}>
                     <SelectTrigger>
@@ -2154,16 +2454,30 @@ export default function GenerateInvoicePage() {
                     </SelectContent>
                   </Select>
                 </div>
-                
-              <div className="space-y-2">
-                <Label htmlFor="notes" className="font-normal text-secondary-foreground mb-2 block">Notes</Label>
-                <Textarea
-                  id="notes"
+
+                <div className="space-y-2">
+                  <Label htmlFor="taxSummary" className="font-normal text-secondary-foreground mb-2 block">Tax Summary</Label>
+                  <Textarea
+                    id="taxSummary"
+                    value={taxSummary}
+                    onChange={(e) => setTaxSummary(e.target.value)}
+                    placeholder="Enter tax summary information..."
+                    rows={3}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    This tax summary will appear before the notes section.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="notes" className="font-normal text-secondary-foreground mb-2 block">Notes</Label>
+                  <Textarea
+                    id="notes"
                     placeholder="Additional notes for this invoice..."
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows={4}
-                />
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows={4}
+                  />
                 </div>
               </div>
             </CardContent>

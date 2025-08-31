@@ -267,7 +267,8 @@ export async function POST(request: NextRequest) {
       companyAddress: '123 Business St\nCity, State 12345',
       companyEmail: senderEmail || 'contact@yourcompany.com',
       companyPhone: '+1 (555) 123-4567',
-      logoUrl: ''
+      logoUrl: '',
+      quantityLabel: invoiceData.quantity_label || 'Qty'
     }
 
     // Generate invoice HTML for PDF (use user's date format from company settings)
@@ -299,6 +300,7 @@ export async function POST(request: NextRequest) {
       dueDate: new Date(invoiceData.due_date).toLocaleDateString(),
       customMessage: customMessage || `Thank you for your business! Please find your invoice ${invoiceData.invoice_number} attached.`,
       invoiceHTML: invoiceHTML,
+      quantityLabel: invoiceData.quantity_label || 'Qty',
       invoiceData: {
         issue_date: invoiceData.issue_date,
         due_date: invoiceData.due_date,
@@ -312,7 +314,10 @@ export async function POST(request: NextRequest) {
           email: invoiceData.clients?.email || clientEmail
         },
         items: invoiceData.items || [],
-        notes: invoiceData.notes || ''
+        notes: invoiceData.notes || '',
+        invoice_description: invoiceData.invoice_description || '',
+        tax_summary: invoiceData.tax_summary || '',
+        authorized_signature: invoiceData.authorized_signature || ''
       }
     }
 

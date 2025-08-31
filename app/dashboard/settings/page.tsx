@@ -16,12 +16,14 @@ import { Textarea } from "@/components/ui/textarea"
 import { PhoneInput } from "@/components/ui/phone-input"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
-import { FloppyDiskIcon, Upload01Icon, Alert01Icon, ImageUploadIcon } from '@hugeicons/core-free-icons'
+import { FloppyDiskIcon, Upload01Icon, Alert01Icon, ImageUploadIcon, Delete01Icon, Add01Icon } from '@hugeicons/core-free-icons'
 import { Badge } from "@/components/ui/badge"
 import { Loader } from "@/components/ui/loader"
 import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "sonner"
 import { PageHeader, PageContent, PageTitle } from "@/components/page-header"
+import { uploadCompanySignature } from "@/lib/company-settings"
+import { validateFile } from "@/lib/input-validation"
 import { setDefaultCurrency, getDefaultCurrency, CURRENCIES } from "@/lib/currency"
 import { CurrencySelector } from "@/components/ui/currency-selector"
 import { useSettings } from "@/components/settings-provider"
@@ -32,6 +34,8 @@ import { clearCurrencyConversionCache } from "@/lib/currency-conversion-cache"
 import { SubscriptionManagement } from "@/components/pricing/subscription-management"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { InformationCircleIcon } from '@hugeicons/core-free-icons'
+import { useCustomQuantityLabels } from '@/hooks/use-custom-quantity-labels'
+import { AddCustomLabelDialog } from '@/components/ui/add-custom-label-dialog'
 
 export default function SettingsPage() {
   const searchParams = useSearchParams()
@@ -40,6 +44,7 @@ export default function SettingsPage() {
   const [savingGeneral, setSavingGeneral] = useState(false)
   const [savingCompany, setSavingCompany] = useState(false)
   const [savingTax, setSavingTax] = useState(false)
+  const [savingInvoiceDetails, setSavingInvoiceDetails] = useState(false)
   
   // Check if Supabase is configured
   const isSupabaseConfigured = () => {
@@ -55,12 +60,27 @@ export default function SettingsPage() {
   const [initialLoadComplete, setInitialLoadComplete] = useState(false) // Track if initial load from DB is complete
   const hasInitializedTax = useRef(false) // Ref to absolutely prevent tax loading loops
   
+  // Signature upload state
+  const [signatureFile, setSignatureFile] = useState<File | null>(null)
+  const [signaturePreview, setSignaturePreview] = useState<string | null>(null)
+  const [isUploadingSignature, setIsUploadingSignature] = useState(false)
+  const [isRemovingSignature, setIsRemovingSignature] = useState(false)
+  const signatureInputRef = useRef<HTMLInputElement>(null)
+  
   // General settings state
   const [generalSettings, setGeneralSettings] = useState({
     defaultCurrency: "USD",
-    invoicePrefix: "INV",
     dateFormat: "MM/DD/YYYY" as DateFormat,
+  })
+
+  // Invoice details state
+  const [invoiceDetails, setInvoiceDetails] = useState({
+    invoicePrefix: "INV",
     defaultInvoiceNotes: "",
+    defaultInvoiceDescription: "",
+    defaultTaxSummary: "",
+    authorizedSignature: "",
+    quantityLabel: "Qty",
   })
 
   // Company information state
@@ -80,12 +100,18 @@ export default function SettingsPage() {
     taxName: "Sales Tax",
     taxJurisdiction: "",
     taxAddress: "",
+    taxDocumentName: "",
+    taxDocumentNumber: "",
     includeTaxInPrices: false,
     autoCalculateTax: true,
   })
 
   const { updateSetting, settings, isLoading } = useSettings()
   const { isLoading: subscriptionLoading, refetchSubscription } = useSubscription()
+  const { customLabels, addCustomLabel, deleteCustomLabel } = useCustomQuantityLabels()
+  
+  // Custom label dialog state
+  const [showCustomLabelDialog, setShowCustomLabelDialog] = useState(false)
   
   // Check if user needs subscription sync - but only once per session
   const [syncChecked, setSyncChecked] = useState(false)
@@ -140,9 +166,7 @@ export default function SettingsPage() {
       try {
         const newGeneralSettings = {
           defaultCurrency: settings.defaultCurrency || "USD",
-          invoicePrefix: settings.invoicePrefix || "INV",
           dateFormat: settings.dateFormat || "MM/DD/YYYY" as DateFormat,
-          defaultInvoiceNotes: settings.defaultInvoiceNotes || "",
         }
 
         // Only update if the general settings have actually changed
@@ -167,7 +191,34 @@ export default function SettingsPage() {
         console.error('Error loading settings data:', error)
       }
     }
-  }, [isLoading, initialLoadComplete, settings.defaultCurrency, settings.invoicePrefix, settings.dateFormat, settings.companyLogo])
+  }, [isLoading, initialLoadComplete, settings.defaultCurrency, settings.dateFormat, settings.companyLogo])
+
+  // Load invoice details when settings data becomes available
+  useEffect(() => {
+    if (!isLoading && initialLoadComplete) {
+      try {
+        const newInvoiceDetails = {
+          invoicePrefix: settings.invoicePrefix || "INV",
+          defaultInvoiceNotes: settings.defaultInvoiceNotes || "",
+          defaultInvoiceDescription: settings.defaultInvoiceDescription || "",
+          defaultTaxSummary: settings.defaultTaxSummary || "",
+          authorizedSignature: settings.authorizedSignature || "",
+          quantityLabel: settings.quantityLabel || "Qty",
+        }
+
+        // Only update if the invoice details have actually changed
+        const hasChanged = Object.keys(newInvoiceDetails).some(key => 
+          newInvoiceDetails[key as keyof typeof newInvoiceDetails] !== invoiceDetails[key as keyof typeof invoiceDetails]
+        )
+
+        if (hasChanged) {
+          setInvoiceDetails(newInvoiceDetails)
+        }
+      } catch (error) {
+        console.error('Error loading invoice details:', error)
+      }
+    }
+  }, [isLoading, initialLoadComplete, settings.invoicePrefix, settings.defaultInvoiceNotes, settings.defaultInvoiceDescription, settings.defaultTaxSummary, settings.authorizedSignature, settings.quantityLabel])
 
   // Load tax info when settings data becomes available
   useEffect(() => {
@@ -179,6 +230,8 @@ export default function SettingsPage() {
           taxName: settings.taxName || "Sales Tax",
           taxJurisdiction: settings.taxJurisdiction || "",
           taxAddress: settings.taxAddress || "",
+          taxDocumentName: settings.taxDocumentName || "",
+          taxDocumentNumber: settings.taxDocumentNumber || "",
           includeTaxInPrices: settings.includeTaxInPrices !== undefined ? settings.includeTaxInPrices : false,
           autoCalculateTax: settings.autoCalculateTax !== undefined ? settings.autoCalculateTax : true,
         }
@@ -198,7 +251,7 @@ export default function SettingsPage() {
         console.error('Error loading tax settings data:', error)
       }
     }
-  }, [isLoading, initialLoadComplete, settings.taxId, settings.taxRate, settings.taxName, settings.taxJurisdiction, settings.taxAddress, settings.includeTaxInPrices, settings.autoCalculateTax])
+  }, [isLoading, initialLoadComplete, settings.taxId, settings.taxRate, settings.taxName, settings.taxJurisdiction, settings.taxAddress, settings.taxDocumentName, settings.taxDocumentNumber, settings.includeTaxInPrices, settings.autoCalculateTax])
 
   // Simple initial load completion effect 
   useEffect(() => {
@@ -231,7 +284,60 @@ export default function SettingsPage() {
     }
   }, [isLoading, initialLoadComplete, settings.companyName, settings.companyAddress, settings.companyPhone, settings.companyWebsite, settings.companyEmail, settings.companyRegistration])
 
+  // Load signature preview from settings
+  useEffect(() => {
+    if (settings.authorizedSignature && !signatureFile && !signaturePreview) {
+      setSignaturePreview(settings.authorizedSignature)
+    }
+  }, [settings.authorizedSignature, signatureFile, signaturePreview])
 
+  // Handle signature file upload
+  const handleSignatureUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // Validate file
+    const validation = validateFile(file, ['image/jpeg', 'image/png', 'image/gif', 'image/webp'], 5)
+    if (!validation.isValid) {
+      toast.error(validation.error || 'Invalid file')
+      return
+    }
+
+    // Set the file and create a preview
+    setSignatureFile(file)
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setSignaturePreview(reader.result as string)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  // Remove signature
+  const removeSignature = async () => {
+    try {
+      setIsRemovingSignature(true)
+
+      // Clear local state
+      setSignatureFile(null)
+      setSignaturePreview(null)
+      setInvoiceDetails({...invoiceDetails, authorizedSignature: ""})
+
+      // Update settings provider (this saves to database)
+      await updateSetting('authorizedSignature', '')
+
+      // Clear the file input
+      if (signatureInputRef.current) {
+        signatureInputRef.current.value = ""
+      }
+
+      toast.success('Signature removed successfully!')
+    } catch (error) {
+      console.error('Error removing signature:', error)
+      toast.error('Failed to remove signature. Please try again.')
+    } finally {
+      setIsRemovingSignature(false)
+    }
+  }
 
   const handleSaveGeneral = async () => {
     try {
@@ -243,9 +349,7 @@ export default function SettingsPage() {
       // Update global settings provider
       await Promise.all([
         updateSetting('defaultCurrency', generalSettings.defaultCurrency),
-        updateSetting('invoicePrefix', generalSettings.invoicePrefix),
-        updateSetting('dateFormat', generalSettings.dateFormat),
-        updateSetting('defaultInvoiceNotes', generalSettings.defaultInvoiceNotes)
+        updateSetting('dateFormat', generalSettings.dateFormat)
       ])
       
       // Clear currency conversion cache if currency changed
@@ -264,6 +368,53 @@ export default function SettingsPage() {
       toast.error("Failed to save general settings. Please try again.")
     } finally {
       setSavingGeneral(false)
+    }
+  }
+
+  const handleSaveInvoiceDetails = async () => {
+    try {
+      setSavingInvoiceDetails(true)
+      
+      // Handle signature upload if there's a new file
+      let finalSignatureUrl = invoiceDetails.authorizedSignature
+      if (signatureFile) {
+        setIsUploadingSignature(true)
+        const uploadedUrl = await uploadCompanySignature(signatureFile)
+        if (uploadedUrl) {
+          finalSignatureUrl = uploadedUrl
+          setSignatureFile(null) // Clear the file after successful upload
+        } else {
+          toast.error("Failed to upload signature image")
+          return
+        }
+        setIsUploadingSignature(false)
+      }
+      
+      // Update the settings with the final signature URL
+      const finalSettings = { ...invoiceDetails, authorizedSignature: finalSignatureUrl }
+      
+      // Save invoice details to localStorage
+      localStorage.setItem('invoice-details', JSON.stringify(finalSettings))
+      
+      // Update global settings provider
+      await Promise.all([
+        updateSetting('invoicePrefix', finalSettings.invoicePrefix),
+        updateSetting('defaultInvoiceNotes', finalSettings.defaultInvoiceNotes),
+        updateSetting('defaultInvoiceDescription', finalSettings.defaultInvoiceDescription),
+        updateSetting('defaultTaxSummary', finalSettings.defaultTaxSummary),
+        updateSetting('authorizedSignature', finalSettings.authorizedSignature),
+        updateSetting('quantityLabel', finalSettings.quantityLabel)
+      ])
+      
+      // Update local state with the final settings
+      setInvoiceDetails(finalSettings)
+      
+      toast.success("Invoice details saved successfully!")
+    } catch (error) {
+      console.error('Error saving invoice details:', error)
+      toast.error("Failed to save invoice details. Please try again.")
+    } finally {
+      setSavingInvoiceDetails(false)
     }
   }
 
@@ -318,6 +469,8 @@ export default function SettingsPage() {
         updateSetting('taxId', taxInfo.taxId),
         updateSetting('taxJurisdiction', taxInfo.taxJurisdiction),
         updateSetting('taxAddress', taxInfo.taxAddress),
+        updateSetting('taxDocumentName', taxInfo.taxDocumentName),
+        updateSetting('taxDocumentNumber', taxInfo.taxDocumentNumber),
         updateSetting('includeTaxInPrices', taxInfo.includeTaxInPrices),
         updateSetting('autoCalculateTax', taxInfo.autoCalculateTax)
       ])
@@ -355,8 +508,27 @@ export default function SettingsPage() {
     try {
       setSaving(true)
       
+      // Handle signature upload if there's a new file
+      let finalSignatureUrl = invoiceDetails.authorizedSignature
+      if (signatureFile) {
+        setIsUploadingSignature(true)
+        const uploadedUrl = await uploadCompanySignature(signatureFile)
+        if (uploadedUrl) {
+          finalSignatureUrl = uploadedUrl
+          setSignatureFile(null) // Clear the file after successful upload
+        } else {
+          toast.error("Failed to upload signature image")
+          return
+        }
+        setIsUploadingSignature(false)
+      }
+      
+      // Update the settings with the final signature URL
+      const finalInvoiceDetails = { ...invoiceDetails, authorizedSignature: finalSignatureUrl }
+      
       // Save all settings to localStorage (for backup/faster loading)
       localStorage.setItem('general-settings', JSON.stringify(generalSettings))
+      localStorage.setItem('invoice-details', JSON.stringify(finalInvoiceDetails))
       localStorage.setItem('company-info', JSON.stringify(companyInfo))
       localStorage.setItem('tax-info', JSON.stringify(taxInfo))
       
@@ -365,9 +537,12 @@ export default function SettingsPage() {
       
       // Update ALL settings in the global provider (which syncs to database)
       updateSetting('defaultCurrency', generalSettings.defaultCurrency)
-      updateSetting('invoicePrefix', generalSettings.invoicePrefix)
       updateSetting('dateFormat', generalSettings.dateFormat)
-      updateSetting('defaultInvoiceNotes', generalSettings.defaultInvoiceNotes)
+      updateSetting('invoicePrefix', finalInvoiceDetails.invoicePrefix)
+      updateSetting('defaultInvoiceNotes', finalInvoiceDetails.defaultInvoiceNotes)
+      updateSetting('defaultInvoiceDescription', finalInvoiceDetails.defaultInvoiceDescription)
+      updateSetting('defaultTaxSummary', finalInvoiceDetails.defaultTaxSummary)
+      updateSetting('authorizedSignature', finalInvoiceDetails.authorizedSignature)
       
       // Update company information
       updateSetting('companyName', companyInfo.companyName)
@@ -379,12 +554,13 @@ export default function SettingsPage() {
       updateSetting('companyLogo', companyLogo)
       
       // Update tax information
-      
       updateSetting('taxRate', parseFloat(taxInfo.defaultTaxRate))
       updateSetting('taxName', taxInfo.taxName)
       updateSetting('taxId', taxInfo.taxId)
       updateSetting('taxJurisdiction', taxInfo.taxJurisdiction)
       updateSetting('taxAddress', taxInfo.taxAddress)
+      updateSetting('taxDocumentName', taxInfo.taxDocumentName)
+      updateSetting('taxDocumentNumber', taxInfo.taxDocumentNumber)
       updateSetting('includeTaxInPrices', taxInfo.includeTaxInPrices)
       updateSetting('autoCalculateTax', taxInfo.autoCalculateTax)
       
@@ -415,6 +591,9 @@ export default function SettingsPage() {
           description: "All changes have been saved to the database and will be available across sessions."
         })
       }
+      
+      // Update local state with final settings
+      setInvoiceDetails(finalInvoiceDetails)
       
       // Update the original currency reference after successful save
       setOriginalCurrency(generalSettings.defaultCurrency)
@@ -554,19 +733,7 @@ export default function SettingsPage() {
                   </p>
                 </div>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="invoicePrefix">Invoice Number Prefix</Label>
-                  <Input 
-                    id="invoicePrefix" 
-                    value={generalSettings.invoicePrefix} 
-                    onChange={(e) => setGeneralSettings({...generalSettings, invoicePrefix: e.target.value})}
-                    placeholder="INV"
-                    className="max-w-32"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    This prefix will be used for all invoice numbers (e.g., {generalSettings.invoicePrefix || 'INV'}-2024-001).
-                  </p>
-                </div>
+
 
                 <div className="space-y-2">
                   <Label htmlFor="dateFormat">Date Format</Label>
@@ -587,19 +754,7 @@ export default function SettingsPage() {
                   </p>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="defaultInvoiceNotes">Default Invoice Notes</Label>
-                  <Textarea 
-                    id="defaultInvoiceNotes" 
-                    value={generalSettings.defaultInvoiceNotes} 
-                    onChange={(e) => setGeneralSettings({...generalSettings, defaultInvoiceNotes: e.target.value})}
-                    placeholder="Enter default notes to appear on all new invoices..."
-                    rows={4}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    These notes will automatically appear in all new invoices. You can override them for individual invoices.
-                  </p>
-                </div>
+
               </CardContent>
             </Card>
           </TabsContent>
@@ -828,6 +983,27 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="taxDocumentName">Tax Document Name</Label>
+                    <Input 
+                      id="taxDocumentName" 
+                      value={taxInfo.taxDocumentName} 
+                      onChange={(e) => setTaxInfo({...taxInfo, taxDocumentName: e.target.value})}
+                      placeholder="e.g., PAN, SSN, NIF, etc." 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="taxDocumentNumber">Tax Document Number</Label>
+                    <Input 
+                      id="taxDocumentNumber" 
+                      value={taxInfo.taxDocumentNumber} 
+                      onChange={(e) => setTaxInfo({...taxInfo, taxDocumentNumber: e.target.value})}
+                      placeholder="e.g., 123-45-6789, A1B2C3D4E5" 
+                    />
+                  </div>
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="taxAddress">Tax Address</Label>
                   <Textarea
@@ -868,6 +1044,212 @@ export default function SettingsPage() {
                 </div>
               </CardContent>
             </Card>
+
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Invoice Details</CardTitle>
+                    <CardDescription>Configure default invoice settings and preferences.</CardDescription>
+                  </div>
+                  <Button size="sm" onClick={handleSaveInvoiceDetails} disabled={savingInvoiceDetails}>
+                    {savingInvoiceDetails ? (
+                      <Loader size="sm" variant="default" className="mr-1.5" />
+                    ) : (
+                      <HugeiconsIcon icon={FloppyDiskIcon} className="mr-1.5 h-4 w-4" />
+                    )}
+                    {savingInvoiceDetails ? "Saving..." : "Save"}
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="authorizedSignature">Authorized Signature</Label>
+                  <div className="flex items-center space-x-4">
+                    {signaturePreview ? (
+                      <div className="w-16 h-16 border rounded-lg overflow-hidden bg-muted flex items-center justify-center">
+                        <img
+                          src={signaturePreview}
+                          alt="Signature preview"
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-16 h-16 border-2 border-dashed border-muted-foreground/25 rounded-lg flex items-center justify-center">
+                        <HugeiconsIcon icon={ImageUploadIcon} className="h-6 w-6 text-muted-foreground" />
+                      </div>
+                    )}
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor="signature-upload" className="cursor-pointer">
+                          <Button variant="outline" size="sm" disabled={isUploadingSignature} asChild>
+                            <span>
+                              {isUploadingSignature ? (
+                                <Loader size="sm" variant="default" className="mr-1.5" />
+                              ) : (
+                                <HugeiconsIcon icon={ImageUploadIcon} className="mr-1.5 h-4 w-4" />
+                              )}
+                              {signaturePreview ? "Change Signature" : "Upload Signature"}
+                            </span>
+                          </Button>
+                        </Label>
+                        {signaturePreview && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={removeSignature}
+                            disabled={isRemovingSignature}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            {isRemovingSignature ? (
+                              <Loader size="sm" variant="default" className="mr-1.5" />
+                            ) : (
+                              <HugeiconsIcon icon={Delete01Icon} className="mr-1.5 h-4 w-4" />
+                            )}
+                            {isRemovingSignature ? "Removing..." : "Remove"}
+                          </Button>
+                        )}
+                      </div>
+                      <Input
+                        ref={signatureInputRef}
+                        id="signature-upload"
+                        type="file"
+                        accept="image/jpeg,image/png,image/gif,image/webp"
+                        onChange={handleSignatureUpload}
+                        disabled={isUploadingSignature}
+                        className="hidden"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        JPG, PNG, GIF, WebP. Max 5MB. Recommended: 200x80px
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="quantityLabel">Quantity Column Label</Label>
+                  <div className="flex items-center space-x-2">
+                    <Select
+                      value={invoiceDetails.quantityLabel}
+                      onValueChange={(value) => setInvoiceDetails({...invoiceDetails, quantityLabel: value})}
+                    >
+                      <SelectTrigger className="max-w-48">
+                        <SelectValue placeholder="Select quantity label" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {/* Default presets */}
+                        <SelectItem value="Qty">Qty</SelectItem>
+                        <SelectItem value="Hours">Hours</SelectItem>
+                        <SelectItem value="Days">Days</SelectItem>
+                        <SelectItem value="Units">Units</SelectItem>
+                        <SelectItem value="Sessions">Sessions</SelectItem>
+                        <SelectItem value="Items">Items</SelectItem>
+
+                        {/* User's custom labels */}
+                        {customLabels.map((label) => (
+                          <div key={label.id} className="relative group">
+                            <SelectItem value={label.label} className="pr-8">
+                              {label.label}
+                            </SelectItem>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                deleteCustomLabel(label.id)
+                              }}
+                            >
+                              <HugeiconsIcon icon={Delete01Icon} className="h-3 w-3 text-muted-foreground hover:text-destructive" />
+                            </Button>
+                          </div>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowCustomLabelDialog(true)}
+                      className="shrink-0"
+                    >
+                      <HugeiconsIcon icon={Add01Icon} className="h-4 w-4 mr-1" />
+                      Add Custom
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    This label will appear in the quantity column header on all invoices. Add custom labels for your specific billing needs.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="invoicePrefix">Invoice Number Prefix</Label>
+                  <Input
+                    id="invoicePrefix"
+                    value={invoiceDetails.invoicePrefix}
+                    onChange={(e) => setInvoiceDetails({...invoiceDetails, invoicePrefix: e.target.value})}
+                    placeholder="INV"
+                    className="max-w-32"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    This prefix will be used for all invoice numbers (e.g., {invoiceDetails.invoicePrefix || 'INV'}-2024-001).
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="defaultInvoiceNotes">Default Invoice Notes</Label>
+                  <Textarea 
+                    id="defaultInvoiceNotes" 
+                    value={invoiceDetails.defaultInvoiceNotes} 
+                    onChange={(e) => setInvoiceDetails({...invoiceDetails, defaultInvoiceNotes: e.target.value})}
+                    placeholder="Enter default notes to appear on all new invoices..."
+                    rows={4}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    These notes will automatically appear in all new invoices. You can override them for individual invoices.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="defaultInvoiceDescription">Default Invoice Description</Label>
+                  <Textarea 
+                    id="defaultInvoiceDescription" 
+                    value={invoiceDetails.defaultInvoiceDescription} 
+                    onChange={(e) => setInvoiceDetails({...invoiceDetails, defaultInvoiceDescription: e.target.value})}
+                    placeholder="Enter default description to appear below the invoice title..."
+                    rows={3}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    This description will appear below the invoice title on all new invoices. You can override it for individual invoices.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="defaultTaxSummary">Default Tax Summary</Label>
+                  <Textarea 
+                    id="defaultTaxSummary" 
+                    value={invoiceDetails.defaultTaxSummary} 
+                    onChange={(e) => setInvoiceDetails({...invoiceDetails, defaultTaxSummary: e.target.value})}
+                    placeholder="Enter default tax summary information..."
+                    rows={3}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    This tax summary will appear before the notes section on all new invoices. You can override it for individual invoices.
+                  </p>
+                </div>
+
+
+              </CardContent>
+            </Card>
+
+            {/* Add Custom Label Dialog */}
+            <AddCustomLabelDialog
+              open={showCustomLabelDialog}
+              onOpenChange={setShowCustomLabelDialog}
+              onAdd={addCustomLabel}
+            />
           </TabsContent>
 
           <TabsContent value="subscription" className="space-y-6">
@@ -994,3 +1376,4 @@ export default function SettingsPage() {
     </>
   )
 }
+

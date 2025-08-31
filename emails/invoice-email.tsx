@@ -23,6 +23,7 @@ interface InvoiceEmailProps {
   dueDate: string
   customMessage: string
   invoiceHTML: string
+  quantityLabel?: string
   invoiceData?: {
     issue_date: string
     due_date: string
@@ -35,13 +36,18 @@ interface InvoiceEmailProps {
       email: string
     }
     items?: Array<{
-      description: string
+      description?: string
+      item_name?: string
+      item_description?: string
       quantity: number
       rate: number
       amount: number
     }>
     tax_rate?: number
     notes?: string
+    invoice_description?: string
+    tax_summary?: string
+    authorized_signature?: string
   }
 }
 
@@ -54,6 +60,7 @@ const InvoiceEmail = ({
   dueDate = '2024-12-31',
   customMessage = 'Thank you for your business!',
   invoiceHTML = '',
+  quantityLabel = 'Qty',
   invoiceData
 }: InvoiceEmailProps) => {
   const getCurrencySymbol = (curr: string) => {
@@ -116,6 +123,13 @@ const InvoiceEmail = ({
             <Text style={subtitle}>From {companyName}</Text>
           </Section>
 
+          {/* Invoice Description */}
+          {displayData.invoice_description && (
+            <Section style={invoiceDescriptionSection}>
+              <Text style={invoiceDescriptionText}>{displayData.invoice_description}</Text>
+            </Section>
+          )}
+
           {/* Main Content */}
           <Section style={content}>
             <Text style={greeting}>Hello {displayData.clients.name},</Text>
@@ -174,13 +188,13 @@ const InvoiceEmail = ({
                         <tr>
                           <td style={itemLeftCell}>
                             <Text style={itemDescription}>{item.item_name || item.description}</Text>
-                            {item.item_description && (
-                              <Text style={itemDetails}>
+                            {(item.item_description || item.description) && item.item_name && (
+                              <Text style={itemSubDescription}>
                                 {item.item_description}
                               </Text>
                             )}
                             <Text style={itemDetails}>
-                              {item.quantity} × {formatCurrency(item.rate, currency)}
+                              {quantityLabel}: {item.quantity} × {formatCurrency(item.rate, currency)}
                             </Text>
                           </td>
                           <td style={itemRightCell}>
@@ -245,11 +259,27 @@ const InvoiceEmail = ({
               </Section>
             </Section>
 
+            {/* Tax Summary */}
+            {displayData.tax_summary && (
+              <Section style={taxSummarySection}>
+                <Text style={taxSummaryTitle}>Tax Summary</Text>
+                <Text style={taxSummaryText}>{displayData.tax_summary}</Text>
+              </Section>
+            )}
+
             {/* Invoice Notes */}
             {displayData.notes && (
               <Section style={notesSection}>
                 <Text style={notesTitle}>Notes</Text>
                 <Text style={notesText}>{displayData.notes}</Text>
+              </Section>
+            )}
+
+            {/* Authorized Signature */}
+            {displayData.authorized_signature && (
+              <Section style={authorizedSignatureSection}>
+                <Text style={authorizedSignatureTitle}>Authorized by</Text>
+                <Text style={authorizedSignatureText}>{displayData.authorized_signature}</Text>
               </Section>
             )}
 
@@ -688,6 +718,50 @@ const footerSmall = {
   margin: '0',
 }
 
+// Invoice Description section styles
+const invoiceDescriptionSection = {
+  padding: '16px 24px',
+  backgroundColor: '#f8fafc',
+  borderBottom: '1px solid #e2e8f0',
+  marginBottom: '0',
+}
+
+const invoiceDescriptionText = {
+  color: '#374151',
+  fontSize: '14px',
+  lineHeight: '1.6',
+  margin: '0',
+  fontStyle: 'italic',
+}
+
+// Enhanced item styles
+const itemSubDescription = {
+  color: '#6b7280',
+  fontSize: '12px',
+  margin: '2px 0 4px',
+  lineHeight: '1.4',
+}
+
+// Tax Summary section styles
+const taxSummarySection = {
+  marginBottom: '24px',
+}
+
+const taxSummaryTitle = {
+  color: '#111827',
+  fontSize: '16px',
+  fontWeight: '600',
+  margin: '0 0 12px',
+}
+
+const taxSummaryText = {
+  color: '#374151',
+  fontSize: '14px',
+  lineHeight: '1.6',
+  margin: '0',
+  whiteSpace: 'pre-wrap' as const,
+}
+
 // Notes section styles
 const notesSection = {
   marginBottom: '24px',
@@ -706,6 +780,30 @@ const notesText = {
   lineHeight: '1.6',
   margin: '0',
   whiteSpace: 'pre-wrap' as const, // Preserve line breaks
+}
+
+// Authorized Signature section styles
+const authorizedSignatureSection = {
+  marginBottom: '24px',
+  padding: '16px',
+  backgroundColor: '#f0f9ff',
+  border: '1px solid #0284c7',
+  borderRadius: '6px',
+}
+
+const authorizedSignatureTitle = {
+  color: '#0c4a6e',
+  fontSize: '14px',
+  fontWeight: '600',
+  margin: '0 0 8px',
+}
+
+const authorizedSignatureText = {
+  color: '#0c4a6e',
+  fontSize: '14px',
+  fontWeight: '500',
+  margin: '0',
+  fontFamily: 'cursive',
 }
 
 export default InvoiceEmail 

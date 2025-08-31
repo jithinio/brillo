@@ -93,6 +93,7 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
   const logoSize = Array.isArray(template.logoSize) ? template.logoSize[0] : (template.logoSize || 60)
   const logoBorderRadius = Array.isArray(template.logoBorderRadius) ? template.logoBorderRadius[0] : (template.logoBorderRadius || 8)
   const tableHeaderSize = Array.isArray(template.tableHeaderSize) ? template.tableHeaderSize[0] : (template.tableHeaderSize || 12)
+  const quantityLabel = template.quantityLabel || 'Qty'
 
   // Base styles for PDF rendering (moved padding to wrapper)
   const baseStyles = {
@@ -109,7 +110,11 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
     email: template.companyEmail || 'contact@yourcompany.com',
     phone: formatPhoneNumber(template.companyPhone || '+1 (555) 123-4567'),
     taxId: template.companyTaxId || template.taxId || '',
-    logoUrl: template.logoUrl || ''
+    taxName: template.companyTaxName || template.taxName || 'Sales Tax',
+    taxDocumentName: template.companyTaxDocumentName || template.taxDocumentName || '',
+    taxDocumentNumber: template.companyTaxDocumentNumber || template.taxDocumentNumber || '',
+    logoUrl: template.logoUrl || '',
+    signature: (template.authorizedSignature && template.authorizedSignature.trim()) || (template.signature && template.signature.trim()) || ''
   }
 
   // Invoice data
@@ -135,7 +140,9 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
     total: invoice.total_amount || 0,
     paymentTerms: invoice.terms || 'Net 30',
     notes: invoice.notes || template.notes || '',
-    currency: invoice.currency || template.currency || 'USD' // Use invoice currency first
+    currency: invoice.currency || template.currency || 'USD', // Use invoice currency first
+    invoiceDescription: invoice.invoice_description || '',
+    taxSummary: invoice.tax_summary || ''
   }
 
   // Format client address
@@ -400,13 +407,24 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
             ${template.showInvoiceNumber ? `
               <div style="color: ${template.secondaryColor}; font-size: 14px;">${invoiceData.number}</div>
             ` : ''}
+            ${template.showInvoiceDescription && invoiceData.invoiceDescription ? `
+              <div style="color: ${template.secondaryColor}; font-size: ${template.bodyFontSize ? template.bodyFontSize[0] : 14}px; font-weight: 400; margin-top: 8px; line-height: 1.4; max-width: 250px;">${invoiceData.invoiceDescription}</div>
+            ` : ''}
           </div>
           <div class="text-right">
             <div style="font-weight: 600; margin-bottom: 4px;">${companyInfo.name}</div>
-            <div style="color: ${template.secondaryColor}; font-size: 14px; white-space: pre-line;">${companyInfo.address}</div>
-            <div style="color: ${template.secondaryColor}; font-size: 14px; margin-top: 8px;">${companyInfo.email}</div>
+            <div style="color: ${template.secondaryColor}; font-size: ${template.bodyFontSize ? template.bodyFontSize[0] : 14}px; white-space: pre-line; max-width: 200px;">${companyInfo.address}</div>
+            ${template.showCompanyEmail && companyInfo.email ? `
+              <div style="color: ${template.secondaryColor}; font-size: ${template.bodyFontSize ? template.bodyFontSize[0] : 14}px; margin-top: 8px;">${companyInfo.email}</div>
+            ` : ''}
+            ${template.showPhoneNumber && companyInfo.phone ? `
+              <div style="color: ${template.secondaryColor}; font-size: ${template.bodyFontSize ? template.bodyFontSize[0] : 14}px; margin-top: 4px;">${companyInfo.phone}</div>
+            ` : ''}
             ${template.showTaxId && companyInfo.taxId ? `
-              <div style="color: ${template.secondaryColor}; font-size: 14px; margin-top: 4px;">${companyInfo.taxId}</div>
+              <div style="color: ${template.secondaryColor}; font-size: ${template.bodyFontSize ? template.bodyFontSize[0] : 14}px; margin-top: 4px;">${companyInfo.taxName ? `${companyInfo.taxName}: ${companyInfo.taxId}` : `Tax ID: ${companyInfo.taxId}`}</div>
+            ` : ''}
+            ${template.showTaxDocument && companyInfo.taxDocumentName && companyInfo.taxDocumentNumber ? `
+              <div style="color: ${template.secondaryColor}; font-size: ${template.bodyFontSize ? template.bodyFontSize[0] : 14}px; margin-top: 4px;">${companyInfo.taxDocumentName}: ${companyInfo.taxDocumentNumber}</div>
             ` : ''}
           </div>
         </div>
@@ -416,17 +434,20 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
           <div>
             <div style="font-weight: 600; margin-bottom: 8px;">Bill To</div>
             <div style="margin-bottom: 4px;">${invoiceData.client.name}</div>
-            <div style="color: ${template.secondaryColor}; font-size: 14px; white-space: pre-line;">${invoiceData.client.address}</div>
+            <div style="color: ${template.secondaryColor}; font-size: ${template.bodyFontSize ? template.bodyFontSize[0] : 14}px; white-space: pre-line; max-width: 200px;">${invoiceData.client.address}</div>
+            ${template.showClientEmail && invoiceData.client.email ? `
+              <div style="color: ${template.secondaryColor}; font-size: ${template.bodyFontSize ? template.bodyFontSize[0] : 14}px; margin-top: 8px;">${invoiceData.client.email}</div>
+            ` : ''}
           </div>
           ${template.showDates ? `
             <div class="text-right">
               <div class="space-y-2">
                 <div>
-                  <span style="color: ${template.secondaryColor}; font-size: 14px;">Invoice Date: </span>
+                  <span style="color: ${template.secondaryColor}; font-size: ${template.bodyFontSize ? template.bodyFontSize[0] : 14}px;">Invoice Date: </span>
                   <span style="font-weight: 500;">${formatDateForUser(invoiceData.date)}</span>
                 </div>
                 <div>
-                  <span style="color: ${template.secondaryColor}; font-size: 14px;">Due Date: </span>
+                  <span style="color: ${template.secondaryColor}; font-size: ${template.bodyFontSize ? template.bodyFontSize[0] : 14}px;">Due Date: </span>
                   <span style="font-weight: 500;">${formatDateForUser(invoiceData.dueDate)}</span>
                 </div>
               </div>
@@ -440,7 +461,7 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
             <thead>
               <tr style="border-bottom: 2px solid ${template.borderColor}; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
                 <th style="text-align: left; padding: 12px 0; font-weight: 600; font-size: ${tableHeaderSize}px; border-bottom: 2px solid ${template.borderColor}; -webkit-print-color-adjust: exact; print-color-adjust: exact;">Description</th>
-                <th style="text-align: right; padding: 12px 0; font-weight: 600; font-size: ${tableHeaderSize}px; border-bottom: 2px solid ${template.borderColor}; -webkit-print-color-adjust: exact; print-color-adjust: exact;">Qty</th>
+                <th style="text-align: right; padding: 12px 0; font-weight: 600; font-size: ${tableHeaderSize}px; border-bottom: 2px solid ${template.borderColor}; -webkit-print-color-adjust: exact; print-color-adjust: exact;">${quantityLabel}</th>
                 <th style="text-align: right; padding: 12px 0; font-weight: 600; font-size: ${tableHeaderSize}px; border-bottom: 2px solid ${template.borderColor}; -webkit-print-color-adjust: exact; print-color-adjust: exact;">Rate</th>
                 <th style="text-align: right; padding: 12px 0; font-weight: 600; font-size: ${tableHeaderSize}px; border-bottom: 2px solid ${template.borderColor}; -webkit-print-color-adjust: exact; print-color-adjust: exact;">Amount</th>
               </tr>
@@ -451,7 +472,7 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
                   <td style="padding: 16px 0; border-bottom: 1px solid ${template.borderColor}; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
                     <div style="font-weight: 500;">${item.description}</div>
                     ${template.showItemDetails && item.details ? `
-                      <div style="color: ${template.secondaryColor}; font-size: 13px; margin-top: 4px;">${item.details}</div>
+                      <div style="color: ${template.secondaryColor}; font-size: ${template.bodyFontSize ? template.bodyFontSize[0] : 13}px; margin-top: 4px;">${item.details}</div>
                     ` : ''}
                   </td>
                   <td style="text-align: right; padding: 16px 0; border-bottom: 1px solid ${template.borderColor}; -webkit-print-color-adjust: exact; print-color-adjust: exact;">${item.quantity}</td>
@@ -478,20 +499,46 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
             </div>
             <div style="display: flex; justify-content: space-between; padding: 12px 0; margin-top: 8px; border-top: 2px solid ${template.primaryColor}; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
               <span style="font-weight: 600;">Total</span>
-              <span style="font-weight: 600; font-size: 18px; color: ${template.accentColor};">
+                            <span style="font-weight: 600; font-size: 18px; color: ${template.accentColor};">
                 ${formatCurrency(invoiceData.total, invoiceData.currency)}
               </span>
             </div>
           </div>
         </div>
 
-          <!-- Notes -->
-          ${template.showNotes && invoiceData.notes ? `
-            <div>
-              <div style="font-weight: 600; margin-bottom: 8px;">Notes</div>
-              <div style="color: ${template.secondaryColor}; font-size: 14px; line-height: 1.6;">${invoiceData.notes}</div>
+        <!-- Two Column Layout: Payment Terms/Tax Summary/Notes + Signature -->
+        <div style="display: grid; ${template.showSignature && companyInfo.signature ? 'grid-template-columns: 70% 30%;' : 'grid-template-columns: 100%;'} gap: 32px; margin-bottom: 48px;">
+          <!-- Left Column (70%) - Payment Terms, Tax Summary, Notes -->
+          <div style="display: flex; flex-direction: column; gap: 24px;">
+
+            ${template.showTaxSummary && invoiceData.taxSummary ? `
+              <div>
+                <div style="font-size: 11px; font-weight: 600; margin-bottom: 16px; color: ${template.secondaryColor}; letter-spacing: 0.05em; text-transform: uppercase;">Tax Summary</div>
+                <div style="color: ${template.secondaryColor}; font-size: ${template.bodyFontSize ? template.bodyFontSize[0] : 14}px; line-height: 1.6;">${invoiceData.taxSummary}</div>
+              </div>
+            ` : ''}
+            ${template.showNotes && invoiceData.notes ? `
+              <div>
+                <div style="font-size: 11px; font-weight: 600; margin-bottom: 16px; color: ${template.secondaryColor}; letter-spacing: 0.05em; text-transform: uppercase;">Notes</div>
+                <div style="color: ${template.secondaryColor}; font-size: ${template.bodyFontSize ? template.bodyFontSize[0] : 14}px; line-height: 1.6;">${invoiceData.notes}</div>
+              </div>
+            ` : ''}
+          </div>
+
+          <!-- Right Column (30%) - Signature (only show if signature exists) -->
+          ${template.showSignature && companyInfo.signature ? `
+            <div style="display: flex; align-items: flex-end; justify-content: flex-end;">
+              <div style="text-align: right;">
+                <div style="font-size: 11px; font-weight: 600; margin-bottom: 16px; color: ${template.secondaryColor}; letter-spacing: 0.05em; text-transform: uppercase;">Authorized Signature</div>
+                <img
+                  src="${companyInfo.signature}"
+                  alt="Authorized Signature"
+                  style="max-width: ${template.signatureWidth ? template.signatureWidth[0] : 140}px; height: auto; display: block; margin-left: auto;"
+                />
+              </div>
             </div>
           ` : ''}
+        </div>
         </div>
         </div>
       </div>
@@ -510,29 +557,32 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
             ${template.showLogo && companyInfo.logoUrl ? `
               <img src="${companyInfo.logoUrl}" alt="Logo" style="height: ${logoSize}px; border-radius: ${logoBorderRadius}px;" class="object-contain">
             ` : ''}
-            <div style="display: inline-block; padding: 8px 16px; border-radius: 9999px; font-size: 14px; font-weight: 500; background-color: ${template.accentColor}33; color: ${template.accentColor}; text-transform: uppercase; letter-spacing: 0.5px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
-              ${invoiceData.status.toUpperCase()}
-            </div>
+
           </div>
 
           <h1 style="font-size: 36px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 16px;">
             Invoice
           </h1>
+          ${template.showInvoiceDescription && invoiceData.invoiceDescription ? `
+            <div style="color: ${template.secondaryColor}; font-size: ${template.bodyFontSize ? template.bodyFontSize[0] : 14}px; font-weight: 400; margin-bottom: 16px; line-height: 1.4; max-width: 250px;">
+              ${invoiceData.invoiceDescription}
+            </div>
+          ` : ''}
           
-          <div class="grid grid-cols-3 gap-4" style="font-size: 14px;">
+          <div class="grid grid-cols-3 gap-4" style="font-size: ${template.bodyFontSize ? template.bodyFontSize[0] : 14}px;">
             ${template.showInvoiceNumber ? `
               <div>
-                <div style="color: ${template.secondaryColor}; margin-bottom: 4px;">Invoice Number</div>
+                <div style="font-size: 11px; font-weight: 600; margin-bottom: 8px; color: ${template.secondaryColor}; letter-spacing: 0.05em; text-transform: uppercase; font-size: ${template.sectionTitleFontSize ? template.sectionTitleFontSize[0] : 16}px;">Invoice Number</div>
                 <div style="font-weight: 600;">${invoiceData.number}</div>
               </div>
             ` : ''}
             ${template.showDates ? `
               <div>
-                <div style="color: ${template.secondaryColor}; margin-bottom: 4px;">Issue Date</div>
+                <div style="font-size: 11px; font-weight: 600; margin-bottom: 8px; color: ${template.secondaryColor}; letter-spacing: 0.05em; text-transform: uppercase; font-size: ${template.sectionTitleFontSize ? template.sectionTitleFontSize[0] : 16}px;">Issue Date</div>
                 <div style="font-weight: 600;">${formatDateForUser(invoiceData.date)}</div>
               </div>
               <div>
-                <div style="color: ${template.secondaryColor}; margin-bottom: 4px;">Due Date</div>
+                <div style="font-size: 11px; font-weight: 600; margin-bottom: 8px; color: ${template.secondaryColor}; letter-spacing: 0.05em; text-transform: uppercase; font-size: ${template.sectionTitleFontSize ? template.sectionTitleFontSize[0] : 16}px;">Due Date</div>
                 <div style="font-weight: 600;">${formatDateForUser(invoiceData.dueDate)}</div>
               </div>
             ` : ''}
@@ -542,34 +592,41 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
         <!-- From/To Section -->
         <div class="grid grid-cols-2 gap-12 mb-16">
           <div>
-            <div class="text-xs font-semibold mb-4" style="color: ${template.secondaryColor}; letter-spacing: 0.05em; text-transform: uppercase;">
+            <div class="text-xs font-semibold mb-4" style="color: ${template.secondaryColor}; letter-spacing: 0.05em; text-transform: uppercase; font-size: ${template.sectionTitleFontSize ? template.sectionTitleFontSize[0] : 16}px;">
               FROM
             </div>
-            <div style="font-weight: 600; font-size: 18px; margin-bottom: 8px;">
+            <div style="font-weight: 600; font-size: ${template.fontSize ? template.fontSize[0] : 14}px; margin-bottom: 8px;">
               ${companyInfo.name}
             </div>
             <div style="color: ${template.secondaryColor}; white-space: pre-line; line-height: 1.5;">
               ${companyInfo.address}
             </div>
-            <div style="color: ${template.secondaryColor}; margin-top: 8px;">
-              ${companyInfo.email}
-            </div>
+            ${template.showCompanyEmail && companyInfo.email ? `
+              <div style="color: ${template.secondaryColor}; margin-top: 8px;">
+                ${companyInfo.email}
+              </div>
+            ` : ''}
+            ${template.showPhoneNumber && companyInfo.phone ? `
+              <div style="color: ${template.secondaryColor}; margin-top: 4px;">
+                ${companyInfo.phone}
+              </div>
+            ` : ''}
           </div>
 
           <div>
             <div class="text-xs font-semibold mb-4" style="color: ${template.secondaryColor}; letter-spacing: 0.05em; text-transform: uppercase;">
               TO
             </div>
-            <div style="font-weight: 600; font-size: 18px; margin-bottom: 8px;">
+            <div style="font-weight: 600; font-size: ${template.fontSize ? template.fontSize[0] : 14}px; margin-bottom: 8px;">
               ${invoiceData.client.name}
             </div>
             <div style="color: ${template.secondaryColor}; white-space: pre-line; line-height: 1.5;">
               ${invoiceData.client.address}
             </div>
-            ${invoiceData.client.email ? `
-            <div style="color: ${template.secondaryColor}; margin-top: 8px;">
-              ${invoiceData.client.email}
-            </div>
+            ${template.showClientEmail && invoiceData.client.email ? `
+              <div style="color: ${template.secondaryColor}; margin-top: 8px;">
+                ${invoiceData.client.email}
+              </div>
             ` : ''}
           </div>
         </div>
@@ -584,7 +641,7 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
             <div style="padding: 24px 0; border-bottom: ${index < invoiceData.items.length - 1 ? `1px solid ${template.borderColor}` : 'none'};">
               <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                 <div style="flex: 1;">
-                  <div style="font-weight: 600; font-size: 16px; margin-bottom: 4px; color: ${template.primaryColor};">
+                  <div style="font-weight: 600; font-size: ${template.fontSize ? template.fontSize[0] : 14}px; margin-bottom: 4px; color: ${template.primaryColor};">
                     ${item.description}
                   </div>
                   ${template.showItemDetails && item.details ? `
@@ -596,7 +653,7 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
                     ${item.quantity} × ${formatCurrency(item.rate, invoiceData.currency)}
                   </div>
                 </div>
-                <div style="font-weight: 600; font-size: 18px; color: ${template.primaryColor};">
+                <div style="font-weight: 600; font-size: ${template.fontSize ? template.fontSize[0] : 14}px; color: ${template.primaryColor};">
                   ${formatCurrency(item.amount, invoiceData.currency)}
                 </div>
               </div>
@@ -607,30 +664,58 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
         <!-- Total -->
         <div style="padding: 32px; border-radius: 8px; margin-bottom: 48px; background-color: ${template.primaryColor}; color: ${template.backgroundColor}; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <div style="font-size: 14px; opacity: 0.8; margin-bottom: 8px;">Total Amount</div>
+                        <div>
+              <div style="font-size: ${template.bodyFontSize ? template.bodyFontSize[0] : 14}px; opacity: 0.8; margin-bottom: 8px;">Total Amount</div>
               <div style="font-size: 36px; font-weight: 700; letter-spacing: -0.02em;">
                 ${formatCurrency(invoiceData.total, invoiceData.currency)}
               </div>
             </div>
             ${template.showPaymentTerms ? `
               <div style="text-align: right;">
-                <div style="font-size: 14px; opacity: 0.8; margin-bottom: 4px;">Payment Terms</div>
-                <div style="font-size: 16px; font-weight: 500;">${invoiceData.paymentTerms}</div>
+                <div style="font-size: ${template.bodyFontSize ? template.bodyFontSize[0] : 14}px; opacity: 0.8; margin-bottom: 4px;">Payment Terms</div>
+                <div style="font-size: ${template.fontSize ? template.fontSize[0] : 14}px; font-weight: 500;">${invoiceData.paymentTerms}</div>
               </div>
             ` : ''}
           </div>
         </div>
 
-          <!-- Notes -->
-          ${template.showNotes && invoiceData.notes ? `
-            <div>
-              <div style="font-weight: 600; margin-bottom: 8px;">Notes</div>
-              <div style="color: ${template.secondaryColor}; line-height: 1.6;">
-                ${invoiceData.notes}
+        <!-- Two Column Layout: Payment Terms/Tax Summary/Notes + Signature -->
+        <div style="display: grid; ${template.showSignature && companyInfo.signature ? 'grid-template-columns: 70% 30%;' : 'grid-template-columns: 100%;'} gap: 32px; margin-bottom: 48px;">
+          <!-- Left Column (70%) - Payment Terms, Tax Summary, Notes -->
+          <div style="display: flex; flex-direction: column; gap: 24px;">
+
+            ${template.showTaxSummary && invoiceData.taxSummary ? `
+              <div>
+                <div style="font-weight: 600; margin-bottom: 8px;">Tax Summary</div>
+                <div style="color: ${template.secondaryColor}; line-height: 1.6;">
+                  ${invoiceData.taxSummary}
+                </div>
+              </div>
+            ` : ''}
+            ${template.showNotes && invoiceData.notes ? `
+              <div>
+                <div style="font-weight: 600; margin-bottom: 8px;">Notes</div>
+                <div style="color: ${template.secondaryColor}; line-height: 1.6;">
+                  ${invoiceData.notes}
+                </div>
+              </div>
+            ` : ''}
+          </div>
+
+          <!-- Right Column (30%) - Signature (only show if signature exists) -->
+          ${template.showSignature && companyInfo.signature ? `
+            <div style="display: flex; align-items: flex-end; justify-content: flex-end;">
+              <div style="text-align: right;">
+                <div style="font-size: 11px; font-weight: 600; margin-bottom: 16px; color: ${template.secondaryColor}; letter-spacing: 0.05em; text-transform: uppercase;">Authorized Signature</div>
+                <img
+                  src="${companyInfo.signature}"
+                  alt="Authorized Signature"
+                  style="max-width: ${template.signatureWidth ? template.signatureWidth[0] : 140}px; height: auto; display: block; margin-left: auto;"
+                />
               </div>
             </div>
           ` : ''}
+        </div>
         </div>
         </div>
       </div>
@@ -654,9 +739,9 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
               <div style="color: ${template.secondaryColor}; font-size: 14px; margin-top: 4px; line-height: 1.5;">
                 ${companyInfo.address.split('\n').join(' • ')}
               </div>
-              ${companyInfo.email ? `
+              ${(template.showCompanyEmail && companyInfo.email) || (template.showPhoneNumber && companyInfo.phone) ? `
                 <div style="color: ${template.secondaryColor}; font-size: 14px; margin-top: 2px;">
-                  ${companyInfo.email} • ${companyInfo.phone || ''}
+                  ${template.showCompanyEmail && companyInfo.email ? companyInfo.email : ''}${(template.showCompanyEmail && companyInfo.email && template.showPhoneNumber && companyInfo.phone) ? ' • ' : ''}${template.showPhoneNumber && companyInfo.phone ? companyInfo.phone : ''}
                 </div>
               ` : ''}
             </div>
@@ -665,6 +750,11 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
               <div style="font-size: 28px; font-weight: 800; letter-spacing: -0.03em; color: ${template.accentColor}; margin-bottom: 12px;">
                 INVOICE
               </div>
+              ${template.showInvoiceDescription && invoiceData.invoiceDescription ? `
+                <div style="font-size: 14px; font-weight: 400; color: ${template.secondaryColor}; margin-bottom: 12px; line-height: 1.4;">
+                  ${invoiceData.invoiceDescription}
+                </div>
+              ` : ''}
               ${template.showInvoiceNumber ? `
                 <div style="font-size: 16px; font-weight: 600; color: ${template.primaryColor}; background-color: ${template.borderColor}50; padding: 6px 12px; border-radius: 6px; display: inline-block;">
                   ${invoiceData.number}
@@ -686,10 +776,11 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
               <div style="white-space: pre-line; color: ${template.secondaryColor};">
                 ${companyInfo.address}
               </div>
-              <div style="color: ${template.secondaryColor}; margin-top: 4px;">
-                ${companyInfo.email}<br />
-                ${companyInfo.phone || ''}
-              </div>
+              ${(template.showCompanyEmail && companyInfo.email) || (template.showPhoneNumber && companyInfo.phone) ? `
+                <div style="color: ${template.secondaryColor}; margin-top: 4px;">
+                  ${template.showCompanyEmail && companyInfo.email ? `${companyInfo.email}${template.showPhoneNumber && companyInfo.phone ? '<br />' : ''}` : ''}${template.showPhoneNumber && companyInfo.phone ? companyInfo.phone : ''}
+                </div>
+              ` : ''}
             </div>
           </div>
 
@@ -702,10 +793,10 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
               <div style="white-space: pre-line; color: ${template.secondaryColor};">
                 ${invoiceData.client.address}
               </div>
-              ${invoiceData.client.email ? `
-              <div style="color: ${template.secondaryColor}; margin-top: 4px;">
-                ${invoiceData.client.email}
-              </div>
+              ${template.showClientEmail && invoiceData.client.email ? `
+                <div style="color: ${template.secondaryColor}; margin-top: 4px;">
+                  ${invoiceData.client.email}
+                </div>
               ` : ''}
             </div>
           </div>
@@ -741,7 +832,7 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
             <div style="padding: 16px; background-color: ${template.primaryColor}; color: ${template.backgroundColor};">
               <div style="display: grid; grid-template-columns: 6fr 2fr 2fr 2fr; gap: 16px; font-weight: 600; font-size: ${tableHeaderSize}px;">
                 <div>Description</div>
-                <div style="text-align: right;">Quantity</div>
+                <div style="text-align: right;">${quantityLabel}</div>
                 <div style="text-align: right;">Rate</div>
                 <div style="text-align: right;">Amount</div>
               </div>
@@ -789,15 +880,48 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
           </div>
         </div>
 
-          <!-- Notes -->
-          ${template.showNotes && invoiceData.notes ? `
-            <div class="p-6 rounded-lg" style="background-color: ${template.borderColor}20;">
-              <div style="font-weight: 600; margin-bottom: 8px; color: ${template.primaryColor};">Notes</div>
-              <div style="color: ${template.secondaryColor}; font-size: 14px; line-height: 1.6;">
-                ${invoiceData.notes}
+        <!-- Two Column Layout: Payment Terms/Tax Summary/Notes + Signature -->
+        <div style="display: grid; ${template.showSignature && companyInfo.signature ? 'grid-template-columns: 70% 30%;' : 'grid-template-columns: 100%;'} gap: 32px; margin-bottom: 48px;">
+          <!-- Left Column (70%) - Payment Terms, Tax Summary, Notes -->
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            ${template.showPaymentTerms ? `
+              <div style="padding: 24px; border-radius: 8px; background-color: ${template.borderColor}20;">
+                <div style="font-weight: 600; margin-bottom: 8px; color: ${template.primaryColor}; font-size: ${template.sectionTitleFontSize ? template.sectionTitleFontSize[0] : 16}px;">Payment Terms</div>
+                <div style="color: ${template.secondaryColor}; font-size: ${template.footerItemsFontSize ? template.footerItemsFontSize[0] : 14}px; line-height: 1.6;">${invoiceData.paymentTerms}</div>
+              </div>
+            ` : ''}
+            ${template.showTaxSummary && invoiceData.taxSummary ? `
+              <div style="padding: 24px; border-radius: 8px; background-color: ${template.borderColor}20;">
+                <div style="font-weight: 600; margin-bottom: 8px; color: ${template.primaryColor};">Tax Summary</div>
+                <div style="color: ${template.secondaryColor}; font-size: 14px; line-height: 1.6;">
+                  ${invoiceData.taxSummary}
+                </div>
+              </div>
+            ` : ''}
+            ${template.showNotes && invoiceData.notes ? `
+              <div style="padding: 24px; border-radius: 8px; background-color: ${template.borderColor}20;">
+                <div style="font-weight: 600; margin-bottom: 8px; color: ${template.primaryColor};">Notes</div>
+                <div style="color: ${template.secondaryColor}; font-size: 14px; line-height: 1.6;">
+                  ${invoiceData.notes}
+                </div>
+              </div>
+            ` : ''}
+          </div>
+
+          <!-- Right Column (30%) - Signature (only show if signature exists) -->
+          ${template.showSignature && companyInfo.signature ? `
+            <div style="display: flex; align-items: flex-end; justify-content: flex-end;">
+              <div style="text-align: right;">
+                <div style="font-weight: 600; margin-bottom: 12px; font-size: 14px; color: ${template.primaryColor};">Authorized Signature</div>
+                <img
+                  src="${companyInfo.signature}"
+                  alt="Authorized Signature"
+                  style="max-width: ${template.signatureWidth ? template.signatureWidth[0] : 140}px; height: auto; display: block; margin-left: auto;"
+                />
               </div>
             </div>
           ` : ''}
+        </div>
         </div>
         </div>
       </div>
@@ -821,11 +945,7 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
                   class="object-contain"
                 />
               ` : ''}
-              <div 
-                style="display: inline-block; font-size: 12px; font-weight: 500; padding: 6px 12px; border-radius: 9999px; background-color: ${invoiceData.status === 'PAID' ? `${template.accentColor}20` : `${template.secondaryColor}20`}; color: ${invoiceData.status === 'PAID' ? template.accentColor : template.secondaryColor}; border: 1px solid ${invoiceData.status === 'PAID' ? template.accentColor : template.secondaryColor}30; -webkit-print-color-adjust: exact; print-color-adjust: exact;"
-              >
-                ${invoiceData.status}
-              </div>
+
             </div>
 
             <div class="mb-8">
@@ -834,19 +954,30 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
                   <h1 style="font-size: 36px; font-weight: 700; margin-bottom: 12px; letter-spacing: -0.02em;">
                     Invoice
                   </h1>
+                  ${template.showInvoiceDescription && invoiceData.invoiceDescription ? `
+                    <div style="font-size: ${template.bodyFontSize ? template.bodyFontSize[0] : 14}px; font-weight: 400; color: ${template.secondaryColor}; margin-top: 16px; margin-bottom: 20px; line-height: 1.4; max-width: 250px;">
+                      ${invoiceData.invoiceDescription}
+                    </div>
+                  ` : ''}
                   ${template.showInvoiceNumber ? `
-                    <div style="font-size: 14px; font-weight: 500; color: ${template.secondaryColor}; background-color: ${template.borderColor}30; padding: 6px 16px; border-radius: 20px; display: inline-block;">
+                    <div style="font-size: 14px; font-weight: 500; color: ${template.secondaryColor}; background-color: ${template.borderColor}30; padding: 6px 16px; border-radius: 20px; display: inline-block; margin-top: ${template.showInvoiceDescription && invoiceData.invoiceDescription ? '0' : '16px'};">
                       ${invoiceData.number}
                     </div>
                   ` : ''}
                 </div>
                 ${template.showDates ? `
-                  <div style="text-align: right; font-size: 13px; color: ${template.secondaryColor};">
-                    <div style="margin-bottom: 4px;">
-                      <span style="font-weight: 500;">Issue Date:</span> ${formatDateForUser(invoiceData.date)}
+                  <div style="text-align: right;">
+                    <div style="font-size: 11px; font-weight: 600; margin-bottom: 8px; color: ${template.secondaryColor}; letter-spacing: 0.05em; text-transform: uppercase;">
+                      Issue Date
                     </div>
-                    <div>
-                      <span style="font-weight: 500;">Due Date:</span> ${formatDateForUser(invoiceData.dueDate)}
+                    <div style="font-size: 14px; font-weight: 600; color: ${template.primaryColor}; margin-bottom: 12px;">
+                      ${formatDateForUser(invoiceData.date)}
+                    </div>
+                    <div style="font-size: 11px; font-weight: 600; margin-bottom: 8px; color: ${template.secondaryColor}; letter-spacing: 0.05em; text-transform: uppercase;">
+                      Due Date
+                    </div>
+                    <div style="font-size: 14px; font-weight: 600; color: ${template.primaryColor};">
+                      ${formatDateForUser(invoiceData.dueDate)}
                     </div>
                   </div>
                 ` : ''}
@@ -857,35 +988,39 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
           <!-- Cards Layout -->
           <div class="grid grid-cols-2 gap-4 mb-12">
             <div style="padding: 20px; border-radius: 8px; background-color: ${template.backgroundColor}; border: 1px solid ${template.borderColor}60; transition: all 0.3s ease;">
-              <div style="font-size: 11px; color: ${template.secondaryColor}; margin-bottom: 12px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;">
+              <div style="font-size: 11px; font-weight: 600; margin-bottom: 16px; color: ${template.secondaryColor}; letter-spacing: 0.05em; text-transform: uppercase;">
                 From
               </div>
               <div style="font-weight: 600; margin-bottom: 6px; font-size: 16px;">${companyInfo.name}</div>
               <div style="font-size: 14px; color: ${template.secondaryColor}; line-height: 1.6;">
                 ${companyInfo.address}
               </div>
-              ${companyInfo.email ? `
+              ${(template.showCompanyEmail && companyInfo.email) || (template.showPhoneNumber && companyInfo.phone) ? `
                 <div style="font-size: 14px; color: ${template.secondaryColor}; margin-top: 8px;">
-                  ${companyInfo.email}<br />
-                  ${companyInfo.phone}
+                  ${template.showCompanyEmail && companyInfo.email ? `${companyInfo.email}${template.showPhoneNumber && companyInfo.phone ? '<br />' : ''}` : ''}${template.showPhoneNumber && companyInfo.phone ? companyInfo.phone : ''}
                 </div>
               ` : ''}
               ${template.showTaxId && companyInfo.taxId ? `
                 <div style="font-size: 13px; color: ${template.secondaryColor}; margin-top: 8px;">
-                  Tax ID: ${companyInfo.taxId}
+                  ${companyInfo.taxName ? `${companyInfo.taxName}: ${companyInfo.taxId}` : `Tax ID: ${companyInfo.taxId}`}
+                </div>
+              ` : ''}
+              ${template.showTaxDocument && companyInfo.taxDocumentName && companyInfo.taxDocumentNumber ? `
+                <div style="font-size: 13px; color: ${template.secondaryColor}; margin-top: 4px;">
+                  ${companyInfo.taxDocumentName}: ${companyInfo.taxDocumentNumber}
                 </div>
               ` : ''}
             </div>
             
             <div style="padding: 20px; border-radius: 8px; background-color: ${template.backgroundColor}; border: 1px solid ${template.borderColor}60; transition: all 0.3s ease;">
-              <div style="font-size: 11px; color: ${template.secondaryColor}; margin-bottom: 12px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;">
+              <div style="font-size: 11px; font-weight: 600; margin-bottom: 16px; color: ${template.secondaryColor}; letter-spacing: 0.05em; text-transform: uppercase;">
                 Bill To
               </div>
               <div style="font-weight: 600; margin-bottom: 6px; font-size: 16px;">${invoiceData.client.name}</div>
               <div style="font-size: 14px; color: ${template.secondaryColor}; line-height: 1.6;">
                 ${invoiceData.client.address}
               </div>
-              ${invoiceData.client.email ? `
+              ${template.showClientEmail && invoiceData.client.email ? `
                 <div style="font-size: 14px; color: ${template.secondaryColor}; margin-top: 8px;">
                   ${invoiceData.client.email}
                 </div>
@@ -896,7 +1031,6 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
           <!-- Services Table -->
           <div class="mb-12">
             <div class="mb-6">
-              <h3 style="font-size: 18px; font-weight: 700; letter-spacing: -0.01em;">Services</h3>
             </div>
 
             <div style="border: 1px solid ${template.borderColor}; border-radius: 12px; overflow: hidden; background-color: ${template.backgroundColor}; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
@@ -904,7 +1038,7 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
                 <thead>
                   <tr style="background-color: ${template.borderColor}20; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
                     <th style="text-align: left; padding: 12px 16px; font-weight: 600; font-size: ${tableHeaderSize}px; color: ${template.primaryColor}; -webkit-print-color-adjust: exact; print-color-adjust: exact;">Item</th>
-                    <th style="text-align: center; padding: 12px 16px; font-weight: 600; font-size: ${tableHeaderSize}px; color: ${template.primaryColor}; -webkit-print-color-adjust: exact; print-color-adjust: exact;">Qty</th>
+                    <th style="text-align: center; padding: 12px 16px; font-weight: 600; font-size: ${tableHeaderSize}px; color: ${template.primaryColor}; -webkit-print-color-adjust: exact; print-color-adjust: exact;">${quantityLabel}</th>
                     <th style="text-align: right; padding: 12px 16px; font-weight: 600; font-size: ${tableHeaderSize}px; color: ${template.primaryColor}; -webkit-print-color-adjust: exact; print-color-adjust: exact;">Rate</th>
                     <th style="text-align: right; padding: 12px 16px; font-weight: 600; font-size: ${tableHeaderSize}px; color: ${template.primaryColor}; -webkit-print-color-adjust: exact; print-color-adjust: exact;">Amount</th>
                   </tr>
@@ -955,26 +1089,54 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
           </div>
 
           <!-- Payment Info -->
-          ${(template.showPaymentTerms || template.showNotes) ? `
-            <div style="padding: 24px; border-radius: 12px; background-color: ${template.accentColor}08; border: 1px solid ${template.accentColor}20; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
-              ${template.showPaymentTerms ? `
-                <div style="margin-bottom: 16px;">
-                  <div style="font-weight: 600; font-size: 13px; color: ${template.primaryColor}; margin-bottom: 6px; letter-spacing: 0.03em; text-transform: uppercase;">Payment Terms</div>
-                  <div style="font-size: 14px; color: ${template.secondaryColor}; line-height: 1.6;">
-                    ${invoiceData.paymentTerms}
+        <!-- Two Column Layout: Payment Terms/Tax Summary/Notes + Signature -->
+        <div style="display: grid; ${template.showSignature && companyInfo.signature ? 'grid-template-columns: 1fr auto;' : 'grid-template-columns: 100%;'} gap: 24px; margin-bottom: 48px;">
+          <!-- Left Column - Payment Terms, Tax Summary, Notes -->
+          <div style="min-width: 0;">
+            ${(template.showPaymentTerms || template.showTaxSummary || template.showNotes) ? `
+              <div style="padding: 24px; border-radius: 12px; background-color: ${template.accentColor}08; border: 1px solid ${template.accentColor}20; display: flex; flex-direction: column; gap: 16px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                ${template.showPaymentTerms ? `
+                  <div>
+                    <div style="font-size: 11px; font-weight: 600; margin-bottom: 16px; color: ${template.secondaryColor}; letter-spacing: 0.05em; text-transform: uppercase;">Payment Terms</div>
+                    <div style="font-size: 14px; color: ${template.secondaryColor}; line-height: 1.6;">
+                      ${invoiceData.paymentTerms}
+                    </div>
                   </div>
-                </div>
-              ` : ''}
-              ${template.showNotes && invoiceData.notes ? `
-                <div>
-                  <div style="font-weight: 600; font-size: 13px; color: ${template.primaryColor}; margin-bottom: 6px; letter-spacing: 0.03em; text-transform: uppercase;">Notes</div>
-                  <div style="font-size: 14px; color: ${template.secondaryColor}; line-height: 1.6;">
-                    ${invoiceData.notes}
+                ` : ''}
+                ${template.showTaxSummary && invoiceData.taxSummary ? `
+                  <div>
+                    <div style="font-size: 11px; font-weight: 600; margin-bottom: 16px; color: ${template.secondaryColor}; letter-spacing: 0.05em; text-transform: uppercase;">Tax Summary</div>
+                    <div style="font-size: 14px; color: ${template.secondaryColor}; line-height: 1.6;">
+                      ${invoiceData.taxSummary}
+                    </div>
                   </div>
-                </div>
-              ` : ''}
+                ` : ''}
+                ${template.showNotes && invoiceData.notes ? `
+                  <div>
+                    <div style="font-size: 11px; font-weight: 600; margin-bottom: 16px; color: ${template.secondaryColor}; letter-spacing: 0.05em; text-transform: uppercase;">Notes</div>
+                    <div style="font-size: 14px; color: ${template.secondaryColor}; line-height: 1.6;">
+                      ${invoiceData.notes}
+                    </div>
+                  </div>
+                ` : ''}
+              </div>
+            ` : ''}
+          </div>
+
+          <!-- Right Column - Signature (only show if signature exists) -->
+          ${template.showSignature && companyInfo.signature ? `
+            <div style="display: flex; align-items: flex-end; justify-content: flex-end; width: 100px; max-width: 100px; min-width: 0;">
+              <div style="text-align: right; width: 100%; max-width: 100px;">
+                <div style="font-size: 10px; font-weight: 600; margin-bottom: 12px; color: ${template.secondaryColor}; letter-spacing: 0.05em; text-transform: uppercase; line-height: 1.2; word-wrap: break-word;">Authorized Signature</div>
+                <img
+                  src="${companyInfo.signature}"
+                  alt="Authorized Signature"
+                  style="max-width: 90px; width: 100%; height: auto; display: block; margin-left: auto; object-fit: contain;"
+                />
+              </div>
             </div>
           ` : ''}
+        </div>
         </div>
         </div>
       </div>
@@ -988,10 +1150,17 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
         <div class="invoice-content">
           <div class="invoice-wrapper" style="${Object.entries(baseStyles).map(([k, v]) => `${k.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${v}`).join('; ')}">
                          <!-- Edge Header -->
-             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4rem;">
-               <h1 style="font-size: 5rem; font-weight: 300; color: ${template.primaryColor}; line-height: 1; margin: 0;">
-                 Invoice
-               </h1>
+             <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 4rem;">
+               <div>
+                 <h1 style="font-size: 5rem; font-weight: 300; color: ${template.primaryColor}; line-height: 1; margin: 0;">
+                   Invoice
+                 </h1>
+                 ${template.showInvoiceDescription && invoiceData.invoiceDescription ? `
+                   <div style="font-size: 14px; font-weight: 400; color: ${template.secondaryColor}; margin-top: 16px; line-height: 1.4; max-width: 500px;">
+                     ${invoiceData.invoiceDescription}
+                   </div>
+                 ` : ''}
+               </div>
                <div style="display: flex; align-items: center; gap: 0.75rem;">
                  ${template.showLogo && companyInfo.logoUrl ? `
                    <img 
@@ -1015,20 +1184,27 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
                   <div style="font-weight: 500; color: ${template.primaryColor}; margin-bottom: 4px;">
                     ${companyInfo.name}
                   </div>
-                  <div style="color: ${template.secondaryColor}; margin-bottom: 4px;">
-                    ${companyInfo.email}
-                  </div>
-                  <div style="color: ${template.secondaryColor}; margin-top: 16px; white-space: pre-line;">
+                  ${template.showCompanyEmail && companyInfo.email ? `
+                    <div style="color: ${template.secondaryColor}; margin-bottom: 4px;">
+                      ${companyInfo.email}
+                    </div>
+                  ` : ''}
+                  <div style="color: ${template.secondaryColor}; margin-top: 16px;">
                     ${companyInfo.address}
                   </div>
-                  ${companyInfo.phone ? `
+                  ${template.showPhoneNumber && companyInfo.phone ? `
                     <div style="color: ${template.secondaryColor}; margin-top: 4px;">
                       ${companyInfo.phone}
                     </div>
                   ` : ''}
                   ${template.showTaxId && companyInfo.taxId ? `
                     <div style="color: ${template.secondaryColor}; margin-top: 8px;">
-                      Tax ID: ${companyInfo.taxId}
+                      ${companyInfo.taxName ? `${companyInfo.taxName}: ${companyInfo.taxId}` : `Tax ID: ${companyInfo.taxId}`}
+                    </div>
+                  ` : ''}
+                  ${template.showTaxDocument && companyInfo.taxDocumentName && companyInfo.taxDocumentNumber ? `
+                    <div style="color: ${template.secondaryColor}; margin-top: 4px;">
+                      ${companyInfo.taxDocumentName}: ${companyInfo.taxDocumentNumber}
                     </div>
                   ` : ''}
                 </div>
@@ -1043,12 +1219,12 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
                   <div style="font-weight: 500; color: ${template.primaryColor}; margin-bottom: 4px;">
                     ${invoiceData.client.name}
                   </div>
-                  ${invoiceData.client.email ? `
-                  <div style="color: ${template.secondaryColor}; margin-bottom: 4px;">
-                    ${invoiceData.client.email}
-                  </div>
+                  ${template.showClientEmail && invoiceData.client.email ? `
+                    <div style="color: ${template.secondaryColor}; margin-bottom: 4px;">
+                      ${invoiceData.client.email}
+                    </div>
                   ` : ''}
-                  <div style="color: ${template.secondaryColor}; margin-top: 16px; white-space: pre-line;">
+                  <div style="color: ${template.secondaryColor}; margin-top: 16px;">
                     ${invoiceData.client.address}
                   </div>
                 </div>
@@ -1084,9 +1260,9 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
             <div class="mb-16">
               <div style="border-bottom: 1px solid ${template.borderColor}; padding-bottom: 16px;">
                 <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 2rem;">
-                  <div style="color: ${template.secondaryColor}; font-weight: 500;">Line items</div>
-                  <div style="color: ${template.secondaryColor}; font-weight: 500; text-align: center;">Quantity</div>
-                  <div style="color: ${template.secondaryColor}; font-weight: 500; text-align: right;">Amount</div>
+                  <div style="color: ${template.secondaryColor}; font-weight: 500; font-size: ${template.tableHeaderSize ? template.tableHeaderSize[0] : 14}px;">Line items</div>
+                  <div style="color: ${template.secondaryColor}; font-weight: 500; text-align: center; font-size: ${template.tableHeaderSize ? template.tableHeaderSize[0] : 14}px;">${quantityLabel}</div>
+                  <div style="color: ${template.secondaryColor}; font-weight: 500; text-align: right; font-size: ${template.tableHeaderSize ? template.tableHeaderSize[0] : 14}px;">Amount</div>
                 </div>
               </div>
               
@@ -1125,9 +1301,17 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
               </div>
             </div>
 
-            <!-- Terms and Notes -->
-            ${(template.showPaymentTerms || template.showNotes) ? `
-              <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 4rem; padding-top: 2rem; border-top: 1px solid ${template.borderColor};">
+            <!-- Terms, Tax Summary, Notes and Signature -->
+            ${(template.showPaymentTerms || template.showTaxSummary || template.showNotes || (template.showSignature && companyInfo.signature)) ? `
+              <div style="display: grid; ${(() => {
+                const items = [
+                  template.showPaymentTerms,
+                  template.showTaxSummary && invoiceData.taxSummary,
+                  template.showNotes && invoiceData.notes,
+                  template.showSignature && companyInfo.signature
+                ].filter(Boolean).length;
+                return items <= 2 ? 'grid-template-columns: repeat(2, 1fr);' : 'grid-template-columns: repeat(3, 1fr);';
+              })()} gap: 4rem; padding-top: 2rem; border-top: 1px solid ${template.borderColor};">
                 ${template.showPaymentTerms ? `
                   <div>
                     <h3 style="color: ${template.secondaryColor}; font-weight: 500; margin-bottom: 24px; font-size: 16px;">
@@ -1142,18 +1326,42 @@ export async function renderInvoiceHTML(invoice: any, template: any, userDateFor
                   </div>
                 ` : ''}
 
+                ${template.showTaxSummary && invoiceData.taxSummary ? `
+                  <div>
+                    <h3 style="color: ${template.secondaryColor}; font-weight: 500; margin-bottom: 24px; font-size: 16px;">
+                      Tax Summary
+                    </h3>
+                    <div style="color: ${template.primaryColor};">
+                      ${invoiceData.taxSummary}
+                    </div>
+                  </div>
+                ` : ''}
+
                 ${template.showNotes && invoiceData.notes ? `
                   <div>
                     <h3 style="color: ${template.secondaryColor}; font-weight: 500; margin-bottom: 24px; font-size: 16px;">
                       Notes
                     </h3>
                     <div style="color: ${template.primaryColor};">
-                    ${invoiceData.notes}
+                      ${invoiceData.notes}
+                    </div>
                   </div>
-                </div>
-              ` : ''}
-            </div>
-          ` : ''}
+                ` : ''}
+
+                ${template.showSignature && companyInfo.signature ? `
+                  <div>
+                    <h3 style="color: ${template.secondaryColor}; font-weight: 500; margin-bottom: 24px; font-size: 16px;">
+                      Authorized Signature
+                    </h3>
+                    <img
+                      src="${companyInfo.signature}"
+                      alt="Authorized Signature"
+                      style="max-width: ${template.signatureWidth ? template.signatureWidth[0] : 140}px; height: auto; display: block;"
+                    />
+                  </div>
+                ` : ''}
+              </div>
+            ` : ''}
         </div>
         </div>
       </div>

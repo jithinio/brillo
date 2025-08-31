@@ -2,15 +2,17 @@
 
 import React from 'react'
 import { HugeiconsIcon } from '@hugeicons/react';
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
@@ -20,6 +22,7 @@ import { toast } from 'sonner'
 import { PageHeader, PageContent } from '@/components/page-header'
 import { cn } from '@/lib/utils'
 import { useSettings } from '@/components/settings-provider'
+
 import { InvoiceCustomizationGate } from '@/components/gates/pro-feature-gate'
 
 interface InvoiceTemplate {
@@ -85,6 +88,7 @@ const backgroundColorPresets = [
 
 export default function CustomizeInvoicePage() {
   const { settings, isLoading, updateSetting, formatDate } = useSettings()
+
   const [activeTab, setActiveTab] = useState('template')
   const [saving, setSaving] = useState(false)
   const [fontDropdownOpen, setFontDropdownOpen] = useState(false)
@@ -110,8 +114,20 @@ export default function CustomizeInvoicePage() {
     showDates: true,
     showPaymentTerms: true,
     showNotes: true,
+    showInvoiceDescription: true,
+    showTaxSummary: true,
     showTaxId: false,
+    showTaxDocument: true,
     showItemDetails: true,
+    showCompanyEmail: true,
+    showClientEmail: true,
+    showPhoneNumber: true,
+    showSignature: true,
+    signatureWidth: [140],
+    footerItemsFontSize: [14],
+    sectionTitleFontSize: [14],
+    bodyFontSize: [14],
+    quantityLabel: settings.quantityLabel || 'Qty',
     notes: ''
   })
 
@@ -122,7 +138,11 @@ export default function CustomizeInvoicePage() {
     phone: '+1 (555) 123-4567',
     address: '123 Business Street\nSan Francisco, CA 94111',
     website: 'www.company.com',
-    taxId: 'TAX-123456789'
+    taxId: 'TAX-123456789',
+    taxName: 'Sales Tax',
+    taxDocumentName: 'SSN',
+    taxDocumentNumber: '123-45-6789',
+    signature: 'https://via.placeholder.com/200x80/333333/FFFFFF?text=Authorized+Signature'
   })
 
   // Load saved template from settings
@@ -180,7 +200,11 @@ export default function CustomizeInvoicePage() {
       phone: settings.companyPhone || companyInfo.phone,
       address: settings.companyAddress || companyInfo.address,
       website: settings.companyWebsite || companyInfo.website,
-      taxId: settings.companyRegistration || settings.taxId || companyInfo.taxId
+      taxId: settings.companyRegistration || settings.taxId || companyInfo.taxId,
+      taxName: settings.taxName || companyInfo.taxName,
+      taxDocumentName: settings.taxDocumentName || companyInfo.taxDocumentName || 'SSN',
+      taxDocumentNumber: settings.taxDocumentNumber || companyInfo.taxDocumentNumber || '123-45-6789',
+      signature: (settings.authorizedSignature && settings.authorizedSignature.trim()) || '/Signature_placehoolder.png'
     }
 
     // Load from localStorage if available (from settings page)
@@ -194,15 +218,29 @@ export default function CustomizeInvoicePage() {
         updatedCompanyInfo.address = parsed.companyAddress || updatedCompanyInfo.address
         updatedCompanyInfo.website = parsed.companyWebsite || updatedCompanyInfo.website
         updatedCompanyInfo.taxId = parsed.companyRegistration || updatedCompanyInfo.taxId
+
+        // Load tax info from localStorage too
+        const savedTaxInfo = localStorage.getItem('tax-info')
+        if (savedTaxInfo) {
+          try {
+            const parsedTaxInfo = JSON.parse(savedTaxInfo)
+            updatedCompanyInfo.taxId = parsedTaxInfo.taxId || updatedCompanyInfo.taxId
+            updatedCompanyInfo.taxName = parsedTaxInfo.taxName || updatedCompanyInfo.taxName
+            updatedCompanyInfo.taxDocumentName = parsedTaxInfo.taxDocumentName || updatedCompanyInfo.taxDocumentName || 'SSN'
+            updatedCompanyInfo.taxDocumentNumber = parsedTaxInfo.taxDocumentNumber || updatedCompanyInfo.taxDocumentNumber || '123-45-6789'
+          } catch (error) {
+            console.error('Error parsing tax info from localStorage:', error)
+          }
+        }
       } catch (error) {
         console.error('Error parsing company info from localStorage:', error)
       }
     }
 
     setCompanyInfo(updatedCompanyInfo)
-  }, [settings.companyName, settings.companyEmail, settings.companyPhone, settings.companyAddress, settings.companyWebsite, settings.companyRegistration, settings.taxId])
+  }, [settings.companyName, settings.companyEmail, settings.companyPhone, settings.companyAddress, settings.companyWebsite, settings.companyRegistration, settings.taxId, settings.taxName, settings.taxDocumentName, settings.taxDocumentNumber, settings.authorizedSignature])
 
-  const invoiceData = {
+  const [invoiceData, setInvoiceData] = useState({
     number: 'INV-2024-001',
     date: new Date(),
     dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
@@ -240,8 +278,10 @@ export default function CustomizeInvoicePage() {
     tax: 750,
     total: 8250,
     paymentTerms: 'Net 30',
-    notes: 'Thank you for your business. Please include the invoice number with your payment.'
-  }
+    notes: 'Thank you for your business. Please include the invoice number with your payment.',
+    invoiceDescription: '', // Will be populated from settings or placeholder
+    taxSummary: '' // Will be populated from settings or placeholder
+  })
 
   // Auto-fetch logo and currency from settings
   useEffect(() => {
@@ -251,6 +291,22 @@ export default function CustomizeInvoicePage() {
     const defaultCurrency = getDefaultCurrency()
     setTemplate(prev => ({ ...prev, currency: defaultCurrency }))
   }, [settings.companyLogo])
+
+  // Update invoice data with defaults from settings or placeholders for preview
+  useEffect(() => {
+    setInvoiceData(prev => ({
+      ...prev,
+      invoiceDescription: settings.defaultInvoiceDescription || 'Website design and development services as per project requirements and specifications.',
+      taxSummary: settings.defaultTaxSummary || 'All taxes calculated as per local regulations. VAT ID: 123456789'
+    }))
+  }, [settings.defaultInvoiceDescription, settings.defaultTaxSummary])
+
+  // Auto-sync quantity label from settings
+  useEffect(() => {
+    if (settings.quantityLabel) {
+      setTemplate(prev => ({ ...prev, quantityLabel: settings.quantityLabel }))
+    }
+  }, [settings.quantityLabel])
 
   // Function to apply default template styles when user selects a new template
   const applyDefaultTemplateStyles = (templateId: string) => {
@@ -269,7 +325,8 @@ export default function CustomizeInvoicePage() {
         accentColor: '#FF5A5F',
         borderColor: '#F0F0F0',
         fontFamily: 'helvetica',
-        invoicePadding: [64]
+        invoicePadding: [64],
+        sectionTitleFontSize: [12]
       },
       'classic': {
         primaryColor: '#1A1A1A',
@@ -285,7 +342,8 @@ export default function CustomizeInvoicePage() {
         accentColor: '#0084FF',
         borderColor: '#EDEDEC',
         fontFamily: 'inter',
-        invoicePadding: [56]
+        invoicePadding: [56],
+        sectionTitleFontSize: [12]
       },
       'edge': {
         primaryColor: '#111827',
@@ -324,7 +382,7 @@ export default function CustomizeInvoicePage() {
     return fontMap[template.fontFamily] || fontMap['inter']
   }
 
-  const renderInvoice = () => {
+  const renderInvoice = useCallback(() => {
     const baseStyles = {
       fontFamily: getFontFamily(),
       fontSize: `${template.fontSize[0]}px`,
@@ -338,7 +396,7 @@ export default function CustomizeInvoicePage() {
 
     switch (template.templateId) {
       case 'modern':
-        return <ModernInvoice {...{ template, companyInfo, invoiceData, baseStyles }} />
+        return <ModernInvoice key={template.sectionTitleFontSize[0]} {...{ template, companyInfo, invoiceData, baseStyles }} />
       case 'bold':
         return <BoldInvoice {...{ template, companyInfo, invoiceData, baseStyles }} />
       case 'classic':
@@ -350,10 +408,11 @@ export default function CustomizeInvoicePage() {
       default:
         return <ModernInvoice {...{ template, companyInfo, invoiceData, baseStyles }} />
     }
-  }
+  }, [template, companyInfo, invoiceData])
 
   // Modern Invoice Component
   const ModernInvoice = ({ template, companyInfo, invoiceData, baseStyles }: any) => {
+    console.log('ModernInvoice render - sectionTitleFontSize:', template.sectionTitleFontSize[0]);
   return (
       <div style={baseStyles}>
         {/* Header */}
@@ -379,32 +438,54 @@ export default function CustomizeInvoicePage() {
                 {invoiceData.number}
                             </div>
             )}
+            {template.showInvoiceDescription && (
+              <div style={{ color: template.secondaryColor, fontSize: `${template.bodyFontSize[0]}px`, fontWeight: '400', marginTop: '8px', lineHeight: '1.4', maxWidth: '250px' }}>
+                {invoiceData.invoiceDescription}
+              </div>
+            )}
                           </div>
 
           <div className="text-right">
             <div style={{ fontWeight: '600', marginBottom: '4px' }}>{companyInfo.name}</div>
-            <div style={{ color: template.secondaryColor, fontSize: '14px', whiteSpace: 'pre-line' }}>
+            <div style={{ color: template.secondaryColor, fontSize: `${template.bodyFontSize[0]}px`, whiteSpace: 'pre-line', maxWidth: '200px' }}>
               {companyInfo.address}
             </div>
-            <div style={{ color: template.secondaryColor, fontSize: '14px', marginTop: '8px' }}>
-              {companyInfo.email}
-            </div>
-            {template.showTaxId && (
-              <div style={{ color: template.secondaryColor, fontSize: '14px', marginTop: '4px' }}>
-                {companyInfo.taxId}
+            {template.showCompanyEmail && companyInfo.email && (
+              <div style={{ color: template.secondaryColor, fontSize: `${template.bodyFontSize[0]}px`, marginTop: '8px' }}>
+                {companyInfo.email}
               </div>
-                            )}
+            )}
+            {template.showPhoneNumber && companyInfo.phone && (
+              <div style={{ color: template.secondaryColor, fontSize: `${template.bodyFontSize[0]}px`, marginTop: '4px' }}>
+                {formatPhoneNumber(companyInfo.phone)}
+              </div>
+            )}
+            {template.showTaxId && companyInfo.taxId && (
+              <div style={{ color: template.secondaryColor, fontSize: `${template.bodyFontSize[0]}px`, marginTop: '4px' }}>
+                {companyInfo.taxName ? `${companyInfo.taxName}: ${companyInfo.taxId}` : `Tax ID: ${companyInfo.taxId}`}
+              </div>
+            )}
+            {template.showTaxDocument && companyInfo.taxDocumentName && companyInfo.taxDocumentNumber && (
+              <div style={{ color: template.secondaryColor, fontSize: `${template.bodyFontSize[0]}px`, marginTop: '4px' }}>
+                {companyInfo.taxDocumentName}: {companyInfo.taxDocumentNumber}
+              </div>
+            )}
                           </div>
                         </div>
 
         {/* Bill To & Dates */}
         <div className="grid grid-cols-2 gap-8 mb-12">
           <div>
-            <div style={{ fontWeight: '600', marginBottom: '8px' }}>Bill To</div>
+            <div style={{ fontWeight: '600', marginBottom: '8px', fontSize: `${template.sectionTitleFontSize[0]}px` }}>Bill To</div>
             <div style={{ marginBottom: '4px' }}>{invoiceData.client.name}</div>
-            <div style={{ color: template.secondaryColor, fontSize: '14px', whiteSpace: 'pre-line' }}>
+            <div style={{ color: template.secondaryColor, fontSize: `${template.bodyFontSize[0]}px`, whiteSpace: 'pre-line', maxWidth: '200px' }}>
               {invoiceData.client.address}
-                    </div>
+            </div>
+            {template.showClientEmail && invoiceData.client.email && (
+              <div style={{ color: template.secondaryColor, fontSize: `${template.bodyFontSize[0]}px`, marginTop: '8px' }}>
+                {invoiceData.client.email}
+              </div>
+            )}
           </div>
 
           {template.showDates && (
@@ -429,7 +510,9 @@ export default function CustomizeInvoicePage() {
             <thead>
               <tr style={{ borderBottom: `1px solid ${template.borderColor}` }}>
                 <th className="text-left py-3" style={{ fontWeight: '600', fontSize: `${template.tableHeaderSize[0]}px` }}>Description</th>
-                <th className="text-right py-3" style={{ fontWeight: '600', fontSize: `${template.tableHeaderSize[0]}px` }}>Qty</th>
+                <th className="text-right py-3" style={{ fontWeight: '600', fontSize: `${template.tableHeaderSize[0]}px` }}>
+                  {template.quantityLabel}
+                </th>
                 <th className="text-right py-3" style={{ fontWeight: '600', fontSize: `${template.tableHeaderSize[0]}px` }}>Rate</th>
                 <th className="text-right py-3" style={{ fontWeight: '600', fontSize: `${template.tableHeaderSize[0]}px` }}>Amount</th>
               </tr>
@@ -438,10 +521,10 @@ export default function CustomizeInvoicePage() {
               {invoiceData.items.map((item: any, index: number) => (
                 <tr key={index} style={{ borderBottom: `1px solid ${template.borderColor}` }}>
                   <td className="py-4">
-                    <div style={{ fontWeight: '500' }}>{item.description}</div>
-                    {template.showItemDetails && item.details && (
-                      <div style={{ color: template.secondaryColor, fontSize: '13px', marginTop: '4px' }}>
-                        {item.details}
+                    <div style={{ fontWeight: '500' }}>{item.item_name}</div>
+                    {template.showItemDetails && item.item_description && (
+                      <div style={{ color: template.secondaryColor, fontSize: `${template.bodyFontSize[0]}px`, marginTop: '4px' }}>
+                        {item.item_description}
                         </div>
                     )}
                   </td>
@@ -475,32 +558,83 @@ export default function CustomizeInvoicePage() {
               <span style={{ fontWeight: '600', fontSize: '18px', color: template.accentColor }}>
                 {getCurrencySymbol(template.currency)}{invoiceData.total.toFixed(2)}
               </span>
-                                  </div>
+            </div>
           </div>
         </div>
 
-        {/* Payment Terms & Notes */}
-        {(template.showPaymentTerms || template.showNotes) && (
-          <div className="space-y-6">
-            {template.showPaymentTerms && (
+                {/* Two Column Layout: Payment Terms/Tax Summary/Notes + Signature */}
+        <div className={`grid gap-8 mb-12 ${template.showSignature && companyInfo.signature ? 'grid-cols-10' : 'grid-cols-1'}`}>
+          {/* Left Column - Payment Terms, Tax Summary, Notes */}
+          <div className={`space-y-6 ${template.showSignature && companyInfo.signature ? 'col-span-7' : 'col-span-1'}`}>
+
+            {template.showTaxSummary && (
               <div>
-                <div style={{ fontWeight: '600', marginBottom: '8px' }}>Payment Terms</div>
-                <div style={{ color: template.secondaryColor, fontSize: '14px' }}>
-                  {invoiceData.paymentTerms}
-                                  </div>
-                                </div>
-                              )}
-            {template.showNotes && invoiceData.notes && (
+                <div
+                  className="text-xs font-semibold mb-4"
+                  style={{
+                    color: template.secondaryColor,
+                    letterSpacing: '0.05em',
+                    textTransform: 'uppercase',
+                    fontSize: `${template.sectionTitleFontSize[0]}px`
+                  }}
+                >
+                  Tax Summary
+                </div>
+                <div style={{ color: template.secondaryColor, fontSize: `${template.bodyFontSize[0]}px` }}>
+                  {invoiceData.taxSummary}
+                </div>
+              </div>
+            )}
+            {template.showNotes && (
               <div>
-                <div style={{ fontWeight: '600', marginBottom: '8px' }}>Notes</div>
-                <div style={{ color: template.secondaryColor, fontSize: '14px' }}>
+                <div
+                  className="text-xs font-semibold mb-4"
+                  style={{
+                    color: template.secondaryColor,
+                    letterSpacing: '0.05em',
+                    textTransform: 'uppercase',
+                    fontSize: `${template.sectionTitleFontSize[0]}px`
+                  }}
+                >
+                  Notes
+                </div>
+                <div style={{ color: template.secondaryColor, fontSize: `${template.bodyFontSize[0]}px` }}>
                   {invoiceData.notes}
                 </div>
-                                </div>
-                              )}
-                                </div>
-                              )}
-                                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Right Column (30%) - Signature */}
+          {template.showSignature && companyInfo.signature && (
+            <div className="col-span-3 flex items-end justify-end">
+              <div className="text-right">
+                <div
+                  className="text-xs font-semibold mb-4"
+                  style={{
+                    color: template.secondaryColor,
+                    letterSpacing: '0.05em',
+                    textTransform: 'uppercase',
+                    fontSize: `${template.sectionTitleFontSize[0]}px`
+                  }}
+                >
+                  Authorized Signature
+                </div>
+                <img 
+                  src={companyInfo.signature} 
+                  alt="Authorized Signature" 
+                  style={{ 
+                    maxWidth: `${template.signatureWidth[0]}px`, 
+                    height: 'auto',
+                    display: 'block',
+                    marginLeft: 'auto'
+                  }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     )
   }
 
@@ -522,36 +656,63 @@ export default function CustomizeInvoicePage() {
                 className="object-contain"
               />
             )}
-            <div 
-              className="px-4 py-2 rounded-full text-sm font-medium"
-              style={{ 
-                backgroundColor: template.accentColor + '20',
-                color: template.accentColor
-              }}
-            >
-              {invoiceData.status}
-                            </div>
+
                           </div>
 
           <h1 style={{ fontSize: '48px', fontWeight: '700', letterSpacing: '-0.02em', marginBottom: '16px' }}>
             Invoice
           </h1>
+          {template.showInvoiceDescription && (
+            <div style={{ color: template.secondaryColor, fontSize: `${template.bodyFontSize[0]}px`, fontWeight: '400', marginBottom: '16px', lineHeight: '1.4', maxWidth: '250px' }}>
+              {invoiceData.invoiceDescription}
+            </div>
+          )}
           
-          <div className="grid grid-cols-3 gap-4" style={{ fontSize: '14px' }}>
+          <div className="grid grid-cols-3 gap-4" style={{ fontSize: `${template.bodyFontSize[0]}px` }}>
             {template.showInvoiceNumber && (
               <div>
-                <div style={{ color: template.secondaryColor, marginBottom: '4px' }}>Invoice Number</div>
+                <div
+                  className="text-xs font-semibold mb-2"
+                  style={{
+                    color: template.secondaryColor,
+                    letterSpacing: '0.05em',
+                    textTransform: 'uppercase',
+                    fontSize: `${template.sectionTitleFontSize[0]}px`
+                  }}
+                >
+                  Invoice Number
+                </div>
                 <div style={{ fontWeight: '600' }}>{invoiceData.number}</div>
               </div>
             )}
             {template.showDates && (
               <>
                 <div>
-                  <div style={{ color: template.secondaryColor, marginBottom: '4px' }}>Issue Date</div>
+                  <div
+                    className="text-xs font-semibold mb-2"
+                    style={{
+                      color: template.secondaryColor,
+                      letterSpacing: '0.05em',
+                      textTransform: 'uppercase',
+                      fontSize: `${template.sectionTitleFontSize[0]}px`
+                    }}
+                  >
+                    Issue Date
+                  </div>
                   <div style={{ fontWeight: '600' }}>{formatDate(invoiceData.date)}</div>
                           </div>
                 <div>
-                  <div style={{ color: template.secondaryColor, marginBottom: '4px' }}>Due Date</div>
+                  <div
+                    className="text-xs font-semibold mb-2"
+                    style={{
+                      color: template.secondaryColor,
+                      letterSpacing: '0.05em',
+                      textTransform: 'uppercase',
+                      fontSize: `${template.sectionTitleFontSize[0]}px`
+                    }}
+                  >
+                    Due Date
+                  </div>
                   <div style={{ fontWeight: '600' }}>{formatDate(invoiceData.dueDate)}</div>
                         </div>
               </>
@@ -562,52 +723,68 @@ export default function CustomizeInvoicePage() {
         {/* From/To Section */}
         <div className="grid grid-cols-2 gap-12 mb-16">
           <div>
-            <div 
+            <div
               className="text-xs font-semibold mb-4"
-              style={{ 
+              style={{
                 color: template.secondaryColor,
                 letterSpacing: '0.05em',
-                textTransform: 'uppercase'
+                textTransform: 'uppercase',
+                fontSize: `${template.sectionTitleFontSize[0]}px`
               }}
             >
               From
                       </div>
-            <div style={{ fontWeight: '600', fontSize: '18px', marginBottom: '8px' }}>
+            <div style={{ fontWeight: '600', fontSize: `${template.fontSize[0]}px`, marginBottom: '8px' }}>
               {companyInfo.name}
                         </div>
-            <div style={{ color: template.secondaryColor, whiteSpace: 'pre-line' }}>
+            <div style={{ color: template.secondaryColor, fontSize: `${template.bodyFontSize[0]}px`, whiteSpace: 'pre-line' }}>
               {companyInfo.address}
-                      </div>
-            <div style={{ color: template.secondaryColor, marginTop: '8px' }}>
-              {companyInfo.email}
             </div>
-            {template.showTaxId && (
-              <div style={{ color: template.secondaryColor, marginTop: '4px' }}>
-                {companyInfo.taxId}
-                      </div>
-                    )}
+            {template.showCompanyEmail && companyInfo.email && (
+              <div style={{ color: template.secondaryColor, fontSize: `${template.bodyFontSize[0]}px`, marginTop: '8px' }}>
+                {companyInfo.email}
+              </div>
+            )}
+            {template.showPhoneNumber && companyInfo.phone && (
+              <div style={{ color: template.secondaryColor, fontSize: `${template.bodyFontSize[0]}px`, marginTop: '4px' }}>
+                {formatPhoneNumber(companyInfo.phone)}
+              </div>
+            )}
+            {template.showTaxId && companyInfo.taxId && (
+              <div style={{ color: template.secondaryColor, fontSize: `${template.bodyFontSize[0]}px`, marginTop: '4px' }}>
+                {companyInfo.taxName ? `${companyInfo.taxName}: ${companyInfo.taxId}` : `Tax ID: ${companyInfo.taxId}`}
+              </div>
+            )}
+            {template.showTaxDocument && companyInfo.taxDocumentName && companyInfo.taxDocumentNumber && (
+              <div style={{ color: template.secondaryColor, fontSize: `${template.bodyFontSize[0]}px`, marginTop: '4px' }}>
+                {companyInfo.taxDocumentName}: {companyInfo.taxDocumentNumber}
+              </div>
+            )}
           </div>
 
           <div>
-            <div 
+            <div
               className="text-xs font-semibold mb-4"
-              style={{ 
+              style={{
                 color: template.secondaryColor,
                 letterSpacing: '0.05em',
-                textTransform: 'uppercase'
+                textTransform: 'uppercase',
+                fontSize: `${template.sectionTitleFontSize[0]}px`
               }}
             >
               To
                       </div>
-            <div style={{ fontWeight: '600', fontSize: '18px', marginBottom: '8px' }}>
+            <div style={{ fontWeight: '600', fontSize: `${template.fontSize[0]}px`, marginBottom: '8px' }}>
               {invoiceData.client.name}
                     </div>
-            <div style={{ color: template.secondaryColor, whiteSpace: 'pre-line' }}>
+            <div style={{ color: template.secondaryColor, fontSize: `${template.bodyFontSize[0]}px`, whiteSpace: 'pre-line' }}>
               {invoiceData.client.address}
-                    </div>
-            <div style={{ color: template.secondaryColor, marginTop: '8px' }}>
-              {invoiceData.client.email}
-                    </div>
+            </div>
+            {template.showClientEmail && invoiceData.client.email && (
+              <div style={{ color: template.secondaryColor, fontSize: `${template.bodyFontSize[0]}px`, marginTop: '8px' }}>
+                {invoiceData.client.email}
+              </div>
+            )}
                     </div>
                     </div>
 
@@ -633,19 +810,19 @@ export default function CustomizeInvoicePage() {
             >
               <div className="flex justify-between items-start">
                 <div className="flex-1">
-                  <div style={{ fontWeight: '600', fontSize: '16px', marginBottom: '4px' }}>
-                    {item.description}
+                  <div style={{ fontWeight: '600', fontSize: `${template.fontSize[0]}px`, marginBottom: '4px' }}>
+                    {item.item_name}
                         </div>
-                  {template.showItemDetails && item.details && (
-                    <div style={{ color: template.secondaryColor, fontSize: '14px' }}>
-                      {item.details}
+                  {template.showItemDetails && item.item_description && (
+                    <div style={{ color: template.secondaryColor, fontSize: `${template.bodyFontSize[0]}px` }}>
+                      {item.item_description}
                       </div>
                   )}
-                  <div style={{ color: template.secondaryColor, fontSize: '14px', marginTop: '8px' }}>
+                  <div style={{ color: template.secondaryColor, fontSize: `${template.bodyFontSize[0]}px`, marginTop: '8px' }}>
                     {item.quantity} × {getCurrencySymbol(template.currency)}{item.rate.toFixed(2)}
                         </div>
                       </div>
-                <div style={{ fontWeight: '600', fontSize: '18px' }}>
+                <div style={{ fontWeight: '600', fontSize: `${template.fontSize[0]}px` }}>
                   {getCurrencySymbol(template.currency)}{item.amount.toFixed(2)}
                         </div>
                       </div>
@@ -660,30 +837,93 @@ export default function CustomizeInvoicePage() {
         >
           <div className="flex justify-between items-center">
             <div>
-              <div style={{ fontSize: '14px', opacity: 0.8 }}>Total Amount</div>
+              <div style={{ fontSize: `${template.bodyFontSize[0]}px`, opacity: 0.8 }}>Total Amount</div>
               <div style={{ fontSize: '36px', fontWeight: '700', letterSpacing: '-0.02em' }}>
                 {getCurrencySymbol(template.currency)}{invoiceData.total.toFixed(2)}
-                        </div>
-                      </div>
+              </div>
+            </div>
             {template.showPaymentTerms && (
               <div className="text-right">
-                <div style={{ fontSize: '14px', opacity: 0.8 }}>Payment Terms</div>
-                <div style={{ fontSize: '16px', fontWeight: '500' }}>{invoiceData.paymentTerms}</div>
-                    </div>
+                <div style={{ fontSize: `${template.bodyFontSize[0]}px`, opacity: 0.8 }}>Payment Terms</div>
+                <div style={{ fontSize: `${template.fontSize[0]}px`, fontWeight: '500' }}>{invoiceData.paymentTerms}</div>
+              </div>
             )}
           </div>
-                      </div>
+        </div>
 
-        {/* Notes */}
-        {template.showNotes && invoiceData.notes && (
-          <div>
-            <div style={{ fontWeight: '600', marginBottom: '8px' }}>Notes</div>
-            <div style={{ color: template.secondaryColor }}>
-              {invoiceData.notes}
-                      </div>
-                    </div>
-        )}
+                {/* Two Column Layout: Payment Terms/Tax Summary/Notes + Signature */}
+        <div className={`grid gap-8 mb-12 ${template.showSignature && companyInfo.signature ? 'grid-cols-10' : 'grid-cols-1'}`}>
+          {/* Left Column - Payment Terms, Tax Summary, Notes */}
+          <div className={`space-y-6 ${template.showSignature && companyInfo.signature ? 'col-span-7' : 'col-span-1'}`}>
+
+            {template.showTaxSummary && (
+              <div>
+                <div
+                  className="text-xs font-semibold mb-4"
+                  style={{
+                    color: template.secondaryColor,
+                    letterSpacing: '0.05em',
+                    textTransform: 'uppercase',
+                    fontSize: `${template.sectionTitleFontSize[0]}px`
+                  }}
+                >
+                  Tax Summary
+                </div>
+                <div style={{ color: template.secondaryColor, fontSize: `${template.bodyFontSize[0]}px` }}>
+                  {invoiceData.taxSummary}
+                </div>
+              </div>
+            )}
+            {template.showNotes && (
+              <div>
+                <div
+                  className="text-xs font-semibold mb-4"
+                  style={{
+                    color: template.secondaryColor,
+                    letterSpacing: '0.05em',
+                    textTransform: 'uppercase',
+                    fontSize: `${template.sectionTitleFontSize[0]}px`
+                  }}
+                >
+                  Notes
+                </div>
+                <div style={{ color: template.secondaryColor, fontSize: `${template.bodyFontSize[0]}px` }}>
+                  {invoiceData.notes}
+                </div>
+              </div>
+            )}
           </div>
+
+          {/* Right Column (30%) - Signature */}
+          {template.showSignature && companyInfo.signature && (
+            <div className="col-span-3 flex items-end justify-end">
+              <div className="text-right">
+                <div
+                  className="text-xs font-semibold mb-4"
+                  style={{
+                    color: template.secondaryColor,
+                    letterSpacing: '0.05em',
+                    textTransform: 'uppercase',
+                    fontSize: `${template.sectionTitleFontSize[0]}px`
+                  }}
+                >
+                  Authorized Signature
+                </div>
+                <img 
+                  src={companyInfo.signature} 
+                  alt="Authorized Signature" 
+                  style={{ 
+                    maxWidth: `${template.signatureWidth[0]}px`, 
+                    height: 'auto',
+                    display: 'block',
+                    marginLeft: 'auto'
+                  }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     )
   }
 
@@ -707,13 +947,16 @@ export default function CustomizeInvoicePage() {
                   className="object-contain"
                 />
               )}
-              <div style={{ fontWeight: '700', fontSize: '20px', letterSpacing: '-0.02em' }}>{companyInfo.name}</div>
-              <div style={{ color: template.secondaryColor, fontSize: '14px', marginTop: '4px', lineHeight: '1.5' }}>
-                {companyInfo.address.split('\n').join(' • ')}
-              </div>
-              {companyInfo.email && (
-                <div style={{ color: template.secondaryColor, fontSize: '14px', marginTop: '2px' }}>
-                  {companyInfo.email} • {formatPhoneNumber(companyInfo.phone)}
+              {template.showInvoiceDescription && invoiceData.invoiceDescription && (
+                <div style={{
+                  fontSize: `${template.bodyFontSize[0]}px`,
+                  fontWeight: '400',
+                  color: template.secondaryColor,
+                  marginTop: '16px',
+                  lineHeight: '1.4',
+                  maxWidth: '250px'
+                }}>
+                  {invoiceData.invoiceDescription}
                 </div>
               )}
             </div>
@@ -728,6 +971,7 @@ export default function CustomizeInvoicePage() {
               }}>
                 INVOICE
               </div>
+
               {template.showInvoiceNumber && (
                 <div style={{ 
                   fontSize: '16px', 
@@ -749,42 +993,75 @@ export default function CustomizeInvoicePage() {
         {/* Company Details */}
         <div className="grid grid-cols-3 gap-8 mb-12">
           <div>
-            <div style={{ color: template.secondaryColor, fontSize: '12px', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <div
+              className="text-xs font-semibold mb-4"
+              style={{
+                color: template.secondaryColor,
+                letterSpacing: '0.05em',
+                textTransform: 'uppercase',
+                fontSize: `${template.sectionTitleFontSize[0]}px`
+              }}
+            >
               From
             </div>
-            <div style={{ fontSize: '14px', lineHeight: '1.6' }}>
+            <div style={{ fontSize: `${template.bodyFontSize[0]}px`, lineHeight: '1.6' }}>
               <div style={{ fontWeight: '500' }}>{companyInfo.name}</div>
               <div style={{ whiteSpace: 'pre-line', color: template.secondaryColor }}>
                 {companyInfo.address}
               </div>
-              <div style={{ color: template.secondaryColor, marginTop: '4px' }}>
-                {companyInfo.email}<br />
-                {formatPhoneNumber(companyInfo.phone)}
-              </div>
+              {(template.showCompanyEmail && companyInfo.email) || (template.showPhoneNumber && companyInfo.phone) ? (
+                <div style={{ color: template.secondaryColor, marginTop: '4px' }}>
+                  {template.showCompanyEmail && companyInfo.email && (
+                    <>
+                      {companyInfo.email}
+                      {template.showPhoneNumber && companyInfo.phone && <br />}
+                    </>
+                  )}
+                  {template.showPhoneNumber && companyInfo.phone && formatPhoneNumber(companyInfo.phone)}
+                </div>
+              ) : null}
             </div>
           </div>
 
           <div>
-            <div style={{ color: template.secondaryColor, fontSize: '12px', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              To
+            <div
+              className="text-xs font-semibold mb-4"
+              style={{
+                color: template.secondaryColor,
+                letterSpacing: '0.05em',
+                textTransform: 'uppercase',
+                fontSize: `${template.sectionTitleFontSize[0]}px`
+              }}
+            >
+              Bill To
             </div>
-            <div style={{ fontSize: '14px', lineHeight: '1.6' }}>
+            <div style={{ fontSize: `${template.bodyFontSize[0]}px`, lineHeight: '1.6' }}>
               <div style={{ fontWeight: '500' }}>{invoiceData.client.name}</div>
               <div style={{ whiteSpace: 'pre-line', color: template.secondaryColor }}>
                 {invoiceData.client.address}
               </div>
-              <div style={{ color: template.secondaryColor, marginTop: '4px' }}>
-                {invoiceData.client.email}
-              </div>
+              {template.showClientEmail && invoiceData.client.email && (
+                <div style={{ color: template.secondaryColor, marginTop: '4px' }}>
+                  {invoiceData.client.email}
+                </div>
+              )}
             </div>
           </div>
 
           {template.showDates && (
             <div>
-              <div style={{ color: template.secondaryColor, fontSize: '12px', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <div
+                className="text-xs font-semibold mb-4"
+                style={{
+                  color: template.secondaryColor,
+                  letterSpacing: '0.05em',
+                  textTransform: 'uppercase',
+                  fontSize: `${template.sectionTitleFontSize[0]}px`
+                }}
+              >
                 Details
               </div>
-              <div style={{ fontSize: '14px', lineHeight: '1.8' }}>
+              <div style={{ fontSize: `${template.bodyFontSize[0]}px`, lineHeight: '1.8' }}>
                 <div>
                   <span style={{ color: template.secondaryColor }}>Date: </span>
                   <span style={{ fontWeight: '500' }}>{formatDate(invoiceData.date)}</span>
@@ -822,7 +1099,9 @@ export default function CustomizeInvoicePage() {
                               >
               <div className="grid grid-cols-12 gap-4 font-semibold" style={{ fontSize: `${template.tableHeaderSize[0]}px` }}>
                 <div className="col-span-6">Description</div>
-                <div className="col-span-2 text-right">Quantity</div>
+                <div className="col-span-2 text-right">
+                  {template.quantityLabel}
+                </div>
                 <div className="col-span-2 text-right">Rate</div>
                 <div className="col-span-2 text-right">Amount</div>
                             </div>
@@ -837,14 +1116,14 @@ export default function CustomizeInvoicePage() {
                   backgroundColor: index % 2 === 0 ? 'transparent' : template.borderColor + '10'
                 }}
                             >
-                <div className="col-span-6">
-                  <div style={{ fontWeight: '600', color: template.primaryColor }}>{item.description}</div>
-                  {template.showItemDetails && item.details && (
-                    <div style={{ color: template.secondaryColor, fontSize: '13px', marginTop: '4px', lineHeight: '1.5' }}>
-                      {item.details}
-                              </div>
+                                <div className="col-span-6">
+                  <div style={{ fontWeight: '600', color: template.primaryColor }}>{item.item_name || 'Item Name'}</div>
+                  {template.showItemDetails && item.item_description && (
+                    <div style={{ color: template.secondaryColor, fontSize: `${template.bodyFontSize[0]}px`, marginTop: '4px', lineHeight: '1.5' }}>
+                      {item.item_description}
+                    </div>
                   )}
-                              </div>
+                </div>
                 <div className="col-span-2 text-right" style={{ fontWeight: '500' }}>{item.quantity}</div>
                 <div className="col-span-2 text-right" style={{ fontWeight: '500' }}>{getCurrencySymbol(template.currency)}{item.rate.toFixed(2)}</div>
                 <div className="col-span-2 text-right" style={{ fontWeight: '700', color: template.primaryColor }}>
@@ -890,17 +1169,104 @@ export default function CustomizeInvoicePage() {
           </div>
         </div>
 
-        {/* Footer */}
-        {template.showNotes && invoiceData.notes && (
-                          <div 
-            className="p-4 rounded"
-            style={{ backgroundColor: template.borderColor + '20' }}
-                          >
-            <div style={{ fontSize: '14px', color: template.secondaryColor }}>
-              {invoiceData.notes}
-                          </div>
-                        </div>
-        )}
+        {/* Two Column Layout: Payment Terms/Tax Summary/Notes + Signature */}
+        <div className={`grid gap-8 mb-12 ${template.showSignature && companyInfo.signature ? 'grid-cols-10' : 'grid-cols-1'}`}>
+          {/* Left Column - Payment Terms, Tax Summary, Notes */}
+          <div className={`space-y-4 ${template.showSignature && companyInfo.signature ? 'col-span-7' : 'col-span-1'}`}>
+            {template.showPaymentTerms && (
+              <div 
+                className="p-4 rounded"
+                style={{ backgroundColor: template.borderColor + '20' }}
+              >
+                <div
+                  className="text-xs font-semibold mb-4"
+                  style={{
+                    color: template.secondaryColor,
+                    letterSpacing: '0.05em',
+                    textTransform: 'uppercase',
+                    fontSize: `${template.sectionTitleFontSize[0]}px`
+                  }}
+                >
+                  Payment Terms
+                </div>
+                <div style={{ fontSize: `${template.footerItemsFontSize[0]}px`, color: template.secondaryColor }}>
+                  {invoiceData.paymentTerms}
+                </div>
+              </div>
+            )}
+            {template.showTaxSummary && (
+              <div 
+                className="p-4 rounded"
+                style={{ backgroundColor: template.borderColor + '20' }}
+              >
+                <div
+                  className="text-xs font-semibold mb-4"
+                  style={{
+                    color: template.secondaryColor,
+                    letterSpacing: '0.05em',
+                    textTransform: 'uppercase',
+                    fontSize: `${template.sectionTitleFontSize[0]}px`
+                  }}
+                >
+                  Tax Summary
+                </div>
+                <div style={{ fontSize: `${template.footerItemsFontSize[0]}px`, color: template.secondaryColor }}>
+                  {invoiceData.taxSummary}
+                </div>
+              </div>
+            )}
+            {template.showNotes && (
+              <div 
+                className="p-4 rounded"
+                style={{ backgroundColor: template.borderColor + '20' }}
+              >
+                <div
+                  className="text-xs font-semibold mb-4"
+                  style={{
+                    color: template.secondaryColor,
+                    letterSpacing: '0.05em',
+                    textTransform: 'uppercase',
+                    fontSize: `${template.sectionTitleFontSize[0]}px`
+                  }}
+                >
+                  Notes
+                </div>
+                <div style={{ fontSize: `${template.footerItemsFontSize[0]}px`, color: template.secondaryColor }}>
+                  {invoiceData.notes}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Right Column (30%) - Signature */}
+          {template.showSignature && companyInfo.signature && (
+            <div className="col-span-3 flex items-end justify-end">
+              <div className="text-right">
+                <div
+                  className="text-xs font-semibold mb-4"
+                  style={{
+                    color: template.secondaryColor,
+                    letterSpacing: '0.05em',
+                    textTransform: 'uppercase',
+                    fontSize: `${template.sectionTitleFontSize[0]}px`
+                  }}
+                >
+                  Authorized Signature
+                </div>
+                <img 
+                  src={companyInfo.signature} 
+                  alt="Authorized Signature" 
+                  style={{ 
+                    maxWidth: `${template.signatureWidth[0]}px`, 
+                    height: 'auto',
+                    display: 'block',
+                    marginLeft: 'auto'
+                  }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     )
   }
@@ -924,20 +1290,7 @@ export default function CustomizeInvoicePage() {
                 className="object-contain"
               />
             )}
-                            <div 
-              className="text-xs font-medium px-3 py-1.5 rounded-full"
-                              style={{ 
-                backgroundColor: invoiceData.status === 'PAID' 
-                  ? `${template.accentColor}20` 
-                  : `${template.secondaryColor}20`,
-                color: invoiceData.status === 'PAID' 
-                  ? template.accentColor 
-                  : template.secondaryColor,
-                border: `1px solid ${invoiceData.status === 'PAID' ? template.accentColor : template.secondaryColor}30`
-                              }}
-                            >
-              {invoiceData.status}
-                            </div>
+
                             </div>
 
           <div className="mb-8">
@@ -951,6 +1304,18 @@ export default function CustomizeInvoicePage() {
                 }}>
                   Invoice
                 </h1>
+                {template.showInvoiceDescription && (
+                  <div style={{
+                    fontSize: `${template.bodyFontSize[0]}px`,
+                    fontWeight: '400',
+                    color: template.secondaryColor,
+                    marginBottom: '12px',
+                    lineHeight: '1.4',
+                    maxWidth: '400px'
+                  }}>
+                    {invoiceData.invoiceDescription}
+                  </div>
+                )}
                 {template.showInvoiceNumber && (
                   <div style={{ 
                     fontSize: '14px', 
@@ -967,28 +1332,29 @@ export default function CustomizeInvoicePage() {
                         </div>
               {template.showDates && (
                 <div className="text-right">
-                  <div style={{ 
-                    fontSize: '12px', 
-                    color: template.secondaryColor, 
-                    marginBottom: '4px',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    fontWeight: '600'
-                  }}>
+                  <div
+                    className="text-xs font-semibold mb-2"
+                    style={{
+                      color: template.secondaryColor,
+                      letterSpacing: '0.05em',
+                      textTransform: 'uppercase',
+                      fontSize: `${template.sectionTitleFontSize[0]}px`
+                    }}
+                  >
                     Issue Date
                       </div>
                   <div style={{ fontSize: '14px', fontWeight: '600', color: template.primaryColor }}>
                     {formatDate(invoiceData.date)}
                   </div>
-                  <div style={{ 
-                    fontSize: '12px', 
-                    color: template.secondaryColor, 
-                    marginTop: '8px',
-                    marginBottom: '4px',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    fontWeight: '600'
-                  }}>
+                  <div
+                    className="text-xs font-semibold mb-2 mt-2"
+                    style={{
+                      color: template.secondaryColor,
+                      letterSpacing: '0.05em',
+                      textTransform: 'uppercase',
+                      fontSize: `${template.sectionTitleFontSize[0]}px`
+                    }}
+                  >
                     Due Date
                   </div>
                   <div style={{ fontSize: '14px', fontWeight: '600', color: template.primaryColor }}>
@@ -1009,29 +1375,40 @@ export default function CustomizeInvoicePage() {
               border: `1px solid ${template.borderColor}60`
             }}
           >
-            <div style={{ 
-              fontSize: '11px', 
-              color: template.secondaryColor, 
-              marginBottom: '12px',
-              fontWeight: '600',
-              letterSpacing: '0.05em',
-              textTransform: 'uppercase'
-            }}>
+            <div
+              className="text-xs font-semibold mb-4"
+              style={{
+                color: template.secondaryColor,
+                letterSpacing: '0.05em',
+                textTransform: 'uppercase',
+                fontSize: `${template.sectionTitleFontSize[0]}px`
+              }}
+            >
               From
                             </div>
             <div style={{ fontWeight: '600', marginBottom: '6px', fontSize: '16px' }}>{companyInfo.name}</div>
-            <div style={{ fontSize: '14px', color: template.secondaryColor, lineHeight: '1.6' }}>
+            <div style={{ fontSize: `${template.bodyFontSize[0]}px`, color: template.secondaryColor, lineHeight: '1.6' }}>
               {companyInfo.address}
                             </div>
-            {companyInfo.email && (
-              <div style={{ fontSize: '14px', color: template.secondaryColor, marginTop: '8px' }}>
-                {companyInfo.email}<br />
-                {formatPhoneNumber(companyInfo.phone)}
-                          </div>
-            )}
+            {(template.showCompanyEmail && companyInfo.email) || (template.showPhoneNumber && companyInfo.phone) ? (
+              <div style={{ fontSize: `${template.bodyFontSize[0]}px`, color: template.secondaryColor, marginTop: '8px' }}>
+                {template.showCompanyEmail && companyInfo.email && (
+                  <>
+                    {companyInfo.email}
+                    {template.showPhoneNumber && companyInfo.phone && <br />}
+                  </>
+                )}
+                {template.showPhoneNumber && companyInfo.phone && formatPhoneNumber(companyInfo.phone)}
+              </div>
+            ) : null}
             {template.showTaxId && companyInfo.taxId && (
-              <div style={{ fontSize: '13px', color: template.secondaryColor, marginTop: '8px' }}>
-                Tax ID: {companyInfo.taxId}
+              <div style={{ fontSize: `${template.bodyFontSize[0]}px`, color: template.secondaryColor, marginTop: '8px' }}>
+                {companyInfo.taxName ? `${companyInfo.taxName}: ${companyInfo.taxId}` : `Tax ID: ${companyInfo.taxId}`}
+              </div>
+            )}
+            {template.showTaxDocument && companyInfo.taxDocumentName && companyInfo.taxDocumentNumber && (
+              <div style={{ fontSize: `${template.bodyFontSize[0]}px`, color: template.secondaryColor, marginTop: '4px' }}>
+                {companyInfo.taxDocumentName}: {companyInfo.taxDocumentNumber}
               </div>
             )}
                         </div>
@@ -1043,24 +1420,25 @@ export default function CustomizeInvoicePage() {
               border: `1px solid ${template.borderColor}60`
             }}
           >
-            <div style={{ 
-              fontSize: '11px', 
-              color: template.secondaryColor, 
-              marginBottom: '12px',
-              fontWeight: '600',
-              letterSpacing: '0.05em',
-              textTransform: 'uppercase'
-            }}>
+            <div
+              className="text-xs font-semibold mb-4"
+              style={{
+                color: template.secondaryColor,
+                letterSpacing: '0.05em',
+                textTransform: 'uppercase',
+                fontSize: `${template.sectionTitleFontSize[0]}px`
+              }}
+            >
               Bill To
                             </div>
             <div style={{ fontWeight: '600', marginBottom: '6px', fontSize: '16px' }}>{invoiceData.client.name}</div>
-            <div style={{ fontSize: '14px', color: template.secondaryColor, lineHeight: '1.6' }}>
+            <div style={{ fontSize: `${template.bodyFontSize[0]}px`, color: template.secondaryColor, lineHeight: '1.6' }}>
               {invoiceData.client.address}
-                          </div>
-            {invoiceData.client.email && (
-              <div style={{ fontSize: '14px', color: template.secondaryColor, marginTop: '8px' }}>
+            </div>
+            {template.showClientEmail && invoiceData.client.email && (
+              <div style={{ fontSize: `${template.bodyFontSize[0]}px`, color: template.secondaryColor, marginTop: '8px' }}>
                 {invoiceData.client.email}
-                          </div>
+              </div>
             )}
                         </div>
                       </div>
@@ -1068,7 +1446,6 @@ export default function CustomizeInvoicePage() {
         {/* Services Table */}
         <div className="mb-12">
           <div className="mb-6">
-            <h3 style={{ fontSize: '18px', fontWeight: '700', letterSpacing: '-0.01em' }}>Services</h3>
                   </div>
 
           <div style={{ 
@@ -1089,7 +1466,9 @@ export default function CustomizeInvoicePage() {
                     fontWeight: '600', 
                     fontSize: `${template.tableHeaderSize[0]}px`,
                     color: template.primaryColor
-                  }}>Qty</th>
+                  }}>
+                    {template.quantityLabel}
+                  </th>
                   <th className="text-right px-4 py-3" style={{ 
                     fontWeight: '600', 
                     fontSize: `${template.tableHeaderSize[0]}px`,
@@ -1109,10 +1488,10 @@ export default function CustomizeInvoicePage() {
                     transition: 'background-color 0.2s'
                   }} className="hover:bg-muted/50">
                     <td className="px-4 py-4">
-                      <div style={{ fontWeight: '500' }}>{item.description}</div>
-                      {template.showItemDetails && item.details && (
+                      <div style={{ fontWeight: '500' }}>{item.item_name || 'Item Name'}</div>
+                      {template.showItemDetails && item.item_description && (
                         <div style={{ color: template.secondaryColor, fontSize: '13px', marginTop: '4px', lineHeight: '1.5' }}>
-                          {item.details}
+                          {item.item_description}
                         </div>
                       )}
                     </td>
@@ -1155,53 +1534,114 @@ export default function CustomizeInvoicePage() {
                 <span style={{ fontWeight: '700', fontSize: '22px', color: template.accentColor }}>
                   {getCurrencySymbol(template.currency)}{invoiceData.total.toFixed(2)}
                 </span>
-                        </div>
-                      </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Two Column Layout: Payment Terms/Tax Summary/Notes + Signature */}
+        <div className={`grid gap-8 mb-12 ${template.showSignature && companyInfo.signature ? 'grid-cols-10' : 'grid-cols-1'}`}>
+          {/* Left Column - Payment Terms, Tax Summary, Notes */}
+          <div className={`${template.showSignature && companyInfo.signature ? 'col-span-7' : 'col-span-1'}`}>
+            {(template.showPaymentTerms || template.showTaxSummary || template.showNotes) && (
+              <div 
+                className="p-6 rounded-xl space-y-4"
+                style={{ 
+                  backgroundColor: template.accentColor + '08',
+                  border: `1px solid ${template.accentColor}20`
+                }}
+              >
+                {template.showPaymentTerms && (
+                  <div>
+                    <div
+                      className="text-xs font-semibold mb-4"
+                      style={{
+                        color: template.secondaryColor,
+                        letterSpacing: '0.05em',
+                        textTransform: 'uppercase',
+                        fontSize: `${template.sectionTitleFontSize[0]}px`
+                      }}
+                    >
+                      Payment Terms
+                    </div>
+                    <div style={{ fontSize: `${template.footerItemsFontSize[0]}px`, color: template.secondaryColor, lineHeight: '1.6' }}>
+                      {invoiceData.paymentTerms}
                     </div>
                   </div>
+                )}
+                {template.showTaxSummary && (
+                  <div>
+                    <div
+                      className="text-xs font-semibold mb-4"
+                      style={{
+                        color: template.secondaryColor,
+                        letterSpacing: '0.05em',
+                        textTransform: 'uppercase',
+                        fontSize: `${template.sectionTitleFontSize[0]}px`
+                      }}
+                    >
+                      Tax Summary
+                    </div>
+                    <div style={{ fontSize: `${template.footerItemsFontSize[0]}px`, color: template.secondaryColor, lineHeight: '1.6' }}>
+                      {invoiceData.taxSummary}
+                    </div>
+                  </div>
+                )}
+                {template.showNotes && (
+                  <div>
+                    <div
+                      className="text-xs font-semibold mb-4"
+                      style={{
+                        color: template.secondaryColor,
+                        letterSpacing: '0.05em',
+                        textTransform: 'uppercase',
+                        fontSize: `${template.sectionTitleFontSize[0]}px`
+                      }}
+                    >
+                      Notes
+                    </div>
+                    <div style={{ fontSize: `${template.footerItemsFontSize[0]}px`, color: template.secondaryColor, lineHeight: '1.6' }}>
+                      {invoiceData.notes}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
-        {/* Payment Info */}
-        {(template.showPaymentTerms || template.showNotes) && (
-                      <div 
-            className="p-6 rounded-xl"
-                        style={{ 
-              backgroundColor: template.accentColor + '08',
-              border: `1px solid ${template.accentColor}20`
-                        }}
-                      >
-            {template.showPaymentTerms && (
-              <div className="mb-4">
-                <div style={{ 
-                  fontWeight: '600', 
-                  fontSize: '13px',
-                  color: template.primaryColor,
-                  marginBottom: '6px',
-                  letterSpacing: '0.03em',
-                  textTransform: 'uppercase'
-                }}>Payment Terms</div>
-                <div style={{ fontSize: '14px', color: template.secondaryColor, lineHeight: '1.6' }}>
-                  {invoiceData.paymentTerms}
-                          </div>
-                          </div>
-            )}
-            {template.showNotes && invoiceData.notes && (
-                          <div>
-                <div style={{ 
-                  fontWeight: '600', 
-                  fontSize: '13px',
-                  color: template.primaryColor,
-                  marginBottom: '6px',
-                  letterSpacing: '0.03em',
-                  textTransform: 'uppercase'
-                }}>Notes</div>
-                <div style={{ fontSize: '14px', color: template.secondaryColor, lineHeight: '1.6' }}>
-                  {invoiceData.notes}
-                          </div>
-                          </div>
-            )}
-                        </div>
-        )}
-                      </div>
+          {/* Right Column (30%) - Signature */}
+          {template.showSignature && companyInfo.signature && (
+            <div className="col-span-3 flex items-end justify-end">
+              <div className="text-right">
+                <div
+                  className="text-xs font-semibold mb-4"
+                  style={{
+                    color: template.secondaryColor,
+                    letterSpacing: '0.05em',
+                    textTransform: 'uppercase',
+                    fontSize: `${template.sectionTitleFontSize[0]}px`,
+                    lineHeight: '1.2',
+                    wordWrap: 'break-word',
+                    whiteSpace: 'normal'
+                  }}
+                >
+                  Authorized Signature
+                </div>
+                <img 
+                  src={companyInfo.signature} 
+                  alt="Authorized Signature" 
+                  style={{ 
+                    maxWidth: `${template.signatureWidth[0]}px`, 
+                    height: 'auto',
+                    display: 'block',
+                    marginLeft: 'auto'
+                  }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     )
   }
 
@@ -1210,14 +1650,28 @@ export default function CustomizeInvoicePage() {
     return (
       <div style={baseStyles}>
         {/* Header */}
-        <div className="flex justify-between items-center mb-16">
-          <h1 style={{ 
-            fontSize: '5rem', 
-            fontWeight: '300', 
-            color: template.primaryColor,
-            lineHeight: '1',
-            margin: '0'
-          }}>Invoice</h1>
+        <div className="flex justify-between items-start mb-16">
+          <div>
+            <h1 style={{ 
+              fontSize: '5rem', 
+              fontWeight: '300', 
+              color: template.primaryColor,
+              lineHeight: '1',
+              margin: '0'
+            }}>Invoice</h1>
+            {template.showInvoiceDescription && (
+              <div style={{
+                fontSize: `${template.bodyFontSize[0]}px`,
+                fontWeight: '400',
+                color: template.secondaryColor,
+                marginTop: '16px',
+                lineHeight: '1.4',
+                maxWidth: '500px'
+              }}>
+                {invoiceData.invoiceDescription}
+              </div>
+            )}
+          </div>
           <div className="flex items-center gap-3">
             {template.showLogo && template.logoUrl && (
               <img 
@@ -1237,26 +1691,33 @@ export default function CustomizeInvoicePage() {
         <div className="grid grid-cols-3 gap-12 mb-16">
           {/* From */}
           <div>
-            <h3 style={{ 
-              color: template.secondaryColor, 
-              fontWeight: '500', 
-              marginBottom: '24px', 
-              paddingBottom: '8px', 
+            <h3 style={{
+              color: template.secondaryColor,
+              fontWeight: '500',
+              marginBottom: '24px',
+              paddingBottom: '8px',
               borderBottom: `1px solid ${template.borderColor}`,
-              fontSize: '16px'
+              fontSize: `${template.sectionTitleFontSize[0]}px`
             }}>From</h3>
             <div className="space-y-1">
               <div style={{ fontWeight: '500', color: template.primaryColor }}>{companyInfo.name}</div>
-              <div style={{ color: template.secondaryColor }}>{companyInfo.email}</div>
-              <div style={{ color: template.secondaryColor, marginTop: '16px', whiteSpace: 'pre-line' }}>
+              {template.showCompanyEmail && companyInfo.email && (
+                <div style={{ color: template.secondaryColor, fontSize: `${template.bodyFontSize[0]}px` }}>{companyInfo.email}</div>
+              )}
+              <div style={{ color: template.secondaryColor, fontSize: `${template.bodyFontSize[0]}px`, marginTop: '16px' }}>
                 {companyInfo.address}
               </div>
-              {companyInfo.phone && (
-                <div style={{ color: template.secondaryColor }}>{formatPhoneNumber(companyInfo.phone)}</div>
+              {template.showPhoneNumber && companyInfo.phone && (
+                <div style={{ color: template.secondaryColor, fontSize: `${template.bodyFontSize[0]}px` }}>{formatPhoneNumber(companyInfo.phone)}</div>
               )}
               {template.showTaxId && companyInfo.taxId && (
-                <div style={{ color: template.secondaryColor, marginTop: '8px' }}>
-                  Tax ID: {companyInfo.taxId}
+                <div style={{ color: template.secondaryColor, fontSize: `${template.bodyFontSize[0]}px`, marginTop: '8px' }}>
+                  {companyInfo.taxName ? `${companyInfo.taxName}: ${companyInfo.taxId}` : `Tax ID: ${companyInfo.taxId}`}
+                </div>
+              )}
+              {template.showTaxDocument && companyInfo.taxDocumentName && companyInfo.taxDocumentNumber && (
+                <div style={{ color: template.secondaryColor, fontSize: `${template.bodyFontSize[0]}px`, marginTop: '4px' }}>
+                  {companyInfo.taxDocumentName}: {companyInfo.taxDocumentNumber}
                 </div>
               )}
             </div>
@@ -1264,18 +1725,20 @@ export default function CustomizeInvoicePage() {
 
           {/* To */}
           <div>
-            <h3 style={{ 
-              color: template.secondaryColor, 
-              fontWeight: '500', 
-              marginBottom: '24px', 
-              paddingBottom: '8px', 
+            <h3 style={{
+              color: template.secondaryColor,
+              fontWeight: '500',
+              marginBottom: '24px',
+              paddingBottom: '8px',
               borderBottom: `1px solid ${template.borderColor}`,
-              fontSize: '16px'
+              fontSize: `${template.sectionTitleFontSize[0]}px`
             }}>To</h3>
             <div className="space-y-1">
               <div style={{ fontWeight: '500', color: template.primaryColor }}>{invoiceData.client.name}</div>
-              <div style={{ color: template.secondaryColor }}>{invoiceData.client.email}</div>
-              <div style={{ color: template.secondaryColor, marginTop: '16px', whiteSpace: 'pre-line' }}>
+              {template.showClientEmail && invoiceData.client.email && (
+                <div style={{ color: template.secondaryColor, fontSize: `${template.bodyFontSize[0]}px` }}>{invoiceData.client.email}</div>
+              )}
+              <div style={{ color: template.secondaryColor, fontSize: `${template.bodyFontSize[0]}px`, marginTop: '16px' }}>
                 {invoiceData.client.address}
               </div>
             </div>
@@ -1283,29 +1746,29 @@ export default function CustomizeInvoicePage() {
 
           {/* Details */}
           <div>
-            <h3 style={{ 
-              color: template.secondaryColor, 
-              fontWeight: '500', 
-              marginBottom: '24px', 
-              paddingBottom: '8px', 
+            <h3 style={{
+              color: template.secondaryColor,
+              fontWeight: '500',
+              marginBottom: '24px',
+              paddingBottom: '8px',
               borderBottom: `1px solid ${template.borderColor}`,
-              fontSize: '16px'
+              fontSize: `${template.sectionTitleFontSize[0]}px`
             }}>Details</h3>
             <div className="space-y-2">
               {template.showInvoiceNumber && (
                 <div className="flex justify-between">
-                  <span style={{ color: template.secondaryColor }}>No:</span>
+                  <span style={{ color: template.secondaryColor, fontSize: `${template.bodyFontSize[0]}px` }}>No:</span>
                   <span style={{ color: template.primaryColor, fontWeight: '500' }}>{invoiceData.number}</span>
                 </div>
               )}
               {template.showDates && (
                 <>
                   <div className="flex justify-between">
-                    <span style={{ color: template.secondaryColor }}>Issue date</span>
+                    <span style={{ color: template.secondaryColor, fontSize: `${template.bodyFontSize[0]}px` }}>Issue date</span>
                     <span style={{ color: template.primaryColor, fontWeight: '500' }}>{formatDate(invoiceData.date)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span style={{ color: template.secondaryColor }}>Due date</span>
+                    <span style={{ color: template.secondaryColor, fontSize: `${template.bodyFontSize[0]}px` }}>Due date</span>
                     <span style={{ color: template.primaryColor, fontWeight: '500' }}>{formatDate(invoiceData.dueDate)}</span>
                   </div>
                 </>
@@ -1318,9 +1781,11 @@ export default function CustomizeInvoicePage() {
         <div className="mb-16">
           <div style={{ borderBottom: `1px solid ${template.borderColor}`, paddingBottom: '16px' }}>
             <div className="grid grid-cols-3 gap-8">
-              <div style={{ color: template.secondaryColor, fontWeight: '500' }}>Line items</div>
-              <div style={{ color: template.secondaryColor, fontWeight: '500', textAlign: 'center' }}>Quantity</div>
-              <div style={{ color: template.secondaryColor, fontWeight: '500', textAlign: 'right' }}>Amount</div>
+              <div style={{ color: template.secondaryColor, fontWeight: '500', fontSize: `${template.tableHeaderSize[0]}px` }}>Line items</div>
+              <div style={{ color: template.secondaryColor, fontWeight: '500', textAlign: 'center', fontSize: `${template.tableHeaderSize[0]}px` }}>
+                {template.quantityLabel}
+              </div>
+              <div style={{ color: template.secondaryColor, fontWeight: '500', textAlign: 'right', fontSize: `${template.tableHeaderSize[0]}px` }}>Amount</div>
             </div>
           </div>
           
@@ -1330,10 +1795,10 @@ export default function CustomizeInvoicePage() {
                 borderBottom: `1px solid ${template.borderColor}40`
               }}>
                 <div>
-                  <div style={{ color: template.primaryColor, fontWeight: '500' }}>{item.item_name || item.description}</div>
+                  <div style={{ color: template.primaryColor, fontWeight: '500' }}>{item.item_name || 'Item Name'}</div>
                   {template.showItemDetails && (item.item_description || item.details) && (
-                    <div style={{ color: template.secondaryColor, fontSize: '14px', marginTop: '4px' }}>
-                      {item.item_description || item.details}
+                    <div style={{ color: template.secondaryColor, fontSize: `${template.bodyFontSize[0]}px`, marginTop: '4px' }}>
+                      {item.item_description || item.details || 'Item description'}
                     </div>
                   )}
                 </div>
@@ -1367,9 +1832,17 @@ export default function CustomizeInvoicePage() {
           </div>
         </div>
 
-        {/* Terms and Notes */}
-        {(template.showPaymentTerms || template.showNotes) && (
-          <div className="grid grid-cols-2 gap-16 pt-8" style={{ borderTop: `1px solid ${template.borderColor}` }}>
+        {/* Terms, Tax Summary, Notes and Signature */}
+        {(template.showPaymentTerms || template.showTaxSummary || template.showNotes || (template.showSignature && companyInfo.signature)) && (
+          <div className={`grid gap-16 pt-8 ${(() => {
+            const items = [
+              template.showPaymentTerms,
+              template.showTaxSummary,
+              template.showNotes,
+              template.showSignature && companyInfo.signature
+            ].filter(Boolean).length;
+            return items <= 2 ? 'grid-cols-2' : 'grid-cols-3';
+          })()} `} style={{ borderTop: `1px solid ${template.borderColor}` }}>
             {/* Terms */}
             {template.showPaymentTerms && (
               <div>
@@ -1377,34 +1850,70 @@ export default function CustomizeInvoicePage() {
                   color: template.secondaryColor, 
                   fontWeight: '500', 
                   marginBottom: '24px',
-                  fontSize: '16px'
+                  fontSize: `${template.sectionTitleFontSize[0]}px`
                 }}>Terms</h3>
                 <div className="space-y-3">
                   <div className="flex justify-between">
-                    <span style={{ color: template.secondaryColor }}>Payment Terms</span>
-                    <span style={{ color: template.primaryColor }}>{invoiceData.paymentTerms}</span>
+                    <span style={{ color: template.secondaryColor, fontSize: `${template.footerItemsFontSize[0]}px` }}>Payment Terms</span>
+                    <span style={{ color: template.primaryColor, fontSize: `${template.footerItemsFontSize[0]}px` }}>{invoiceData.paymentTerms}</span>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Notes */}
-            {template.showNotes && invoiceData.notes && (
+            {/* Tax Summary */}
+            {template.showTaxSummary && (
               <div>
                 <h3 style={{ 
                   color: template.secondaryColor, 
                   fontWeight: '500', 
                   marginBottom: '24px',
-                  fontSize: '16px'
-                }}>Notes</h3>
-                <div style={{ color: template.primaryColor }}>
-                  {invoiceData.notes}
+                  fontSize: `${template.sectionTitleFontSize[0]}px`
+                }}>Tax Summary</h3>
+                <div style={{ color: template.primaryColor, fontSize: `${template.footerItemsFontSize[0]}px` }}>
+                  {invoiceData.taxSummary}
                           </div>
                           </div>
             )}
-                        </div>
+
+            {/* Notes */}
+            {template.showNotes && (
+              <div>
+                <h3 style={{ 
+                  color: template.secondaryColor, 
+                  fontWeight: '500', 
+                  marginBottom: '24px',
+                  fontSize: `${template.sectionTitleFontSize[0]}px`
+                }}>Notes</h3>
+                <div style={{ color: template.primaryColor, fontSize: `${template.footerItemsFontSize[0]}px` }}>
+                  {invoiceData.notes}
+                </div>
+              </div>
+            )}
+
+            {/* Signature */}
+            {template.showSignature && companyInfo.signature && (
+              <div>
+                <h3 style={{ 
+                  color: template.secondaryColor, 
+                  fontWeight: '500', 
+                  marginBottom: '24px',
+                  fontSize: `${template.sectionTitleFontSize[0]}px`
+                }}>Authorized Signature</h3>
+                <img 
+                  src={companyInfo.signature} 
+                  alt="Authorized Signature" 
+                  style={{ 
+                    maxWidth: `${template.signatureWidth[0]}px`, 
+                    height: 'auto',
+                    display: 'block'
+                  }}
+                />
+              </div>
+            )}
+          </div>
         )}
-                      </div>
+      </div>
     )
   }
 
@@ -1414,17 +1923,24 @@ export default function CustomizeInvoicePage() {
       ...prev,
       logoUrl: settings.companyLogo || '',
       logoSize: [80],
-      logoBorderRadius: [8]
+      logoBorderRadius: [8],
+      signatureWidth: [140]
     }))
   }
 
   const resetTypography = () => {
+    // Set template-specific section title font size
+    const defaultSectionTitleSize = (template.templateId === 'bold' || template.templateId === 'slate') ? [12] : [14]
+
     setTemplate(prev => ({
       ...prev,
       fontFamily: 'inter',
       fontSize: [14],
       lineHeight: [1.6],
-      tableHeaderSize: [13]
+      tableHeaderSize: [13],
+      footerItemsFontSize: [14],
+      sectionTitleFontSize: defaultSectionTitleSize,
+      bodyFontSize: [14]
     }))
   }
 
@@ -1517,6 +2033,8 @@ export default function CustomizeInvoicePage() {
       setSaving(false)
     }
   }
+
+
 
   return (
     <InvoiceCustomizationGate>
@@ -1618,86 +2136,156 @@ export default function CustomizeInvoicePage() {
                     <div className="flex items-center justify-between py-3 border-b border-border">
                       <div className="space-y-0.5">
                         <Label htmlFor="show-logo" className="text-sm font-normal cursor-pointer">Company Logo</Label>
-                        <p className="text-xs text-muted-foreground">Display your company logo on invoices</p>
-                        </div>
+                      </div>
                       <Switch
                         id="show-logo"
                         checked={template.showLogo}
                         onCheckedChange={(checked) => setTemplate(prev => ({ ...prev, showLogo: checked }))}
                       />
+                    </div>
+
+                    <div className="flex items-center justify-between py-3 border-b border-border">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="show-invoice-description" className="text-sm font-normal cursor-pointer">Invoice Description</Label>
                       </div>
+                      <Switch
+                        id="show-invoice-description"
+                        checked={template.showInvoiceDescription}
+                        onCheckedChange={(checked) => setTemplate(prev => ({ ...prev, showInvoiceDescription: checked }))}
+                      />
+                    </div>
 
                     <div className="flex items-center justify-between py-3 border-b border-border">
                       <div className="space-y-0.5">
                         <Label htmlFor="show-invoice-number" className="text-sm font-normal cursor-pointer">Invoice Number</Label>
-                        <p className="text-xs text-muted-foreground">Show unique invoice identifier</p>
-                              </div>
+                      </div>
                       <Switch
                         id="show-invoice-number"
                         checked={template.showInvoiceNumber}
                         onCheckedChange={(checked) => setTemplate(prev => ({ ...prev, showInvoiceNumber: checked }))}
                       />
-                            </div>
+                    </div>
 
                     <div className="flex items-center justify-between py-3 border-b border-border">
                       <div className="space-y-0.5">
                         <Label htmlFor="show-dates" className="text-sm font-normal cursor-pointer">Invoice & Due Dates</Label>
-                        <p className="text-xs text-muted-foreground">Display issue and payment due dates</p>
-                          </div>
+                      </div>
                       <Switch
                         id="show-dates"
                         checked={template.showDates}
                         onCheckedChange={(checked) => setTemplate(prev => ({ ...prev, showDates: checked }))}
                       />
-                        </div>
+                    </div>
+
+                    <div className="flex items-center justify-between py-3 border-b border-border">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="show-company-email" className="text-sm font-normal cursor-pointer">Company Email</Label>
+                      </div>
+                      <Switch
+                        id="show-company-email"
+                        checked={template.showCompanyEmail}
+                        onCheckedChange={(checked) => setTemplate(prev => ({ ...prev, showCompanyEmail: checked }))}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between py-3 border-b border-border">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="show-client-email" className="text-sm font-normal cursor-pointer">Client Email</Label>
+                      </div>
+                      <Switch
+                        id="show-client-email"
+                        checked={template.showClientEmail}
+                        onCheckedChange={(checked) => setTemplate(prev => ({ ...prev, showClientEmail: checked }))}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between py-3 border-b border-border">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="show-phone-number" className="text-sm font-normal cursor-pointer">Phone Number</Label>
+                      </div>
+                      <Switch
+                        id="show-phone-number"
+                        checked={template.showPhoneNumber}
+                        onCheckedChange={(checked) => setTemplate(prev => ({ ...prev, showPhoneNumber: checked }))}
+                      />
+                    </div>
 
                     <div className="flex items-center justify-between py-3 border-b border-border">
                       <div className="space-y-0.5">
                         <Label htmlFor="show-tax-id" className="text-sm font-normal cursor-pointer">Tax ID</Label>
-                        <p className="text-xs text-muted-foreground">Show company tax identification number</p>
-                              </div>
+                      </div>
                       <Switch
                         id="show-tax-id"
                         checked={template.showTaxId}
                         onCheckedChange={(checked) => setTemplate(prev => ({ ...prev, showTaxId: checked }))}
                       />
-                            </div>
+                    </div>
+
+                    <div className="flex items-center justify-between py-3 border-b border-border">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="show-tax-document" className="text-sm font-normal cursor-pointer">Tax Document</Label>
+                      </div>
+                      <Switch
+                        id="show-tax-document"
+                        checked={template.showTaxDocument}
+                        onCheckedChange={(checked) => setTemplate(prev => ({ ...prev, showTaxDocument: checked }))}
+                      />
+                    </div>
 
                     <div className="flex items-center justify-between py-3 border-b border-border">
                       <div className="space-y-0.5">
                         <Label htmlFor="show-item-details" className="text-sm font-normal cursor-pointer">Item Details</Label>
-                        <p className="text-xs text-muted-foreground">Show detailed descriptions for line items</p>
-                          </div>
+                      </div>
                       <Switch
                         id="show-item-details"
                         checked={template.showItemDetails}
                         onCheckedChange={(checked) => setTemplate(prev => ({ ...prev, showItemDetails: checked }))}
                       />
-                        </div>
+                    </div>
 
                     <div className="flex items-center justify-between py-3 border-b border-border">
                       <div className="space-y-0.5">
                         <Label htmlFor="show-payment-terms" className="text-sm font-normal cursor-pointer">Payment Terms</Label>
-                        <p className="text-xs text-muted-foreground">Display payment terms and conditions</p>
-                              </div>
+                      </div>
                       <Switch
                         id="show-payment-terms"
                         checked={template.showPaymentTerms}
                         onCheckedChange={(checked) => setTemplate(prev => ({ ...prev, showPaymentTerms: checked }))}
                       />
-                            </div>
+                    </div>
 
-                    <div className="flex items-center justify-between py-3">
+                    <div className="flex items-center justify-between py-3 border-b border-border">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="show-tax-summary" className="text-sm font-normal cursor-pointer">Tax Summary</Label>
+                      </div>
+                      <Switch
+                        id="show-tax-summary"
+                        checked={template.showTaxSummary}
+                        onCheckedChange={(checked) => setTemplate(prev => ({ ...prev, showTaxSummary: checked }))}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between py-3 border-b border-border">
                       <div className="space-y-0.5">
                         <Label htmlFor="show-notes" className="text-sm font-normal cursor-pointer">Notes Section</Label>
-                        <p className="text-xs text-muted-foreground">Include additional notes or messages</p>
-                          </div>
+                      </div>
                       <Switch
                         id="show-notes"
                         checked={template.showNotes}
                         onCheckedChange={(checked) => setTemplate(prev => ({ ...prev, showNotes: checked }))}
                       />
-                        </div>
+                    </div>
+
+                    <div className="flex items-center justify-between py-3">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="show-signature" className="text-sm font-normal cursor-pointer">Authorised Signature</Label>
+                      </div>
+                      <Switch
+                        id="show-signature"
+                        checked={template.showSignature}
+                        onCheckedChange={(checked) => setTemplate(prev => ({ ...prev, showSignature: checked }))}
+                      />
+                    </div>
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -1741,7 +2329,22 @@ export default function CustomizeInvoicePage() {
                         step={1}
                         className="w-full"
                       />
-                          </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-normal">Signature Width</Label>
+                        <span className="text-xs text-muted-foreground">{template.signatureWidth[0]}px</span>
+                      </div>
+                      <Slider
+                        value={template.signatureWidth}
+                        onValueChange={(value) => setTemplate(prev => ({ ...prev, signatureWidth: value }))}
+                        min={100}
+                        max={400}
+                        step={20}
+                        className="w-full"
+                      />
+                    </div>
                   </CardContent>
                 </Card>
 
@@ -1868,6 +2471,51 @@ export default function CustomizeInvoicePage() {
                         className="w-full"
                         />
                       </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-normal">Section Title Font Size</Label>
+                        <span className="text-xs text-muted-foreground">{template.sectionTitleFontSize[0]}px</span>
+                      </div>
+                      <Slider
+                        value={template.sectionTitleFontSize}
+                        onValueChange={(value) => setTemplate(prev => ({ ...prev, sectionTitleFontSize: value }))}
+                        min={12}
+                        max={24}
+                        step={1}
+                        className="w-full"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-normal">Body Font Size</Label>
+                        <span className="text-xs text-muted-foreground">{template.bodyFontSize[0]}px</span>
+                      </div>
+                      <Slider
+                        value={template.bodyFontSize}
+                        onValueChange={(value) => setTemplate(prev => ({ ...prev, bodyFontSize: value }))}
+                        min={10}
+                        max={18}
+                        step={1}
+                        className="w-full"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-normal">Footer Items Font Size</Label>
+                        <span className="text-xs text-muted-foreground">{template.footerItemsFontSize[0]}px</span>
+                      </div>
+                      <Slider
+                        value={template.footerItemsFontSize}
+                        onValueChange={(value) => setTemplate(prev => ({ ...prev, footerItemsFontSize: value }))}
+                        min={10}
+                        max={20}
+                        step={1}
+                        className="w-full"
+                      />
+                    </div>
                   </CardContent>
                 </Card>
 
@@ -2013,6 +2661,8 @@ export default function CustomizeInvoicePage() {
                     </div>
                   </CardContent>
                 </Card>
+
+
               </TabsContent>
             </Tabs>
                   </div>
@@ -2024,7 +2674,7 @@ export default function CustomizeInvoicePage() {
                 <CardDescription className="text-sm">See your invoice design in real-time</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="bg-background border rounded-lg shadow-sm overflow-hidden">
+                <div className="bg-background border rounded-lg shadow-sm overflow-hidden" key={`${template.sectionTitleFontSize[0]}-${template.templateId}`}>
                   {renderInvoice()}
                 </div>
               </CardContent>

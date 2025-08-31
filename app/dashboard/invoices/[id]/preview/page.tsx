@@ -30,7 +30,10 @@ interface Invoice {
   tax_amount: number
   total_amount: number
   notes: string | null
+  invoice_description?: string | null
+  tax_summary?: string | null
   terms?: string | null
+  quantity_label?: string
   client_id: string
   project_id: string | null
   created_at: string
@@ -215,6 +218,9 @@ export default function InvoicePreviewPage() {
       companyEmail: settings.companyEmail || 'contact@yourcompany.com',
       companyPhone: settings.companyPhone || '+1 (555) 123-4567',
       companyTaxId: settings.companyRegistration || settings.taxId || '',
+      companyTaxName: settings.taxName || 'Sales Tax',
+      companyTaxDocumentName: settings.taxDocumentName || '',
+      companyTaxDocumentNumber: settings.taxDocumentNumber || '',
       logoUrl: settings.companyLogo || ''
     }
     
@@ -229,7 +235,20 @@ export default function InvoicePreviewPage() {
           companyEmail: parsed.companyEmail || companyInfo.companyEmail,
           companyPhone: parsed.companyPhone || companyInfo.companyPhone,
           companyTaxId: parsed.companyTaxId || '',
+          companyTaxName: parsed.companyTaxName || settings.taxName || companyInfo.companyTaxName,
+          companyTaxDocumentName: parsed.companyTaxDocumentName || settings.taxDocumentName || companyInfo.companyTaxDocumentName,
+          companyTaxDocumentNumber: parsed.companyTaxDocumentNumber || settings.taxDocumentNumber || companyInfo.companyTaxDocumentNumber,
           logoUrl: parsed.logoUrl || settings.companyLogo || companyInfo.logoUrl
+        }
+
+        // Also try to load tax info from localStorage
+        const savedTaxInfo = localStorage.getItem('tax-info')
+        if (savedTaxInfo) {
+          const parsedTaxInfo = JSON.parse(savedTaxInfo)
+          companyInfo.companyTaxId = parsedTaxInfo.taxId || companyInfo.companyTaxId
+          companyInfo.companyTaxName = parsedTaxInfo.taxName || companyInfo.companyTaxName
+          companyInfo.companyTaxDocumentName = parsedTaxInfo.taxDocumentName || companyInfo.companyTaxDocumentName
+          companyInfo.companyTaxDocumentNumber = parsedTaxInfo.taxDocumentNumber || companyInfo.companyTaxDocumentNumber
         }
       }
     } catch (error) {
@@ -258,10 +277,25 @@ export default function InvoicePreviewPage() {
       showDates: templateSettings.showDates !== undefined ? templateSettings.showDates : true,
       showPaymentTerms: templateSettings.showPaymentTerms !== undefined ? templateSettings.showPaymentTerms : true,
       showNotes: templateSettings.showNotes !== undefined ? templateSettings.showNotes : true,
+      showInvoiceDescription: templateSettings.showInvoiceDescription !== undefined ? templateSettings.showInvoiceDescription : true,
+      showTaxSummary: templateSettings.showTaxSummary !== undefined ? templateSettings.showTaxSummary : true,
       showTaxId: templateSettings.showTaxId !== undefined ? templateSettings.showTaxId : false,
+      showTaxDocument: templateSettings.showTaxDocument !== undefined ? templateSettings.showTaxDocument : true,
       showItemDetails: templateSettings.showItemDetails !== undefined ? templateSettings.showItemDetails : true,
+      showCompanyEmail: templateSettings.showCompanyEmail !== undefined ? templateSettings.showCompanyEmail : true,
+      showClientEmail: templateSettings.showClientEmail !== undefined ? templateSettings.showClientEmail : true,
+      showPhoneNumber: templateSettings.showPhoneNumber !== undefined ? templateSettings.showPhoneNumber : true,
+      showSignature: templateSettings.showSignature !== undefined ? templateSettings.showSignature : true,
+      signatureWidth: templateSettings.signatureWidth || [200],
       notes: settings.defaultInvoiceNotes || '',
-      ...companyInfo
+      quantityLabel: invoice.quantity_label || settings.quantityLabel || 'Qty',
+      ...companyInfo,
+      // Map the company tax info to the expected field names
+      taxId: companyInfo.companyTaxId,
+      taxName: companyInfo.companyTaxName,
+      taxDocumentName: companyInfo.companyTaxDocumentName,
+      taxDocumentNumber: companyInfo.companyTaxDocumentNumber,
+      signature: settings.authorizedSignature || ''
     }
     
     // Format invoice data for renderer
@@ -386,7 +420,18 @@ export default function InvoicePreviewPage() {
         height: element.scrollHeight,
         scrollX: 0,
         scrollY: 0,
+        // Optimize for invoice content
+        ignoreElements: (el) => {
+          // Skip elements that might add unwanted height
+          return el.classList.contains('print:hidden') || 
+                 el.hasAttribute('data-html2canvas-ignore')
+        },
+        // Ensure we capture tight bounds
+        letterRendering: true,
+        removeContainer: true
       })
+      
+      console.log(`🖼️ Canvas capture: ${canvas.width}x${canvas.height}px from element ${element.scrollWidth}x${element.scrollHeight}px`)
 
       // Create PDF
       const pdf = new jsPDF({
@@ -398,19 +443,162 @@ export default function InvoicePreviewPage() {
 
       // Calculate dimensions for A4
       const imgWidth = 210 // A4 width in mm
+      const a4Height = 297 // Actual A4 height in mm
+      const singlePageLimit = a4Height + 10 // Allow 10mm over A4 for single page
       const imgHeight = (canvas.height * imgWidth) / canvas.width
       
-      // Add image to PDF
-      pdf.addImage(
-        canvas.toDataURL('image/png', 1.0),
-        'PNG',
-        0,
-        0,
-        imgWidth,
-        imgHeight,
-        undefined,
-        'FAST'
-      )
+      console.log(`📏 PDF Dimensions: Canvas ${canvas.width}x${canvas.height}px → PDF ${imgWidth}x${imgHeight.toFixed(1)}mm`)
+      console.log(`📐 A4 height: ${a4Height}mm, single page limit: ${singlePageLimit}mm`)
+      console.log(`🔍 Fits on one page? ${imgHeight.toFixed(2)} <= ${singlePageLimit} = ${imgHeight <= singlePageLimit}`)
+      
+      // Check if content fits on one page (A4 height + small tolerance)
+      if (imgHeight <= singlePageLimit) {
+        // Single page - fits entirely
+        console.log(`✅ Single page PDF: Content fits within ${singlePageLimit}mm limit`)
+        pdf.addImage(
+          canvas.toDataURL('image/png', 1.0),
+          'PNG',
+          0,
+          0,
+          imgWidth,
+          imgHeight,
+          undefined,
+          'FAST'
+        )
+      } else {
+        // Multiple pages needed - split the content using canvas cropping
+        const imageData = canvas.toDataURL('image/png', 1.0)
+        const totalPages = Math.ceil(imgHeight / a4Height)
+        
+        console.log(`📄 PDF Pagination: Content height ${imgHeight.toFixed(1)}mm requires ${totalPages} pages`)
+        
+        // Use Promise to handle async image processing
+        await new Promise<void>((resolve, reject) => {
+          const img = new Image()
+          img.onload = () => {
+            try {
+              const sourceWidth = canvas.width
+              const sourceHeight = canvas.height
+              
+              // Calculate pixels per page based on original canvas dimensions
+              const pixelsPerPage = Math.ceil((sourceHeight * a4Height) / imgHeight)
+              
+              for (let pageIndex = 0; pageIndex < totalPages; pageIndex++) {
+                if (pageIndex > 0) {
+                  pdf.addPage()
+                }
+                
+                // Calculate the crop area for this page with proper bounds checking
+                const cropY = Math.floor(pageIndex * pixelsPerPage)
+                const remainingHeight = sourceHeight - cropY
+                const cropHeight = Math.min(Math.ceil(pixelsPerPage), remainingHeight)
+                
+                // Validate dimensions to prevent corrupt canvas
+                if (cropHeight <= 0 || cropY >= sourceHeight || sourceWidth <= 0) {
+                  console.warn(`Skipping page ${pageIndex + 1} due to invalid dimensions:`, {
+                    cropY, cropHeight, sourceWidth, sourceHeight
+                  })
+                  continue
+                }
+                
+                // Create a temporary canvas for this page
+                const pageCanvas = document.createElement('canvas')
+                const pageCtx = pageCanvas.getContext('2d')
+                
+                if (!pageCtx) {
+                  throw new Error('Failed to get canvas 2D context')
+                }
+                
+                // Set canvas dimensions with integer values
+                pageCanvas.width = Math.floor(sourceWidth)
+                pageCanvas.height = Math.floor(cropHeight)
+                
+                // Clear the canvas
+                pageCtx.clearRect(0, 0, pageCanvas.width, pageCanvas.height)
+                
+                // Draw the cropped portion with validated dimensions
+                pageCtx.drawImage(
+                  img,
+                  0, cropY, sourceWidth, cropHeight, // Source rectangle
+                  0, 0, pageCanvas.width, pageCanvas.height // Destination rectangle
+                )
+                
+                // Calculate the actual height for this page in the PDF
+                const pageHeightInPDF = (pageCanvas.height * imgWidth) / pageCanvas.width
+                
+                // Validate the canvas has valid content before converting to data URL
+                const imageData = pageCtx.getImageData(0, 0, pageCanvas.width, pageCanvas.height)
+                if (imageData.data.length === 0) {
+                  console.warn(`Skipping page ${pageIndex + 1} due to empty canvas`)
+                  continue
+                }
+                
+                // Convert to data URL and validate
+                const dataURL = pageCanvas.toDataURL('image/png', 1.0)
+                if (!dataURL || dataURL === 'data:,') {
+                  console.warn(`Skipping page ${pageIndex + 1} due to invalid data URL`)
+                  continue
+                }
+                
+                // Add the page to PDF
+                pdf.addImage(
+                  dataURL,
+                  'PNG',
+                  0,
+                  0,
+                  imgWidth,
+                  pageHeightInPDF,
+                  undefined,
+                  'FAST'
+                )
+              }
+              
+              resolve()
+            } catch (error) {
+              console.error('Error during canvas processing:', error)
+              // Fallback: create single page PDF if pagination fails
+              console.warn('📄 Falling back to single-page PDF due to pagination error')
+              try {
+                pdf.addImage(
+                  canvas.toDataURL('image/png', 1.0),
+                  'PNG',
+                  0,
+                  0,
+                  imgWidth,
+                  imgHeight,
+                  undefined,
+                  'FAST'
+                )
+                resolve()
+              } catch (fallbackError) {
+                reject(new Error(`PDF generation failed: ${fallbackError instanceof Error ? fallbackError.message : 'Unknown error'}`))
+              }
+            }
+          }
+          
+          img.onerror = () => {
+            console.error('Failed to load image for pagination, using fallback')
+            // Fallback: create single page PDF if image loading fails
+            try {
+              pdf.addImage(
+                canvas.toDataURL('image/png', 1.0),
+                'PNG',
+                0,
+                0,
+                imgWidth,
+                imgHeight,
+                undefined,
+                'FAST'
+              )
+              resolve()
+            } catch (fallbackError) {
+              reject(new Error(`PDF generation failed: ${fallbackError instanceof Error ? fallbackError.message : 'Unknown error'}`))
+            }
+          }
+          
+          img.src = imageData
+        })
+      }
 
       // Save PDF
       pdf.save(`invoice-${invoice.invoice_number || 'preview'}.pdf`)
@@ -539,7 +727,10 @@ export default function InvoicePreviewPage() {
       issueDate: invoice.issue_date,
       dueDate: invoice.due_date,
       notes: invoice.notes,
+      invoiceDescription: invoice.invoice_description,
+      taxSummary: invoice.tax_summary,
       paymentTerms: invoice.terms,
+      quantityLabel: invoice.quantity_label,
       items: invoice.items || [],
       projectName: invoice.projects?.name
     }

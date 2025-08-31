@@ -22,6 +22,9 @@ export interface CompanySettings {
   date_format?: string
   invoice_template?: any // JSON object for invoice template settings
   default_invoice_notes?: string
+  default_invoice_description?: string
+  default_tax_summary?: string
+  authorized_signature?: string
   created_at?: string
   updated_at?: string
 }
@@ -355,6 +358,64 @@ export async function uploadCompanyLogo(file: File): Promise<string | null> {
     return publicUrl
   } catch (err) {
     console.error('Unexpected error in uploadCompanyLogo:', err)
+    return null
+  }
+}
+
+/**
+ * Upload company signature to Supabase Storage
+ */
+export async function uploadCompanySignature(file: File): Promise<string | null> {
+  try {
+    if (!isSupabaseConfigured()) {
+      console.log('Supabase not configured, cannot upload signature')
+      return null
+    }
+
+    // Check session first - if no session, return null early
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    
+    if (sessionError) {
+      console.error('❌ Session error in uploadCompanySignature:', sessionError.message)
+      return null
+    }
+    
+    if (!session) {
+      console.log('❌ No active session found in uploadCompanySignature - user not authenticated')
+      return null
+    }
+    
+    // If we have a session, get the user from the session
+    const user = session.user
+    
+    if (!user) {
+      console.log('❌ No user found in session')
+      return null
+    }
+
+    const fileExt = file.name.split('.').pop()
+    const timestamp = Date.now()
+    const fileName = `${user.id}/company-signature-${timestamp}.${fileExt}`
+
+    const { data, error } = await supabase.storage
+      .from('company-assets')
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: true
+      })
+
+    if (error) {
+      console.error('Error uploading company signature:', error)
+      return null
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('company-assets')
+      .getPublicUrl(fileName)
+
+    return publicUrl
+  } catch (err) {
+    console.error('Unexpected error in uploadCompanySignature:', err)
     return null
   }
 } 
