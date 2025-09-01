@@ -450,7 +450,7 @@ export function ProjectsTableWrapper({
           
           // Handle pipeline status change
           if (newProject.status === 'pipeline') {
-            updateData.pipeline_stage = 'lead'
+            updateData.pipeline_stage = 'Lead'
             updateData.deal_probability = 10
           } else {
             updateData.pipeline_stage = null

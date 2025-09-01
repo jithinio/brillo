@@ -232,7 +232,7 @@ export async function createPipelineClient(clientData: Partial<PipelineClient>):
       .insert([{
         ...clientData,
         status: 'pipeline',
-        pipeline_stage: 'lead',
+        pipeline_stage: 'Lead',
         deal_probability: 10
       }])
       .select()

@@ -39,7 +39,7 @@ import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { getCompanySettings } from "@/lib/company-settings"
-import { getDefaultCurrency } from "@/lib/currency"
+import { getDefaultCurrency, formatCurrency } from "@/lib/currency"
 import { useCanPerformAction } from "@/components/over-limit-alert"
 import { useClients } from "@/hooks/use-clients"
 import { calculateRecurringTotal, calculateHourlyTotal } from "@/lib/project-calculation-engine"
@@ -67,6 +67,9 @@ interface CreateProjectData {
   hourly_rate_new?: number
   estimated_hours?: number
   actual_hours?: number
+  // Pipeline-specific fields
+  pipeline_stage?: string
+  deal_probability?: number
 }
 
 interface FixedProjectFormData {
@@ -170,26 +173,30 @@ const ClientField = ({
     <>
       <div className="space-y-2">
         <Label htmlFor="client">Client *</Label>
-        <div className="flex gap-2">
+        <div className="flex gap-2 min-w-0">
           <Popover open={clientDropdownOpen} onOpenChange={setClientDropdownOpen} modal={true}>
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
                 role="combobox"
                 aria-expanded={clientDropdownOpen}
-                className="flex-1 justify-between"
+                className="flex-1 justify-between min-w-0 w-0"
               >
                 {selectedClient ? (
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
                     <ClientAvatar 
                       name={selectedClient.name} 
                       avatarUrl={selectedClient.avatar_url} 
                       size="sm" 
                     />
-                    <span className="truncate">{selectedClient.name}</span>
-                    {selectedClient.company && (
-                      <span className="text-muted-foreground truncate">({selectedClient.company})</span>
-                    )}
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:gap-1 min-w-0 flex-1 overflow-hidden">
+                      <span className="truncate font-medium">{selectedClient.name}</span>
+                      {selectedClient.company && (
+                        <span className="text-muted-foreground text-xs truncate">
+                          ({selectedClient.company})
+                        </span>
+                      )}
+                    </div>
                   </div>
                 ) : (
                   "Select client..."
@@ -502,17 +509,22 @@ export function EnhancedAddProjectDialog({
   // Get settings for currency and date format
   const { settings } = useSettings()
   const defaultCurrency = settings.defaultCurrency || getDefaultCurrency()
+  
+  // Ensure we always have a valid currency
+  const ensureValidCurrency = (currency?: string) => {
+    return currency && currency.trim() !== '' ? currency : defaultCurrency
+  }
 
   // Form data for different project types
   const [fixedData, setFixedData] = useState<FixedProjectFormData>({
     name: "",
     description: "",
     client_id: "",
-    currency: defaultCurrency,
+    currency: context === 'pipeline' ? ensureValidCurrency() : defaultCurrency,
     start_date: "",
     due_date: "",
     notes: "",
-    status: "active",
+    status: context === 'pipeline' ? "pipeline" : "active",
     project_type: 'fixed',
     total_budget: 0
   })
@@ -521,11 +533,11 @@ export function EnhancedAddProjectDialog({
     name: "",
     description: "",
     client_id: "",
-    currency: defaultCurrency,
+    currency: context === 'pipeline' ? ensureValidCurrency() : defaultCurrency,
     start_date: "",
     due_date: "",
     notes: "",
-    status: "active",
+    status: context === 'pipeline' ? "pipeline" : "active",
     project_type: 'recurring',
     recurring_frequency: 'monthly',
     recurring_amount: 0
@@ -535,11 +547,11 @@ export function EnhancedAddProjectDialog({
     name: "",
     description: "",
     client_id: "",
-    currency: defaultCurrency,
+    currency: context === 'pipeline' ? ensureValidCurrency() : defaultCurrency,
     start_date: "",
     due_date: "",
     notes: "",
-    status: "active",
+    status: context === 'pipeline' ? "pipeline" : "active",
     project_type: 'hourly',
     hourly_rate_new: 0,
     estimated_hours: 0,
@@ -566,7 +578,7 @@ export function EnhancedAddProjectDialog({
         name: editProject.name || "",
         description: editProject.description || "",
         client_id: editProject.client_id || "",
-        currency: editProject.currency || defaultCurrency,
+        currency: ensureValidCurrency(editProject.currency),
         start_date: editProject.start_date || "",
         due_date: editProject.due_date || "",
         notes: editProject.notes || "",
@@ -602,6 +614,30 @@ export function EnhancedAddProjectDialog({
       }
     }
   }, [editProject, open, defaultCurrency])
+
+  // Update form currencies when defaultCurrency changes
+  useEffect(() => {
+    if (!editProject && defaultCurrency) {
+      // For non-pipeline projects, always use default currency since currency field is hidden
+      const currencyToUse = context === 'pipeline' ? ensureValidCurrency : () => defaultCurrency
+      
+      setFixedData(prev => ({ 
+        ...prev, 
+        currency: currencyToUse(prev.currency),
+        status: context === 'pipeline' ? "pipeline" : "active"
+      }))
+      setRecurringData(prev => ({ 
+        ...prev, 
+        currency: currencyToUse(prev.currency),
+        status: context === 'pipeline' ? "pipeline" : "active"
+      }))
+      setHourlyData(prev => ({ 
+        ...prev, 
+        currency: currencyToUse(prev.currency),
+        status: context === 'pipeline' ? "pipeline" : "active"
+      }))
+    }
+  }, [defaultCurrency, editProject, context])
 
   // Computed values
   const recurringTotal = useMemo(() => {
@@ -688,11 +724,11 @@ export function EnhancedAddProjectDialog({
       name: "",
       description: "",
       client_id: "",
-      currency: defaultCurrency,
+      currency: context === 'pipeline' ? ensureValidCurrency() : defaultCurrency,
       start_date: "",
       due_date: "",
       notes: "",
-      status: "active",
+      status: context === 'pipeline' ? "pipeline" : "active",
       project_type: 'fixed',
       total_budget: 0
     })
@@ -701,11 +737,11 @@ export function EnhancedAddProjectDialog({
       name: "",
       description: "",
       client_id: "",
-      currency: defaultCurrency,
+      currency: context === 'pipeline' ? ensureValidCurrency() : defaultCurrency,
       start_date: "",
       due_date: "",
       notes: "",
-      status: "active",
+      status: context === 'pipeline' ? "pipeline" : "active",
       project_type: 'recurring',
       recurring_frequency: 'monthly',
       recurring_amount: 0
@@ -715,11 +751,11 @@ export function EnhancedAddProjectDialog({
       name: "",
       description: "",
       client_id: "",
-      currency: defaultCurrency,
+      currency: context === 'pipeline' ? ensureValidCurrency() : defaultCurrency,
       start_date: "",
       due_date: "",
       notes: "",
-      status: "active",
+      status: context === 'pipeline' ? "pipeline" : "active",
       project_type: 'hourly',
       hourly_rate_new: 0,
       estimated_hours: 0,
@@ -798,7 +834,12 @@ export function EnhancedAddProjectDialog({
         // Convert empty date strings to null for PostgreSQL
         start_date: currentData.start_date || null,
         due_date: currentData.due_date || null,
-        recurring_end_date: (currentData as any).recurring_end_date || null
+        recurring_end_date: (currentData as any).recurring_end_date || null,
+        // Add pipeline-specific fields when context is pipeline
+        ...(context === 'pipeline' && !isEditMode && {
+          pipeline_stage: 'Lead',
+          deal_probability: 10
+        })
       }
 
       let project: any
@@ -873,11 +914,14 @@ export function EnhancedAddProjectDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col" id="project-dialog">
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden" id="project-dialog">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle>{isEditMode ? 'Edit Project' : 'Add New Project'}</DialogTitle>
           <DialogDescription>
-            Choose the project type and fill in the details. All calculations are automatic.
+            {context === 'pipeline' 
+              ? 'Add a new project to your pipeline. It will start in the Lead stage. All calculations are automatic.'
+              : 'Choose the project type and fill in the details. All calculations are automatic.'
+            }
           </DialogDescription>
         </DialogHeader>
 
@@ -904,27 +948,31 @@ export function EnhancedAddProjectDialog({
               <TabsContent value="fixed" className="space-y-4 mt-6">
                 <div className="space-y-4">
                   {/* 1st row: Project name, Client */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <ProjectNameField data={fixedData} setData={setFixedData} />
-                    <ClientField 
-                      clients={clients}
-                      selectedClient={selectedClient}
-                      setSelectedClient={setSelectedClient}
-                      clientDropdownOpen={clientDropdownOpen}
-                      setClientDropdownOpen={setClientDropdownOpen}
-                      clientSearchQuery={clientSearchQuery}
-                      setClientSearchQuery={setClientSearchQuery}
-                      data={fixedData}
-                      setData={setFixedData}
-                      onClientUpdate={refetchClients}
-                    />
+                  <div className="grid grid-cols-2 gap-4 min-w-0">
+                    <div className="min-w-0">
+                      <ProjectNameField data={fixedData} setData={setFixedData} />
+                    </div>
+                    <div className="min-w-0">
+                      <ClientField 
+                        clients={clients}
+                        selectedClient={selectedClient}
+                        setSelectedClient={setSelectedClient}
+                        clientDropdownOpen={clientDropdownOpen}
+                        setClientDropdownOpen={setClientDropdownOpen}
+                        clientSearchQuery={clientSearchQuery}
+                        setClientSearchQuery={setClientSearchQuery}
+                        data={fixedData}
+                        setData={setFixedData}
+                        onClientUpdate={refetchClients}
+                      />
+                    </div>
                   </div>
 
                   {/* Currency row (if pipeline) */}
                   <CurrencyField data={fixedData} setData={setFixedData} context={context} />
 
                   {/* 2nd Row: Status, Total budget, Expenses */}
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-3 gap-4 min-w-0">
                     <StatusField data={fixedData} setData={setFixedData} />
                     <div className="space-y-2">
                       <Label htmlFor="total_budget">Total Budget *</Label>
@@ -946,7 +994,7 @@ export function EnhancedAddProjectDialog({
                   </div>
 
                   {/* 3rd: Received, Recently received */}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4 min-w-0">
                     <ReceivedFields 
                       data={fixedData} 
                       setData={setFixedData}
@@ -967,27 +1015,31 @@ export function EnhancedAddProjectDialog({
               <TabsContent value="recurring" className="space-y-4 mt-6">
                 <div className="space-y-4">
                   {/* 1st row: Project name, Client */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <ProjectNameField data={recurringData} setData={setRecurringData} />
-                    <ClientField 
-                      clients={clients}
-                      selectedClient={selectedClient}
-                      setSelectedClient={setSelectedClient}
-                      clientDropdownOpen={clientDropdownOpen}
-                      setClientDropdownOpen={setClientDropdownOpen}
-                      clientSearchQuery={clientSearchQuery}
-                      setClientSearchQuery={setClientSearchQuery}
-                      data={recurringData}
-                      setData={setRecurringData}
-                      onClientUpdate={refetchClients}
-                    />
+                  <div className="grid grid-cols-2 gap-4 min-w-0">
+                    <div className="min-w-0">
+                      <ProjectNameField data={recurringData} setData={setRecurringData} />
+                    </div>
+                    <div className="min-w-0">
+                      <ClientField 
+                        clients={clients}
+                        selectedClient={selectedClient}
+                        setSelectedClient={setSelectedClient}
+                        clientDropdownOpen={clientDropdownOpen}
+                        setClientDropdownOpen={setClientDropdownOpen}
+                        clientSearchQuery={clientSearchQuery}
+                        setClientSearchQuery={setClientSearchQuery}
+                        data={recurringData}
+                        setData={setRecurringData}
+                        onClientUpdate={refetchClients}
+                      />
+                    </div>
                   </div>
 
                   {/* Currency row (if pipeline) */}
                   <CurrencyField data={recurringData} setData={setRecurringData} context={context} />
 
                   {/* 2nd: Status, Frequency */}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4 min-w-0">
                     <StatusField data={recurringData} setData={setRecurringData} />
                     <div className="space-y-2">
                       <Label htmlFor="frequency">Frequency *</Label>
@@ -1012,7 +1064,7 @@ export function EnhancedAddProjectDialog({
                   </div>
 
                   {/* 3rd: Recurring Amount, Expenses */}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4 min-w-0">
                     <div className="space-y-2">
                       <Label htmlFor="recurring_amount">Recurring Amount *</Label>
                       <Input
@@ -1033,7 +1085,7 @@ export function EnhancedAddProjectDialog({
                   </div>
 
                   {/* 4th: Received, Recently received */}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4 min-w-0">
                     <ReceivedFields 
                       data={recurringData} 
                       setData={setRecurringData}
@@ -1051,9 +1103,9 @@ export function EnhancedAddProjectDialog({
                       <div className="flex items-center gap-2">
                         <HugeiconsIcon icon={CalculateIcon} className="h-4 w-4"  />
                         <span className="font-medium">Calculated Total Budget:</span>
-                        <Badge variant="secondary" className="text-lg">
-                          {recurringData.currency || defaultCurrency} {recurringTotal.toLocaleString()}
-                        </Badge>
+                        <span className="text-lg font-semibold">
+                          {formatCurrency(recurringTotal, context === 'pipeline' ? ensureValidCurrency(recurringData.currency) : defaultCurrency)}
+                        </span>
                       </div>
                       <p className="text-sm text-muted-foreground mt-2">
                         {recurringData.due_date 
@@ -1073,27 +1125,31 @@ export function EnhancedAddProjectDialog({
               <TabsContent value="hourly" className="space-y-4 mt-6">
                 <div className="space-y-4">
                   {/* 1st row: Project name, Client */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <ProjectNameField data={hourlyData} setData={setHourlyData} />
-                    <ClientField 
-                      clients={clients}
-                      selectedClient={selectedClient}
-                      setSelectedClient={setSelectedClient}
-                      clientDropdownOpen={clientDropdownOpen}
-                      setClientDropdownOpen={setClientDropdownOpen}
-                      clientSearchQuery={clientSearchQuery}
-                      setClientSearchQuery={setClientSearchQuery}
-                      data={hourlyData}
-                      setData={setHourlyData}
-                      onClientUpdate={refetchClients}
-                    />
+                  <div className="grid grid-cols-2 gap-4 min-w-0">
+                    <div className="min-w-0">
+                      <ProjectNameField data={hourlyData} setData={setHourlyData} />
+                    </div>
+                    <div className="min-w-0">
+                      <ClientField 
+                        clients={clients}
+                        selectedClient={selectedClient}
+                        setSelectedClient={setSelectedClient}
+                        clientDropdownOpen={clientDropdownOpen}
+                        setClientDropdownOpen={setClientDropdownOpen}
+                        clientSearchQuery={clientSearchQuery}
+                        setClientSearchQuery={setClientSearchQuery}
+                        data={hourlyData}
+                        setData={setHourlyData}
+                        onClientUpdate={refetchClients}
+                      />
+                    </div>
                   </div>
 
                   {/* Currency row (if pipeline) */}
                   <CurrencyField data={hourlyData} setData={setHourlyData} context={context} />
 
                   {/* 2nd: Status, Hourly Rate, Hours */}
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-3 gap-4 min-w-0">
                     <StatusField data={hourlyData} setData={setHourlyData} />
                     <div className="space-y-2">
                       <Label htmlFor="hourly_rate">Hourly Rate *</Label>
@@ -1129,7 +1185,7 @@ export function EnhancedAddProjectDialog({
                   </div>
 
                   {/* 3rd: Estimated, Expenses */}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4 min-w-0">
                     <div className="space-y-2">
                       <Label htmlFor="estimated_hours">Estimated</Label>
                       <Input
@@ -1149,7 +1205,7 @@ export function EnhancedAddProjectDialog({
                   </div>
 
                   {/* 4th: Received, Recently received */}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4 min-w-0">
                     <ReceivedFields 
                       data={hourlyData} 
                       setData={setHourlyData}
@@ -1167,9 +1223,9 @@ export function EnhancedAddProjectDialog({
                       <div className="flex items-center gap-2">
                         <HugeiconsIcon icon={CalculateIcon} className="h-4 w-4"  />
                         <span className="font-medium">Initial Estimated Total:</span>
-                        <Badge variant="secondary" className="text-lg">
-                          {hourlyData.currency || defaultCurrency} {hourlyTotal.toLocaleString()}
-                        </Badge>
+                        <span className="text-lg font-semibold">
+                          {formatCurrency(hourlyTotal, context === 'pipeline' ? ensureValidCurrency(hourlyData.currency) : defaultCurrency)}
+                        </span>
                       </div>
                       <p className="text-sm text-muted-foreground mt-2">
                         Total will update automatically as you log hours

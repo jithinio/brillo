@@ -88,7 +88,7 @@ export function EditProjectDialog({ open, onOpenChange, onProjectUpdate, project
     description: "",
     budget: "",
     currency: "USD",
-    pipeline_stage: "lead",
+    pipeline_stage: "Lead",
     pipeline_notes: "",
     client_id: "",
   })
@@ -162,7 +162,7 @@ export function EditProjectDialog({ open, onOpenChange, onProjectUpdate, project
         description: project.description || "",
         budget: project.budget?.toString() || "",
         currency: project.currency || "USD",
-        pipeline_stage: project.pipeline_stage || "lead",
+        pipeline_stage: project.pipeline_stage || "Lead",
         pipeline_notes: project.pipeline_notes || "",
         client_id: project.client_id || "",
       })

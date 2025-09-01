@@ -349,8 +349,8 @@ export async function convertProjectToActive(projectId: string): Promise<boolean
     
     let updateData: any = {
       status: 'active',
-      pipeline_stage: 'closed', // Mark as closed deal from pipeline
-      deal_probability: 100, // Won deal
+      pipeline_stage: null, // Clear pipeline stage since project is now active
+      deal_probability: null, // Clear probability since it's no longer in pipeline
       start_date: todayDate // Set start date to today when project becomes active
     }
 
@@ -474,7 +474,7 @@ export async function createPipelineProject(projectData: Partial<PipelineProject
       .insert([{
         ...projectData,
         status: 'pipeline',
-        pipeline_stage: 'lead',
+        pipeline_stage: 'Lead',
         deal_probability: 10
       }])
       .select(`

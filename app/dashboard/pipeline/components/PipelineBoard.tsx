@@ -281,40 +281,70 @@ function LostClientCard({ project, onRestore, onEdit, onDelete, onProjectUpdate,
 )
 }
 
-// Minimal confetti animation function for project completion
+// Confetti celebration for successful project wins
 const triggerMinimalConfetti = () => {
-  // Simple success colors - green theme
-  const colors = ['#10b981', '#34d399', '#6ee7b7', '#059669']
-  
-  // Single gentle burst from center
-  confetti({
-    particleCount: 50,
-    spread: 60,
-    origin: { x: 0.5, y: 0.6 },
-    colors: colors,
-    shapes: ['circle'],
-    scalar: 1.0,
-    gravity: 0.8,
-    startVelocity: 25,
-    ticks: 60,
-    zIndex: 1000
-  })
-
-  // Small follow-up burst after a short delay
-  setTimeout(() => {
-    confetti({
-      particleCount: 25,
-      spread: 40,
-      origin: { x: 0.5, y: 0.7 },
-      colors: colors,
-      shapes: ['circle'],
-      scalar: 0.8,
-      gravity: 0.9,
-      startVelocity: 20,
-      ticks: 50,
-      zIndex: 1000
+  try {
+    // Create confetti instance with worker disabled to avoid CSP issues
+    const myConfetti = confetti.create(undefined, {
+      resize: true,
+      useWorker: false // Disable web worker to avoid CSP violations
     })
-  }, 200)
+    
+    // Success colors - green theme
+    const colors = ['#10b981', '#34d399', '#6ee7b7', '#059669', '#047857']
+    
+    // Center burst
+    myConfetti({
+      particleCount: 100,
+      spread: 70,
+      origin: { x: 0.5, y: 0.6 },
+      colors: colors,
+      scalar: 1.2,
+      startVelocity: 30,
+      ticks: 100
+    })
+    
+    // Left side burst
+    setTimeout(() => {
+      myConfetti({
+        particleCount: 50,
+        spread: 60,
+        origin: { x: 0.2, y: 0.7 },
+        colors: colors,
+        angle: 60,
+        scalar: 1.0,
+        startVelocity: 25
+      })
+    }, 200)
+    
+    // Right side burst
+    setTimeout(() => {
+      myConfetti({
+        particleCount: 50,
+        spread: 60,
+        origin: { x: 0.8, y: 0.7 },
+        colors: colors,
+        angle: 120,
+        scalar: 1.0,
+        startVelocity: 25
+      })
+    }, 400)
+    
+  } catch (error) {
+    console.error('Error triggering confetti:', error)
+    
+    // Fallback: simple confetti without special configuration
+    try {
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 },
+        useWorker: false
+      })
+    } catch (fallbackError) {
+      console.error('Confetti fallback failed:', fallbackError)
+    }
+  }
 }
 
 export function PipelineBoard({ 
@@ -500,11 +530,12 @@ export function PipelineBoard({
         }
 
         const success = await convertProjectToActive(activeProject.id)
+        
         if (success) {
           toast.success(`${activeProject.name} closed as WON! 🎉`, {
             description: "Project converted to active and moved to Projects page"
           })
-          // Trigger minimal celebration confetti
+          // Trigger celebration confetti
           triggerMinimalConfetti()
         } else {
           toast.error("Failed to close project as won", {

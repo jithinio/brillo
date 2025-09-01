@@ -209,7 +209,7 @@ const updateProjectStatus = async ({ id, status }: { id: string; status: string 
   
   // If moving to pipeline, set default pipeline fields
   if (status === 'pipeline') {
-    updateData.pipeline_stage = 'lead'
+    updateData.pipeline_stage = 'Lead'
     updateData.deal_probability = 10
   } else {
     // If moving away from pipeline, clear pipeline fields

@@ -65,7 +65,7 @@ export function AddClientDialog({ open, onOpenChange, onClientUpdate, context = 
         source: newClient.source.trim() || undefined,
         status: context === 'pipeline' ? 'pipeline' : 'active',
         ...(context === 'pipeline' && {
-          pipeline_stage: 'lead',
+          pipeline_stage: 'Lead',
           deal_probability: 10
         })
       }

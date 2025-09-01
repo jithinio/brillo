@@ -47,7 +47,7 @@ export function ClientAvatar({ name, avatarUrl, size = "md", className }: Client
 
   return (
     <Avatar className={cn(sizeMap[size], className)}>
-      {avatarUrl && (
+      {avatarUrl && avatarUrl.trim() !== "" && (
         <AvatarImage src={avatarUrl} alt={name} />
       )}
       <AvatarFallback 

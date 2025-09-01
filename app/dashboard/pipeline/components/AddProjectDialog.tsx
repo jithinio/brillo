@@ -300,13 +300,20 @@ export function AddProjectDialog({
                     disabled={clientsLoading}
                   >
                     {selectedClient ? (
-                      <div className="flex items-center space-x-2 min-w-0 flex-1 mr-2">
+                      <div className="flex items-center space-x-2 min-w-0 flex-1 mr-2 overflow-hidden">
                         <ClientAvatar 
                           name={selectedClient.name} 
                           avatarUrl={selectedClient.avatar_url}
                           size="xs"
                         />
-                        <span className="truncate">{selectedClient.name} - {selectedClient.company}</span>
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:gap-1 min-w-0 flex-1 overflow-hidden">
+                          <span className="truncate font-medium">{selectedClient.name}</span>
+                          {selectedClient.company && (
+                            <span className="text-muted-foreground text-xs truncate">
+                              {selectedClient.company}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     ) : (
                       <span className="text-muted-foreground flex-1 mr-2">

@@ -435,7 +435,7 @@ const statusConfig = {
     label: "Pipeline",
     icon: FilterIcon,
     variant: "outline" as const,
-    iconClassName: "text-sky-500",
+    iconClassName: "text-purple-500",
   },
   due: {
     label: "Due",
