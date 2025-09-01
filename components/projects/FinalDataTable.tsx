@@ -24,6 +24,7 @@ import { supabase, isSupabaseConfigured } from "@/lib/supabase"
 import { formatCurrencyAbbreviated } from "../../lib/currency-utils"
 import { useQueryClient } from "@tanstack/react-query"
 import { cacheUtils } from "@/components/query-provider"
+import { BatchStatusSelector } from "./BatchStatusSelector"
 
 // Custom scrollbar styles with performance optimizations
 const scrollbarStyles = `
@@ -182,6 +183,7 @@ interface FinalDataTableProps {
   onEditProject: (project: any) => void
   onDuplicateProject: (project: any) => void
   onBatchDelete: (projects: any[]) => void
+  onBatchStatusChange: (projects: any[], status: string) => void
   onResizeStart: (columnId: string, startX: number, event: React.MouseEvent) => void
   createSortingFunctions: (columnId: string) => {
     toggleSorting: (desc?: boolean) => void
@@ -208,6 +210,7 @@ function FinalDataTableComponent({
   onEditProject,
   onDuplicateProject,
   onBatchDelete,
+  onBatchStatusChange,
   onResizeStart,
   createSortingFunctions,
   preferencesLoading,
@@ -357,6 +360,9 @@ function FinalDataTableComponent({
                 >
                   Clear
                 </Button>
+                <BatchStatusSelector
+                  onStatusChange={(status) => onBatchStatusChange(selectedProjects, status)}
+                />
                 <Button
                   variant="destructive" 
                   size="sm"

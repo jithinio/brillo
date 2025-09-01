@@ -1148,6 +1148,65 @@ export function ProjectsTableWrapper({
     }
   }
 
+  const handleBatchStatusChange = async (projects: any[], newStatus: string) => {
+    if (projects.length === 0) return
+    
+    const projectNames = projects.map(p => p.name).join(', ')
+    const statusLabels = {
+      active: 'Active',
+      completed: 'Completed',
+      on_hold: 'On Hold',
+      cancelled: 'Cancelled',
+      pipeline: 'Pipeline'
+    }
+    
+    const statusLabel = statusLabels[newStatus as keyof typeof statusLabels] || newStatus
+    const confirmed = window.confirm(`Are you sure you want to change the status of ${projects.length} project(s) to "${statusLabel}"?\n\n${projectNames}`)
+    if (!confirmed) return
+
+    try {
+      if (isSupabaseConfigured()) {
+        const projectIds = projects.map(p => p.id)
+        
+        // Prepare update data based on status
+        const updateData: any = { 
+          status: newStatus, 
+          updated_at: new Date().toISOString() 
+        }
+        
+        // If moving to pipeline, set default pipeline fields
+        if (newStatus === 'pipeline') {
+          updateData.pipeline_stage = 'Lead'
+          updateData.deal_probability = 10
+        } else {
+          // If moving away from pipeline, clear pipeline fields
+          updateData.pipeline_stage = null
+          updateData.deal_probability = null
+        }
+
+        // Update all projects at once
+        const { error } = await supabase
+          .from('projects')
+          .update(updateData)
+          .in('id', projectIds)
+
+        if (error) throw error
+
+        // Invalidate cache to refresh the data
+        cacheUtils.invalidateAllProjectRelatedData(queryClient)
+
+        toast.success(`${projects.length} project(s) status updated successfully`, {
+          description: `Status changed to "${statusLabel}"`
+        })
+      } else {
+        toast.error("Database not configured")
+      }
+    } catch (error: any) {
+      console.error('❌ Failed to update project status:', error)
+      toast.error(`Failed to update project status: ${error.message}`)
+    }
+  }
+
   const handleExport = () => {
     try {
       const exportData = projects || []
@@ -1595,6 +1654,7 @@ export function ProjectsTableWrapper({
             onEditProject={handleEditProject}
             onDuplicateProject={handleDuplicateProject}
             onBatchDelete={handleBatchDelete}
+            onBatchStatusChange={handleBatchStatusChange}
             onResizeStart={handleResizeStart}
             createSortingFunctions={createSortingFunctions}
             preferencesLoading={preferencesLoading}
