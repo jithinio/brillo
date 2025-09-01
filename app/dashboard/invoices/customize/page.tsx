@@ -2147,7 +2147,7 @@ export default function CustomizeInvoicePage() {
                               <div className="flex flex-col space-y-1">
                                 <div className="flex items-center gap-2">
                                   <h3 className="font-medium text-sm">{tmpl.name}</h3>
-                                  {isProTemplate && (
+                                  {isProTemplate && !hasProAccess && (
                                     <span className="px-1.5 py-0.5 text-xs font-medium bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded">
                                       PRO
                                     </span>
