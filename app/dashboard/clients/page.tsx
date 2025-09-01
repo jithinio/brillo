@@ -22,7 +22,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { SourceSelector } from "@/components/ui/source-selector"
-import { PlusSignIcon, Upload01Icon, UserIcon, Crown02Icon, ImageUploadIcon } from '@hugeicons/core-free-icons'
+import { PlusSignIcon, Upload01Icon, UserIcon, ImageUploadIcon } from '@hugeicons/core-free-icons'
 import Link from "next/link"
 import { ClientMetrics } from "@/components/clients/ClientMetrics"
 import { DataHookReturn, EntityActions } from "@/components/table/types"
@@ -964,12 +964,12 @@ export default function ClientsPage() {
         addButton={
           <div className="flex items-center gap-2">
             {!canCreateResource('clients') && (
-              <Button asChild variant="outline" size="sm" className="h-8">
-                <Link href="/pricing">
-                  <HugeiconsIcon icon={Crown02Icon} className="h-3 w-3 mr-1"  />
-                  Upgrade to Pro
-                </Link>
-              </Button>
+                              <Button asChild variant="outline" size="sm" className="h-8 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white border-0">
+                  <Link href="/pricing">
+                   
+                    Upgrade to Pro
+                  </Link>
+                </Button>
             )}
             <Button
               onClick={() => {

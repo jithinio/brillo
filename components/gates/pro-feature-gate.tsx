@@ -3,7 +3,7 @@
 import { HugeiconsIcon } from '@hugeicons/react';
 import { ReactNode, memo, useState, useEffect } from "react"
 import Link from "next/link"
-import { Crown02Icon } from '@hugeicons/core-free-icons'
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -114,7 +114,7 @@ const ProFeatureGateComponent = ({
           <CardHeader className="text-center pb-4">
             <div className="flex justify-center mb-4">
               <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center">
-                <HugeiconsIcon icon={Crown02Icon} className="w-6 h-6 text-white"  />
+                <div className="w-6 h-6 text-white font-bold text-xl">PRO</div>
               </div>
             </div>
             <CardTitle className="text-center">
@@ -149,11 +149,7 @@ const ProFeatureGateComponent = ({
     <div className={cn("w-full flex items-center justify-center min-h-[calc(100vh-4rem)] p-4", className)}>
       <Card className="border-dashed border-2 border-muted-foreground/20 bg-muted/10 w-full max-w-[400px]">
         <CardHeader className="text-center pb-4">
-          <div className="flex justify-center mb-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center">
-              <HugeiconsIcon icon={Crown02Icon} className="w-6 h-6 text-white"  />
-            </div>
-          </div>
+
           <CardTitle className="text-center">
             {getFeatureName()}
           </CardTitle>
@@ -167,12 +163,12 @@ const ProFeatureGateComponent = ({
           </div>
           
           <div className="flex flex-col sm:flex-row gap-2 justify-center">
-            <Button asChild className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600">
-              <Link href="/pricing">
-                <HugeiconsIcon icon={Crown02Icon} className="w-4 h-4 mr-2"  />
-                Upgrade to Pro
-              </Link>
-            </Button>
+                            <Button asChild className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white">
+                  <Link href="/pricing">
+   
+                    Upgrade to Pro
+                  </Link>
+                </Button>
             <Button variant="outline" asChild>
               <Link href="/pricing">
                 View Plans

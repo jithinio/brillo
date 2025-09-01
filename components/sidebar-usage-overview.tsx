@@ -1,7 +1,7 @@
 "use client"
 
 import { HugeiconsIcon } from '@hugeicons/react';
-import { Crown02Icon, Group01Icon, FolderOpenIcon, CreditCardIcon, ArrowDown01Icon } from '@hugeicons/core-free-icons'
+import { Group01Icon, FolderOpenIcon, CreditCardIcon, ArrowDown01Icon, Invoice01Icon } from '@hugeicons/core-free-icons'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { motion, AnimatePresence } from "framer-motion"
@@ -354,10 +354,12 @@ export function SidebarUsageOverview() {
   const clientsLimit = (displayUsage?.clients?.limit as number) ?? 10
   const projectsUsed = displayUsage?.projects?.current ?? 0
   const projectsLimit = (displayUsage?.projects?.limit as number) ?? 20
+  const invoicesUsed = displayUsage?.invoices?.current ?? 0
+  const invoicesLimit = (displayUsage?.invoices?.limit as number) ?? 5
 
   // Show loading skeleton if no data available during initialization
-  const hasAnyData = displayUsage?.clients || displayUsage?.projects || 
-                     clientsUsed !== undefined || projectsUsed !== undefined || cachedUsage
+  const hasAnyData = displayUsage?.clients || displayUsage?.projects || displayUsage?.invoices ||
+                     clientsUsed !== undefined || projectsUsed !== undefined || invoicesUsed !== undefined || cachedUsage
 
   if (!hasAnyData && isLoading) {
     return <SidebarUsageSkeleton />
@@ -367,6 +369,7 @@ export function SidebarUsageOverview() {
 
   const clientsPercentage = clientsLimit > 0 ? (clientsUsed / clientsLimit) * 100 : 0
   const projectsPercentage = projectsLimit > 0 ? (projectsUsed / projectsLimit) * 100 : 0
+  const invoicesPercentage = invoicesLimit > 0 ? (invoicesUsed / invoicesLimit) * 100 : 0
 
   // Check if we're using cached data
   const usingCachedData = displayUsage === cachedUsage && cachedUsage !== null
@@ -471,6 +474,29 @@ export function SidebarUsageOverview() {
               </div>
             </div>
 
+            {/* Invoices Usage */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-1.5">
+                  <HugeiconsIcon icon={Invoice01Icon} className="w-3 h-3 text-secondary-foreground"  />
+                  <span className="text-secondary-foreground">Invoices</span>
+                </div>
+                <span className="font-medium">{invoicesUsed}/{invoicesLimit}</span>
+              </div>
+              <div className="w-full bg-secondary rounded-full h-2">
+                <div 
+                  className={`h-2 rounded-full transition-all duration-300 ${
+                    invoicesPercentage >= 90 
+                      ? 'bg-destructive' 
+                      : invoicesPercentage >= 75 
+                        ? 'bg-orange-500' 
+                        : 'bg-primary'
+                  }`}
+                  style={{ width: `${Math.min(invoicesPercentage, 100)}%` }}
+                />
+              </div>
+            </div>
+
             {/* Upgrade/Manage Button */}
             {!isLoading && (
               (() => {
@@ -495,7 +521,7 @@ export function SidebarUsageOverview() {
                   className="w-full h-7 text-xs bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white border-0"
                 >
                   <Link href="/pricing">
-                    <HugeiconsIcon icon={Crown02Icon} className="w-3 h-3 mr-1"  />
+
                     Upgrade to Pro
                   </Link>
                 </Button>

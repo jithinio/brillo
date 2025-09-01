@@ -10,7 +10,7 @@ export interface SubscriptionPlan {
   limits: {
     projects: number | 'unlimited'
     clients: number | 'unlimited'
-    invoices: 'none' | 'unlimited'
+    invoices: number | 'unlimited'
   }
   proFeatures?: string[]
   popular?: boolean
@@ -39,7 +39,7 @@ export interface UsageLimits {
   }
   invoices: {
     current: number
-    limit: 'none' | 'unlimited'
+    limit: number | 'unlimited'
     canCreate: boolean
   }
 }

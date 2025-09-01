@@ -24,11 +24,13 @@ import { cn } from '@/lib/utils'
 import { useSettings } from '@/components/settings-provider'
 
 import { InvoiceCustomizationGate } from '@/components/gates/pro-feature-gate'
+import { useSubscription } from '@/components/providers/subscription-provider'
 
 interface InvoiceTemplate {
   id: string
   name: string
   description: string
+  isProFeature?: boolean
 }
 
 const invoiceTemplates: InvoiceTemplate[] = [
@@ -45,17 +47,20 @@ const invoiceTemplates: InvoiceTemplate[] = [
   {
     id: 'classic',
     name: 'Classic',
-    description: 'Corporate clean, structured'
+    description: 'Corporate clean, structured',
+    isProFeature: true
   },
   {
     id: 'slate',
     name: 'Slate',
-    description: 'Minimal, functional, modern'
+    description: 'Minimal, functional, modern',
+    isProFeature: true
   },
   {
     id: 'edge',
     name: 'Edge',
-    description: 'Ultra-modern and spacious'
+    description: 'Ultra-modern and spacious',
+    isProFeature: true
   }
 ]
 
@@ -88,6 +93,7 @@ const backgroundColorPresets = [
 
 export default function CustomizeInvoicePage() {
   const { settings, isLoading, updateSetting, formatDate } = useSettings()
+  const { hasAccess } = useSubscription()
 
   const [activeTab, setActiveTab] = useState('template')
   const [saving, setSaving] = useState(false)
@@ -158,12 +164,25 @@ export default function CustomizeInvoicePage() {
       return migrationMap[templateId] || templateId
     }
 
+    // Check if user has access to Pro features
+    const validateTemplateAccess = (templateId: string) => {
+      const template = invoiceTemplates.find(t => t.id === templateId)
+      if (template?.isProFeature && !hasAccess('invoice_customization')) {
+        console.log('🚫 Free user attempted to load Pro template:', templateId, '- falling back to modern')
+        return 'modern' // Default to modern for free users
+      }
+      return templateId
+    }
+
     // First try to load from settings (account-level)
     if (settings.invoiceTemplate && Object.keys(settings.invoiceTemplate).length > 0) {
       console.log('✅ Loading template from Supabase:', settings.invoiceTemplate.templateId)
+      const migratedTemplateId = migrateTemplateId(settings.invoiceTemplate.templateId)
+      const validatedTemplateId = validateTemplateAccess(migratedTemplateId)
+      
       const migratedTemplate = {
         ...settings.invoiceTemplate,
-        templateId: migrateTemplateId(settings.invoiceTemplate.templateId)
+        templateId: validatedTemplateId
       }
       setTemplate(prev => ({
         ...prev,
@@ -176,9 +195,12 @@ export default function CustomizeInvoicePage() {
         try {
           const parsed = JSON.parse(savedTemplate)
           console.log('✅ Loading template from localStorage:', parsed.templateId)
+          const migratedTemplateId = migrateTemplateId(parsed.templateId)
+          const validatedTemplateId = validateTemplateAccess(migratedTemplateId)
+          
           const migratedTemplate = {
             ...parsed,
-            templateId: migrateTemplateId(parsed.templateId)
+            templateId: validatedTemplateId
           }
           setTemplate(prev => ({
             ...prev,
@@ -2083,12 +2105,18 @@ export default function CustomizeInvoicePage() {
                       onValueChange={(value) => applyDefaultTemplateStyles(value)}
                       className="grid grid-cols-2 gap-3"
                     >
-                      {invoiceTemplates.map((tmpl) => (
+                      {invoiceTemplates.map((tmpl) => {
+                        const isProTemplate = tmpl.isProFeature
+                        const hasProAccess = hasAccess('invoice_customization')
+                        const isDisabled = isProTemplate && !hasProAccess
+                        
+                        return (
                         <div key={tmpl.id} className="relative">
                           <RadioGroupItem
                             value={tmpl.id}
                             id={tmpl.id}
                             className="sr-only"
+                            disabled={isDisabled}
                           />
                           <Label
                             htmlFor={tmpl.id}
@@ -2096,7 +2124,8 @@ export default function CustomizeInvoicePage() {
                               "block cursor-pointer rounded-lg border-2 p-4 transition-all hover:shadow-md hover:border-primary/50 relative",
                               template.templateId === tmpl.id
                                 ? "border-primary bg-primary/5 shadow-sm"
-                                : "border-border"
+                                : "border-border",
+                              isDisabled && "opacity-50 cursor-not-allowed hover:shadow-none"
                             )}
                           >
                             {/* Radio button at top-left */}
@@ -2116,13 +2145,38 @@ export default function CustomizeInvoicePage() {
                               
                               {/* Title and description stacked vertically */}
                               <div className="flex flex-col space-y-1">
-                                <h3 className="font-medium text-sm">{tmpl.name}</h3>
+                                <div className="flex items-center gap-2">
+                                  <h3 className="font-medium text-sm">{tmpl.name}</h3>
+                                  {isProTemplate && (
+                                    <span className="px-1.5 py-0.5 text-xs font-medium bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded">
+                                      PRO
+                                    </span>
+                                  )}
+                                </div>
                                 <p className="text-xs text-muted-foreground">{tmpl.description}</p>
                               </div>
                             </div>
                           </Label>
+                          {isDisabled && (
+                            <div className="absolute inset-0 bg-background/60 backdrop-blur-[2px] rounded-lg flex items-center justify-center">
+                              <div className="text-center">
+                                <p className="text-xs font-medium mb-1">Pro Feature</p>
+                                <button 
+                                  onClick={(e) => {
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                    window.open('/pricing', '_blank')
+                                  }}
+                                  className="text-xs text-primary hover:underline"
+                                >
+                                  Upgrade to Pro
+                                </button>
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      ))}
+                        )
+                      })}
                     </RadioGroup>
                   </CardContent>
                 </Card>
@@ -2290,7 +2344,7 @@ export default function CustomizeInvoicePage() {
                 </Card>
               </TabsContent>
 
-              <TabsContent value="style" className="space-y-6">
+              <TabsContent value="style" className="space-y-6 relative">
                 <Card className="border-border shadow-sm">
                   <CardHeader className="pb-4">
                     <div className="flex items-center justify-between">
@@ -2662,6 +2716,23 @@ export default function CustomizeInvoicePage() {
                   </CardContent>
                 </Card>
 
+                {/* Pro Overlay for Style Tab */}
+                {!hasAccess('invoice_customization') && (
+                  <div className="absolute inset-0 bg-background/60 backdrop-blur-[2px] rounded-lg flex items-center justify-center z-10">
+                    <div className="text-center bg-background/80 p-6 rounded-lg border shadow-lg">
+                      <h3 className="text-lg font-semibold mb-2">Pro Feature</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Customize invoice styles, colors, fonts, and layouts with Pro
+                      </p>
+                      <button 
+                        onClick={() => window.open('/pricing', '_blank')}
+                        className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-medium rounded-lg hover:from-amber-600 hover:to-orange-600 transition-colors"
+                      >
+                        Upgrade to Pro
+                      </button>
+                    </div>
+                  </div>
+                )}
 
               </TabsContent>
             </Tabs>

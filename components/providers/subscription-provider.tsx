@@ -60,7 +60,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
   const [usage, setUsage] = useState<UsageLimits>({
     projects: { current: 0, limit: 20, canCreate: true },
     clients: { current: 0, limit: 10, canCreate: true },
-    invoices: { current: 0, limit: 'none', canCreate: false }
+    invoices: { current: 0, limit: 5, canCreate: true }
   })
 
   // Start with loading state true to prevent hydration mismatch
@@ -220,9 +220,9 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
       restrictions.push(`You have ${usage.clients.current} clients but your current plan only allows ${plan.limits.clients}. Some features may be limited.`)
     }
     
-    if (plan.limits.invoices === 'none' && usage.invoices.current > 0) {
+    if (plan.limits.invoices !== 'unlimited' && usage.invoices.current > plan.limits.invoices) {
       isOverLimit = true
-      restrictions.push(`You have ${usage.invoices.current} invoices but your current plan doesn't include invoicing. Consider upgrading to Pro.`)
+      restrictions.push(`You have ${usage.invoices.current} invoices but your current plan only allows ${plan.limits.invoices}. Some features may be limited.`)
     }
     
     return { isOverLimit, restrictions }
@@ -546,7 +546,7 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
           invoices: { 
             current: usageData.invoices || 0, 
             limit: plan.limits.invoices, 
-            canCreate: plan.limits.invoices === 'unlimited' || (plan.limits.invoices !== 'none' && (usageData.invoices || 0) < plan.limits.invoices)
+            canCreate: plan.limits.invoices === 'unlimited' || (usageData.invoices || 0) < plan.limits.invoices
           }
         }
         

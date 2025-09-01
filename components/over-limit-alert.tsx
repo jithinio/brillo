@@ -3,7 +3,7 @@
 import { HugeiconsIcon } from '@hugeicons/react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
-import { Alert01Icon, Crown02Icon } from '@hugeicons/core-free-icons'
+import { Alert01Icon } from '@hugeicons/core-free-icons'
 import Link from "next/link"
 import { useSubscription } from "@/components/providers/subscription-provider"
 
@@ -29,12 +29,12 @@ export function OverLimitAlert() {
             </p>
           ))}
           <div className="pt-2">
-            <Button asChild size="sm" className="bg-amber-600 hover:bg-amber-700">
-              <Link href="/pricing">
-                <HugeiconsIcon icon={Crown02Icon} className="w-4 h-4 mr-2"  />
-                Upgrade to Pro
-              </Link>
-            </Button>
+                          <Button asChild size="sm" className="bg-amber-600 hover:bg-amber-700 text-white">
+                <Link href="/pricing">
+         
+                  Upgrade to Pro
+                </Link>
+              </Button>
           </div>
         </div>
       </AlertDescription>

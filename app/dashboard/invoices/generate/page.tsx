@@ -30,9 +30,10 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { ClientAvatar } from "@/components/ui/client-avatar"
 import { CurrencySelector } from "@/components/ui/currency-selector"
-import { InvoicingGate } from "@/components/gates/pro-feature-gate"
+
 import { CurrencyConverterWidget } from "@/components/currency-converter-widget"
 import { useCustomQuantityLabels } from "@/hooks/use-custom-quantity-labels"
+import { useSubscription } from "@/components/providers/subscription-provider"
 
 
 interface InvoiceItem {
@@ -48,6 +49,7 @@ interface InvoiceItem {
 export default function GenerateInvoicePage() {
   const router = useRouter()
   const { settings, isLoading: settingsLoading, formatDate } = useSettings()
+  const { hasAccess } = useSubscription()
   const queryClient = useQueryClient()
   const { customLabels } = useCustomQuantityLabels()
   
@@ -1545,12 +1547,25 @@ export default function GenerateInvoicePage() {
         }
         return migrationMap[templateId] || templateId
       }
+
+      // Define Pro templates and validate access
+      const proTemplates = ['classic', 'slate', 'edge']
+      const validateTemplateAccess = (templateId: string) => {
+        if (proTemplates.includes(templateId) && !hasAccess('invoice_customization')) {
+          console.log('🚫 Free user attempted to download Pro template PDF:', templateId, '- falling back to modern')
+          return 'modern' // Default to modern for free users
+        }
+        return templateId
+      }
       
       // First try to get from settings (Supabase)
       if (settings.invoiceTemplate && Object.keys(settings.invoiceTemplate).length > 0) {
+        const migratedTemplateId = migrateTemplateId(settings.invoiceTemplate.templateId)
+        const validatedTemplateId = validateTemplateAccess(migratedTemplateId)
+        
         templateSettings = {
           ...settings.invoiceTemplate,
-          templateId: migrateTemplateId(settings.invoiceTemplate.templateId)
+          templateId: validatedTemplateId
         }
         console.log('✅ Generate PDF - Template settings loaded from Supabase')
       } else {
@@ -1560,9 +1575,12 @@ export default function GenerateInvoicePage() {
         if (savedTemplate) {
           try {
             const parsed = JSON.parse(savedTemplate)
+            const migratedTemplateId = migrateTemplateId(parsed.templateId)
+            const validatedTemplateId = validateTemplateAccess(migratedTemplateId)
+            
             templateSettings = {
               ...parsed,
-              templateId: migrateTemplateId(parsed.templateId)
+              templateId: validatedTemplateId
             }
             console.log('✅ Generate PDF - Template settings loaded from localStorage')
           } catch (error) {
@@ -1965,7 +1983,7 @@ export default function GenerateInvoicePage() {
 
 
   return (
-    <InvoicingGate>
+      <>
       {/* Loading overlay for edit mode */}
       {isLoadingEditData && (
         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center" style={{left: 'var(--sidebar-width, 16rem)'}}>
@@ -2945,7 +2963,7 @@ export default function GenerateInvoicePage() {
       />
 
       </div>
-    </InvoicingGate>
+      </>
   )
 }
 

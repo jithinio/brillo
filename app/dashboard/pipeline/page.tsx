@@ -8,7 +8,7 @@ import { PipelineBoard } from "./components/PipelineBoard"
 import { EnhancedAddProjectDialog } from "@/components/projects/EnhancedAddProjectDialog"
 import { fetchPipelineProjects, fetchPipelineStages, calculateProjectPipelineMetrics } from "@/lib/project-pipeline"
 import type { PipelineProject, PipelineStage, PipelineMetrics as PipelineMetricsType } from "@/lib/types/pipeline"
-import { SearchIcon, CancelIcon, PlusSignIcon, Crown02Icon } from '@hugeicons/core-free-icons'
+import { SearchIcon, CancelIcon, PlusSignIcon } from '@hugeicons/core-free-icons'
 import { Input } from "@/components/ui/input"
 import { Loader } from "@/components/ui/loader"
 import { Button } from "@/components/ui/button"
@@ -239,12 +239,12 @@ export default function PipelinePage() {
               {/* New Lead Button */}
               <div className="ml-auto flex items-center gap-2">
                 {!canCreateResource('projects') && (
-                  <Button asChild variant="outline" size="sm" className="h-8">
-                    <Link href="/pricing">
-                      <HugeiconsIcon icon={Crown02Icon} className="h-3 w-3 mr-1"  />
-                      Upgrade to Pro
-                    </Link>
-                  </Button>
+                                      <Button asChild variant="outline" size="sm" className="h-8 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white border-0">
+                      <Link href="/pricing">
+ 
+                        Upgrade to Pro
+                      </Link>
+                    </Button>
                 )}
                 <Button
                   onClick={() => setShowAddDialog(true)}

@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { BadgeIcon, More01Icon, LogoutIcon, SparklesIcon, Moon01Icon, Sun01Icon, ComputerIcon, ColorPickerIcon, Settings01Icon, UserIcon, CreditCardIcon, Crown02Icon, Message01Icon, MoreVerticalCircle01Icon, PaintBoardIcon, LogoutSquare02Icon, Sun03Icon, Moon02Icon } from '@hugeicons/core-free-icons'
+import { BadgeIcon, More01Icon, LogoutIcon, SparklesIcon, Moon01Icon, Sun01Icon, ComputerIcon, ColorPickerIcon, Settings01Icon, UserIcon, CreditCardIcon, Message01Icon, MoreVerticalCircle01Icon, PaintBoardIcon, LogoutSquare02Icon, Sun03Icon, Moon02Icon } from '@hugeicons/core-free-icons'
 import { useAuth } from "@/components/auth-provider"
 import { useSubscription } from "@/components/providers/subscription-provider"
 import { isProPlan } from "@/lib/subscription-plans"

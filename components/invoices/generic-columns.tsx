@@ -100,7 +100,7 @@ const invoiceStatusConfig = {
     label: "Sent",
     icon: SentIcon,
     variant: "outline" as const,
-    iconClassName: "text-blue-500",
+    iconClassName: "text-primary",
   },
   partially_paid: {
     label: "Partially Paid",
@@ -240,7 +240,7 @@ export function createInvoiceColumns(columnConfig: InvoiceColumnConfig): ColumnD
                 })
               }
             }}
-            className="font-medium text-sm cursor-pointer hover:text-blue-600 transition-colors"
+            className="font-medium text-sm cursor-pointer hover:text-primary transition-colors"
           >
             {invoiceNumber}
           </button>

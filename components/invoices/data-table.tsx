@@ -415,7 +415,7 @@ export function DataTable<TData, TValue>({
                             <ContextMenuItem 
                               onClick={() => contextActions.onStatusChange(row.original, 'sent')}
                             >
-                              <HugeiconsIcon icon={DollarSend01Icon} className="mr-1.5 h-4 w-4 text-blue-600"  />
+                              <HugeiconsIcon icon={DollarSend01Icon} className="mr-1.5 h-4 w-4 text-primary"  />
                               Sent
                             </ContextMenuItem>
                             <ContextMenuItem 

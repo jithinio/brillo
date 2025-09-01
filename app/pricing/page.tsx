@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from '@hugeicons/react';
 import { useState, useEffect, Suspense } from "react"
-import { Tick02Icon, Crown02Icon, DocumentAttachmentIcon, BarChartIcon, ColorPickerIcon, ZapIcon, Group01Icon, CreditCardIcon, ArrowLeft01Icon, ArrowDown01Icon, MailIcon } from '@hugeicons/core-free-icons'
+import { Tick02Icon, DocumentAttachmentIcon, BarChartIcon, ColorPickerIcon, ZapIcon, Group01Icon, CreditCardIcon, ArrowLeft01Icon, ArrowDown01Icon, MailIcon, Invoice01Icon } from '@hugeicons/core-free-icons'
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -41,10 +41,10 @@ function PricingContent() {
       features: [
         { icon: Group01Icon, text: 'Up to 10 clients' },
         { icon: DocumentAttachmentIcon, text: 'Up to 20 projects' },
+        { icon: Invoice01Icon, text: 'Up to 5 invoices' },
         { icon: BarChartIcon, text: 'Basic reporting' },
       ],
       limitations: [
-        'No invoicing',
         'Basic support'
       ],
       buttonText: 'Start Free',
@@ -58,7 +58,7 @@ function PricingContent() {
       features: [
         { icon: Group01Icon, text: 'Unlimited clients' },
         { icon: DocumentAttachmentIcon, text: 'Unlimited projects' },
-        { icon: CreditCardIcon, text: 'Full invoicing suite', pro: true },
+        { icon: Invoice01Icon, text: 'Unlimited invoices', pro: true },
         { icon: ColorPickerIcon, text: 'Custom invoice templates', pro: true },
         { icon: BarChartIcon, text: 'Advanced analytics', pro: true },
         { icon: ZapIcon, text: 'API access', pro: true },
@@ -112,12 +112,9 @@ function PricingContent() {
       {/* Header */}
       <header className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="mx-auto max-w-[1200px] flex h-16 items-center justify-between px-4">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg flex items-center justify-center">
-              <HugeiconsIcon icon={Crown02Icon} className="w-5 h-5 text-white"  />
+                      <div className="flex items-center gap-3">
+              <span className="font-semibold text-lg">Brillo</span>
             </div>
-                            <span className="font-semibold text-lg">Brillo</span>
-          </div>
           
           <div className="flex items-center gap-3">
             <Button asChild variant="ghost" size="sm">
@@ -203,7 +200,7 @@ function PricingContent() {
                 {plan.popular && (
                   <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10">
                     <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-3 py-1 shadow-lg">
-                      <HugeiconsIcon icon={Crown02Icon} className="w-3 h-3 mr-1"  />
+                      
                       Most Popular
                     </Badge>
                   </div>

@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
 import { useSettings } from '@/components/settings-provider'
+import { useSubscription } from '@/components/providers/subscription-provider'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import { PageHeader, PageContent, PageTitle } from '@/components/page-header'
 import { Loader } from '@/components/ui/loader'
@@ -64,6 +65,7 @@ export default function InvoicePreviewPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { settings } = useSettings()
+  const { hasAccess } = useSubscription()
   const queryClient = useQueryClient()
   
   const [invoice, setInvoice] = useState<Invoice | null>(null)
@@ -195,7 +197,7 @@ export default function InvoicePreviewPage() {
       }
     }
     renderInvoice()
-  }, [invoice, finalTemplateSettings, settings])
+  }, [invoice, finalTemplateSettings, settings, hasAccess])
 
   // Helper function to render invoice HTML
   async function renderInvoiceForPreview(invoice: Invoice, templateSettings: any, settings: any) {
@@ -209,6 +211,18 @@ export default function InvoicePreviewPage() {
         'notion-inspired': 'slate'
       }
       return migrationMap[templateId] || templateId
+    }
+
+    // Define Pro templates (same as in customize page)
+    const proTemplates = ['classic', 'slate', 'edge']
+    
+    // Validate template access for free users
+    const validateTemplateAccess = (templateId: string) => {
+      if (proTemplates.includes(templateId) && !hasAccess('invoice_customization')) {
+        console.log('🚫 Free user attempted to view Pro template:', templateId, '- falling back to modern')
+        return 'modern' // Default to modern for free users
+      }
+      return templateId
     }
     
     // Get company info from settings or localStorage
@@ -257,8 +271,11 @@ export default function InvoicePreviewPage() {
     }
     
     // Create full template with all settings - use saved templateId if available
+    const migratedTemplateId = migrateTemplateId(templateSettings.templateId) || 'modern'
+    const validatedTemplateId = validateTemplateAccess(migratedTemplateId)
+    
     const fullTemplate = {
-      templateId: migrateTemplateId(templateSettings.templateId) || 'modern',
+      templateId: validatedTemplateId,
       logoSize: templateSettings.logoSize || [80],
       logoBorderRadius: templateSettings.logoBorderRadius || [8],
       invoicePadding: templateSettings.invoicePadding || [48],

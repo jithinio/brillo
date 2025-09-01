@@ -17,7 +17,7 @@ import { supabase } from "@/lib/supabase"
 import { getDateRangeFromTimePeriod } from "@/lib/project-filters-v2"
 import { useSettings } from "@/components/settings-provider"
 import { useCurrencyCache } from "@/hooks/use-currency-cache"
-import { InvoicingGate } from "@/components/gates/pro-feature-gate"
+
 import { formatCurrency } from "@/lib/currency"
 import { exportInvoices } from "@/lib/csv-export"
 
@@ -275,7 +275,6 @@ export default function InvoicesPage() {
   }
 
   return (
-    <InvoicingGate>
       <GenericTableWrapper
           entityType="invoices"
           pageTitle="Invoices"
@@ -367,6 +366,5 @@ export default function InvoicesPage() {
                           </Button>
           }
         />
-    </InvoicingGate>
   )
 }

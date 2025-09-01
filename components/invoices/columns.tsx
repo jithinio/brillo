@@ -145,7 +145,7 @@ const statusConfig = {
     label: "Sent",
     icon: SentIcon,
     variant: "outline" as const,
-    iconClassName: "text-blue-500",
+    iconClassName: "text-primary",
   },
   partially_paid: {
     label: "Partially Paid",
@@ -651,7 +651,7 @@ export function createColumns(actions: ColumnActions): ColumnDef<Invoice>[] {
                       onClick={() => actions.onStatusChange(invoice, 'sent')}
                       disabled={invoice.status === 'sent'}
                     >
-                      <HugeiconsIcon icon={DollarSend01Icon} className="mr-2 h-4 w-4 text-blue-600"  />
+                      <HugeiconsIcon icon={DollarSend01Icon} className="mr-2 h-4 w-4 text-primary"  />
                       Sent
                     </DropdownMenuItem>
                     <DropdownMenuItem 

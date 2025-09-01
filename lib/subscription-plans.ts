@@ -11,16 +11,16 @@ export const SUBSCRIPTION_PLANS: Record<string, SubscriptionPlan> = {
     price: 0,
     interval: 'month',
     features: [
-      'Project management',
-      'Client management', 
-      'Basic pipeline tracking',
+      'Up to 10 clients',
+      'Up to 20 projects',
+      'Up to 5 invoices',
       'Basic reporting',
       'Community support'
     ],
     limits: { 
       projects: 20, 
       clients: 10, 
-      invoices: 'none' // No invoicing on free plan
+      invoices: 5 // Limited invoices on free plan
     },
     badge: 'Forever Free'
   },
@@ -32,8 +32,9 @@ export const SUBSCRIPTION_PLANS: Record<string, SubscriptionPlan> = {
     interval: 'month',
     features: [
       'Everything in Free Plan',
-      'Unlimited projects & clients',
-      'Full invoicing system',
+      'Unlimited clients',
+      'Unlimited projects',
+      'Unlimited invoices',
       'Custom invoice templates',
       'Advanced analytics dashboard',
       'Export capabilities',
@@ -41,8 +42,8 @@ export const SUBSCRIPTION_PLANS: Record<string, SubscriptionPlan> = {
       'API access'
     ],
     proFeatures: [
-      'Create & send invoices',
-      'Customize invoice templates', 
+      'Unlimited invoices',
+      'Custom invoice templates', 
       'Advanced analytics',
       'Revenue tracking',
       'Financial reports'
@@ -70,8 +71,8 @@ export const SUBSCRIPTION_PLANS: Record<string, SubscriptionPlan> = {
       'Dedicated account manager'
     ],
     proFeatures: [
-      'Full invoicing suite',
-      'Advanced customization', 
+      'Unlimited invoices',
+      'Advanced invoice customization', 
       'Premium analytics',
       'Advanced reporting',
       'API & integrations'
@@ -109,7 +110,7 @@ export function canAccessFeature(planId: string, feature: string): boolean {
   
   switch (feature) {
     case 'invoicing':
-      return plan.limits.invoices !== 'none'
+      return plan.limits.invoices !== 'none' && plan.limits.invoices !== 0
     case 'advanced_analytics':
       return isPro
     case 'invoice_customization':
@@ -128,16 +129,19 @@ export function calculateYearlySavings(): number {
 }
 
 // Safe limits checking
-export function checkLimits(planId: string, usage: { projects: number; clients: number }): {
+export function checkLimits(planId: string, usage: { projects: number; clients: number; invoices: number }): {
   canCreateProject: boolean
   canCreateClient: boolean
+  canCreateInvoice: boolean
   projectsRemaining: number | 'unlimited'
   clientsRemaining: number | 'unlimited'
+  invoicesRemaining: number | 'unlimited'
 } {
   const plan = getPlan(planId)
   
   const canCreateProject = plan.limits.projects === 'unlimited' || usage.projects < plan.limits.projects
   const canCreateClient = plan.limits.clients === 'unlimited' || usage.clients < plan.limits.clients
+  const canCreateInvoice = plan.limits.invoices === 'unlimited' || usage.invoices < plan.limits.invoices
   
   const projectsRemaining = plan.limits.projects === 'unlimited' 
     ? 'unlimited' 
@@ -146,11 +150,17 @@ export function checkLimits(planId: string, usage: { projects: number; clients: 
   const clientsRemaining = plan.limits.clients === 'unlimited' 
     ? 'unlimited' 
     : Math.max(0, plan.limits.clients - usage.clients)
+
+  const invoicesRemaining = plan.limits.invoices === 'unlimited' 
+    ? 'unlimited' 
+    : Math.max(0, plan.limits.invoices - usage.invoices)
   
   return {
     canCreateProject,
     canCreateClient,
+    canCreateInvoice,
     projectsRemaining,
-    clientsRemaining
+    clientsRemaining,
+    invoicesRemaining
   }
 }

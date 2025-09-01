@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from '@hugeicons/react';
 import * as React from "react"
-import { FilterIcon, ArrowDown01Icon, SearchIcon, PlusSignIcon, Calendar01Icon, SettingsIcon, CheckmarkCircleIcon, UserIcon, CancelIcon, Crown02Icon, TagIcon, Activity03Icon } from '@hugeicons/core-free-icons'
+import { FilterIcon, ArrowDown01Icon, SearchIcon, PlusSignIcon, Calendar01Icon, SettingsIcon, CheckmarkCircleIcon, UserIcon, CancelIcon, TagIcon, Activity03Icon } from '@hugeicons/core-free-icons'
 import { ColumnViewFilter } from "./column-view-filter"
 import { Button } from "@/components/ui/button"
 import { Loader } from "@/components/ui/loader"
@@ -411,12 +411,12 @@ export function ProjectFiltersV2({
           {onAddProject && (
             <div className="flex items-center gap-2">
               {!canCreateResource('projects') && (
-                <Button asChild variant="outline" size="sm" className="h-8 text-sm font-normal">
-                  <Link href="/pricing">
-                    <HugeiconsIcon icon={Crown02Icon} className="mr-1 h-3 w-3"  />
-                    Upgrade to Pro
-                  </Link>
-                </Button>
+                                  <Button asChild variant="outline" size="sm" className="h-8 text-sm font-normal bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white border-0">
+                    <Link href="/pricing">
+ 
+                      Upgrade to Pro
+                    </Link>
+                  </Button>
               )}
               <Button 
                 onClick={onAddProject} 

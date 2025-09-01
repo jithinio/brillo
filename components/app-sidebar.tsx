@@ -80,7 +80,6 @@ const data = {
       title: "Invoices",
       url: "/dashboard/invoices",
       icon: InvoicesIcon,
-      proFeature: "invoicing",
       items: [
         {
           title: "All Invoices",
@@ -91,8 +90,9 @@ const data = {
           url: "/dashboard/invoices/generate",
         },
         {
-          title: "Customize Template",
+          title: "Customize",
           url: "/dashboard/invoices/customize",
+          proFeature: "invoice_customization",
         },
       ],
     },
